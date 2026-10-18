@@ -3,3 +3,5 @@ transcript
 vsim.wlf
 modelsim.ini
 *.vstf
+__pycache__/
+*.pyc
