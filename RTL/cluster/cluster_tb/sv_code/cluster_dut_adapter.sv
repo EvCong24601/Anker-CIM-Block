@@ -10,8 +10,6 @@ module cluster_dut_adapter #(
   input logic cmd_valid_i,
   output wire cmd_ready_o,
   input logic [1023:0] act_data_i,
-  input logic act_valid_i,
-  output wire act_ready_o,
   input logic [7:0] weight_wen_i,
   input logic [7:0] weight_waddr_i,
   input logic [8191:0] weight_wdata_i,
@@ -21,11 +19,10 @@ module cluster_dut_adapter #(
   input logic out_ready_i
 );
   import cluster_tb_pkg::*;
-  cluster_ctrl_t queued_cmd, command;
-  logic have_cmd, have_act;
+  cluster_ctrl_t command;
   logic [1023:0] held_plane, plane;
   int phase, context_idx, tile, phases, contexts;
-  logic need_plane, release_plane, issue, credit_ok, final_issue;
+  logic need_plane, issue, credit_ok, final_issue;
   logic [31:0] issue_mask;
   logic [7:0] active, ren, station, hold_valid;
   logic [7:0] hold_addr [0:7];
@@ -102,12 +99,13 @@ module cluster_dut_adapter #(
       $fatal(1,"Buffer depth / context capacity must be >= 1");
   end
   always_comb begin
-    command=have_cmd ? queued_cmd : cmd_i;
+    command=cmd_i;
     phases=abits(int'(command.precision))/4;
     contexts=command.ws_cnt>1 ? int'(command.ws_cnt) : int'(command.as_cnt);
     need_plane=command.as_cnt<=1 || context_idx==0;
-    release_plane=command.as_cnt<=1 || context_idx==contexts-1;
-    plane=have_act ? held_plane : act_data_i;
+    // ACT has no separate handshake. Ctx0 samples a new AS Plane on
+    // cmd_fire; later consumers use the captured Plane and ignore ACT pins.
+    plane=need_plane ? act_data_i : held_plane;
     issue_mask='0; active='0;
     for(int m=0;m<8;m++) begin
       active[m]=command.macro_en_mask[m] && (|command.macro_oc_mask[4*m+:4]);
@@ -117,14 +115,12 @@ module cluster_dut_adapter #(
     end
     final_issue=phase==phases-1 && tile==int'(command.os_cnt)-1;
     credit_ok=!final_issue || reserved<OUTPUT_BUFFER_DEPTH || pop;
-    issue=!reset && !batch_input_done && (have_cmd || cmd_valid_i) &&
-          (have_act || (need_plane && act_valid_i)) && credit_ok;
+    issue=cmd_valid_i && cmd_ready_o;
     ren=active & {8{issue}};
     for(int m=0;m<8;m++)
       station[m]=!hold_valid[m] || hold_addr[m]!=command.weight_cim_raddr;
   end
-  assign cmd_ready_o=!reset && !batch_input_done && !have_cmd && credit_ok;
-  assign act_ready_o=!reset && !have_act && need_plane;
+  assign cmd_ready_o=!reset && !batch_input_done && credit_ok;
   always_comb begin
     out_valid_o=occupancy!=0;
     psum_lane_valid_o=out_valid_o ? output_mask[rd_ptr] : '0;
@@ -303,7 +299,7 @@ module cluster_dut_adapter #(
     logic [31:0] captured;
     int slot;
     if(reset) begin
-      have_cmd<=0; have_act<=0; queued_cmd<='0; held_plane<='0;
+      held_plane<='0;
       phase<=0; context_idx<=0; tile<=0; hold_valid<='0;
       in_tag<='0; macro_tag<='0; red1_tag<='0; red2_tag<='0;
       rd_ptr<=0; wr_ptr<=0; commit_ptr<=0; occupancy<=0; reserved<=0;
@@ -320,7 +316,6 @@ module cluster_dut_adapter #(
       end
     end else begin
       if(cmd_valid_i && cmd_ready_o) begin
-        queued_cmd<=cmd_i; have_cmd<=1;
         if(!batch_active) begin
           batch_active<=1; batch_command<=cmd_i;
           batch_contexts<=cmd_i.ws_cnt>1 ? int'(cmd_i.ws_cnt) : int'(cmd_i.as_cnt);
@@ -340,13 +335,13 @@ module cluster_dut_adapter #(
                     cmd_i.act_slot_sel!=batch_command.act_slot_sel)
           $fatal(1,"Batch descriptor fields changed before completion");
       end
-      if(act_valid_i && act_ready_o) begin held_plane<=act_data_i; have_act<=1; end
       for(int m=0;m<8;m++) begin
         if(weight_wen_i[m]) hold_valid[m]<=0;
         else if(ren[m]) begin hold_valid[m]<=1; hold_addr[m]<=command.weight_cim_raddr; end
       end
       in_tag.valid<=issue;
       if(issue) begin
+        if(need_plane) held_plane<=act_data_i;
         if(command.precision>6 || !canonical(command.reduce_split_mask) ||
            command.os_cnt<1 || command.ws_cnt<1 || command.as_cnt<1 ||
            (command.ws_cnt>1 && command.as_cnt>1) ||
@@ -371,8 +366,6 @@ module cluster_dut_adapter #(
           output_mask[wr_ptr]<=issue_mask; output_context[wr_ptr]<=context_idx;
           wr_ptr<=(wr_ptr+1)%OUTPUT_BUFFER_DEPTH;
         end
-        have_cmd<=0;
-        if(release_plane) have_act<=0;
         if(command.as_cnt>1) begin
           if(context_idx==contexts-1) begin
             context_idx<=0;

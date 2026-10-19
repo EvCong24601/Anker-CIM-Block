@@ -1,6 +1,8 @@
 # Cluster testbench：tmp、bit fusion、Psum acc 与 ICG
 
-参考 adapter 连接八个真实 SingleMacro RTL。未包含 requant，未新增对外 pin。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。
+参考 adapter 连接八个真实 SingleMacro RTL，输出为 raw signed32，未包含 requant。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。
+
+ACT 输入只有 `act_data_i[1023:0]`，采样沿由 `cmd_fire=cmd_valid_i&&cmd_ready_o` 决定。WS/单 Context 每次接受 Command 时采样新 slice；AS 每个 phase 在 Ctx0 采样并保存，后续 Context 使用内部保存的数据，外部 ACT 不参与该拍计算。Command 停顿且需要新 ACT 时，保持 Command 和 ACT 数据至接受沿；ACT 没有独立握手信号。
 
 ## 目录与入口
 
@@ -38,13 +40,13 @@ cluster_tb/
 
 t1..t6 是向父级转发的 DFF。Pair 结束时从 t3..t6 前取数并关闭转发 DFF；quad 结束时从 t1/t2 前取数并关闭它们；仅继续归约时打开。`reduce_cg_en` 仍提前 1T，接 ICG。没有独立 root-only DFF 或统一末级对齐流水。
 
-从实际 Macro 发射 Cq：叶子/pair 在 C(q+2) 捕获 tmp、C(q+3) 运算完成；quad 在 C(q+3)/C(q+4)；root 在 C(q+4)/C(q+5)。标准 W2/W4/W8 完整延迟为 **3T/4T/5T**，比旧端点直写版增加 1T。混合树各 channel 按自身深度写最终预留槽位，写齐后发布整个 Context。当前同批 Context 使用同一 descriptor 布局。输入停顿、排队、下游等待和 requant 不含在上述周期中。
+从实际 Macro 发射 Cq：叶子/pair 在 C(q+2) 捕获 tmp、C(q+3) 运算完成；quad 在 C(q+3)/C(q+4)；root 在 C(q+4)/C(q+5)。标准 W2/W4/W8 完整延迟为 **3T/4T/5T**。混合树各 channel 按自身深度写最终预留槽位，写齐后发布整个 Context。同批 Context 使用同一 descriptor 布局。输入停顿、排队、下游等待和 requant 不含在上述周期中。
 
 ## 六种配置与清单
 
-case 1..6 固定为：`(os,ws,as)=(1,1,1)、(1,1,2)、(1,2,1)、(2,1,1)、(2,2,1)、(2,1,2)`，没有重复配置。七种 precision 各展开六例，共 42 个操作表；INT×INT/UINT×UINT 共用时序。
+case 1..6 为：`(os,ws,as)=(1,1,1)、(1,1,2)、(1,2,1)、(2,1,1)、(2,2,1)、(2,1,2)`。七种 precision 各展开六例，共 42 个操作表；INT×INT/UINT×UINT 共用时序。
 
-运行生成器后，`data/buffer_cycle_cases.txt` 逐行列出 tmp 数据、操作、深度和写回时刻。提交的 [buffer_cycle_cases.csv](data/buffer_cycle_cases.csv) 提供相同操作的完整 split/group 枚举。Word 文档仅保留在本地，未随本次上传。
+运行生成器后，`data/buffer_cycle_cases.txt` 逐行列出 tmp 数据、操作、深度和写回时刻。[buffer_cycle_cases.csv](data/buffer_cycle_cases.csv) 提供完整 split/group 枚举。仓库主 README 的附录 A 按六种配置、七种精度列出 ACT 采样、权重地址、运算和结果位置。
 
 `py/buffer_schedule.py` 从 `data/split_cases.csv` 将所有合法 split/sign 配置展开为六种配置，生成 `data/buffer_cycle_cases.csv`。默认 200×6=1200 个组合、44280 个有效 group 事件。这是无停顿逻辑时序枚举，不等于额外仿真了1200组。[buffer_operations.csv](data/buffer_operations.csv) 是实际标准仿真记录，无停顿版本核对480个运算事件：
 
@@ -54,9 +56,9 @@ python py/buffer_schedule.py --trace data/buffer_operations.csv
 
 三个 count 最小为1。ws>1/as=1为WS，as>1/ws=1为AS，二者为1则单Context，不定义同时>1。precision 0..6为W2A4、W2A8、W4A4、W4A8、W4A16、W8A8、W8A16。A0..A3为4-bit slice，INT仅最高有效slice按signed4。WS顺序为Tile→Context→phase，AS为Tile→phase→Context。
 
-descriptor为131bit，保留共享8-bit weight_cim_raddr与32-bit macro_oc_mask。每phase都有Command，首拍可同拍输入ACT/地址；AS保持Plane时仍有Command。同地址有效Hold用cim_station=0，首读/换地址/写入后刷新。标准映射：W2 slots=[0,1,0,1,0,1,0,1]/split07/EN55；W4 slots=[0,1,2,3,0,1,2,3]/split01/EN33；W8 slots=[0,1,2,3,4,5,6,7]/split00/EN0F。每组K128，ACT高512bit补零。WS地址T0=20/T1=30，AS的T0 Ctx0/1=20/21、T1=30/31，均为8-bit十六进制。
+descriptor为131bit，包含共享8-bit weight_cim_raddr与32-bit macro_oc_mask。每phase提交Command，首拍同拍提供ACT/地址；AS复用Plane的计算拍也提交Command。同地址有效Hold用cim_station=0，首读/换地址/写入后刷新。标准映射：W2 slots=[0,1,0,1,0,1,0,1]/split07/EN55；W4 slots=[0,1,2,3,0,1,2,3]/split01/EN33；W8 slots=[0,1,2,3,4,5,6,7]/split00/EN0F。每组K128，ACT高512bit补零。WS地址T0=20/T1=30，AS的T0 Ctx0/1=20/21、T1=30/31，均为8-bit十六进制。
 
-现有psum_data_o/out_valid_o运输raw signed32；不同Context不相加，未实现原Spec的requant输出。
+psum_data_o/out_valid_o 输出 raw signed32；不同 Context 独立，不包含 requant。
 
 ## 验证
 
@@ -66,10 +68,10 @@ python py/run_regression.py --depth 1 --psum-depth 3 --patterns 2 --log regressi
 python py/run_regression.py --en 81 --oc 84218421 --os 2 --depth 3 --psum-depth 3 --patterns 2 --log regression_tmp_sparse_depth3.log
 ```
 
-默认1368个Cluster case：1200穷举数据case、84标准时序case、28握手/输出buffer压力case、56三Tile/三Context极值case。另有208个reduce-tree门控单元case。EN=FF时每符号合法split数为1,1,16,16,16,25,25，每组有效K严格小于256。
+默认1368个Cluster case：1200穷举数据case、84标准时序case、28 Command停顿/输出buffer压力case、56三Tile/三Context极值case。另有208个reduce-tree门控单元case。EN=FF时每符号合法split数为1,1,16,16,16,25,25，每组有效K严格小于256。AS 复用拍会故意改变外部 ACT，检查实际计算始终使用已保存的 Plane。
 
 检查独立整数点积、每channel到达周期、WS tmp状态、AS逐phase Psum历史、os=1 Psum保持、未用加法器输入隔离、真实ICG时钟、关闭DFF保持、高地址深度整批关闭和FIFO反压/回绕。`--latency-audit` 启用 `sv_code/latency_audit.sv`，采集 [latency_audit.csv](data/latency_audit.csv) 的140个标准Context输出；`py/audit_latency.py` 按六种配置公式核对，生成 [latency_audit_validation.log](log/latency_audit_validation.log)。Python检查器只依赖标准库，无需本地Word文档。
 
-要求 ModelSim 的 vlib/vlog/vsim 在 PATH。Python 入口按顺序直接编译 sv_code 中的源文件，并自动定位仓库中的 `../../macro/rtl`；也可用 `--macro-rtl PATH` 指定。`filelist.f` 已同步目录结构，可从本目录手动编译；随后需明确选择仿真顶层。`+DATA_DIR=路径` 可控制 SV 的 CSV 输出位置，Python 入口自动传入绝对 data 路径；直接运行 TB 时默认当前工作目录。本次上传不含 PS1、Word、TXT、波形或仿真 work 库。
+要求 ModelSim 的 vlib/vlog/vsim 在 PATH。Python 入口按顺序编译 sv_code 中的源文件，自动定位 `../../macro/rtl`；也可用 `--macro-rtl PATH` 指定。`filelist.f` 可从本目录手动编译，仿真时选择具体顶层。`+DATA_DIR=路径` 控制 SV 的 CSV 输出位置，Python 入口自动传入绝对 data 路径；直接运行 TB 时默认当前工作目录。
 
-OS_TILES控制穷举suite，范围1..14。UINT W8A16的ACT限制到0..32768/os_cnt-1，避免最终signed32溢出，不是DUT饱和。现行验证日志位于 log，文件名前缀为 regression_tmp_*，另有 latency_audit_validation.log。log 中原有 regression_v27_*/regression_default.log 等是历史结果，不用于当前版本时延判断。
+OS_TILES 控制穷举 suite，范围1..14。UINT W8A16 的 ACT 限制到0..32768/os_cnt-1，使最终结果保持 signed32。验证入口对应的日志为 `log/regression_tmp_default.log`、`log/regression_tmp_default_reduce_gate.log`、`log/regression_tmp_depth1.log`、`log/regression_tmp_sparse_depth3.log` 和 `log/latency_audit_validation.log`。

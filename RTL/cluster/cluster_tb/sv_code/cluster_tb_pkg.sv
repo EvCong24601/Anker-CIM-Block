@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 package cluster_tb_pkg;
-  // Integration contract; counter widths are not frozen in the source spec.
+  // Cluster descriptor: three 16-bit counts, total packed width 131 bits.
   typedef struct packed {
     // All counts are >=1. ws>1 selects WS, as>1 selects AS;
     // ws=as=1 is a single Context, with no cross-Context reuse.

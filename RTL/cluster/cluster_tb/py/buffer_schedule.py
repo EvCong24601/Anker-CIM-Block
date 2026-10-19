@@ -136,7 +136,7 @@ def main():
               'group', 'lane_mask', 'issue_cycle', 'tmp_capture', 'compute_cycle',
               'tile', 'context', 'phase', 'weight_address', 'operation', 'description',
               'destination', 'fusion', 'acc', 'psum_write', 'tmp_write', 'done', 'serial',
-              'psum_depth_open_hex', 'icg_enable_cycle']
+              'psum_depth_open_hex', 'icg_enable_cycle', 'act_sample', 'act_source']
     count = 0
     with (ROOT / 'buffer_cycle_cases.csv').open('w', newline='', encoding='utf-8-sig') as f:
         writer = csv.DictWriter(f, fieldnames=fields)
@@ -160,12 +160,15 @@ def main():
                                  tile=k, context=c, phase=ph,
                                  weight_address=f"8'h{0x20+16*k+(c if ac>1 else 0):02x}",
                                  psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if os>1 else 0:x}',
-                                 icg_enable_cycle=q+d-1)
+                                 icg_enable_cycle=q+d-1,
+                                 act_sample=int(ac<=1 or c==0),
+                                 act_source=f'A{ph}(T{k})' if ac>1 else f'A{ph}(T{k},Ctx{c})')
                         writer.writerow(r)
                         count += 1
     text = ['Cluster tmp / bit-fusion / Psum acc 逐拍操作清单',
             'R=tmp_result 中当前归约结果；T[d]=tmp-buffer 融合状态；P[d]=Psum buffer。',
             '每个并行 channel=4*group+OC；OC 不串行。signed/unsigned 时序相同。',
+            'ACT 无独立握手；随 cmd_fire 采样。AS 每 phase 仅 Ctx0 采样，其他 Context 复用。',
             'C0 为首输入；tmp 在 C(q+D-1) 捕获，运算写回在 C(q+D)，ICG enable 提前一拍。',
             '标准 W2/W4/W8 的 D=3/4/5T。无停顿、无 requant；WS 串联路径需 STA。',
             'os=1 不写 Psum。AS 的 os>1：T0/A0 填充；后续 Tile A0 做 acc；其他 phase 做 fusion。',

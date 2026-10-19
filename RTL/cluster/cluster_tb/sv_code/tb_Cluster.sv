@@ -14,8 +14,8 @@ module tb_Cluster;
   always #5 clock=~clock;
   logic reset=1;
   cluster_ctrl_t cmd_i='0;
-  logic cmd_valid_i=0, act_valid_i=0, out_ready_i=0;
-  wire cmd_ready_o, act_ready_o, out_valid_o;
+  logic cmd_valid_i=0, out_ready_i=0;
+  wire cmd_ready_o, out_valid_o;
   logic [1023:0] act_data_i='0;
   logic [7:0] weight_wen_i=0, weight_waddr_i=0;
   logic [8191:0] weight_wdata_i=0;
@@ -32,6 +32,7 @@ module tb_Cluster;
   int standard_case=0; // six distinct chapter-4 configurations
   int cycle=0, issue_count, raw_count, output_count;
   int case_os, case_ws, case_as, case_r, case_p, first_issue, last_issue;
+  int case_used_digits;
   int final_due[0:MAX_CONTEXTS-1];
   int final_slot[0:MAX_CONTEXTS-1],lane_due[0:MAX_CONTEXTS-1][0:31];
   bit raw_seen[0:MAX_CONTEXTS-1], output_seen[0:MAX_CONTEXTS-1];
@@ -40,7 +41,7 @@ module tb_Cluster;
   bit held_output=0;
   logic [1023:0] last_data;
   logic [31:0] last_mask;
-  bit held_cmd=0, held_act=0;
+  bit held_cmd=0, held_act_for_cmd=0;
   cluster_ctrl_t last_cmd;
   logic [1023:0] last_act;
   int buffer_gate_checks=0, high_depth_checks=0, os1_psum_hold_checks=0;
@@ -244,10 +245,10 @@ module tb_Cluster;
     else if(monitoring) begin
       if(held_cmd && (!cmd_valid_i || cmd_i!==last_cmd))
         $fatal(1,"Command changed before ready");
-      if(held_act && (!act_valid_i || act_data_i!==last_act))
-        $fatal(1,"ACT changed before ready");
+      if(held_act_for_cmd && act_data_i!==last_act)
+        $fatal(1,"ACT payload changed while its Command was stalled");
       held_cmd=cmd_valid_i && !cmd_ready_o; last_cmd=cmd_i;
-      held_act=act_valid_i && !act_ready_o; last_act=act_data_i;
+      held_act_for_cmd=cmd_valid_i && !cmd_ready_o && dut.need_plane; last_act=act_data_i;
       if(held_output && (!out_valid_o || psum_data_o!==last_data ||
                          psum_lane_valid_o!==last_mask))
         $fatal(1,"Output changed under backpressure");
@@ -271,8 +272,11 @@ module tb_Cluster;
         else begin c=(idx/case_p)%case_r; p=idx%case_p; end
         if(dut.phase!=p || dut.context_idx!=c || dut.tile!=t)
           $fatal(1,"Issue order differs from spec at index %0d",idx);
-        if(case_as>1 && c!=0 && act_ready_o)
-          $fatal(1,"AS plane can be overwritten before all consumers finish");
+        // Check the consumed Plane, including AS reuse while external ACT
+        // deliberately carries unrelated data. Sampling is tied to cmd_fire.
+        for(int k=0;k<256;k++)
+          if(dut.plane[4*k+:4] !== (k<case_used_digits ? 4'(activation[t][c][k]>>(4*p)) : 4'd0))
+            $fatal(1,"ACT Plane sampling/reuse mismatch tile=%0d ctx=%0d phase=%0d digit=%0d",t,c,p,k);
         if(dut.command.weight_cim_raddr!==8'('h20+16*t+(case_as>1 ? c : 0)))
           $fatal(1,"Descriptor weight address mismatch");
         if(issue_count==0) first_issue=cycle;
@@ -320,23 +324,14 @@ module tb_Cluster;
       else out_ready_i=!stress || cycle%4!=0;
     end
   end
-  task automatic send_command(input cluster_ctrl_t d, input int gap);
+  task automatic send_compute(input cluster_ctrl_t d, input logic [1023:0] data, input int gap);
     @(negedge clock); repeat(gap) @(negedge clock);
-    cmd_i=d; cmd_valid_i=1;
+    cmd_i=d; cmd_valid_i=1; act_data_i=data;
     for(int t=0;t<TIMEOUT_CYCLES;t++) begin
       @(posedge clock);
       if(cmd_ready_o) begin #1; cmd_valid_i=0; return; end
     end
     $fatal(1,"Command timeout");
-  endtask
-  task automatic send_plane(input logic [1023:0] data, input int gap);
-    @(negedge clock); repeat(gap) @(negedge clock);
-    act_data_i=data; act_valid_i=1;
-    for(int t=0;t<TIMEOUT_CYCLES;t++) begin
-      @(posedge clock);
-      if(act_ready_o) begin #1; act_valid_i=0; return; end
-    end
-    $fatal(1,"ACT timeout");
   endtask
 
   task automatic run_case(input int precision, input bit sign_en,
@@ -359,6 +354,7 @@ module tb_Cluster;
     used_digits=0;
     for(int m=0;m<8;m++) if(en[m] && (int'(slots[3*m+:3])+1)*kr>used_digits)
       used_digits=(int'(slots[3*m+:3])+1)*kr;
+    case_used_digits=used_digits;
     groups=0; decode_groups(split,0,0,8,groups);
     expected_mask='0;
     for(int cx=0;cx<case_r;cx++) begin
@@ -404,7 +400,7 @@ module tb_Cluster;
         $fatal(1,"Golden overflow: selected OS/pattern exceeds signed32");
     issue_count=0; raw_count=0; output_count=0; first_issue=-1; last_issue=-1;
     stress=pressure; exact_ii=!pressure && !bubbles;
-    held_output=0; held_cmd=0; held_act=0;
+    held_output=0; held_cmd=0; held_act_for_cmd=0;
     monitoring=1;
     for(int index=0;index<os*case_r*case_p;index++) begin
       t=index/(case_r*case_p);
@@ -413,12 +409,8 @@ module tb_Cluster;
       d.weight_cim_raddr=8'('h20+16*t+(as_count>1 ? c : 0));
       plane='0;
       for(int k=0;k<used_digits;k++) plane[4*k+:4]=4'(activation[t][c][k]>>(4*p));
-      if(as_count<=1 || c==0) begin
-        fork
-          send_command(d,bubbles ? (index%3) : 0);
-          send_plane(plane,bubbles ? ((index+1)%3) : 0);
-        join
-      end else send_command(d,bubbles ? index%2 : 0);
+      // Reused AS Contexts must ignore external ACT entirely.
+      send_compute(d,(as_count>1 && c>0) ? ~plane : plane,bubbles ? index%3 : 0);
     end
     for(int wait_cycles=0;wait_cycles<TIMEOUT_CYCLES;wait_cycles++) begin
       @(negedge clock);
@@ -484,7 +476,7 @@ module tb_Cluster;
                  (mode==1 || mode==5) ? 2 : 1,OUTPUT_BUFFER_DEPTH<2,0);
       end
       standard_case=0;
-      // More contexts than output entries: force full, wrap and backpressure.
+      // More contexts than output entries: force full, wrap, Command gaps and backpressure.
       r=OUTPUT_BUFFER_DEPTH+2;
       if(r>MAX_CONTEXTS) r=MAX_CONTEXTS;
       if(r>PSUM_BUFFER_DEPTH) r=PSUM_BUFFER_DEPTH;
