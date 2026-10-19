@@ -5,3 +5,5 @@ modelsim.ini
 *.vstf
 __pycache__/
 *.pyc
+*.wlf
+data/*.txt

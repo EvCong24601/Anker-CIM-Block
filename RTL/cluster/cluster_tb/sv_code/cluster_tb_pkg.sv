@@ -2,6 +2,8 @@
 package cluster_tb_pkg;
   // Integration contract; counter widths are not frozen in the source spec.
   typedef struct packed {
+    // All counts are >=1. ws>1 selects WS, as>1 selects AS;
+    // ws=as=1 is a single Context, with no cross-Context reuse.
     logic [15:0] os_cnt, ws_cnt, as_cnt;
     logic [6:0] reduce_split_mask;
     logic [7:0] macro_en_mask;
@@ -36,8 +38,9 @@ package cluster_tb_pkg;
   function automatic int group_of(input logic [6:0] s, input int m);
     int g;
     g=0;
-    for (int i=1;i<=m;i++)
-      if (first_leaf(s,i)!=first_leaf(s,i-1)) g++;
+    // Fixed elaboration bound; m only controls the combinational predicate.
+    for (int i=1;i<8;i++)
+      if (i<=m && first_leaf(s,i)!=first_leaf(s,i-1)) g++;
     return g;
   endfunction
   function automatic longint signed number(

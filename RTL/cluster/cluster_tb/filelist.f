@@ -4,6 +4,9 @@
 ../../macro/rtl/MacroMul2x4.sv
 ../../macro/rtl/MacroSliceFusion.sv
 ../../macro/rtl/SingleMacro.sv
-cluster_tb_pkg.sv
-cluster_dut_adapter.sv
-tb_Cluster.sv
+sv_code/cluster_tb_pkg.sv
+sv_code/ClusterReduceTree.sv
+sv_code/cluster_dut_adapter.sv
+sv_code/tb_Cluster.sv
+sv_code/tb_ClusterReduceTree.sv
+sv_code/latency_audit.sv

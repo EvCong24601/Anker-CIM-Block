@@ -2,6 +2,16 @@
 
 版本：整合版 v0.1。日期：2026-10-19。
 
+## 当前 Cluster 参考实现更新 2026-10-19
+
+仓库 RTL 层级已收平为 `RTL/cluster` 和 `RTL/macro`。Cluster 测试目录按 `sv_code`、`py`、`log`、`data` 分类；从仓库根目录运行 `python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --latency-audit --log regression_tmp_default.log`。VCS 的文件列表与检查路径也已同步。
+
+最新可运行的仿真参考实现位于 [cluster_tb](RTL/cluster/cluster_tb/README.md)。已加入归约终点后的 tmp 寄存级、WS/AS 的 fusion/acc 路由、提前一拍的 ICG 使能和未使用高地址深度的整批门控。六种配置为 `(os,ws,as)=(1,1,1)、(1,1,2)、(1,2,1)、(2,1,1)、(2,2,1)、(2,1,2)`，三个 count 均最小为 1，ws/as 不能同时大于 1。
+
+当前标准 W2/W4/W8 映射的末输入到 raw 完成分别为 **3T/4T/5T**；AS 在首 Tile/A0 填充 Psum、后续 Tile/A0 做 acc、其他 phase 做 fusion；os=1 在 tmp 完成后直接输出。默认 1368 个 Cluster case 和 208 个归约门控 case 已通过。尚未综合/STA，未包含 requant，不增加对外 pin。
+
+以下整合规格保留了早期的 4T 目标、零值 count 和逐拍示例，作为规格来源归档；这些旧口径不代表当前参考 TB 行为。当前流水、参数、六种配置、回归与 CSV 以 [cluster_tb 说明](RTL/cluster/cluster_tb/README.md)及其随附代码为准，未更新的 Requant/正式接口讨论仍属于规格目标。
+
 本文将单 Macro、8 Macro 组成的单 Cluster、Macro 间 K 归约级联、Activation Fusion、跨 K Tile Psum、逐拍输入和输出协议组织为同一份规格。CIM-Block 在本文中等同于一个 Cluster。外部 CV-Core 提供 Command 和 Activation；跨 Cluster 的全局调度不属于本模块。
 
 单 Macro 采用 SingleMacro v0.2 的固定一拍契约：上升沿 n 接受一个 activation digit Phase，n+1 沿后输出四路 signed18 局部和，Phase II=1。Cluster 先归约相同 Phase 的跨 Macro 贡献，再做 A4/A8/A16 Fusion 和 Psum。Cluster 的 4T raw Psum 时序沿用逐拍输入 v2.7 的目标流水，尚不能据此宣称 Cluster RTL 已实现或完成时序签核。

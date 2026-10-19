@@ -6,6 +6,7 @@ module tb_Cluster;
   parameter int OS_TILES=1;
   parameter int PATTERNS=6;
   parameter int OUTPUT_BUFFER_DEPTH=4; // signed32 entries in EACH output channel
+  parameter int PSUM_BUFFER_DEPTH=16; // Context entries per channel, separate from output FIFO
   parameter int TIMEOUT_CYCLES=4000;
   parameter logic [31:0] SEED=32'h19e2a407;
   localparam int MAX_CONTEXTS=16;
@@ -21,16 +22,18 @@ module tb_Cluster;
   wire [1023:0] psum_data_o;
   wire [31:0] psum_lane_valid_o;
   cluster_dut_adapter #(.OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
-                       .MAX_CONTEXTS(MAX_CONTEXTS)) dut(.*);
+                       .MAX_CONTEXTS(MAX_CONTEXTS),.PSUM_BUFFER_DEPTH(PSUM_BUFFER_DEPTH)) dut(.*);
   logic [31:0] rng=SEED;
   int unsigned activation[0:255][0:MAX_CONTEXTS-1][0:255];
   longint signed expected[0:MAX_CONTEXTS-1][0:31];
   logic [31:0] expected_mask;
   int golden_group[0:7];
   int cases_run=0, configurations=0, canonical_count=0, manifest;
+  int standard_case=0; // six distinct chapter-4 configurations
   int cycle=0, issue_count, raw_count, output_count;
   int case_os, case_ws, case_as, case_r, case_p, first_issue, last_issue;
   int final_due[0:MAX_CONTEXTS-1];
+  int final_slot[0:MAX_CONTEXTS-1],lane_due[0:MAX_CONTEXTS-1][0:31];
   bit raw_seen[0:MAX_CONTEXTS-1], output_seen[0:MAX_CONTEXTS-1];
   bit monitoring=0, stress=0, exact_ii=0;
   int stalled_cycles=0, reuse_cycles=0, full_cycles=0;
@@ -40,10 +43,63 @@ module tb_Cluster;
   bit held_cmd=0, held_act=0;
   cluster_ctrl_t last_cmd;
   logic [1023:0] last_act;
+  int buffer_gate_checks=0, high_depth_checks=0, os1_psum_hold_checks=0;
+  int operation_trace;
 
   function automatic int unsigned rand32();
     rng=rng^(rng<<13); rng=rng^(rng>>17); rng=rng^(rng<<5); return rng;
   endfunction
+
+  always @(posedge clock) begin : buffer_clock_scoreboard
+    longint signed old_p[0:PSUM_BUFFER_DEPTH-1][0:31];
+    longint signed old_t[0:MAX_CONTEXTS-1][0:31];
+    bit want_p[0:PSUM_BUFFER_DEPTH-1][0:31];
+    bit want_t[0:MAX_CONTEXTS-1][0:31];
+    logic [31:0] want_input;
+    int c,ph,ab;
+    if(!reset) begin
+      want_input=dut.capture_valid;
+      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
+        old_p[d][l]=dut.psum[d][l]; want_p[d][l]=0;
+      end
+      for(int d=0;d<MAX_CONTEXTS;d++) for(int l=0;l<32;l++) begin
+        old_t[d][l]=dut.tmp_buffer[d][l]; want_t[d][l]=0;
+      end
+      for(int l=0;l<32;l++) if(dut.tmp_valid[l]) begin
+        c=dut.tmp_tag[l].ctx; ph=dut.tmp_tag[l].ph;
+        ab=abits(int'(dut.tmp_tag[l].cmd.precision));
+        if(dut.tmp_tag[l].cmd.os_cnt==1)
+          want_t[dut.tmp_tag[l].cmd.as_cnt>1 ? c : 0][l]=ab>4;
+        else if(dut.tmp_tag[l].cmd.as_cnt>1) want_p[c][l]=1;
+        else begin want_t[0][l]=ab>4; want_p[c][l]=ph==ab/4-1; end
+      end
+      #0.001;
+      if(dut.tmp_input_clock!==want_input)
+        $fatal(1,"Advance tmp-input ICG prediction mismatch");
+      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
+        if(dut.psum_clock[d][l]!==want_p[d][l])
+          $fatal(1,"Advance Psum ICG mismatch depth=%0d lane=%0d",d,l);
+        if(dut.batch_active && d>=dut.batch_contexts) begin
+          if(dut.psum_depth_open[d] || dut.psum_clock[d][l])
+            $fatal(1,"High address Psum depth was not gated for batch");
+          high_depth_checks++;
+        end
+        buffer_gate_checks++;
+      end
+      for(int d=0;d<MAX_CONTEXTS;d++) for(int l=0;l<32;l++)
+        if(dut.tmp_state_clock[d][l]!==want_t[d][l])
+          $fatal(1,"Advance tmp-state ICG mismatch depth=%0d lane=%0d",d,l);
+      #0.001;
+      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) for(int l=0;l<32;l++)
+        if(!want_p[d][l]) begin
+          if(dut.psum[d][l]!==old_p[d][l]) $fatal(1,"Gated Psum DFF changed");
+          if(dut.batch_active && dut.batch_command.os_cnt==1) os1_psum_hold_checks++;
+        end
+      for(int d=0;d<MAX_CONTEXTS;d++) for(int l=0;l<32;l++)
+        if(!want_t[d][l] && dut.tmp_buffer[d][l]!==old_t[d][l])
+          $fatal(1,"Gated tmp-state DFF changed");
+    end
+  end
   function automatic int unsigned sample_bits(input int bits, pattern, index,
                                                input bit sign_en, is_weight);
     int unsigned hi,lo;
@@ -89,6 +145,96 @@ module tb_Cluster;
     end
     return slots;
   endfunction
+  function automatic int result_latency();
+    int size,delay;
+    delay=0;
+    for(int g=0;g<8;g++) if(expected_mask[4*g+:4]!=0) begin
+      size=0;
+      for(int m=0;m<8;m++) if(golden_group[m]==g) size++;
+      if((size<=2 ? 2 : size==4 ? 3 : 4)>delay) delay=size<=2 ? 2 : size==4 ? 3 : 4;
+    end
+    return delay+1; // tree -> tmp DFF -> arithmetic/storage
+  endfunction
+  function automatic int lane_latency(input int lane);
+    int size;
+    size=0;
+    for(int m=0;m<8;m++) if(golden_group[m]==lane/4) size++;
+    return size<=2 ? 3 : size==4 ? 4 : 5;
+  endfunction
+
+  // Check intermediate history independently of the DUT's route enables.
+  // A mathematical running sum checks AS's reuse of the same Context entry;
+  // a separate Tile sum checks WS's tmp history and final-only Psum writes.
+  always @(posedge clock) begin : arithmetic_scoreboard
+    longint signed tile_sum[0:MAX_CONTEXTS-1][0:31];
+    longint signed running_sum[0:MAX_CONTEXTS-1][0:31];
+    longint signed want[0:31], old_psum[0:31];
+    int cx[0:31], ti[0:31];
+    bit check_p[0:31], check_t[0:31], no_p[0:31];
+    int ph,kt,c,ab;
+    bit traced;
+    string trace_row, op;
+    if(!reset && monitoring) begin
+      traced=0; trace_row="";
+      for(int l=0;l<32;l++) begin
+        check_p[l]=0; check_t[l]=0; no_p[l]=0;
+        if(!dut.fusion_enable[l] && (dut.fusion_a[l]!==0 || dut.fusion_b[l]!==0))
+          $fatal(1,"Unused fusion operands not isolated");
+        if(!dut.acc_enable[l] && (dut.acc_a[l]!==0 || dut.acc_b[l]!==0))
+          $fatal(1,"Unused acc operands not isolated");
+        if(dut.tmp_valid[l]) begin
+          c=dut.tmp_tag[l].ctx; ph=dut.tmp_tag[l].ph; kt=dut.tmp_tag[l].kt;
+          ab=abits(int'(dut.tmp_tag[l].cmd.precision));
+          cx[l]=c; ti[l]=dut.tmp_tag[l].cmd.as_cnt>1 ? c : 0;
+          if(ph==0) tile_sum[c][l]=0;
+          if(ph==0 && kt==0) running_sum[c][l]=0;
+          tile_sum[c][l]+=dut.tmp_result[l] <<< (4*ph);
+          running_sum[c][l]+=dut.tmp_result[l] <<< (4*ph);
+          if(dut.tmp_tag[l].cmd.os_cnt==1) begin
+            check_t[l]=ab>4; want[l]=tile_sum[c][l];
+            no_p[l]=1; old_psum[l]=dut.psum[c][l];
+            if(dut.psum_write[l] || dut.acc_enable[l])
+              $fatal(1,"os=1 must bypass Psum state and acc");
+          end else if(dut.tmp_tag[l].cmd.as_cnt>1) begin
+            check_p[l]=1; want[l]=running_sum[c][l];
+            if(dut.fusion_enable[l] && dut.acc_enable[l])
+              $fatal(1,"AS must select fusion OR acc, never cascade");
+            if(dut.acc_enable[l] !== (ph==0 && kt>0) ||
+               dut.fusion_enable[l] !== (ph>0))
+              $fatal(1,"AS phase/Tile route mismatch");
+          end else begin
+            check_t[l]=ab>4; want[l]=tile_sum[c][l];
+            if(ph==ab/4-1) begin check_p[l]=1; end
+            else begin no_p[l]=1; old_psum[l]=dut.psum[c][l]; end
+          end
+          if(dut.result_done[l] && dut.arithmetic_result[l]!==running_sum[c][l])
+            $fatal(1,"Tmp arithmetic lost slice / prior Tile history");
+          if(standard_case!=0 && !traced) begin
+            op=dut.fusion_enable[l] ? (dut.acc_enable[l] ? "fusion+acc" : "fusion") :
+               dut.acc_enable[l] ? "acc" : "seed";
+            trace_row=$sformatf("%0d,%0d,%0d,%0d,%0d,%0d,%0d,%s,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
+              standard_case,int'(dut.tmp_tag[l].cmd.precision),int'(dut.tmp_tag[l].cmd.signed_en),
+              kt,c,ph,l,op,dut.tmp_result[l],dut.fusion_a[l],dut.fusion_b[l],
+              dut.acc_a[l],dut.acc_b[l],dut.arithmetic_result[l],int'(dut.result_done[l]));
+            traced=1;
+          end
+        end
+      end
+      #2;
+      if(traced) begin
+        $fdisplay(operation_trace,"%0d,%s",cycle-first_issue,trace_row);
+        $fflush(operation_trace);
+      end
+      for(int l=0;l<32;l++) begin
+        if(check_t[l] && dut.tmp_buffer[ti[l]][l]!==tile_sum[cx[l]][l])
+          $fatal(1,"Tmp fusion state mismatch ctx=%0d lane=%0d",cx[l],l);
+        if(check_p[l] && dut.psum[cx[l]][l]!==running_sum[cx[l]][l])
+          $fatal(1,"Psum history mismatch ctx=%0d lane=%0d",cx[l],l);
+        if(no_p[l] && dut.psum[cx[l]][l]!==old_psum[l])
+          $fatal(1,"Psum changed on a tmp-only step");
+      end
+    end
+  end
 
   // Capture accepted compute events before NBA, inspect raw result after NBA.
   always @(posedge clock) begin : scoreboard
@@ -121,22 +267,34 @@ module tb_Cluster;
       end
       if(dut.issue) begin
         idx=issue_count; t=idx/(case_r*case_p);
-        if(case_as!=0) begin p=(idx/case_r)%case_p; c=idx%case_r; end
+        if(case_as>1) begin p=(idx/case_r)%case_p; c=idx%case_r; end
         else begin c=(idx/case_p)%case_r; p=idx%case_p; end
         if(dut.phase!=p || dut.context_idx!=c || dut.tile!=t)
           $fatal(1,"Issue order differs from spec at index %0d",idx);
-        if(case_as!=0 && c!=0 && act_ready_o)
+        if(case_as>1 && c!=0 && act_ready_o)
           $fatal(1,"AS plane can be overwritten before all consumers finish");
-        if(dut.command.weight_cim_raddr!==8'('h20+16*t+(case_as!=0 ? c : 0)))
+        if(dut.command.weight_cim_raddr!==8'('h20+16*t+(case_as>1 ? c : 0)))
           $fatal(1,"Descriptor weight address mismatch");
         if(issue_count==0) first_issue=cycle;
         else if(exact_ii && cycle!=last_issue+1)
           $fatal(1,"Unexpected bubble in v2.7 schedule");
         last_issue=cycle; issue_count++;
         if((dut.ren & ~dut.station)!=0) reuse_cycles++;
-        if(p==case_p-1 && t==case_os-1) final_due[c]=cycle+4;
+        if(p==case_p-1 && t==case_os-1) begin
+          final_due[c]=cycle+result_latency(); final_slot[c]=dut.wr_ptr;
+          for(int l=0;l<32;l++) if(expected_mask[l]) lane_due[c][l]=cycle+lane_latency(l);
+        end
       end
       #1;
+      // Verify actual per-channel output-buffer writes, including early lanes
+      // of mixed trees, rather than checking only whole-Context publication.
+      for(int cx=0;cx<case_r;cx++) for(int l=0;l<32;l++) if(lane_due[cx][l]>=cycle) begin
+        if(cycle<lane_due[cx][l] && dut.ready_mask[final_slot[cx]][l])
+          $fatal(1,"Premature terminal write ctx=%0d lane=%0d",cx,l);
+        if(cycle==lane_due[cx][l] && (!dut.ready_mask[final_slot[cx]][l] ||
+            dut.output_buffer[l][final_slot[cx]]!==32'(expected[cx][l])))
+          $fatal(1,"Missing/incorrect direct terminal write ctx=%0d lane=%0d",cx,l);
+      end
       if(dut.raw_psum_valid) begin
         tag=dut.raw_context;
         if(tag>=case_r || raw_seen[tag] || final_due[tag]!=cycle)
@@ -151,7 +309,7 @@ module tb_Cluster;
         raw_seen[tag]=1; raw_count++;
       end
       for(int c0=0;c0<case_r;c0++)
-        if(final_due[c0]==cycle && !raw_seen[c0]) $fatal(1,"Missing raw output at +4T");
+        if(final_due[c0]==cycle && !raw_seen[c0]) $fatal(1,"Missing raw output at terminal-dependent latency");
     end
   end
   // Downstream is held long enough to fill even a non-power-of-two buffer.
@@ -192,7 +350,9 @@ module tb_Cluster;
     longint signed w,a;
     wb=wbits(precision); ab=abits(precision); kr=256/wb;
     case_os=os; case_ws=ws; case_as=as_count;
-    case_r=ws!=0 ? ws : as_count!=0 ? as_count : 1; case_p=ab/4;
+    if(os<1 || ws<1 || as_count<1 || (ws>1 && as_count>1))
+      $fatal(1,"Counts must be >=1; simultaneous WS/AS reuse is not defined");
+    case_r=ws>1 ? ws : as_count; case_p=ab/4;
     d='0; d.os_cnt=16'(os); d.ws_cnt=16'(ws); d.as_cnt=16'(as_count);
     d.precision=3'(precision); d.signed_en=sign_en; d.reduce_split_mask=split;
     d.macro_en_mask=en; d.macro_oc_mask=oc; d.act_slot_sel=slots;
@@ -203,12 +363,12 @@ module tb_Cluster;
     expected_mask='0;
     for(int cx=0;cx<case_r;cx++) begin
       final_due[cx]=-1; raw_seen[cx]=0; output_seen[cx]=0;
-      for(int i=0;i<32;i++) expected[cx][i]=0;
+      for(int i=0;i<32;i++) begin expected[cx][i]=0; lane_due[cx][i]=-1; end
     end
     for(int kt=0;kt<os;kt++) for(int cx=0;cx<case_r;cx++)
       for(int k=0;k<256;k++) begin
-        a_ctx=as_count!=0 ? 0 : cx;
-        if(cx==0 || as_count==0)
+        a_ctx=as_count>1 ? 0 : cx;
+        if(cx==0 || as_count<=1)
           activation[kt][cx][k]=sample_bits(ab,pattern,k+7*cx+kt,sign_en,0);
         else activation[kt][cx][k]=activation[kt][0][k];
         // Keep all positive W8A16 OS extrema within signed32; no saturation.
@@ -217,7 +377,7 @@ module tb_Cluster;
       end
     // Preload every tile/context row before issuing any computation.
     for(int kt=0;kt<os;kt++) begin
-      for(int wc=0;wc<(as_count!=0 ? case_r : 1);wc++) begin
+      for(int wc=0;wc<(as_count>1 ? case_r : 1);wc++) begin
         @(negedge clock);
         weight_waddr_i=8'('h20+16*kt+wc); weight_wen_i=8'hff;
         for(int m=0;m<8;m++) begin
@@ -227,7 +387,7 @@ module tb_Cluster;
             for(int b=0;b<wb;b++) row[256*ocid+wb*j+b]=(raw>>b)&1;
             if(en[m] && oc[4*m+ocid]) begin
               l=4*golden_group[m]+ocid; slot=int'(slots[3*m+:3]);
-              for(int cx=0;cx<case_r;cx++) if(as_count==0 || cx==wc) begin
+              for(int cx=0;cx<case_r;cx++) if(as_count<=1 || cx==wc) begin
                 w=number(raw,wb,sign_en);
                 a=number(activation[kt][cx][slot*kr+j],ab,sign_en);
                 expected[cx][l]+=w*a; expected_mask[l]=1;
@@ -248,12 +408,12 @@ module tb_Cluster;
     monitoring=1;
     for(int index=0;index<os*case_r*case_p;index++) begin
       t=index/(case_r*case_p);
-      if(as_count!=0) begin p=(index/case_r)%case_p; c=index%case_r; end
+      if(as_count>1) begin p=(index/case_r)%case_p; c=index%case_r; end
       else begin c=(index/case_p)%case_r; p=index%case_p; end
-      d.weight_cim_raddr=8'('h20+16*t+(as_count!=0 ? c : 0));
+      d.weight_cim_raddr=8'('h20+16*t+(as_count>1 ? c : 0));
       plane='0;
       for(int k=0;k<used_digits;k++) plane[4*k+:4]=4'(activation[t][c][k]>>(4*p));
-      if(as_count==0 || c==0) begin
+      if(as_count<=1 || c==0) begin
         fork
           send_command(d,bubbles ? (index%3) : 0);
           send_plane(plane,bubbles ? ((index+1)%3) : 0);
@@ -275,6 +435,7 @@ module tb_Cluster;
 
   initial begin : regression
     int legal_count,n,r;
+    string data_dir;
     logic [23:0] standard_slots;
     logic [7:0] standard_en;
     logic [6:0] standard_split;
@@ -283,7 +444,12 @@ module tb_Cluster;
     if(OUTPUT_BUFFER_DEPTH<1) $fatal(1,"Depth must be >=1");
     for(int mask=0;mask<128;mask++) if(canonical(7'(mask))) canonical_count++;
     if(canonical_count!=26) $fatal(1,"Expected 26 canonical trees");
-    manifest=$fopen("split_cases.csv","w");
+    data_dir=".";
+    if($value$plusargs("DATA_DIR=%s",data_dir)) begin end
+    manifest=$fopen($sformatf("%s/split_cases.csv",data_dir),"w");
+    operation_trace=$fopen($sformatf("%s/buffer_operations.csv",data_dir),"w");
+    if(!manifest || !operation_trace) $fatal(1,"Cannot open CSV output directory %s",data_dir);
+    $fdisplay(operation_trace,"compute_cycle,case,precision,signed_en,tile,context,phase,lane,operation,tmp,fusion_a,fusion_b,acc_a,acc_b,result,done");
     $fdisplay(manifest,"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,group2_K,group3_K,group4_K,group5_K,group6_K,group7_K");
     repeat(4) @(negedge clock); reset=0;
     repeat(2) @(negedge clock);
@@ -301,7 +467,7 @@ module tb_Cluster;
           $fwrite(manifest,"\n"); configurations++;
           for(int pattern=0;pattern<PATTERNS;pattern++)
             run_case(p,1'(s),7'(mask),EN_MASK,OC_MASK,make_slots(7'(mask)),
-                     pattern,OS_TILES,0,0,0,pattern==0);
+                     pattern,OS_TILES,1,1,0,pattern==0);
         end
       end
       $display("precision=%0d W%0dA%0d splits/sign=%0d",p,wbits(p),abits(p),legal_count);
@@ -311,21 +477,49 @@ module tb_Cluster;
         default: begin standard_slots=24'hfac688; standard_en=8'h0f; standard_split=0; end
       endcase
       // Six chapter-4 schedules, both signs; K=128 per tile, high plane half 0.
-      for(int s=0;s<2;s++) for(int mode=0;mode<6;mode++)
+      for(int s=0;s<2;s++) for(int mode=0;mode<6;mode++) begin
+        standard_case=mode+1;
         run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
-                 0,mode<2 ? 1 : 2, mode%2==0 ? (mode==2 ? 1 : 2) : 0,
-                 mode%2==1 ? (mode==3 ? 1 : 2) : 0,OUTPUT_BUFFER_DEPTH<2,0);
+                 0,mode<3 ? 1 : 2, (mode==2 || mode==4) ? 2 : 1,
+                 (mode==1 || mode==5) ? 2 : 1,OUTPUT_BUFFER_DEPTH<2,0);
+      end
+      standard_case=0;
       // More contexts than output entries: force full, wrap and backpressure.
       r=OUTPUT_BUFFER_DEPTH+2;
       if(r>MAX_CONTEXTS) r=MAX_CONTEXTS;
+      if(r>PSUM_BUFFER_DEPTH) r=PSUM_BUFFER_DEPTH;
       for(int s=0;s<2;s++) for(int mode=0;mode<2;mode++)
         run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
-                 0,2,mode==0 ? r : 0,mode==1 ? r : 0,1,1);
+                 0,2,mode==0 ? r : 1,mode==1 ? r : 1,1,1);
+      // Three Tiles and three interleaved Contexts: catch history overwrite
+      // beyond the two-Tile/two-Context examples, with signed extrema too.
+      for(int s=0;s<2;s++) for(int mode=0;mode<2;mode++)
+        for(int pattern=4;pattern<6;pattern++)
+          run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
+                   pattern,3,mode==0 ? (PSUM_BUFFER_DEPTH<3 ? PSUM_BUFFER_DEPTH : 3) : 1,
+                             mode==1 ? (PSUM_BUFFER_DEPTH<3 ? PSUM_BUFFER_DEPTH : 3) : 1,1,1);
     end
     $fclose(manifest);
-    if(reuse_cycles==0 || (OUTPUT_BUFFER_DEPTH<MAX_CONTEXTS &&
+    $fclose(operation_trace);
+    if(reuse_cycles==0 || (OUTPUT_BUFFER_DEPTH<MAX_CONTEXTS && OUTPUT_BUFFER_DEPTH<PSUM_BUFFER_DEPTH &&
                           (full_cycles==0 || stalled_cycles==0)))
       $fatal(1,"Missing coverage: reuse=%0d full=%0d stalls=%0d",reuse_cycles,full_cycles,stalled_cycles);
+    for(int n=1;n<7;n++) begin
+      if(dut.u_reduce.gated_checks[n]==0) $fatal(1,"No gated hold checks for node %0d",n);
+      $display("CG node=t%0d active_edges=%0d gated_OC_checks=%0d",n,
+        dut.u_reduce.active_edges[n],dut.u_reduce.gated_checks[n]);
+    end
+    if(dut.tmp_only_steps==0 || dut.as_seed_steps==0 || dut.as_fusion_steps==0 ||
+       dut.as_acc_steps==0 || dut.ws_fusion_steps==0 || dut.ws_acc_steps==0 ||
+       dut.ws_serial_steps==0 || dut.a4_acc_steps==0)
+      $fatal(1,"Missing tmp/fusion/acc routing coverage");
+    $display("TMP_ROUTES os1=%0d AS_seed=%0d AS_fusion=%0d AS_acc=%0d WS_fusion=%0d WS_acc=%0d WS_serial=%0d A4_acc=%0d",
+      dut.tmp_only_steps,dut.as_seed_steps,dut.as_fusion_steps,dut.as_acc_steps,
+      dut.ws_fusion_steps,dut.ws_acc_steps,dut.ws_serial_steps,dut.a4_acc_steps);
+    if(buffer_gate_checks==0 || os1_psum_hold_checks==0 ||
+       (PSUM_BUFFER_DEPTH>2 && high_depth_checks==0)) $fatal(1,"Missing buffer gate checks");
+    $display("BUFFER_ICG checks=%0d high_depth=%0d os1_Psum_hold=%0d depth=%0d",
+      buffer_gate_checks,high_depth_checks,os1_psum_hold_checks,PSUM_BUFFER_DEPTH);
     $display("PASS configurations=%0d cases=%0d depth/channel=%0d reuse=%0d full=%0d stalls=%0d seed=%08h",
       configurations,cases_run,OUTPUT_BUFFER_DEPTH,reuse_cycles,full_cycles,stalled_cycles,SEED);
     $finish;

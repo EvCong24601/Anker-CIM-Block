@@ -1,0 +1,19 @@
+PASS: 140 Context outputs and 480 buffer operations match the six schedules.
+Signed/unsigned timing identical; C0 is first input; no stalls or requant.
+From last input to raw: W2=3T, W4=4T, W8=5T.
+Operation trace checked: 480 events.
+
+case 1: os=1, ws=1, as=1
+case 2: os=1, ws=1, as=2
+case 3: os=1, ws=2, as=1
+case 4: os=2, ws=1, as=1
+case 5: os=2, ws=2, as=1
+case 6: os=2, ws=1, as=2
+
+precision=0 W2A4: complete latency=3T; final raw cycles=[3, 4, 4, 4, 6, 6]
+precision=1 W2A8: complete latency=3T; final raw cycles=[4, 6, 6, 6, 10, 10]
+precision=2 W4A4: complete latency=4T; final raw cycles=[4, 5, 5, 5, 7, 7]
+precision=3 W4A8: complete latency=4T; final raw cycles=[5, 7, 7, 7, 11, 11]
+precision=4 W4A16: complete latency=4T; final raw cycles=[7, 11, 11, 11, 19, 19]
+precision=5 W8A8: complete latency=5T; final raw cycles=[6, 8, 8, 8, 12, 12]
+precision=6 W8A16: complete latency=5T; final raw cycles=[8, 12, 12, 12, 20, 20]

@@ -68,7 +68,7 @@ ifeq ($(TB),cluster)
 check:
 	grep -q "PASS configurations=" ${WORK_DIR}/${OUTPUT}.log
 	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
-	python3 ../RTL/Anker-CIM-Block/cluster/cluster_tb/verify_manifest.py ${WORK_DIR}/split_cases.csv
+	python3 ../RTL/cluster/cluster_tb/py/verify_manifest.py ${WORK_DIR}/split_cases.csv
 else
 check:
 	grep -q "PASS clock_gating=" ${WORK_DIR}/${OUTPUT}.log

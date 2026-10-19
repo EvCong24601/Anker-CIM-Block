@@ -52,4 +52,4 @@ def main(path):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1] if len(sys.argv) > 1 else 'split_cases.csv')
+    main(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[1] / 'data/split_cases.csv')
