@@ -1,0 +1,10 @@
+work/
+*.log
+*.vpd
+*.vcd
+*.fsdb
+*.key
+simv*
+csrc/
+*.daidir
+DVEfiles/
