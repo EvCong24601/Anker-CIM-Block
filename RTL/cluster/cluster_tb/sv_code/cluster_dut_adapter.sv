@@ -1,7 +1,6 @@
 `timescale 1ns/1ps
 // Simulation reference Cluster. Existing ports carry RAW Psum, no requant.
 module cluster_dut_adapter #(
-  parameter int OUTPUT_BUFFER_DEPTH = 4,
   parameter int MAX_CONTEXTS = 16,
   parameter int PSUM_BUFFER_DEPTH = MAX_CONTEXTS
 ) (
@@ -14,15 +13,13 @@ module cluster_dut_adapter #(
   input logic [7:0] weight_waddr_i,
   input logic [8191:0] weight_wdata_i,
   output logic [1023:0] psum_data_o,
-  output logic [31:0] psum_lane_valid_o,
-  output logic out_valid_o,
-  input logic out_ready_i
+  output logic [31:0] out_valid_o
 );
   import cluster_tb_pkg::*;
   cluster_ctrl_t command;
   logic [1023:0] held_plane, plane;
   int phase, context_idx, tile, phases, contexts;
-  logic need_plane, issue, credit_ok, final_issue;
+  logic need_plane, issue, final_issue;
   logic [31:0] issue_mask;
   logic [7:0] active, ren, station, hold_valid;
   logic [7:0] hold_addr [0:7];
@@ -34,7 +31,6 @@ module cluster_dut_adapter #(
     logic valid;
     cluster_ctrl_t cmd;
     int ph, ctx, kt;
-    int slot;
     logic [31:0] mask;
   } tag_t;
   tag_t in_tag, macro_tag, red1_tag, red2_tag;
@@ -81,22 +77,20 @@ module cluster_dut_adapter #(
   // Internal operation coverage; no extra external interface.
   int tmp_only_steps, as_seed_steps, as_fusion_steps, as_acc_steps;
   int ws_fusion_steps, ws_acc_steps, ws_serial_steps, a4_acc_steps;
-  // OUTPUT_BUFFER_DEPTH entries PER channel. A masked vector retires together.
-  logic [31:0] output_buffer [0:31][0:OUTPUT_BUFFER_DEPTH-1];
-  logic [31:0] output_mask [0:OUTPUT_BUFFER_DEPTH-1];
-  int output_context [0:OUTPUT_BUFFER_DEPTH-1]; // internal verification tag
-  logic [31:0] ready_mask[0:OUTPUT_BUFFER_DEPTH-1];
-  logic pending_slot[0:OUTPUT_BUFFER_DEPTH-1];
-  int rd_ptr, wr_ptr, commit_ptr, occupancy, reserved;
-  wire pop = out_valid_o && out_ready_i;
+  // No output FIFO, no vector assembly. Every reserved OC lane publishes
+  // itself the moment its result arrives: one one-cycle out_valid_o[l] pulse
+  // per lane and Context. The downstream is assumed to be always ready (no
+  // backpressure). result_ready/result_mask only track lane reservation and
+  // completion for the integrity checks and the batch-end decision.
+  logic [31:0] result_ready [0:MAX_CONTEXTS-1];
+  logic [31:0] result_mask [0:MAX_CONTEXTS-1];
   // Internal observation only; no new external signal.
-  logic raw_psum_valid;
+  logic [31:0] raw_valid;
   int raw_context;
   logic [1023:0] raw_data;
-  logic [31:0] raw_mask;
   initial begin
-    if(OUTPUT_BUFFER_DEPTH<1 || MAX_CONTEXTS<1 || PSUM_BUFFER_DEPTH<1)
-      $fatal(1,"Buffer depth / context capacity must be >= 1");
+    if(MAX_CONTEXTS<1 || PSUM_BUFFER_DEPTH<1)
+      $fatal(1,"Context capacity must be >= 1");
   end
   always_comb begin
     command=cmd_i;
@@ -114,19 +108,18 @@ module cluster_dut_adapter #(
           issue_mask[4*group_of(command.reduce_split_mask,m)+c]=1;
     end
     final_issue=phase==phases-1 && tile==int'(command.os_cnt)-1;
-    credit_ok=!final_issue || reserved<OUTPUT_BUFFER_DEPTH || pop;
     issue=cmd_valid_i && cmd_ready_o;
     ren=active & {8{issue}};
     for(int m=0;m<8;m++)
       station[m]=!hold_valid[m] || hold_addr[m]!=command.weight_cim_raddr;
   end
-  assign cmd_ready_o=!reset && !batch_input_done && credit_ok;
+  assign cmd_ready_o=!reset && !batch_input_done;
+  // Registered publish: each pulsing out_valid_o bit marks a fresh lane
+  // result on psum_data_o for one cycle; that lane's value holds until its
+  // next publication.
   always_comb begin
-    out_valid_o=occupancy!=0;
-    psum_lane_valid_o=out_valid_o ? output_mask[rd_ptr] : '0;
-    psum_data_o='0;
-    if(out_valid_o)
-      for(int l=0;l<32;l++) psum_data_o[32*l+:32]=output_buffer[l][rd_ptr];
+    out_valid_o=raw_valid;
+    psum_data_o=raw_data;
   end
   for(genvar m=0;m<8;m++) begin: g_macro
     logic [511:0] idata;
@@ -295,30 +288,31 @@ module cluster_dut_adapter #(
     end
   end
   always @(posedge clock or posedge reset) begin : pipeline
-    bit push;
+    bit all_done;
     logic [31:0] captured;
-    int slot;
+    int ctx;
     if(reset) begin
       held_plane<='0;
       phase<=0; context_idx<=0; tile<=0; hold_valid<='0;
       in_tag<='0; macro_tag<='0; red1_tag<='0; red2_tag<='0;
-      rd_ptr<=0; wr_ptr<=0; commit_ptr<=0; occupancy<=0; reserved<=0;
-      raw_psum_valid<=0; raw_context<=0; raw_data<='0; raw_mask<='0;
+      raw_valid<='0; raw_context<=0; raw_data<='0;
       tmp_valid<='0;
       batch_active<=0; batch_input_done<=0; batch_contexts<=0;
       batch_command<='0; psum_depth_open<='0; tmp_depth_open<='0;
       tmp_only_steps=0; as_seed_steps=0; as_fusion_steps=0; as_acc_steps=0;
       ws_fusion_steps=0; ws_acc_steps=0; ws_serial_steps=0; a4_acc_steps=0;
       for(int l=0;l<32;l++) tmp_tag[l]<='0;
-      for(int s=0;s<OUTPUT_BUFFER_DEPTH;s++) begin
-        ready_mask[s]='0; pending_slot[s]=0;
-        output_mask[s]='0; output_context[s]=0;
+      for(int c=0;c<MAX_CONTEXTS;c++) begin
+        result_ready[c]='0; result_mask[c]='0;
       end
     end else begin
       if(cmd_valid_i && cmd_ready_o) begin
         if(!batch_active) begin
           batch_active<=1; batch_command<=cmd_i;
           batch_contexts<=cmd_i.ws_cnt>1 ? int'(cmd_i.ws_cnt) : int'(cmd_i.as_cnt);
+          // Clear per-lane completion tracking for the whole batch; the
+          // per-Context reservation masks are (re)written at final_issue.
+          for(int c=0;c<MAX_CONTEXTS;c++) result_ready[c]='0;
           for(int d=0;d<PSUM_BUFFER_DEPTH;d++)
             psum_depth_open[d]<=cmd_i.os_cnt>1 && d<int'(cmd_i.ws_cnt>1 ? cmd_i.ws_cnt : cmd_i.as_cnt);
           for(int d=0;d<MAX_CONTEXTS;d++)
@@ -358,13 +352,11 @@ module cluster_dut_adapter #(
         end
         in_tag.cmd<=command; in_tag.ph<=phase; in_tag.ctx<=context_idx;
         in_tag.kt<=tile; in_tag.mask<=issue_mask;
-        in_tag.slot<=wr_ptr;
         if(final_issue && context_idx==contexts-1) batch_input_done<=1;
         if(final_issue) begin
-          // Allocate once BEFORE final-phase results can take any short path.
-          pending_slot[wr_ptr]=1; ready_mask[wr_ptr]='0;
-          output_mask[wr_ptr]<=issue_mask; output_context[wr_ptr]<=context_idx;
-          wr_ptr<=(wr_ptr+1)%OUTPUT_BUFFER_DEPTH;
+          // Reserve the Context's lanes once BEFORE final-phase results can
+          // take any short path.
+          result_mask[context_idx]<=issue_mask;
         end
         if(command.as_cnt>1) begin
           if(context_idx==contexts-1) begin
@@ -393,7 +385,7 @@ module cluster_dut_adapter #(
         end
       end
       red2_tag<=red1_tag;
-      raw_psum_valid<=0;
+      raw_valid<='0;
       // Consume the PREVIOUS tmp DFF contents. NBA state writes preserve
       // consecutive-phase feedback and prevent zero-time procedural cascades.
       for(int l=0;l<32;l++) if(tmp_valid[l]) begin
@@ -412,11 +404,15 @@ module cluster_dut_adapter #(
           if(arithmetic_result[l] < -64'sd2147483648 || arithmetic_result[l]>64'sd2147483647 ||
              (!tmp_tag[l].cmd.signed_en && arithmetic_result[l]<0))
             $fatal(1,"Psum signed32 overflow (policy TBD)");
-          slot=tmp_tag[l].slot;
-          if(!pending_slot[slot] || ready_mask[slot][l])
+          ctx=tmp_tag[l].ctx;
+          if(!result_mask[ctx][l] || result_ready[ctx][l])
             $fatal(1,"Unreserved/duplicate final lane write");
-          output_buffer[l][slot]=32'(arithmetic_result[l]);
-          ready_mask[slot][l]=1;
+          result_ready[ctx][l]=1;
+          // Publish this lane immediately: its out_valid_o bit pulses for
+          // one cycle, the lane value holds until the lane publishes again.
+          raw_valid[l]<=1;
+          raw_data[32*l+:32]<=32'(arithmetic_result[l]);
+          raw_context<=ctx;
         end
       end
       // Independent tree taps capture into per-channel tmp DFFs. There is
@@ -433,26 +429,21 @@ module cluster_dut_adapter #(
           tmp_tag[l]<=tap_tag[path];
         end
       end
-      // A mixed tree writes shallow groups early. Publish only when every
-      // required channel in this Context's reserved slot has actually arrived.
-      push=pending_slot[commit_ptr] && ready_mask[commit_ptr]==output_mask[commit_ptr] &&
-           !(issue && final_issue && commit_ptr==wr_ptr);
-      if(push) begin
-        if(occupancy==OUTPUT_BUFFER_DEPTH && !pop) $fatal(1,"Output FIFO overflow");
-        pending_slot[commit_ptr]=0;
-        raw_psum_valid<=1; raw_context<=output_context[commit_ptr]; raw_mask<=output_mask[commit_ptr];
-        for(int l=0;l<32;l++) raw_data[32*l+:32]<=output_mask[commit_ptr][l] ? output_buffer[l][commit_ptr] : '0;
-        commit_ptr<=(commit_ptr+1)%OUTPUT_BUFFER_DEPTH;
-        if(output_context[commit_ptr]==batch_contexts-1) begin
-          batch_active<=0; batch_input_done<=0;
-          psum_depth_open<='0; tmp_depth_open<='0;
-        end
+      // A mixed tree writes shallow groups early; every lane publishes at
+      // its own endpoint latency, so per-OC results leave the Cluster
+      // without waiting for the Context vector to fill. Same-lane
+      // publication order follows Context order: all Contexts share one
+      // descriptor (identical lane latencies), final-issue cycles increase
+      // strictly, and every completion cycle maps to exactly one issue
+      // event. The batch closes only after every Context has reserved and
+      // completed its lanes.
+      all_done=1;
+      for(int c=0;c<batch_contexts;c++)
+        if(result_mask[c]==0 || result_ready[c]!=result_mask[c]) all_done=0;
+      if(batch_active && all_done) begin
+        batch_active<=0; batch_input_done<=0;
+        psum_depth_open<='0; tmp_depth_open<='0;
       end
-      if(pop) rd_ptr<=(rd_ptr+1)%OUTPUT_BUFFER_DEPTH;
-      occupancy<=occupancy+int'(push)-int'(pop);
-      reserved<=reserved+int'(issue && final_issue)-int'(pop);
-      if(occupancy<0 || reserved<occupancy || reserved>OUTPUT_BUFFER_DEPTH)
-        $fatal(1,"Output FIFO credit accounting error");
     end
   end
 endmodule

@@ -5,8 +5,7 @@ module tb_Cluster;
   parameter logic [31:0] OC_MASK=32'hffff_ffff;
   parameter int OS_TILES=1;
   parameter int PATTERNS=6;
-  parameter int OUTPUT_BUFFER_DEPTH=4; // signed32 entries in EACH output channel
-  parameter int PSUM_BUFFER_DEPTH=16; // Context entries per channel, separate from output FIFO
+  parameter int PSUM_BUFFER_DEPTH=16; // Context entries per channel
   parameter int TIMEOUT_CYCLES=4000;
   parameter logic [31:0] SEED=32'h19e2a407;
   localparam int MAX_CONTEXTS=16;
@@ -14,15 +13,15 @@ module tb_Cluster;
   always #5 clock=~clock;
   logic reset=1;
   cluster_ctrl_t cmd_i='0;
-  logic cmd_valid_i=0, out_ready_i=0;
-  wire cmd_ready_o, out_valid_o;
+  logic cmd_valid_i=0;
+  wire cmd_ready_o;
+  wire [31:0] out_valid_o;
   logic [1023:0] act_data_i='0;
   logic [7:0] weight_wen_i=0, weight_waddr_i=0;
   logic [8191:0] weight_wdata_i=0;
   wire [1023:0] psum_data_o;
-  wire [31:0] psum_lane_valid_o;
-  cluster_dut_adapter #(.OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
-                       .MAX_CONTEXTS(MAX_CONTEXTS),.PSUM_BUFFER_DEPTH(PSUM_BUFFER_DEPTH)) dut(.*);
+  cluster_dut_adapter #(.MAX_CONTEXTS(MAX_CONTEXTS),
+                        .PSUM_BUFFER_DEPTH(PSUM_BUFFER_DEPTH)) dut(.*);
   logic [31:0] rng=SEED;
   int unsigned activation[0:255][0:MAX_CONTEXTS-1][0:255];
   longint signed expected[0:MAX_CONTEXTS-1][0:31];
@@ -30,17 +29,13 @@ module tb_Cluster;
   int golden_group[0:7];
   int cases_run=0, configurations=0, canonical_count=0, manifest;
   int standard_case=0; // six distinct chapter-4 configurations
-  int cycle=0, issue_count, raw_count, output_count;
+  int cycle=0, issue_count, raw_count;
   int case_os, case_ws, case_as, case_r, case_p, first_issue, last_issue;
   int case_used_digits;
-  int final_due[0:MAX_CONTEXTS-1];
-  int final_slot[0:MAX_CONTEXTS-1],lane_due[0:MAX_CONTEXTS-1][0:31];
-  bit raw_seen[0:MAX_CONTEXTS-1], output_seen[0:MAX_CONTEXTS-1];
-  bit monitoring=0, stress=0, exact_ii=0;
-  int stalled_cycles=0, reuse_cycles=0, full_cycles=0;
-  bit held_output=0;
-  logic [1023:0] last_data;
-  logic [31:0] last_mask;
+  int lane_due[0:MAX_CONTEXTS-1][0:31];
+  bit raw_seen[0:MAX_CONTEXTS-1][0:31];
+  bit monitoring=0, exact_ii=0;
+  int reuse_cycles=0;
   bit held_cmd=0, held_act_for_cmd=0;
   cluster_ctrl_t last_cmd;
   logic [1023:0] last_act;
@@ -146,16 +141,6 @@ module tb_Cluster;
     end
     return slots;
   endfunction
-  function automatic int result_latency();
-    int size,delay;
-    delay=0;
-    for(int g=0;g<8;g++) if(expected_mask[4*g+:4]!=0) begin
-      size=0;
-      for(int m=0;m<8;m++) if(golden_group[m]==g) size++;
-      if((size<=2 ? 2 : size==4 ? 3 : 4)>delay) delay=size<=2 ? 2 : size==4 ? 3 : 4;
-    end
-    return delay+1; // tree -> tmp DFF -> arithmetic/storage
-  endfunction
   function automatic int lane_latency(input int lane);
     int size;
     size=0;
@@ -241,31 +226,13 @@ module tb_Cluster;
   always @(posedge clock) begin : scoreboard
     int t,c,p,idx,tag;
     cycle=cycle+1;
-    if(reset) begin held_output=0; end
-    else if(monitoring) begin
+    if(!reset && monitoring) begin
       if(held_cmd && (!cmd_valid_i || cmd_i!==last_cmd))
         $fatal(1,"Command changed before ready");
       if(held_act_for_cmd && act_data_i!==last_act)
         $fatal(1,"ACT payload changed while its Command was stalled");
       held_cmd=cmd_valid_i && !cmd_ready_o; last_cmd=cmd_i;
       held_act_for_cmd=cmd_valid_i && !cmd_ready_o && dut.need_plane; last_act=act_data_i;
-      if(held_output && (!out_valid_o || psum_data_o!==last_data ||
-                         psum_lane_valid_o!==last_mask))
-        $fatal(1,"Output changed under backpressure");
-      held_output=out_valid_o && !out_ready_i;
-      last_data=psum_data_o; last_mask=psum_lane_valid_o;
-      if(dut.occupancy==OUTPUT_BUFFER_DEPTH) full_cycles++;
-      if(cmd_valid_i && !cmd_ready_o) stalled_cycles++;
-      if(out_valid_o && out_ready_i) begin
-        tag=dut.output_context[dut.rd_ptr];
-        if(tag!=output_count || tag>=case_r || output_seen[tag])
-          $fatal(1,"Duplicate/out-of-order buffered Context %0d",tag);
-        if(psum_lane_valid_o!==expected_mask) $fatal(1,"Buffered mask mismatch");
-        for(int l=0;l<32;l++) if(expected_mask[l] &&
-            psum_data_o[32*l+:32]!==32'(expected[tag][l]))
-          $fatal(1,"Buffered result case=%0d ctx=%0d lane=%0d",cases_run,tag,l);
-        output_seen[tag]=1; output_count++;
-      end
       if(dut.issue) begin
         idx=issue_count; t=idx/(case_r*case_p);
         if(case_as>1) begin p=(idx/case_r)%case_p; c=idx%case_r; end
@@ -284,44 +251,34 @@ module tb_Cluster;
           $fatal(1,"Unexpected bubble in v2.7 schedule");
         last_issue=cycle; issue_count++;
         if((dut.ren & ~dut.station)!=0) reuse_cycles++;
-        if(p==case_p-1 && t==case_os-1) begin
-          final_due[c]=cycle+result_latency(); final_slot[c]=dut.wr_ptr;
+        if(p==case_p-1 && t==case_os-1)
           for(int l=0;l<32;l++) if(expected_mask[l]) lane_due[c][l]=cycle+lane_latency(l);
-        end
       end
       #1;
-      // Verify actual per-channel output-buffer writes, including early lanes
-      // of mixed trees, rather than checking only whole-Context publication.
+      // Per-OC publication: every lane leaves the Cluster on its own endpoint
+      // latency. Premature completion is checked against the per-Context done
+      // bits; the due-cycle pulse against the published lane value.
       for(int cx=0;cx<case_r;cx++) for(int l=0;l<32;l++) if(lane_due[cx][l]>=cycle) begin
-        if(cycle<lane_due[cx][l] && dut.ready_mask[final_slot[cx]][l])
+        if(cycle<lane_due[cx][l] && dut.result_ready[cx][l])
           $fatal(1,"Premature terminal write ctx=%0d lane=%0d",cx,l);
-        if(cycle==lane_due[cx][l] && (!dut.ready_mask[final_slot[cx]][l] ||
-            dut.output_buffer[l][final_slot[cx]]!==32'(expected[cx][l])))
-          $fatal(1,"Missing/incorrect direct terminal write ctx=%0d lane=%0d",cx,l);
+        if(cycle==lane_due[cx][l] && (!dut.result_ready[cx][l] || !dut.raw_valid[l]))
+          $fatal(1,"Missing direct terminal write ctx=%0d lane=%0d",cx,l);
       end
-      if(dut.raw_psum_valid) begin
+      if(dut.raw_valid!=0) begin
         tag=dut.raw_context;
-        if(tag>=case_r || raw_seen[tag] || final_due[tag]!=cycle)
-          $fatal(1,"Raw latency/context mismatch ctx=%0d actual=%0d due=%0d",
-                 tag,cycle,final_due[tag]);
-        if(dut.raw_mask!==expected_mask) $fatal(1,"Raw mask mismatch");
-        for(int l=0;l<32;l++) if(expected_mask[l] &&
-            dut.raw_data[32*l+:32]!==32'(expected[tag][l]))
-          $fatal(1,"Raw mismatch case=%0d p=%0d sign=%0d ctx=%0d lane=%0d got=%0d expected=%0d",
-              cases_run,cmd_i.precision,cmd_i.signed_en,tag,l,
-              $signed(dut.raw_data[32*l+:32]),expected[tag][l]);
-        raw_seen[tag]=1; raw_count++;
+        if(tag>=case_r) $fatal(1,"Raw context out of range %0d",tag);
+        if((dut.raw_valid & ~expected_mask)!=0) $fatal(1,"Raw valid on masked lane");
+        for(int l=0;l<32;l++) if(dut.raw_valid[l]) begin
+          if(raw_seen[tag][l] || lane_due[tag][l]!=cycle)
+            $fatal(1,"Raw latency/seen mismatch ctx=%0d lane=%0d due=%0d actual=%0d",
+                   tag,l,lane_due[tag][l],cycle);
+          if(dut.raw_data[32*l+:32]!==32'(expected[tag][l]))
+            $fatal(1,"Raw mismatch case=%0d p=%0d sign=%0d ctx=%0d lane=%0d got=%0d expected=%0d",
+                cases_run,cmd_i.precision,cmd_i.signed_en,tag,l,
+                $signed(dut.raw_data[32*l+:32]),expected[tag][l]);
+          raw_seen[tag][l]=1; raw_count++;
+        end
       end
-      for(int c0=0;c0<case_r;c0++)
-        if(final_due[c0]==cycle && !raw_seen[c0]) $fatal(1,"Missing raw output at terminal-dependent latency");
-    end
-  end
-  // Downstream is held long enough to fill even a non-power-of-two buffer.
-  always @(negedge clock) begin
-    if(monitoring) begin
-      if(stress && (issue_count==0 || cycle-first_issue<case_os*case_r*case_p*4+16))
-        out_ready_i=0;
-      else out_ready_i=!stress || cycle%4!=0;
     end
   end
   task automatic send_compute(input cluster_ctrl_t d, input logic [1023:0] data, input int gap);
@@ -337,7 +294,7 @@ module tb_Cluster;
   task automatic run_case(input int precision, input bit sign_en,
       input logic [6:0] split, input logic [7:0] en,
       input logic [31:0] oc, input logic [23:0] slots,
-      input int pattern,os,ws,as_count, input bit pressure,bubbles);
+      input int pattern,os,ws,as_count, input bit bubbles);
     cluster_ctrl_t d;
     logic [1023:0] plane, row;
     int wb,ab,kr,l,slot,a_ctx,c,p,t,groups,used_digits;
@@ -358,7 +315,7 @@ module tb_Cluster;
     groups=0; decode_groups(split,0,0,8,groups);
     expected_mask='0;
     for(int cx=0;cx<case_r;cx++) begin
-      final_due[cx]=-1; raw_seen[cx]=0; output_seen[cx]=0;
+      raw_seen[cx]=0;
       for(int i=0;i<32;i++) begin expected[cx][i]=0; lane_due[cx][i]=-1; end
     end
     for(int kt=0;kt<os;kt++) for(int cx=0;cx<case_r;cx++)
@@ -398,9 +355,9 @@ module tb_Cluster;
     for(int cx=0;cx<case_r;cx++) for(int ch=0;ch<32;ch++)
       if(expected[cx][ch]<-64'sd2147483648 || expected[cx][ch]>64'sd2147483647)
         $fatal(1,"Golden overflow: selected OS/pattern exceeds signed32");
-    issue_count=0; raw_count=0; output_count=0; first_issue=-1; last_issue=-1;
-    stress=pressure; exact_ii=!pressure && !bubbles;
-    held_output=0; held_cmd=0; held_act_for_cmd=0;
+    issue_count=0; raw_count=0; first_issue=-1; last_issue=-1;
+    exact_ii=!bubbles;
+    held_cmd=0; held_act_for_cmd=0;
     monitoring=1;
     for(int index=0;index<os*case_r*case_p;index++) begin
       t=index/(case_r*case_p);
@@ -414,15 +371,15 @@ module tb_Cluster;
     end
     for(int wait_cycles=0;wait_cycles<TIMEOUT_CYCLES;wait_cycles++) begin
       @(negedge clock);
-      if(output_count==case_r) break;
+      if(raw_count==case_r*$countones(expected_mask)) break;
       if(wait_cycles==TIMEOUT_CYCLES-1) $fatal(1,"Output timeout");
     end
-    if(raw_count!=case_r || issue_count!=os*case_r*case_p)
+    if(raw_count!=case_r*$countones(expected_mask) || issue_count!=os*case_r*case_p)
       $fatal(1,"Lost/duplicate compute or result");
     repeat(6) @(negedge clock);
-    if(out_valid_o || dut.reserved!=0 || dut.occupancy!=0)
-      $fatal(1,"FIFO failed to drain");
-    monitoring=0; out_ready_i=0; cases_run++;
+    if(dut.raw_valid!=0 || dut.batch_active)
+      $fatal(1,"Unexpected output after the final Context published");
+    monitoring=0; cases_run++;
   endtask
 
   initial begin : regression
@@ -433,7 +390,6 @@ module tb_Cluster;
     logic [6:0] standard_split;
     if(OS_TILES<1 || OS_TILES>14 || PATTERNS<1 || PATTERNS>6 || SEED==0)
       $fatal(1,"Require OS_TILES 1..14 (distinct preload rows), PATTERNS 1..6, nonzero seed");
-    if(OUTPUT_BUFFER_DEPTH<1) $fatal(1,"Depth must be >=1");
     for(int mask=0;mask<128;mask++) if(canonical(7'(mask))) canonical_count++;
     if(canonical_count!=26) $fatal(1,"Expected 26 canonical trees");
     data_dir=".";
@@ -459,7 +415,7 @@ module tb_Cluster;
           $fwrite(manifest,"\n"); configurations++;
           for(int pattern=0;pattern<PATTERNS;pattern++)
             run_case(p,1'(s),7'(mask),EN_MASK,OC_MASK,make_slots(7'(mask)),
-                     pattern,OS_TILES,1,1,0,pattern==0);
+                     pattern,OS_TILES,1,1,pattern==0);
         end
       end
       $display("precision=%0d W%0dA%0d splits/sign=%0d",p,wbits(p),abits(p),legal_count);
@@ -473,29 +429,29 @@ module tb_Cluster;
         standard_case=mode+1;
         run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
                  0,mode<3 ? 1 : 2, (mode==2 || mode==4) ? 2 : 1,
-                 (mode==1 || mode==5) ? 2 : 1,OUTPUT_BUFFER_DEPTH<2,0);
+                 (mode==1 || mode==5) ? 2 : 1,0);
       end
       standard_case=0;
-      // More contexts than output entries: force full, wrap, Command gaps and backpressure.
-      r=OUTPUT_BUFFER_DEPTH+2;
+      // Six interleaved Contexts keep several raw vectors in flight at once:
+      // check ordered publication with Command gaps, downstream always ready.
+      r=6;
       if(r>MAX_CONTEXTS) r=MAX_CONTEXTS;
       if(r>PSUM_BUFFER_DEPTH) r=PSUM_BUFFER_DEPTH;
       for(int s=0;s<2;s++) for(int mode=0;mode<2;mode++)
         run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
-                 0,2,mode==0 ? r : 1,mode==1 ? r : 1,1,1);
+                 0,2,mode==0 ? r : 1,mode==1 ? r : 1,1);
       // Three Tiles and three interleaved Contexts: catch history overwrite
       // beyond the two-Tile/two-Context examples, with signed extrema too.
       for(int s=0;s<2;s++) for(int mode=0;mode<2;mode++)
         for(int pattern=4;pattern<6;pattern++)
           run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
                    pattern,3,mode==0 ? (PSUM_BUFFER_DEPTH<3 ? PSUM_BUFFER_DEPTH : 3) : 1,
-                             mode==1 ? (PSUM_BUFFER_DEPTH<3 ? PSUM_BUFFER_DEPTH : 3) : 1,1,1);
+                             mode==1 ? (PSUM_BUFFER_DEPTH<3 ? PSUM_BUFFER_DEPTH : 3) : 1,1);
     end
     $fclose(manifest);
     $fclose(operation_trace);
-    if(reuse_cycles==0 || (OUTPUT_BUFFER_DEPTH<MAX_CONTEXTS && OUTPUT_BUFFER_DEPTH<PSUM_BUFFER_DEPTH &&
-                          (full_cycles==0 || stalled_cycles==0)))
-      $fatal(1,"Missing coverage: reuse=%0d full=%0d stalls=%0d",reuse_cycles,full_cycles,stalled_cycles);
+    if(reuse_cycles==0)
+      $fatal(1,"Missing coverage: reuse=%0d",reuse_cycles);
     for(int n=1;n<7;n++) begin
       if(dut.u_reduce.gated_checks[n]==0) $fatal(1,"No gated hold checks for node %0d",n);
       $display("CG node=t%0d active_edges=%0d gated_OC_checks=%0d",n,
@@ -512,8 +468,9 @@ module tb_Cluster;
        (PSUM_BUFFER_DEPTH>2 && high_depth_checks==0)) $fatal(1,"Missing buffer gate checks");
     $display("BUFFER_ICG checks=%0d high_depth=%0d os1_Psum_hold=%0d depth=%0d",
       buffer_gate_checks,high_depth_checks,os1_psum_hold_checks,PSUM_BUFFER_DEPTH);
-    $display("PASS configurations=%0d cases=%0d depth/channel=%0d reuse=%0d full=%0d stalls=%0d seed=%08h",
-      configurations,cases_run,OUTPUT_BUFFER_DEPTH,reuse_cycles,full_cycles,stalled_cycles,SEED);
+    $display("PASS configurations=%0d cases=%0d reuse=%0d seed=%08h",
+      configurations,cases_run,reuse_cycles,SEED);
+    $fsdbDumpoff;
     $finish;
   end
   initial begin #200000000; $fatal(1,"Global watchdog"); end

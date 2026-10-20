@@ -32,8 +32,6 @@ def compile_sources(macro_override=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--depth', type=int, default=4,
-                        help='signed32 entries per output channel (>=1)')
     parser.add_argument('--os', type=int, default=1)
     parser.add_argument('--psum-depth', type=int, default=16,
                         help='Context entries per channel, >=2 for standard AS/WS cases')
@@ -44,7 +42,7 @@ def main():
     parser.add_argument('--log', default='regression.log')
     parser.add_argument('--macro-rtl', help='optional directory containing SingleMacro RTL')
     parser.add_argument('--latency-audit', action='store_true',
-                        help='capture/check 140 no-stall Context latencies; requires --depth >=2')
+                        help='capture/check 140 no-stall Context latencies')
     parser.add_argument('--gate-unit', action='store_true',
                         help='also run the 208-case reduction clock-gating unit test')
     args = parser.parse_args()
@@ -53,12 +51,8 @@ def main():
     log_path = Path(args.log)
     if not log_path.is_absolute(): log_path = LOG_DIR / log_path
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    if args.depth < 1:
-        parser.error('--depth must be >=1')
     if args.psum_depth < 2 or args.psum_depth > 16:
         parser.error('--psum-depth must be 2..16 for this regression')
-    if args.latency_audit and args.depth < 2:
-        parser.error('--latency-audit requires --depth >=2')
     if not (ROOT / 'work').exists():
         run(['vlib', 'work'])
     run(['vlog', '-sv', '-svinputport=var',
@@ -73,7 +67,7 @@ def main():
             raise RuntimeError(f'Reduction gating unit test failed; see {gate_log}')
     tops = ['work.tb_Cluster'] + (['work.latency_audit'] if args.latency_audit else [])
     run(['vsim', '-c', '-onfinish', 'stop', *tops,
-         f'-gOUTPUT_BUFFER_DEPTH={args.depth}', f'-gOS_TILES={args.os}',
+         f'-gOS_TILES={args.os}',
          f'-gPSUM_BUFFER_DEPTH={args.psum_depth}',
          f'-gPATTERNS={args.patterns}', f"-gEN_MASK=8'h{args.en}",
          f"-gOC_MASK=32'h{args.oc}", f"-gSEED=32'h{args.seed}",
@@ -83,9 +77,8 @@ def main():
     if 'PASS configurations=' not in log or '** Fatal:' in log or '** Error:' in log:
         raise RuntimeError(f'Simulation failed; see {args.log}')
     run([sys.executable, str(PY_DIR / 'verify_manifest.py'), str(DATA_DIR / 'split_cases.csv')])
-    schedule_args = [sys.executable, str(PY_DIR / 'buffer_schedule.py'), '--psum-depth', str(args.psum_depth)]
-    if args.depth >= 2:
-        schedule_args += ['--trace', str(DATA_DIR / 'buffer_operations.csv')]
+    schedule_args = [sys.executable, str(PY_DIR / 'buffer_schedule.py'), '--psum-depth', str(args.psum_depth),
+                     '--trace', str(DATA_DIR / 'buffer_operations.csv')]
     run(schedule_args)
     if args.latency_audit:
         run([sys.executable, str(PY_DIR / 'audit_latency.py')])

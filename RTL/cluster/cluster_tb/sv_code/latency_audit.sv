@@ -4,6 +4,7 @@ module latency_audit;
   integer fd;
   int tick=0, origin, precision_code, sign_mode, os,ws,as_count, case_id, last_case=-1;
   int final_input[0:15];
+  int lane_count[0:15];
   bit selected;
   initial begin
     string data_dir;
@@ -29,12 +30,19 @@ module latency_audit;
         final_input[tb_Cluster.dut.context_idx]=tick-origin;
     end
     #2;
-    if(selected && tb_Cluster.monitoring && tb_Cluster.dut.raw_psum_valid) begin
-      $fdisplay(fd,"%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
-        case_id,precision_code,sign_mode,os,ws,as_count,tb_Cluster.dut.raw_context,
-        final_input[tb_Cluster.dut.raw_context],tick-origin,
-        tick-origin-final_input[tb_Cluster.dut.raw_context]);
-      $fflush(fd);
+    // Per-OC publication pulses out_valid_o per lane. Log one row per
+    // Context once its LAST reserved lane has pulsed: the tick still marks
+    // the whole-Context terminal latency 3T/4T/5T.
+    if(selected && tb_Cluster.monitoring && tb_Cluster.dut.raw_valid!=0) begin
+      lane_count[tb_Cluster.dut.raw_context]++;
+      if(lane_count[tb_Cluster.dut.raw_context]==$countones(tb_Cluster.expected_mask)) begin
+        lane_count[tb_Cluster.dut.raw_context]=0;
+        $fdisplay(fd,"%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
+          case_id,precision_code,sign_mode,os,ws,as_count,tb_Cluster.dut.raw_context,
+          final_input[tb_Cluster.dut.raw_context],tick-origin,
+          tick-origin-final_input[tb_Cluster.dut.raw_context]);
+        $fflush(fd);
+      end
     end
   end
 endmodule
