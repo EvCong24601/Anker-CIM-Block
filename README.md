@@ -24,10 +24,10 @@ vcs-rtl/                        VCS 编译列表与 Makefile
 从仓库根目录执行：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --latency-audit --log regression_tmp_default.log
+python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_oc_default.log
 ```
 
-ModelSim 的 vlib/vlog/vsim 需在 PATH 中。脚本从任意工作目录调用均可，CSV 固定写入 data，日志写入 log。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [cluster_tb README](RTL/cluster/cluster_tb/README.md)。
+ModelSim 的 vlib/vlog/vsim 需在 PATH 中。脚本从任意工作目录调用均可，脚本将 SV、Macro RTL 和 Python 检查器复制到仓库外的本地仿真目录，work、波形、CSV 和日志均在该副本内生成；副本不纳入 Git。默认位置为仓库同级 cluster_tb_work/local_sim/<日志名>，可用 --sim-dir 指定仓库外目录。仓库 data/log 保存经检查的结果。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [cluster_tb README](RTL/cluster/cluster_tb/README.md)。
 
 ## Cluster 接口
 
@@ -133,7 +133,7 @@ AS 的相邻 slice 间隔为 n 个有效发射周期，n=as_cnt；相邻 Tile �
 
 ## Buffer 深度与 ICG
 
-`PSUM_BUFFER_DEPTH` 默认16，设置每 channel 的 Context 状态容量。Context 数不超过状态容量。最终输出不设 FIFO、无输出排队：每个 OC 的结果写回即发布，`out_valid_o[oc]` 置位一拍，数据保持到该 OC 下次发布，下游默认无反压。
+`OUTPUT_BUFFER_DEPTH` 默认16，统一设置每个 OC 的 Context 状态容量，包括 tmp 融合历史和 Psum 的 entry 数；高地址 entry 按批次门控。Context 数不超过 min(OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS)，MAX_CONTEXTS=16；RTL 深度最小为1，六种标准配置需要至少2。最终输出不设 FIFO、无输出排队：每个 OC 的结果写回即发布，`out_valid_o[oc]` 置位一拍，数据保持到该 OC 下次发布，下游默认无反压。
 
 首条 Command 接受时锁定本批深度开放掩码，保持至最后 Context 的最后 lane 发布：os>1 仅开放 Psum 深度 `0..max(ws,as)-1`，其余高地址 entry 关闭；os=1 全部关闭。
 
@@ -169,7 +169,7 @@ WS/单 Context 顺序为 Tile→Context→phase；AS 为 Tile→phase→Context�
 3. **逐拍监视：** 三个独立监视器（数值记分板、运算历史记分板、时钟门控记分板）全程比对 DUT 与独立参考模型。
 4. **结果核对：** 检查每个 OC 脉冲的到达时刻、数值与同 OC 的 Context 顺序，最后确认全部 lane 均已发布且批次关闭。
 
-一个 case 内 precision、符号、split、EN/OC mask、slot、counts、pattern 全部固定；case 之间只有权重 SRAM 内容保留。case 行为由 SEED 决定，可精确重现。
+一个 case 内 precision、符号、split、EN/OC mask、slot、counts、pattern 全部固定；case 之间不复位；权重保持状态可保留，批次配置、Context 计数和状态有效性按批次重新建立。case 行为由 SEED 决定，可精确重现。
 
 ### 默认参数
 
@@ -179,7 +179,7 @@ WS/单 Context 顺序为 Tile→Context→phase；AS 为 Tile→phase→Context�
 | OC_MASK | 32'hFFFF_FFFF | 32 个 OC 全部使能 |
 | OS_TILES | 1 | suite 1 的 Tile 数（1..14） |
 | PATTERNS | 6 | suite 1 使用的数据 pattern 数 |
-| PSUM_BUFFER_DEPTH | 16 | 每 channel Context 状态深度 |
+| OUTPUT_BUFFER_DEPTH | 16 | 每 channel Context 状态深度 |
 | SEED | 32'h19E2_A407 | pattern 0 的 xorshift 种子 |
 
 七种精度均测试 UINT×UINT 和 INT×INT；不包含混合符号乘法。
@@ -224,22 +224,22 @@ case 按三个维度展开：
 - 展开：7 种精度×2 种符号×6 种 `(os,ws,as)`，依次为 `(1,1,1)`、`(1,1,2)`、`(1,2,1)`、`(2,1,1)`、`(2,2,1)`、`(2,1,2)`，对应附录 A1..A6；每 Tile K=128，ACT 高 512 bit 补零。
 - 数据：固定随机 pattern 0。
 - 发射：连续发射，检查任意相邻两次发射恰好间隔一拍（无气泡），逐拍与附录 A 一致。
-- 副产物：本 suite 的每个发射拍写入 [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)，默认回归共 480 条（即 84 个 case 的全部发射拍），记录操作类型、tmp、fusion/acc 操作数、结果与完成标志；`--latency-audit` 时由独立观察器把 140 个无停顿 Context 输出周期写入 [latency_audit.csv](RTL/cluster/cluster_tb/data/latency_audit.csv)（每精度×符号下六配置共 10 个 Context，7×2×10=140）。
+- 副产物：本 suite 的每个运算写回拍选一个有效 channel 写入 [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)，默认回归共 480 条（对应 84 个 case 的运算事件），记录操作类型、tmp、fusion/acc 操作数、结果与完成标志；`--latency-audit` 时由独立观察器把 140 个无停顿 Context 输出周期写入 [latency_audit.csv](RTL/cluster/cluster_tb/data/latency_audit.csv)（每精度×符号下六配置共 10 个 Context，7×2×10=140）。
 
 #### suite 3：Command 空拍与多 Context 交错（28 case）
 
 **目的：** 让多个 Context 的各 OC 结果同时在途，检查同 OC 按 Context 顺序逐拍发布与结果顺序。
 
-- 展开：7 种精度×2 种符号×WS/AS。Context 数 `r=min(6,16,PSUM_BUFFER_DEPTH)`，默认 6；WS 用 `(2,r,1)`，AS 用 `(2,1,r)`。
+- 展开：7 种精度×2 种符号×WS/AS。Context 数 `r=min(6,16,OUTPUT_BUFFER_DEPTH)`，默认 6；WS 用 `(2,r,1)`，AS 用 `(2,1,r)`。
 - 空拍：第 index 条 Command 前插入 index%3 个空拍。
 - 数据：固定随机 pattern 0。
 
 #### suite 4：三 Tile 极值与历史保持（56 case）
 
-**目的：** 在三 Tile×三 Context 交错与空拍条件下，检查 fusion/acc 历史不被后续写入覆盖，并压满符号极值结果。
+**目的：** 在三 Tile×三 Context 交错与空拍条件下，检查 fusion/acc 历史不被后续写入覆盖，覆盖符号极值位型的组合。
 
-- 展开：7 种精度×2 种符号×WS/AS×pattern 4/5。os=3，Context 数 `r=min(3,PSUM_BUFFER_DEPTH)`，默认 3；WS 用 `(3,r,1)`，AS 用 `(3,1,r)`。
-- 数据：pattern 4/5 按元素在 lo/hi 间交替，INT 下乘积分别全为正/全为负，使累加和逼近 signed32 两端极限。
+- 展开：7 种精度×2 种符号×WS/AS×pattern 4/5。os=3，Context 数 `r=min(3,OUTPUT_BUFFER_DEPTH)`，默认 3；WS 用 `(3,r,1)`，AS 用 `(3,1,r)`。
+- 数据：pattern 4/5 按元素在 lo/hi 间交替，ACT 和 weight 使用各自带偏移的元素索引，乘积符号由配对关系决定；不能保证同一 case 全部乘积同号。
 - 压力：空拍注入方式与 suite 3 相同。
 
 ### 六种输入数据 pattern
@@ -250,10 +250,10 @@ pattern 同时决定 ACT 和 weight 的取值，各按自身精度位数采样�
 |---:|---|---|---|
 | 0 | xorshift 伪随机位模式（SEED） | 同 ACT | 随机覆盖 |
 | 1 | 全 0 | 全 0 | 零输入 |
-| 2 | hi | hi | 单一极值位型（INT 最大正 digit、UINT 全 1） |
-| 3 | lo | lo | 另一侧极值位型（INT 最小负 digit、UINT 全 0） |
-| 4 | 偶数 lo、奇数 hi | 偶数 lo、奇数 hi | 同相交替，INT 乘积全为正 |
-| 5 | 偶数 lo、奇数 hi | 偶数 hi、奇数 lo | 反相交替，INT 乘积全为负 |
+| 2 | hi | hi | 单一极值位型（INT 最大正整数、UINT 全 1） |
+| 3 | lo | lo | 另一侧极值位型（INT 最小负整数、UINT 全 0） |
+| 4 | 偶数 lo、奇数 hi | 偶数 lo、奇数 hi | 各自索引上的 lo/hi 交替 |
+| 5 | 偶数 lo、奇数 hi | 偶数 hi、奇数 lo | weight 交换 lo/hi 的交替 |
 
 交替项的 index 是数据生成函数的元素索引，不是输入周期：ACT 的 index=digit 序号 k+7×Context 序号+Tile 序号（AS 复用 Context 复制 Ctx0 的 ACT）；weight 的 index=K_row 内序号 j+7×Macro 序号+3×OC 序号+Tile 序号+11×预加载 Context 序号（WS/单 Context 恒为 0）。
 
@@ -275,7 +275,7 @@ UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw sig
 从仓库根目录运行默认回归、归约门控单测和独立时延核对：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --latency-audit --log regression_tmp_default.log
+python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_oc_default.log
 ```
 
 | 参数 | 默认 | 作用范围 |
@@ -283,22 +283,30 @@ python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --latency-audit -
 | `--en` / `--oc` | ff / ffffffff | 只改 suite 1 的 EN/OC mask。改 EN 会重新筛选合法 split（K 筛选按 EN 计算，不因关闭 OC 放宽）；suite 2..4 仍用标准 K128 映射与 OC 全开 |
 | `--os` | 1 | 只改 suite 1 的 Tile 数（OS_TILES，1..14）；suite 2..4 的 os 固定为 1/2/3 |
 | `--patterns` | 6 | 只改 suite 1 使用前 N 种 pattern；suite 2/3 固定 pattern 0，suite 4 固定 pattern 4/5，均不受影响 |
-| `--psum-depth` | 16 | 全局 Context 状态深度，限 2..16；suite 3/4 的 r 按其截断，不足 3 时 suite 4 按可用深度运行 |
+| `--depth` | 16 | OUTPUT_BUFFER_DEPTH，全局每 OC Context 状态深度，限 2..16；suite 3/4 的 r 按其截断，不足 3 时 suite 4 按可用深度运行 |
 | `--seed` | 19e2a407 | 全局 pattern 0 种子 |
 
 已有附加回归：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --en 81 --oc 84218421 --os 2 --psum-depth 3 --patterns 2 --log regression_tmp_sparse_depth3.log
+python RTL/cluster/cluster_tb/py/run_regression.py --en 81 --oc 84218421 --os 2 --depth 3 --patterns 2 --log regression_oc_sparse_depth3.log
 ```
 
-它共 888 个 case，其中 suite 1 的 split×符号配置 360 个（×2 pattern=720），检查稀疏 Macro/OC 和小容量 Context 状态。计数记录在 [默认日志](RTL/cluster/cluster_tb/log/regression_tmp_default.log) 和 [稀疏配置日志](RTL/cluster/cluster_tb/log/regression_tmp_sparse_depth3.log)。
+它共 888 个 case，其中 suite 1 的 split×符号配置 360 个（×2 pattern=720），检查稀疏 Macro/OC 和小容量 Context 状态。计数记录在 [默认日志](RTL/cluster/cluster_tb/log/regression_oc_default.log) 和 [稀疏配置日志](RTL/cluster/cluster_tb/log/regression_oc_sparse_depth3.log)。
 
 - [split_cases.csv](RTL/cluster/cluster_tb/data/split_cases.csv)：suite 1 每个配置一行（precision、符号、split、EN、OC、slot、各组 K），默认 200 行；不逐行记录 pattern 与其他三类 suite。
-- [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)：suite 2 的逐拍运算记录，默认回归 480 条，字段含发射拍号、精度、Tile/Context/phase、操作类型、tmp、fusion/acc 操作数、结果与完成标志。
+- [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)：suite 2 的逐拍运算记录，默认回归 480 条，compute_cycle 字段为相对首个输入的运算写回拍号、精度、Tile/Context/phase、操作类型、tmp、fusion/acc 操作数、结果与完成标志。
 - [latency_audit.csv](RTL/cluster/cluster_tb/data/latency_audit.csv)：独立观察器记录的 140 个标准 Context 输出周期；[核对报告](RTL/cluster/cluster_tb/log/latency_audit_validation.log) 按六种配置公式逐条核对输入到输出周期。
 
 `--gate-unit` 另外运行 [tb_ClusterReduceTree.sv](RTL/cluster/cluster_tb/sv_code/tb_ClusterReduceTree.sv)，不计入上述 1368 个 Cluster case。8 种 EN（FF、0F、F0、55、AA、81、01、00）×26 种规范 split=208 个 case，OC 按 case 序号轮换 FFFFFFFF、84218421、12345678；检查三级终点的数据与有效 mask、t1..t6 转发 DFF 的门控与保持、下游加法器被门控时的数据保持。这是独立归约树单测，不应用 Cluster 的 K<256 精度限制。
+
+### 混合 Context 与本地仿真副本
+
+`--mixed-context` 在默认 suite 前额外运行24个定向 case：W4A4/A8/A16×两种符号×os=1/2×WS/AS双 Context。split=03、EN=55、slots=24'h040000、OC全开，同一树中同时存在 pair 与 quad 终点，检查不同 Context 的 channel 同拍发布。内部 raw_context 按 lane 保存，仅用于验证；没有新增对外 Context pin。默认1368个 case 的编号和计数保持独立。
+
+本地 ModelSim 使用仓库外的源码副本，默认在仓库同级 `cluster_tb_work/local_sim/<日志名>/` 下生成 sv_code、py、work、data、log 和 source_manifest.json。源文件指纹记录本次实际仿真的输入。`--sim-dir PATH` 可指定仓库外的独立目录；该副本及仿真工作文件不提交 Git。
+
+SV 中的 FSDB 调用由 `CLUSTER_FSDB` 编译宏控制；VCS Makefile 开启该宏，ModelSim 入口不启用。`OUTPUT_BUFFER_DEPTH` 控制 Context 状态深度，与输出 ready/valid 反压无关；输出无需 ready，out_valid_o[l] 每个有效周期发布一个新结果。深度1支持单 Context；完整回归需要至少2。`--psum-depth` 是 `--depth` 的命令行别名，不是第二个硬件深度参数。
 
 ## 附录 A 逐拍输入与运算
 

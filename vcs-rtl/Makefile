@@ -29,7 +29,7 @@ LIB_LIST =
 # FSDB dump：tb 内直接调用 $fsdbDump*（-kdb 会自动集成 Verdi PLI，无需 -P novas.tab）
 
 # SINGLE_MACRO_ASSERTIONS：使能 SingleMacro.sv 内的协议断言
-ALL_DEFINE = +define+SINGLE_MACRO_ASSERTIONS
+ALL_DEFINE = +define+SINGLE_MACRO_ASSERTIONS +define+CLUSTER_FSDB
 
 VCS = vcs 	-sverilog +v2k                \
           	+libext+.v+.sv                \

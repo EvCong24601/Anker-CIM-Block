@@ -5,7 +5,7 @@ module tb_Cluster;
   parameter logic [31:0] OC_MASK=32'hffff_ffff;
   parameter int OS_TILES=1;
   parameter int PATTERNS=6;
-  parameter int PSUM_BUFFER_DEPTH=16; // Context entries per channel
+  parameter int OUTPUT_BUFFER_DEPTH=16; // Context entries per channel
   parameter int TIMEOUT_CYCLES=4000;
   parameter logic [31:0] SEED=32'h19e2a407;
   localparam int MAX_CONTEXTS=16;
@@ -21,7 +21,7 @@ module tb_Cluster;
   logic [8191:0] weight_wdata_i=0;
   wire [1023:0] psum_data_o;
   cluster_dut_adapter #(.MAX_CONTEXTS(MAX_CONTEXTS),
-                        .PSUM_BUFFER_DEPTH(PSUM_BUFFER_DEPTH)) dut(.*);
+                        .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH)) dut(.*);
   logic [31:0] rng=SEED;
   int unsigned activation[0:255][0:MAX_CONTEXTS-1][0:255];
   longint signed expected[0:MAX_CONTEXTS-1][0:31];
@@ -47,18 +47,18 @@ module tb_Cluster;
   endfunction
 
   always @(posedge clock) begin : buffer_clock_scoreboard
-    longint signed old_p[0:PSUM_BUFFER_DEPTH-1][0:31];
-    longint signed old_t[0:MAX_CONTEXTS-1][0:31];
-    bit want_p[0:PSUM_BUFFER_DEPTH-1][0:31];
-    bit want_t[0:MAX_CONTEXTS-1][0:31];
+    longint signed old_p[0:OUTPUT_BUFFER_DEPTH-1][0:31];
+    longint signed old_t[0:OUTPUT_BUFFER_DEPTH-1][0:31];
+    bit want_p[0:OUTPUT_BUFFER_DEPTH-1][0:31];
+    bit want_t[0:OUTPUT_BUFFER_DEPTH-1][0:31];
     logic [31:0] want_input;
     int c,ph,ab;
     if(!reset) begin
       want_input=dut.capture_valid;
-      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
         old_p[d][l]=dut.psum[d][l]; want_p[d][l]=0;
       end
-      for(int d=0;d<MAX_CONTEXTS;d++) for(int l=0;l<32;l++) begin
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
         old_t[d][l]=dut.tmp_buffer[d][l]; want_t[d][l]=0;
       end
       for(int l=0;l<32;l++) if(dut.tmp_valid[l]) begin
@@ -72,7 +72,7 @@ module tb_Cluster;
       #0.001;
       if(dut.tmp_input_clock!==want_input)
         $fatal(1,"Advance tmp-input ICG prediction mismatch");
-      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
         if(dut.psum_clock[d][l]!==want_p[d][l])
           $fatal(1,"Advance Psum ICG mismatch depth=%0d lane=%0d",d,l);
         if(dut.batch_active && d>=dut.batch_contexts) begin
@@ -82,16 +82,16 @@ module tb_Cluster;
         end
         buffer_gate_checks++;
       end
-      for(int d=0;d<MAX_CONTEXTS;d++) for(int l=0;l<32;l++)
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++)
         if(dut.tmp_state_clock[d][l]!==want_t[d][l])
           $fatal(1,"Advance tmp-state ICG mismatch depth=%0d lane=%0d",d,l);
       #0.001;
-      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) for(int l=0;l<32;l++)
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++)
         if(!want_p[d][l]) begin
           if(dut.psum[d][l]!==old_p[d][l]) $fatal(1,"Gated Psum DFF changed");
           if(dut.batch_active && dut.batch_command.os_cnt==1) os1_psum_hold_checks++;
         end
-      for(int d=0;d<MAX_CONTEXTS;d++) for(int l=0;l<32;l++)
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++)
         if(!want_t[d][l] && dut.tmp_buffer[d][l]!==old_t[d][l])
           $fatal(1,"Gated tmp-state DFF changed");
     end
@@ -265,14 +265,14 @@ module tb_Cluster;
           $fatal(1,"Missing direct terminal write ctx=%0d lane=%0d",cx,l);
       end
       if(dut.raw_valid!=0) begin
-        tag=dut.raw_context;
-        if(tag>=case_r) $fatal(1,"Raw context out of range %0d",tag);
         if((dut.raw_valid & ~expected_mask)!=0) $fatal(1,"Raw valid on masked lane");
-        for(int l=0;l<32;l++) if(dut.raw_valid[l]) begin
+        for(int l=0;l<32;l++) if(out_valid_o[l]) begin
+          tag=dut.raw_context[l];
+          if(tag<0 || tag>=case_r) $fatal(1,"Raw context out of range %0d",tag);
           if(raw_seen[tag][l] || lane_due[tag][l]!=cycle)
             $fatal(1,"Raw latency/seen mismatch ctx=%0d lane=%0d due=%0d actual=%0d",
                    tag,l,lane_due[tag][l],cycle);
-          if(dut.raw_data[32*l+:32]!==32'(expected[tag][l]))
+          if(psum_data_o[32*l+:32]!==32'(expected[tag][l]))
             $fatal(1,"Raw mismatch case=%0d p=%0d sign=%0d ctx=%0d lane=%0d got=%0d expected=%0d",
                 cases_run,cmd_i.precision,cmd_i.signed_en,tag,l,
                 $signed(dut.raw_data[32*l+:32]),expected[tag][l]);
@@ -315,7 +315,7 @@ module tb_Cluster;
     groups=0; decode_groups(split,0,0,8,groups);
     expected_mask='0;
     for(int cx=0;cx<case_r;cx++) begin
-      raw_seen[cx]=0;
+      for(int l=0;l<32;l++) raw_seen[cx][l]=0;
       for(int i=0;i<32;i++) begin expected[cx][i]=0; lane_due[cx][i]=-1; end
     end
     for(int kt=0;kt<os;kt++) for(int cx=0;cx<case_r;cx++)
@@ -401,6 +401,17 @@ module tb_Cluster;
     $fdisplay(manifest,"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,group2_K,group3_K,group4_K,group5_K,group6_K,group7_K");
     repeat(4) @(negedge clock); reset=0;
     repeat(2) @(negedge clock);
+    // Separate directed suite: mixed pair/quad endpoints may publish
+    // different Contexts on the same edge. Keep standard case IDs unchanged.
+    if($test$plusargs("MIXED_CONTEXT_TEST")) begin
+      for(int p=2;p<=4;p++) for(int sign_mode=0;sign_mode<2;sign_mode++)
+        for(int tiles=1;tiles<=2;tiles++) for(int mode=0;mode<2;mode++)
+          run_case(p,1'(sign_mode),7'h03,8'h55,32'hffffffff,24'h040000,
+                   0,tiles,mode==0 ? 2 : 1,mode==1 ? 2 : 1,0);
+      $fclose(manifest); $fclose(operation_trace);
+      $display("PASS mixed_context cases=%0d",cases_run);
+      $finish;
+    end
     for(int p=0;p<7;p++) begin
       legal_count=0;
       for(int mask=0;mask<128;mask++) if(canonical(7'(mask)) && legal_k(p,7'(mask))) begin
@@ -436,7 +447,7 @@ module tb_Cluster;
       // check ordered publication with Command gaps, downstream always ready.
       r=6;
       if(r>MAX_CONTEXTS) r=MAX_CONTEXTS;
-      if(r>PSUM_BUFFER_DEPTH) r=PSUM_BUFFER_DEPTH;
+      if(r>OUTPUT_BUFFER_DEPTH) r=OUTPUT_BUFFER_DEPTH;
       for(int s=0;s<2;s++) for(int mode=0;mode<2;mode++)
         run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
                  0,2,mode==0 ? r : 1,mode==1 ? r : 1,1);
@@ -445,8 +456,8 @@ module tb_Cluster;
       for(int s=0;s<2;s++) for(int mode=0;mode<2;mode++)
         for(int pattern=4;pattern<6;pattern++)
           run_case(p,1'(s),standard_split,standard_en,32'hffffffff,standard_slots,
-                   pattern,3,mode==0 ? (PSUM_BUFFER_DEPTH<3 ? PSUM_BUFFER_DEPTH : 3) : 1,
-                             mode==1 ? (PSUM_BUFFER_DEPTH<3 ? PSUM_BUFFER_DEPTH : 3) : 1,1);
+                   pattern,3,mode==0 ? (OUTPUT_BUFFER_DEPTH<3 ? OUTPUT_BUFFER_DEPTH : 3) : 1,
+                             mode==1 ? (OUTPUT_BUFFER_DEPTH<3 ? OUTPUT_BUFFER_DEPTH : 3) : 1,1);
     end
     $fclose(manifest);
     $fclose(operation_trace);
@@ -465,20 +476,24 @@ module tb_Cluster;
       dut.tmp_only_steps,dut.as_seed_steps,dut.as_fusion_steps,dut.as_acc_steps,
       dut.ws_fusion_steps,dut.ws_acc_steps,dut.ws_serial_steps,dut.a4_acc_steps);
     if(buffer_gate_checks==0 || os1_psum_hold_checks==0 ||
-       (PSUM_BUFFER_DEPTH>2 && high_depth_checks==0)) $fatal(1,"Missing buffer gate checks");
+       (OUTPUT_BUFFER_DEPTH>2 && high_depth_checks==0)) $fatal(1,"Missing buffer gate checks");
     $display("BUFFER_ICG checks=%0d high_depth=%0d os1_Psum_hold=%0d depth=%0d",
-      buffer_gate_checks,high_depth_checks,os1_psum_hold_checks,PSUM_BUFFER_DEPTH);
+      buffer_gate_checks,high_depth_checks,os1_psum_hold_checks,OUTPUT_BUFFER_DEPTH);
     $display("PASS configurations=%0d cases=%0d reuse=%0d seed=%08h",
       configurations,cases_run,reuse_cycles,SEED);
+`ifdef CLUSTER_FSDB
     $fsdbDumpoff;
+`endif
     $finish;
   end
   initial begin #200000000; $fatal(1,"Global watchdog"); end
   // FSDB waveform dump for Verdi (tasks registered via -P novas.tab in Makefile)
+`ifdef CLUSTER_FSDB
   initial begin : fsdb_dump
     $display("The simulation started.");
     $fsdbDumpfile("tb_Cluster_2026.fsdb");
     $fsdbDumpvars(0, tb_Cluster, "+all");
     $fsdbDumpon;
   end
+`endif
 endmodule

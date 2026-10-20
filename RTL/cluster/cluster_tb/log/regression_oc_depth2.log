@@ -1,0 +1,50 @@
+# vsim -c -onfinish stop work.tb_Cluster work.latency_audit "+DATA_DIR=D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_oc_depth2/data" -l D:\Document\2025B\anker\M1\cluster_tb_work\local_sim\regression_oc_depth2\log\regression_oc_depth2.log -do "onbreak {quit -code 1}; onerror {quit -code 1}; run -all; quit -code 0" -gSEED=32'h19e2a407 -gOC_MASK=32'hffffffff -gPATTERNS=2 -gEN_MASK=8'hff -gOUTPUT_BUFFER_DEPTH=2 -gOS_TILES=1
+# Start time: 15:55:20 on Oct 20,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  ModelSim SE-64 2020.4 Oct 13 2020
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.cluster_tb_pkg(fast)
+# Loading work.tb_Cluster(fast)
+# Loading work.single_macro_pkg(fast)
+# Loading work.SingleMacro(fast)
+# Loading work.latency_audit(fast)
+# onbreak {quit -code 1}
+#  Warning: onbreak command for use within macro
+#  onerror {quit -code 1}
+#  Warning: onerror command for use within macro
+#  run -all
+# precision=0 W2A4 splits/sign=1
+# precision=1 W2A8 splits/sign=1
+# precision=2 W4A4 splits/sign=16
+# precision=3 W4A8 splits/sign=16
+# precision=4 W4A16 splits/sign=16
+# precision=5 W8A8 splits/sign=25
+# precision=6 W8A16 splits/sign=25
+# CG node=t1 active_edges=564 gated_OC_checks=44224
+# CG node=t2 active_edges=0 gated_OC_checks=46480
+# CG node=t3 active_edges=1342 gated_OC_checks=41112
+# CG node=t4 active_edges=684 gated_OC_checks=43744
+# CG node=t5 active_edges=778 gated_OC_checks=43368
+# CG node=t6 active_edges=120 gated_OC_checks=46000
+# TMP_ROUTES os1=24896 AS_seed=1024 AS_fusion=2560 AS_acc=1536 WS_fusion=2816 WS_acc=1664 WS_serial=1040 A4_acc=1200
+# BUFFER_ICG checks=743680 high_depth=78144 os1_Psum_hold=163072 depth=2
+# PASS configurations=200 cases=568 reuse=1264 seed=19e2a407
+# ** Note: $finish    : D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_oc_depth2/sv_code/tb_Cluster.sv(487)
+#    Time: 116240 ns  Iteration: 1  Instance: /tb_Cluster
+# Break at D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_oc_depth2/sv_code/tb_Cluster.sv line 487
+# Stopped at D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_oc_depth2/sv_code/tb_Cluster.sv line 487
+#  quit -code 0
+# End time: 15:55:25 on Oct 20,2026, Elapsed time: 0:00:05
+# Errors: 0, Warnings: 0

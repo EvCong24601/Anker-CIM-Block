@@ -2,7 +2,7 @@
 // Simulation reference Cluster. Existing ports carry RAW Psum, no requant.
 module cluster_dut_adapter #(
   parameter int MAX_CONTEXTS = 16,
-  parameter int PSUM_BUFFER_DEPTH = MAX_CONTEXTS
+  parameter int OUTPUT_BUFFER_DEPTH = MAX_CONTEXTS
 ) (
   input logic clock, reset,
   input cluster_tb_pkg::cluster_ctrl_t cmd_i,
@@ -45,15 +45,16 @@ module cluster_dut_adapter #(
   end
   // Each tree endpoint writes one per-output-channel tmp result register.
   // The tagged arithmetic stage consumes it on the NEXT edge (II=1).
+  // OUTPUT_BUFFER_DEPTH is the per-OC Context state capacity, not a FIFO.
   logic [31:0] tmp_valid;
   tag_t tmp_tag[0:31];
   longint signed tmp_result[0:31];
   // WS reuses depth 0 for adjacent phases. AS with os=1 needs one
   // partial-fusion entry per interleaved Context; it NEVER writes psum.
-  longint signed tmp_buffer [0:MAX_CONTEXTS-1][0:31];
-  longint signed psum [0:PSUM_BUFFER_DEPTH-1][0:31];
-  logic [PSUM_BUFFER_DEPTH-1:0] psum_depth_open;
-  logic [MAX_CONTEXTS-1:0] tmp_depth_open;
+  longint signed tmp_buffer [0:OUTPUT_BUFFER_DEPTH-1][0:31];
+  longint signed psum [0:OUTPUT_BUFFER_DEPTH-1][0:31];
+  logic [OUTPUT_BUFFER_DEPTH-1:0] psum_depth_open;
+  logic [OUTPUT_BUFFER_DEPTH-1:0] tmp_depth_open;
   logic batch_active, batch_input_done;
   int batch_contexts;
   cluster_ctrl_t batch_command;
@@ -61,11 +62,11 @@ module cluster_dut_adapter #(
   // the arithmetic-state DFFs on the next edge. High address depths are
   // disabled for the WHOLE batch, independently of per-cycle write requests.
   logic [31:0] tmp_input_cg_en;
-  logic [31:0] psum_cg_en[0:PSUM_BUFFER_DEPTH-1];
-  logic [31:0] tmp_state_cg_en[0:MAX_CONTEXTS-1];
+  logic [31:0] psum_cg_en[0:OUTPUT_BUFFER_DEPTH-1];
+  logic [31:0] tmp_state_cg_en[0:OUTPUT_BUFFER_DEPTH-1];
   wire [31:0] tmp_input_clock;
-  wire [31:0] psum_clock[0:PSUM_BUFFER_DEPTH-1];
-  wire [31:0] tmp_state_clock[0:MAX_CONTEXTS-1];
+  wire [31:0] psum_clock[0:OUTPUT_BUFFER_DEPTH-1];
+  wire [31:0] tmp_state_clock[0:OUTPUT_BUFFER_DEPTH-1];
   logic [31:0] capture_valid;
   tag_t capture_tag[0:31];
   longint signed capture_data[0:31];
@@ -86,10 +87,10 @@ module cluster_dut_adapter #(
   logic [31:0] result_mask [0:MAX_CONTEXTS-1];
   // Internal observation only; no new external signal.
   logic [31:0] raw_valid;
-  int raw_context;
+  int raw_context[0:31]; // internal per-lane tag; never an external pin
   logic [1023:0] raw_data;
   initial begin
-    if(MAX_CONTEXTS<1 || PSUM_BUFFER_DEPTH<1)
+    if(MAX_CONTEXTS<1 || OUTPUT_BUFFER_DEPTH<1)
       $fatal(1,"Context capacity must be >= 1");
   end
   always_comb begin
@@ -179,14 +180,14 @@ module cluster_dut_adapter #(
   always @(posedge clock or posedge reset) begin : advance_buffer_enables
     if(reset) begin
       tmp_input_cg_en<='0;
-      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) psum_cg_en[d]<='0;
-      for(int d=0;d<MAX_CONTEXTS;d++) tmp_state_cg_en[d]<='0;
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) psum_cg_en[d]<='0;
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) tmp_state_cg_en[d]<='0;
     end else begin
       tmp_input_cg_en<=terminal_lanes(early_tmp_tag[0],0) |
                        terminal_lanes(early_tmp_tag[1],1) |
                        terminal_lanes(early_tmp_tag[2],2);
-      for(int d=0;d<PSUM_BUFFER_DEPTH;d++) psum_cg_en[d]<='0;
-      for(int d=0;d<MAX_CONTEXTS;d++) tmp_state_cg_en[d]<='0;
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) psum_cg_en[d]<='0;
+      for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) tmp_state_cg_en[d]<='0;
       for(int l=0;l<32;l++) if(capture_valid[l]) begin
         if(capture_tag[l].cmd.os_cnt==1) begin
           if(abits(int'(capture_tag[l].cmd.precision))>4)
@@ -208,7 +209,7 @@ module cluster_dut_adapter #(
       if(reset) tmp_result[l]<=0;
       else tmp_result[l]<=capture_data[l];
   end
-  for(genvar d=0;d<MAX_CONTEXTS;d++) begin : g_tmp_depth
+  for(genvar d=0;d<OUTPUT_BUFFER_DEPTH;d++) begin : g_tmp_depth
     for(genvar l=0;l<32;l++) begin : g_lane
       MacroClockGate u_icg(.clock(clock),
         .enable(tmp_depth_open[d] && tmp_state_cg_en[d][l]),
@@ -218,7 +219,7 @@ module cluster_dut_adapter #(
         else tmp_buffer[d][l]<=phase_result[l];
     end
   end
-  for(genvar d=0;d<PSUM_BUFFER_DEPTH;d++) begin : g_psum_depth
+  for(genvar d=0;d<OUTPUT_BUFFER_DEPTH;d++) begin : g_psum_depth
     for(genvar l=0;l<32;l++) begin : g_lane
       MacroClockGate u_icg(.clock(clock),
         .enable(psum_depth_open[d] && psum_cg_en[d][l]),
@@ -295,7 +296,8 @@ module cluster_dut_adapter #(
       held_plane<='0;
       phase<=0; context_idx<=0; tile<=0; hold_valid<='0;
       in_tag<='0; macro_tag<='0; red1_tag<='0; red2_tag<='0;
-      raw_valid<='0; raw_context<=0; raw_data<='0;
+      raw_valid<='0; raw_data<='0;
+      for(int l=0;l<32;l++) raw_context[l]<=0;
       tmp_valid<='0;
       batch_active<=0; batch_input_done<=0; batch_contexts<=0;
       batch_command<='0; psum_depth_open<='0; tmp_depth_open<='0;
@@ -312,10 +314,10 @@ module cluster_dut_adapter #(
           batch_contexts<=cmd_i.ws_cnt>1 ? int'(cmd_i.ws_cnt) : int'(cmd_i.as_cnt);
           // Clear per-lane completion tracking for the whole batch; the
           // per-Context reservation masks are (re)written at final_issue.
-          for(int c=0;c<MAX_CONTEXTS;c++) result_ready[c]='0;
-          for(int d=0;d<PSUM_BUFFER_DEPTH;d++)
+          for(int c=0;c<MAX_CONTEXTS;c++) begin result_ready[c]='0; result_mask[c]='0; end
+          for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++)
             psum_depth_open[d]<=cmd_i.os_cnt>1 && d<int'(cmd_i.ws_cnt>1 ? cmd_i.ws_cnt : cmd_i.as_cnt);
-          for(int d=0;d<MAX_CONTEXTS;d++)
+          for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++)
             tmp_depth_open[d]<=abits(int'(cmd_i.precision))>4 &&
               (cmd_i.os_cnt==1 ? d<(cmd_i.as_cnt>1 ? int'(cmd_i.as_cnt) : 1) :
                                (cmd_i.as_cnt<=1 && d==0));
@@ -339,7 +341,7 @@ module cluster_dut_adapter #(
         if(command.precision>6 || !canonical(command.reduce_split_mask) ||
            command.os_cnt<1 || command.ws_cnt<1 || command.as_cnt<1 ||
            (command.ws_cnt>1 && command.as_cnt>1) ||
-           contexts>MAX_CONTEXTS || contexts>PSUM_BUFFER_DEPTH || issue_mask==0)
+           contexts>MAX_CONTEXTS || contexts>OUTPUT_BUFFER_DEPTH || issue_mask==0)
           $fatal(1,"Invalid descriptor / context capacity / empty output");
         for(int m=0;m<8;m++) if(command.macro_en_mask[m]) begin
           if(int'(command.act_slot_sel[3*m+:3])>=wbits(int'(command.precision)))
@@ -412,7 +414,7 @@ module cluster_dut_adapter #(
           // one cycle, the lane value holds until the lane publishes again.
           raw_valid[l]<=1;
           raw_data[32*l+:32]<=32'(arithmetic_result[l]);
-          raw_context<=ctx;
+          raw_context[l]<=ctx;
         end
       end
       // Independent tree taps capture into per-channel tmp DFFs. There is
