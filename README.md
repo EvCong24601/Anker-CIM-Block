@@ -2,9 +2,14 @@
 
 本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。每条 Command 触发一个 ACT 4-bit slice 的计算；归约结果先进入 tmp，再进行 bit fusion 或 Psum acc。各 Context 独立输出 raw signed32，未包含 requant。
 
+## 逐拍输入时序文档
+
+[下载 CIM_Cluster_逐拍输入时序_v2.7.docx](docs/CIM_Cluster_逐拍输入时序_v2.7.docx)：包含 Cluster 输入 pin、七种精度的 ACT slice、WS/AS/OS 配置、权重地址、逐拍操作和输入到输出时延。
+
 ## 目录与运行
 
 ```text
+docs/                           逐拍输入时序 Word 文档
 RTL/
   macro/rtl/                    SingleMacro 计算与权重存储
   macro/tb/                     单 Macro testbench
