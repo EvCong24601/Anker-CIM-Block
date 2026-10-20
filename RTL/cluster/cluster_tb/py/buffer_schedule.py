@@ -29,51 +29,21 @@ def operation(p, counts, k, c, ph):
     os, ws, ac = counts
     last = ph == ABITS[p] // 4 - 1
     fusion = ph > 0
+    acc = k > 0 and (ph == 0 if ac > 1 else last and os > 1)
+    ps_write = (os > 1 or ABITS[p] > 4) if ac > 1 else (os > 1 and last)
     done = last and k == os - 1
-    shift = 4 * ph
-    t = f'T[{c if ac > 1 else 0}]'
     ps = f'P[{c}]'
-    part = f'{t} + (R << {shift})' if fusion else 'R'
-    op = 'fusion' if fusion else 'seed'
-    ps_write = False
-    tmp_write = False
-    serial = False
-    if os == 1:
-        desc = ('fusion: ' + part) if fusion else '填充: R'
-        tmp_write = ABITS[p] > 4
-        dest = t if tmp_write else '直接输出'
-        if done and tmp_write:
-            dest += '；输出'
-    elif ac > 1:
-        ps_write = True
-        dest = ps + ('；输出' if done else '')
-        if ph > 0:
-            desc = f'fusion: {ps} + (R << {shift})'
-        elif k > 0:
-            op = 'acc'
-            desc = f'acc: {ps} + R'
-        else:
-            desc = '初次填充: R'
+    if ac > 1:
+        desc = f'fusion: {ps} + (R << {4*ph})' if fusion else f'acc: {ps} + R' if acc else '填充: R'
+        dest = ps if ps_write else '直接输出'
     else:
-        tmp_write = ABITS[p] > 4
-        dest = t if tmp_write else ''
-        desc = ('fusion: ' + part) if fusion else '填充: R'
-        if last:
-            ps_write = True
-            dest = (t + '；' if tmp_write else '') + ps + ('；输出' if done else '')
-            if k > 0:
-                op = 'fusion+acc' if fusion else 'acc'
-                serial = fusion
-                desc = (f'fusion: {part} → F；acc: {ps} + F' if fusion
-                        else f'acc: {ps} + R')
-            elif fusion:
-                desc += '；融合值填充 Psum'
-            else:
-                desc = '初次填充: R'
-    return dict(operation=op, description=desc, destination=dest,
-                fusion=int(fusion), acc=int(op in ('acc', 'fusion+acc')),
-                psum_write=int(ps_write), tmp_write=int(tmp_write),
-                done=int(done), serial=int(serial))
+        desc = f'tmp捕获前 fusion: tmp + (R << {4*ph})' if fusion else 'tmp捕获: R'
+        if ps_write: desc += f'；下一拍 acc: {ps} + tmp' if acc else '；下一拍 tmp 填充 Psum'
+        dest = 'tmp' + (f'；{ps}' if ps_write else '')
+    if done and dest != '直接输出': dest += '；输出'
+    return dict(operation='fusion_then_acc' if fusion and acc else 'fusion' if fusion else 'acc' if acc else 'seed',
+                description=desc,destination=dest,fusion=int(fusion),acc=int(acc),
+                psum_write=int(ps_write),tmp_write=1,done=int(done),serial=0)
 
 
 def groups(split):
@@ -116,6 +86,10 @@ def validate_trace(path):
         if not ref['fusion']: assert fa == fb == 0
         if not ref['acc']: assert aa == ab == 0
         value = aa + ab if ref['acc'] else fa + fb if ref['fusion'] else int(row['tmp'])
+        stored = int(row['tmp_stored'])
+        is_as = COUNTS[key[0]-1][2] > 1
+        assert stored == (int(row['tmp']) if is_as or not ref['fusion'] else fa+fb)
+        assert int(row['fusion_cycle']) == cycle-(0 if is_as else 1)
         assert result == value
     assert seen == expected.keys(), (len(seen), len(expected))
     return len(rows)
@@ -136,7 +110,7 @@ def main():
               'group', 'lane_mask', 'issue_cycle', 'tmp_capture', 'compute_cycle',
               'tile', 'context', 'phase', 'weight_address', 'operation', 'description',
               'destination', 'fusion', 'acc', 'psum_write', 'tmp_write', 'done', 'serial',
-              'psum_depth_open_hex', 'icg_enable_cycle', 'act_sample', 'act_source']
+              'psum_depth_open_hex', 'fusion_cycle', 'icg_enable_cycle', 'act_sample', 'act_source']
     count = 0
     with (ROOT / 'buffer_cycle_cases.csv').open('w', newline='', encoding='utf-8-sig') as f:
         writer = csv.DictWriter(f, fieldnames=fields)
@@ -159,21 +133,22 @@ def main():
                                  issue_cycle=q, tmp_capture=q+d-1, compute_cycle=q+d,
                                  tile=k, context=c, phase=ph,
                                  weight_address=f"8'h{0x20+16*k+(c if ac>1 else 0):02x}",
-                                 psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if os>1 else 0:x}',
+                                 psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if (os>1 or (ac>1 and ABITS[p]>4)) else 0:x}',
+                                 fusion_cycle=(q+d-(0 if ac>1 else 1)) if ph>0 else '',
                                  icg_enable_cycle=q+d-1,
                                  act_sample=int(ac<=1 or c==0),
                                  act_source=f'A{ph}(T{k})' if ac>1 else f'A{ph}(T{k},Ctx{c})')
                         writer.writerow(r)
                         count += 1
     text = ['Cluster tmp / bit-fusion / Psum acc 逐拍操作清单',
-            'R=tmp_result 中当前归约结果；T[d]=tmp-buffer 融合状态；P[d]=Psum buffer。',
+            'R=当前原始归约 slice；每OC一个tmp，WS保存Tile融合前缀，AS保存当前R；P[d]=Context Psum。',
             '每个并行 channel=4*group+OC；OC 不串行。signed/unsigned 时序相同。',
             'ACT 无独立握手；随 cmd_fire 采样。AS 每 phase 仅 Ctx0 采样，其他 Context 复用。',
             'C0 为首输入；tmp 在 C(q+D-1) 捕获，运算写回在 C(q+D)，ICG enable 提前一拍。',
-            '标准 W2/W4/W8 的 D=3/4/5T。无停顿、无 requant；WS 串联路径需 STA。',
-            'os=1 不写 Psum。AS 的 os>1：T0/A0 填充；后续 Tile A0 做 acc；其他 phase 做 fusion。',
+            '标准 W2/W4/W8 的 D=3/4/5T。无停顿、无 requant；WS归约末级与fusion在tmp前的路径需STA。',
+            'WS的os=1不写Psum；AS的A8/A16即使os=1也写P[ctx]保存fusion历史。首Tile/A0填充，后续Tile/A0 acc，高phase fusion。',
             'n=as_cnt，P=A位宽/4：同 Context slice 间隔 n，Tile 间隔 n*P（不是 n*os_cnt）。',
-            'Psum 高地址深度 d>=max(ws,as) 整批关闭；os=1 全部关闭。', '']
+            'Psum高地址深度d>=max(ws,as)整批关闭；每OC每拍只时钟一个Context entry。WS os=1及AS A4 os=1关闭Psum。', '']
     for p, name in enumerate(NAMES):
         for case, counts in enumerate(COUNTS, 1):
             text += [f'precision={p} {name} case={case} os/ws/as={"/".join(map(str,counts))}',

@@ -1,6 +1,6 @@
 # CIM Cluster 输入与计算说明
 
-本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。每条 Command 触发一个 ACT 4-bit slice 的计算；归约结果先进入 tmp，再进行 bit fusion 或 Psum acc。各 Context 独立输出 raw signed32，未包含 requant。
+本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。每条 Command 触发一个 ACT 4-bit slice 的计算；WS 在 tmp 写入前做 fusion、下一拍做 Psum acc；AS 先写 tmp，下一拍选择 fusion 或 acc。各 Context 独立输出 raw signed32，未包含 requant。
 
 ## 逐拍输入时序文档
 
@@ -24,7 +24,7 @@ vcs-rtl/                        VCS 编译列表与 Makefile
 从仓库根目录执行：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_oc_default.log
+python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_single_tmp_default.log
 ```
 
 ModelSim 的 vlib/vlog/vsim 需在 PATH 中。脚本从任意工作目录调用均可，脚本将 SV、Macro RTL 和 Python 检查器复制到仓库外的本地仿真目录，work、波形、CSV 和日志均在该副本内生成；副本不纳入 Git。默认位置为仓库同级 cluster_tb_work/local_sim/<日志名>，可用 --sim-dir 指定仓库外目录。仓库 data/log 保存经检查的结果。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [cluster_tb README](RTL/cluster/cluster_tb/README.md)。
@@ -111,7 +111,7 @@ OC mask 为 `32'hFFFF_FFFF`。物理终点由 split 决定，不因某些 Macro 
 
 归约终点从向父级转发 DFF 前取数。pair 终止时关闭相应 t3..t6；quad 终止时关闭相应 t1/t2；仅继续归约时打开转发 DFF。根结果进入通用 tmp，无额外 root-only 输出级。
 
-| 归约终点 | Macro 发射 | tmp 捕获 | fusion/acc 写回或完成 |
+| 归约终点 | Macro 发射 | tmp 捕获 / WS fusion | AS fusion、acc、Psum 写回或输出 |
 |---|---|---|---|
 | 叶子 / pair | Cq | C(q+2) | C(q+3) |
 | quad | Cq | C(q+3) | C(q+4) |
@@ -121,23 +121,24 @@ OC mask 为 `32'hFFFF_FFFF`。物理终点由 split 决定，不因某些 Macro 
 
 ## tmp bit fusion 与 Psum acc
 
-每个并行 channel 共用一套 fusion 和 acc 组合块，Context 按 buffer 深度从低到高存放。令 R 为 tmp_result 中本拍归约结果，T[d] 为 tmp 的融合状态，P[d] 为 Psum 状态。
+每个 channel=4×group+OC 只有一个 tmp 数据寄存器，以及深度为 OUTPUT_BUFFER_DEPTH 的 Psum buffer。每 OC 共用一套 fusion 和一套 acc 组合块，所有 Context 共享；同一 OC 每拍最多更新一个 Context entry。不同 OC 可独立处理各自到达的 Context。
 
-- os=1：A0 填充 T，后续 slice 执行 `T+(R<<(4*phase))`；最后 phase 直接输出。A4 从 tmp_result 直接输出，Psum 全部关闭。
-- os>1、WS/单 Context：在 T[0] 融合当前 Tile。最后 phase 将首 Tile 的融合值写入 P[ctx]；后续 Tile 则执行 `P[ctx]+融合值` 并回写。
-- os>1、AS：首 Tile/A0 将 R 写入 P[ctx]；后续 Tile/A0 执行 `P[ctx]+R`；A1..A3 执行 `P[ctx]+(R<<(4*phase))`。每次回写同一 Context，最后 Tile 的最后 phase 产生输出。
+令 R 为当前原始归约 slice，P[c] 为 Context c 的 Psum。WS/单 Context 的 tmp 保存当前 Tile 的融合前缀；AS 的 tmp 保存当前原始 R。
 
-AS 每拍只选择 fusion 或 acc。WS/单 Context 在 A8/A16 的后续 Tile 最后 phase 可经过 fusion 加法器→acc 加法器串联路径，需要 STA 确认一拍时序。未使用组合块的两个输入均隔离为零。
+- WS/单 Context：A0 在 C(q+D−1) 用 R 覆盖 tmp；A1..A3 在写 tmp 前计算 `tmp+(R<<(4*phase))`。C(q+D) 消费这个 tmp；os=1 的最后 phase 直接输出，Psum 关闭；os>1 的最后 phase 将首 Tile 的 tmp 填充 P[c]，后续 Tile 执行 `P[c]+tmp`。非最后 phase 不写 Psum。
+- AS：先在 C(q+D−1) 把 R 写入唯一 tmp，C(q+D) 更新当前 P[c]。首 Tile/A0 填充；后续 Tile/A0 做 `P[c]+tmp`；A1..A3 做 `P[c]+(tmp<<(4*phase))`。因此 os=1 的 A8/A16 也使用 P[c] 保存交错 Context 的 fusion 历史，但不启用跨 Tile acc；os=1 的 A4 直接从 tmp 输出，不写 Psum。
+
+WS 的 fusion 与 acc 分属 tmp 两侧的相邻流水级，同一结果不串联经过这两个加法器。WS 的归约末级逻辑与 fusion 在 tmp 前可能形成串联路径，需要 STA。AS 在 tmp 后每拍只选择 fusion 或 acc；未使用组合块的两个输入均隔离为零。WS 处理旧 tmp 的 acc 时，可以同时融合下一条归约数据并写入同一个 tmp，DFF 上升沿使用旧值。
 
 AS 的相邻 slice 间隔为 n 个有效发射周期，n=as_cnt；相邻 Tile 间隔为 n×P，P=A位宽/4。OC 并行计算，不乘 OC 数。
 
 ## Buffer 深度与 ICG
 
-`OUTPUT_BUFFER_DEPTH` 默认16，统一设置每个 OC 的 Context 状态容量，包括 tmp 融合历史和 Psum 的 entry 数；高地址 entry 按批次门控。Context 数不超过 min(OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS)，MAX_CONTEXTS=16；RTL 深度最小为1，六种标准配置需要至少2。最终输出不设 FIFO、无输出排队：每个 OC 的结果写回即发布，`out_valid_o[oc]` 置位一拍，数据保持到该 OC 下次发布，下游默认无反压。
+OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 每 OC 固定一个。Context 数不超过 min(OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS)，MAX_CONTEXTS=16。RTL 最小深度1，完整六种标准配置需要至少2。输出逐 OC 发布，无输出反压。
 
-首条 Command 接受时锁定本批深度开放掩码，保持至最后 Context 的最后 lane 发布：os>1 仅开放 Psum 深度 `0..max(ws,as)-1`，其余高地址 entry 关闭；os=1 全部关闭。
+首条 Command 接受时锁定深度掩码：os>1 或 AS 的 A8/A16 需要 Psum，仅开放低 max(ws,as) 个 entry；高地址 entry 整批关闭。WS/单 Context 的 os=1、AS A4 的 os=1 全部关闭 Psum。掩码保持至全部 Context 的有效 channel 发布完成。
 
-tmp_input_cg_en 提前 tmp 捕获一拍寄存；tmp_state_cg_en/psum_cg_en 在 tmp 捕获时寄存，供下一拍写回。每深度/每 channel 的 DFF 接专用 ICG 模型。A4 的 T 状态 DFF 全关；A8/A16 的 WS/单 Context 仅开放 T[0]，os=1 的 AS 开放低 as 个 T 深度，os>1 的 AS 使用 P 保存融合历史。
+`tmp_input_cg_en` 在 tmp 捕获前一拍寄存。`psum_cg_en[d][l]` 在 tmp 捕获时按已对齐的 Context/phase 标签寄存，供下一拍的 Psum 写回：AS 每个有效 phase 选当前 Context，WS 仅 os>1 的最后 phase 选当前 Context。每 OC 的 Psum 门控请求至多一位有效，其他深度保持。ICG 使用 MacroClockGate 模型，ASIC 需映射工艺库 cell。
 
 复位清除控制、valid、标签和状态，不清除权重 SRAM。最终 RAW 为 signed32；参考计算使用 longint 避免中间截断，最终溢出时报错。
 
@@ -157,6 +158,24 @@ WS/单 Context 顺序为 Tile→Context→phase；AS 为 Tile→phase→Context�
 默认回归为1368个 Cluster case，另有208个归约门控 case；检查140个 Context 输出周期和480个标准运算事件。EN=FF 时每符号在七种 precision 下的合法 split 数为1、1、16、16、16、25、25，要求每组有效 K<256。
 
 验证包含 Command 停顿、AS 外部 ACT 变化时内部 Plane 的复用、ICG 时钟、关闭 DFF 保持和高地址深度关闭。实现为仿真参考 adapter，未进行综合/STA/门级功耗验证，未包含 requant。
+
+## Cluster 数据 DFF 位置
+
+以下按当前 SV 的声明位宽统计，D=OUTPUT_BUFFER_DEPTH；longint 为64 bit。范围限 Cluster adapter 与 reduce tree，八个 SingleMacro 的内部 ACT/weight/计算寄存器另计。这是静态功能数据存储的 bit 数，不是综合后的最终 cell 数。时钟门控只停止更新，不减少已实例化的 DFF 数量。
+
+| 位置 | 实例或数组 | 数量×位宽 | 数据 DFF bit |
+|---|---|---|---:|
+| ACT 保存 | held_plane | 1×1024 | 1024 |
+| pair 转发级 | t3..t6 的 result_q | 4节点×4 OC×19 | 304 |
+| quad 转发级 | t1/t2 的 result_q | 2节点×4 OC×20 | 160 |
+| 唯一 tmp | tmp_result | 32 OC×64 | 2048 |
+| Context Psum | psum[d][l] | D×32 OC×64 | 2048D |
+| 输出数据保持 | raw_data | 32 OC×32 | 1024 |
+| 合计 | 不含控制/标签/计数器 | 4560+2048D | D=16时37328 |
+
+归约树 root 没有独立转发 DFF；fusion 与 acc 是组合块，二者之间使用唯一 tmp，没有额外 tmp 历史数组或 acc 中间 buffer。raw_data 是现有输出保持寄存器，与 tmp/Psum 分开计数。
+
+此外存在 valid、phase/Context/Tile 标签、Command 流水、批次状态、权重 Hold 地址/有效位及 ICG 请求等控制寄存器。Psum 写请求为32D bit、深度掩码为D bit、tmp请求为32 bit；reduce tree 的有效节点总使能为6 bit、逐OC请求为24 bit，另有两级48-bit控制流水。参考 adapter 的 int/完整 descriptor 标签和验证计数不作为优化后的控制面积估算。MacroClockGate 内部的 enable_latched 是 latch，不计为 DFF；未使用组合信号也不计存储。
 
 ## tb_Cluster 测试 case
 
@@ -266,8 +285,8 @@ UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw sig
 | 数值与有效通道 | 用完整 ACT/weight 整数独立计算点积（longint 无中间截断），逐 channel 比较 out_valid_o 脉冲与发布值；检查 OC mask、同 OC 的 Context 顺序，输出无丢失、重复、乱序 |
 | 发射与输入 | WS 的 Tile→Context→phase、AS 的 Tile→phase→Context 发射顺序；权重地址 `8'h20+16*Tile`（AS 再加 Context 号）；逐 digit 比对 DUT 实际采样的 ACT Plane；AS 复用拍故意向外部 ACT 驱动相反位模式，确认 DUT 使用内部保存的 Plane；Command 被阻塞且需要新 ACT 时，Command 与 ACT 数据保持稳定 |
 | 到达时延 | 每个 channel 按自身归约终点在末输入后 3T/4T/5T 写回并独立发布 out_valid_o 脉冲，不提前、不迟到；混合树各通道分别到达、分别发布 |
-| 中间运算状态 | 逐 phase 检查 WS 的 Tile 内 tmp 融合值、AS 的跨 Tile Psum 累加历史；os=1 全程不写 Psum 且 Psum 保持；AS 同拍 fusion/acc 二选一，WS 最后 phase 走 fusion→acc 串联路径；未用加法器的两个输入隔离为零 |
-| 时钟门控与保持 | 独立预测 tmp 输入/tmp 状态/Psum 的 ICG 使能并比对实际门控时钟；被门控 DFF 数据保持不变；os>1 批次的高地址 Context entry 整批关闭 |
+| 中间运算状态 | 逐 phase 检查 WS 唯一 tmp 的融合前缀、AS 的 Context Psum 历史；仅 WS/单 Context os=1 和 AS A4 os=1 全关 Psum；AS 同拍 fusion/acc 二选一，WS fusion 在 tmp 前、acc 在 tmp 后；未用加法器的两个输入隔离为零 |
+| 时钟门控与保持 | 独立预测 唯一 tmp 输入/Psum 的 ICG 使能并比对实际门控时钟；被门控 DFF 数据保持不变；os>1 批次的高地址 Context entry 整批关闭 |
 | 发布与批次边界 | 每个 OC 写回即发布一拍，lane 数据保持到该 OC 下次发布，同 OC 按 Context 顺序；权重复用覆盖计数非零；结束时检查全部 lane 已发布、批次关闭、无多余输出，tmp/fusion/acc 各路由与门控路径覆盖齐全 |
 
 ### 运行、参数作用范围与结果
@@ -275,7 +294,7 @@ UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw sig
 从仓库根目录运行默认回归、归约门控单测和独立时延核对：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_oc_default.log
+python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_single_tmp_default.log
 ```
 
 | 参数 | 默认 | 作用范围 |
@@ -289,10 +308,10 @@ python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context -
 已有附加回归：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --en 81 --oc 84218421 --os 2 --depth 3 --patterns 2 --log regression_oc_sparse_depth3.log
+python RTL/cluster/cluster_tb/py/run_regression.py --en 81 --oc 84218421 --os 2 --depth 3 --patterns 2 --log regression_single_tmp_sparse_depth3.log
 ```
 
-它共 888 个 case，其中 suite 1 的 split×符号配置 360 个（×2 pattern=720），检查稀疏 Macro/OC 和小容量 Context 状态。计数记录在 [默认日志](RTL/cluster/cluster_tb/log/regression_oc_default.log) 和 [稀疏配置日志](RTL/cluster/cluster_tb/log/regression_oc_sparse_depth3.log)。
+它共 888 个 case，其中 suite 1 的 split×符号配置 360 个（×2 pattern=720），检查稀疏 Macro/OC 和小容量 Context 状态。计数记录在 [默认日志](RTL/cluster/cluster_tb/log/regression_single_tmp_default.log) 和 [稀疏配置日志](RTL/cluster/cluster_tb/log/regression_single_tmp_sparse_depth3.log)。
 
 - [split_cases.csv](RTL/cluster/cluster_tb/data/split_cases.csv)：suite 1 每个配置一行（precision、符号、split、EN、OC、slot、各组 K），默认 200 行；不逐行记录 pattern 与其他三类 suite。
 - [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)：suite 2 的逐拍运算记录，默认回归 480 条，compute_cycle 字段为相对首个输入的运算写回拍号、精度、Tile/Context/phase、操作类型、tmp、fusion/acc 操作数、结果与完成标志。
@@ -312,7 +331,7 @@ SV 中的 FSDB 调用由 `CLUSTER_FSDB` 编译宏控制；VCS Makefile 开启该
 
 C0 是首个 Command 的接受沿。每行均有 cmd_fire=1，地址属于该条 descriptor。ACT 列的“采样”表示该沿读取 act_data_i；“复用”表示不采样外部 ACT。写回周期采用实际输入起点；tmp 在该写回周期前一拍捕获，状态写回 ICG 使能在 tmp 捕获时寄存；tmp 输入 ICG 使能则提前 tmp 捕获一拍寄存。
 
-操作中的 R 是对应行输入计算得到的归约值；T/P 的索引为 Context 状态深度，“输出”表示该 Context raw 就绪。signed_en=0/1 共用时序。
+操作中的 R 是对应行输入的原始归约 slice；tmp 每 OC 唯一，P[c] 的索引为 Context 深度。WS 填充/fusion 在所列完成周期前一拍写 tmp，AS 的 fusion 与 acc 在所列周期写 Psum，“输出”表示该 Context raw 就绪。signed_en=0/1 共用时序。
 
 ### A1 单 Context os=1 ws=1 as=1
 每 Tile K=128；每 Context 总 K=128。
@@ -322,7 +341,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 填充: R → 直接输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R → tmp；输出 |
 
 Ctx0：末输入 C0，raw 完成 C3。
 
@@ -331,8 +350,8 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | fusion: T[0] + (R << 4) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
 
 Ctx0：末输入 C1，raw 完成 C4。
 
@@ -341,7 +360,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → 直接输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp；输出 |
 
 Ctx0：末输入 C0，raw 完成 C4。
 
@@ -350,8 +369,8 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
 
 Ctx0：末输入 C1，raw 完成 C5。
 
@@ -360,10 +379,10 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | fusion: T[0] + (R << 12) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 12) → tmp；输出 |
 
 Ctx0：末输入 C3，raw 完成 C7。
 
@@ -372,8 +391,8 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
 
 Ctx0：末输入 C1，raw 完成 C6。
 
@@ -382,10 +401,10 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | fusion: T[0] + (R << 12) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R << 12) → tmp；输出 |
 
 Ctx0：末输入 C3，raw 完成 C8。
 
@@ -407,10 +426,10 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C3 | 填充: R → T[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C4 | 填充: R → T[1] |
-| C2 | 8'h20 | 采样 A1(T0) | C5 | fusion: T[0] + (R << 4) → T[0]；输出 |
-| C3 | 8'h21 | 复用 A1(T0) | C6 | fusion: T[1] + (R << 4) → T[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0) | C3 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C4 | 填充: R → P[1] |
+| C2 | 8'h20 | 采样 A1(T0) | C5 | fusion: P[0] + (R << 4) → P[0]；输出 |
+| C3 | 8'h21 | 复用 A1(T0) | C6 | fusion: P[1] + (R << 4) → P[1]；输出 |
 
 Ctx0：末输入 C2，raw 完成 C5；Ctx1：末输入 C3，raw 完成 C6。
 
@@ -429,10 +448,10 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C4 | 填充: R → T[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C5 | 填充: R → T[1] |
-| C2 | 8'h20 | 采样 A1(T0) | C6 | fusion: T[0] + (R << 4) → T[0]；输出 |
-| C3 | 8'h21 | 复用 A1(T0) | C7 | fusion: T[1] + (R << 4) → T[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0) | C4 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C5 | 填充: R → P[1] |
+| C2 | 8'h20 | 采样 A1(T0) | C6 | fusion: P[0] + (R << 4) → P[0]；输出 |
+| C3 | 8'h21 | 复用 A1(T0) | C7 | fusion: P[1] + (R << 4) → P[1]；输出 |
 
 Ctx0：末输入 C2，raw 完成 C6；Ctx1：末输入 C3，raw 完成 C7。
 
@@ -441,14 +460,14 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C4 | 填充: R → T[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C5 | 填充: R → T[1] |
-| C2 | 8'h20 | 采样 A1(T0) | C6 | fusion: T[0] + (R << 4) → T[0] |
-| C3 | 8'h21 | 复用 A1(T0) | C7 | fusion: T[1] + (R << 4) → T[1] |
-| C4 | 8'h20 | 采样 A2(T0) | C8 | fusion: T[0] + (R << 8) → T[0] |
-| C5 | 8'h21 | 复用 A2(T0) | C9 | fusion: T[1] + (R << 8) → T[1] |
-| C6 | 8'h20 | 采样 A3(T0) | C10 | fusion: T[0] + (R << 12) → T[0]；输出 |
-| C7 | 8'h21 | 复用 A3(T0) | C11 | fusion: T[1] + (R << 12) → T[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0) | C4 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C5 | 填充: R → P[1] |
+| C2 | 8'h20 | 采样 A1(T0) | C6 | fusion: P[0] + (R << 4) → P[0] |
+| C3 | 8'h21 | 复用 A1(T0) | C7 | fusion: P[1] + (R << 4) → P[1] |
+| C4 | 8'h20 | 采样 A2(T0) | C8 | fusion: P[0] + (R << 8) → P[0] |
+| C5 | 8'h21 | 复用 A2(T0) | C9 | fusion: P[1] + (R << 8) → P[1] |
+| C6 | 8'h20 | 采样 A3(T0) | C10 | fusion: P[0] + (R << 12) → P[0]；输出 |
+| C7 | 8'h21 | 复用 A3(T0) | C11 | fusion: P[1] + (R << 12) → P[1]；输出 |
 
 Ctx0：末输入 C6，raw 完成 C10；Ctx1：末输入 C7，raw 完成 C11。
 
@@ -457,10 +476,10 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C5 | 填充: R → T[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C6 | 填充: R → T[1] |
-| C2 | 8'h20 | 采样 A1(T0) | C7 | fusion: T[0] + (R << 4) → T[0]；输出 |
-| C3 | 8'h21 | 复用 A1(T0) | C8 | fusion: T[1] + (R << 4) → T[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0) | C5 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C6 | 填充: R → P[1] |
+| C2 | 8'h20 | 采样 A1(T0) | C7 | fusion: P[0] + (R << 4) → P[0]；输出 |
+| C3 | 8'h21 | 复用 A1(T0) | C8 | fusion: P[1] + (R << 4) → P[1]；输出 |
 
 Ctx0：末输入 C2，raw 完成 C7；Ctx1：末输入 C3，raw 完成 C8。
 
@@ -469,14 +488,14 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C5 | 填充: R → T[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C6 | 填充: R → T[1] |
-| C2 | 8'h20 | 采样 A1(T0) | C7 | fusion: T[0] + (R << 4) → T[0] |
-| C3 | 8'h21 | 复用 A1(T0) | C8 | fusion: T[1] + (R << 4) → T[1] |
-| C4 | 8'h20 | 采样 A2(T0) | C9 | fusion: T[0] + (R << 8) → T[0] |
-| C5 | 8'h21 | 复用 A2(T0) | C10 | fusion: T[1] + (R << 8) → T[1] |
-| C6 | 8'h20 | 采样 A3(T0) | C11 | fusion: T[0] + (R << 12) → T[0]；输出 |
-| C7 | 8'h21 | 复用 A3(T0) | C12 | fusion: T[1] + (R << 12) → T[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0) | C5 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C6 | 填充: R → P[1] |
+| C2 | 8'h20 | 采样 A1(T0) | C7 | fusion: P[0] + (R << 4) → P[0] |
+| C3 | 8'h21 | 复用 A1(T0) | C8 | fusion: P[1] + (R << 4) → P[1] |
+| C4 | 8'h20 | 采样 A2(T0) | C9 | fusion: P[0] + (R << 8) → P[0] |
+| C5 | 8'h21 | 复用 A2(T0) | C10 | fusion: P[1] + (R << 8) → P[1] |
+| C6 | 8'h20 | 采样 A3(T0) | C11 | fusion: P[0] + (R << 12) → P[0]；输出 |
+| C7 | 8'h21 | 复用 A3(T0) | C12 | fusion: P[1] + (R << 12) → P[1]；输出 |
 
 Ctx0：末输入 C6，raw 完成 C11；Ctx1：末输入 C7，raw 完成 C12。
 
@@ -488,8 +507,8 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 填充: R → 直接输出 |
-| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C4 | 填充: R → 直接输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R → tmp；输出 |
+| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C4 | tmp捕获: R → tmp；输出 |
 
 Ctx0：末输入 C0，raw 完成 C3；Ctx1：末输入 C1，raw 完成 C4。
 
@@ -498,10 +517,10 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | fusion: T[0] + (R << 4) → T[0]；输出 |
-| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | 填充: R → T[0] |
-| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C6 | fusion: T[0] + (R << 4) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
+| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | tmp捕获: R → tmp |
+| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C6 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
 
 Ctx0：末输入 C1，raw 完成 C4；Ctx1：末输入 C3，raw 完成 C6。
 
@@ -510,8 +529,8 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → 直接输出 |
-| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | 填充: R → 直接输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp；输出 |
+| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | tmp捕获: R → tmp；输出 |
 
 Ctx0：末输入 C0，raw 完成 C4；Ctx1：末输入 C1，raw 完成 C5。
 
@@ -520,10 +539,10 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4) → T[0]；输出 |
-| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C6 | 填充: R → T[0] |
-| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C7 | fusion: T[0] + (R << 4) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
+| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C6 | tmp捕获: R → tmp |
+| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C7 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
 
 Ctx0：末输入 C1，raw 完成 C5；Ctx1：末输入 C3，raw 完成 C7。
 
@@ -532,14 +551,14 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | fusion: T[0] + (R << 12) → T[0]；输出 |
-| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C8 | 填充: R → T[0] |
-| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C9 | fusion: T[0] + (R << 4) → T[0] |
-| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C10 | fusion: T[0] + (R << 8) → T[0] |
-| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C11 | fusion: T[0] + (R << 12) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 12) → tmp；输出 |
+| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C8 | tmp捕获: R → tmp |
+| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C9 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C10 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C11 | tmp捕获前 fusion: tmp + (R << 12) → tmp；输出 |
 
 Ctx0：末输入 C3，raw 完成 C7；Ctx1：末输入 C7，raw 完成 C11。
 
@@ -548,10 +567,10 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4) → T[0]；输出 |
-| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C7 | 填充: R → T[0] |
-| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C8 | fusion: T[0] + (R << 4) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
+| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C7 | tmp捕获: R → tmp |
+| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C8 | tmp捕获前 fusion: tmp + (R << 4) → tmp；输出 |
 
 Ctx0：末输入 C1，raw 完成 C6；Ctx1：末输入 C3，raw 完成 C8。
 
@@ -560,14 +579,14 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | fusion: T[0] + (R << 12) → T[0]；输出 |
-| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C9 | 填充: R → T[0] |
-| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C10 | fusion: T[0] + (R << 4) → T[0] |
-| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C11 | fusion: T[0] + (R << 8) → T[0] |
-| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C12 | fusion: T[0] + (R << 12) → T[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R << 12) → tmp；输出 |
+| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C9 | tmp捕获: R → tmp |
+| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C10 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C11 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C12 | tmp捕获前 fusion: tmp + (R << 12) → tmp；输出 |
 
 Ctx0：末输入 C3，raw 完成 C8；Ctx1：末输入 C7，raw 完成 C12。
 
@@ -579,8 +598,8 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 初次填充: R → P[0] |
-| C1 | 8'h30 | 采样 A0(T1,Ctx0) | C4 | acc: P[0] + R → P[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C1 | 8'h30 | 采样 A0(T1,Ctx0) | C4 | tmp捕获: R；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
 
 Ctx0：末输入 C1，raw 完成 C4。
 
@@ -589,10 +608,10 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[0] |
-| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C5 | 填充: R → T[0] |
-| C3 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C6 | fusion: T[0] + (R << 4) → F；acc: P[0] + F → T[0]；P[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C5 | tmp捕获: R → tmp |
+| C3 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
 
 Ctx0：末输入 C3，raw 完成 C6。
 
@@ -601,8 +620,8 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 初次填充: R → P[0] |
-| C1 | 8'h30 | 采样 A0(T1,Ctx0) | C5 | acc: P[0] + R → P[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C1 | 8'h30 | 采样 A0(T1,Ctx0) | C5 | tmp捕获: R；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
 
 Ctx0：末输入 C1，raw 完成 C5。
 
@@ -611,10 +630,10 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[0] |
-| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C6 | 填充: R → T[0] |
-| C3 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C7 | fusion: T[0] + (R << 4) → F；acc: P[0] + F → T[0]；P[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C6 | tmp捕获: R → tmp |
+| C3 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
 
 Ctx0：末输入 C3，raw 完成 C7。
 
@@ -623,14 +642,14 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | fusion: T[0] + (R << 12)；融合值填充 Psum → T[0]；P[0] |
-| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C8 | 填充: R → T[0] |
-| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C9 | fusion: T[0] + (R << 4) → T[0] |
-| C6 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C10 | fusion: T[0] + (R << 8) → T[0] |
-| C7 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C11 | fusion: T[0] + (R << 12) → F；acc: P[0] + F → T[0]；P[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C8 | tmp捕获: R → tmp |
+| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C9 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C6 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C10 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C7 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C11 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
 
 Ctx0：末输入 C7，raw 完成 C11。
 
@@ -639,10 +658,10 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[0] |
-| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C7 | 填充: R → T[0] |
-| C3 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C8 | fusion: T[0] + (R << 4) → F；acc: P[0] + F → T[0]；P[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C7 | tmp捕获: R → tmp |
+| C3 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
 
 Ctx0：末输入 C3，raw 完成 C8。
 
@@ -651,14 +670,14 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | fusion: T[0] + (R << 12)；融合值填充 Psum → T[0]；P[0] |
-| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C9 | 填充: R → T[0] |
-| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C10 | fusion: T[0] + (R << 4) → T[0] |
-| C6 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C11 | fusion: T[0] + (R << 8) → T[0] |
-| C7 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C12 | fusion: T[0] + (R << 12) → F；acc: P[0] + F → T[0]；P[0]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C9 | tmp捕获: R → tmp |
+| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C10 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C6 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C11 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C7 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C12 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
 
 Ctx0：末输入 C7，raw 完成 C12。
 
@@ -670,10 +689,10 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 初次填充: R → P[0] |
-| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C4 | 初次填充: R → P[1] |
-| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C5 | acc: P[0] + R → P[0]；输出 |
-| C3 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C6 | acc: P[1] + R → P[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C4 | tmp捕获: R；下一拍 tmp 填充 Psum → tmp；P[1] |
+| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C5 | tmp捕获: R；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
+| C3 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C6 | tmp捕获: R；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
 
 Ctx0：末输入 C2，raw 完成 C5；Ctx1：末输入 C3，raw 完成 C6。
 
@@ -682,14 +701,14 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[0] |
-| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | 填充: R → T[0] |
-| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C6 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[1] |
-| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C7 | 填充: R → T[0] |
-| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C8 | fusion: T[0] + (R << 4) → F；acc: P[0] + F → T[0]；P[0]；输出 |
-| C6 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C9 | 填充: R → T[0] |
-| C7 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C10 | fusion: T[0] + (R << 4) → F；acc: P[1] + F → T[0]；P[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C3 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C4 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | tmp捕获: R → tmp |
+| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C6 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[1] |
+| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C7 | tmp捕获: R → tmp |
+| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
+| C6 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C9 | tmp捕获: R → tmp |
+| C7 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C10 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
 
 Ctx0：末输入 C5，raw 完成 C8；Ctx1：末输入 C7，raw 完成 C10。
 
@@ -698,10 +717,10 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 初次填充: R → P[0] |
-| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | 初次填充: R → P[1] |
-| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C6 | acc: P[0] + R → P[0]；输出 |
-| C3 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C7 | acc: P[1] + R → P[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C1 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C5 | tmp捕获: R；下一拍 tmp 填充 Psum → tmp；P[1] |
+| C2 | 8'h30 | 采样 A0(T1,Ctx0) | C6 | tmp捕获: R；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
+| C3 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C7 | tmp捕获: R；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
 
 Ctx0：末输入 C2，raw 完成 C6；Ctx1：末输入 C3，raw 完成 C7。
 
@@ -710,14 +729,14 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[0] |
-| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C6 | 填充: R → T[0] |
-| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C7 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[1] |
-| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C8 | 填充: R → T[0] |
-| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C9 | fusion: T[0] + (R << 4) → F；acc: P[0] + F → T[0]；P[0]；输出 |
-| C6 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C10 | 填充: R → T[0] |
-| C7 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C11 | fusion: T[0] + (R << 4) → F；acc: P[1] + F → T[0]；P[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C6 | tmp捕获: R → tmp |
+| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C7 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[1] |
+| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C8 | tmp捕获: R → tmp |
+| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C9 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
+| C6 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C10 | tmp捕获: R → tmp |
+| C7 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C11 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
 
 Ctx0：末输入 C5，raw 完成 C9；Ctx1：末输入 C7，raw 完成 C11。
 
@@ -726,22 +745,22 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | fusion: T[0] + (R << 12)；融合值填充 Psum → T[0]；P[0] |
-| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C8 | 填充: R → T[0] |
-| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C9 | fusion: T[0] + (R << 4) → T[0] |
-| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C10 | fusion: T[0] + (R << 8) → T[0] |
-| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C11 | fusion: T[0] + (R << 12)；融合值填充 Psum → T[0]；P[1] |
-| C8 | 8'h30 | 采样 A0(T1,Ctx0) | C12 | 填充: R → T[0] |
-| C9 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C13 | fusion: T[0] + (R << 4) → T[0] |
-| C10 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C14 | fusion: T[0] + (R << 8) → T[0] |
-| C11 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C15 | fusion: T[0] + (R << 12) → F；acc: P[0] + F → T[0]；P[0]；输出 |
-| C12 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C16 | 填充: R → T[0] |
-| C13 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C17 | fusion: T[0] + (R << 4) → T[0] |
-| C14 | 8'h30（不变） | 采样 A2(T1,Ctx1) | C18 | fusion: T[0] + (R << 8) → T[0] |
-| C15 | 8'h30（不变） | 采样 A3(T1,Ctx1) | C19 | fusion: T[0] + (R << 12) → F；acc: P[1] + F → T[0]；P[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C4 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C8 | tmp捕获: R → tmp |
+| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C9 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C10 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C11 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 tmp 填充 Psum → tmp；P[1] |
+| C8 | 8'h30 | 采样 A0(T1,Ctx0) | C12 | tmp捕获: R → tmp |
+| C9 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C13 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C10 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C14 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C11 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C15 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
+| C12 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C16 | tmp捕获: R → tmp |
+| C13 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C17 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C14 | 8'h30（不变） | 采样 A2(T1,Ctx1) | C18 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C15 | 8'h30（不变） | 采样 A3(T1,Ctx1) | C19 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
 
 Ctx0：末输入 C11，raw 完成 C15；Ctx1：末输入 C15，raw 完成 C19。
 
@@ -750,14 +769,14 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[0] |
-| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C7 | 填充: R → T[0] |
-| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C8 | fusion: T[0] + (R << 4)；融合值填充 Psum → T[0]；P[1] |
-| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C9 | 填充: R → T[0] |
-| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C10 | fusion: T[0] + (R << 4) → F；acc: P[0] + F → T[0]；P[0]；输出 |
-| C6 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C11 | 填充: R → T[0] |
-| C7 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C12 | fusion: T[0] + (R << 4) → F；acc: P[1] + F → T[0]；P[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C2 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C7 | tmp捕获: R → tmp |
+| C3 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C8 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 tmp 填充 Psum → tmp；P[1] |
+| C4 | 8'h30 | 采样 A0(T1,Ctx0) | C9 | tmp捕获: R → tmp |
+| C5 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C10 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
+| C6 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C11 | tmp捕获: R → tmp |
+| C7 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C12 | tmp捕获前 fusion: tmp + (R << 4)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
 
 Ctx0：末输入 C5，raw 完成 C10；Ctx1：末输入 C7，raw 完成 C12。
 
@@ -766,22 +785,22 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | 填充: R → T[0] |
-| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | fusion: T[0] + (R << 4) → T[0] |
-| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | fusion: T[0] + (R << 8) → T[0] |
-| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | fusion: T[0] + (R << 12)；融合值填充 Psum → T[0]；P[0] |
-| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C9 | 填充: R → T[0] |
-| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C10 | fusion: T[0] + (R << 4) → T[0] |
-| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C11 | fusion: T[0] + (R << 8) → T[0] |
-| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C12 | fusion: T[0] + (R << 12)；融合值填充 Psum → T[0]；P[1] |
-| C8 | 8'h30 | 采样 A0(T1,Ctx0) | C13 | 填充: R → T[0] |
-| C9 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C14 | fusion: T[0] + (R << 4) → T[0] |
-| C10 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C15 | fusion: T[0] + (R << 8) → T[0] |
-| C11 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C16 | fusion: T[0] + (R << 12) → F；acc: P[0] + F → T[0]；P[0]；输出 |
-| C12 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C17 | 填充: R → T[0] |
-| C13 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C18 | fusion: T[0] + (R << 4) → T[0] |
-| C14 | 8'h30（不变） | 采样 A2(T1,Ctx1) | C19 | fusion: T[0] + (R << 8) → T[0] |
-| C15 | 8'h30（不变） | 采样 A3(T1,Ctx1) | C20 | fusion: T[0] + (R << 12) → F；acc: P[1] + F → T[0]；P[1]；输出 |
+| C0 | 8'h20 | 采样 A0(T0,Ctx0) | C5 | tmp捕获: R → tmp |
+| C1 | 8'h20（不变） | 采样 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C2 | 8'h20（不变） | 采样 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C3 | 8'h20（不变） | 采样 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
+| C4 | 8'h20（不变） | 采样 A0(T0,Ctx1) | C9 | tmp捕获: R → tmp |
+| C5 | 8'h20（不变） | 采样 A1(T0,Ctx1) | C10 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C6 | 8'h20（不变） | 采样 A2(T0,Ctx1) | C11 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C7 | 8'h20（不变） | 采样 A3(T0,Ctx1) | C12 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 tmp 填充 Psum → tmp；P[1] |
+| C8 | 8'h30 | 采样 A0(T1,Ctx0) | C13 | tmp捕获: R → tmp |
+| C9 | 8'h30（不变） | 采样 A1(T1,Ctx0) | C14 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C10 | 8'h30（不变） | 采样 A2(T1,Ctx0) | C15 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C11 | 8'h30（不变） | 采样 A3(T1,Ctx0) | C16 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
+| C12 | 8'h30（不变） | 采样 A0(T1,Ctx1) | C17 | tmp捕获: R → tmp |
+| C13 | 8'h30（不变） | 采样 A1(T1,Ctx1) | C18 | tmp捕获前 fusion: tmp + (R << 4) → tmp |
+| C14 | 8'h30（不变） | 采样 A2(T1,Ctx1) | C19 | tmp捕获前 fusion: tmp + (R << 8) → tmp |
+| C15 | 8'h30（不变） | 采样 A3(T1,Ctx1) | C20 | tmp捕获前 fusion: tmp + (R << 12)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
 
 Ctx0：末输入 C11，raw 完成 C16；Ctx1：末输入 C15，raw 完成 C20。
 
@@ -793,8 +812,8 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C3 | 初次填充: R → P[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C4 | 初次填充: R → P[1] |
+| C0 | 8'h20 | 采样 A0(T0) | C3 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C4 | 填充: R → P[1] |
 | C2 | 8'h30 | 采样 A0(T1) | C5 | acc: P[0] + R → P[0]；输出 |
 | C3 | 8'h31 | 复用 A0(T1) | C6 | acc: P[1] + R → P[1]；输出 |
 
@@ -805,8 +824,8 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C3 | 初次填充: R → P[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C4 | 初次填充: R → P[1] |
+| C0 | 8'h20 | 采样 A0(T0) | C3 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C4 | 填充: R → P[1] |
 | C2 | 8'h20 | 采样 A1(T0) | C5 | fusion: P[0] + (R << 4) → P[0] |
 | C3 | 8'h21 | 复用 A1(T0) | C6 | fusion: P[1] + (R << 4) → P[1] |
 | C4 | 8'h30 | 采样 A0(T1) | C7 | acc: P[0] + R → P[0] |
@@ -821,8 +840,8 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C4 | 初次填充: R → P[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C5 | 初次填充: R → P[1] |
+| C0 | 8'h20 | 采样 A0(T0) | C4 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C5 | 填充: R → P[1] |
 | C2 | 8'h30 | 采样 A0(T1) | C6 | acc: P[0] + R → P[0]；输出 |
 | C3 | 8'h31 | 复用 A0(T1) | C7 | acc: P[1] + R → P[1]；输出 |
 
@@ -833,8 +852,8 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C4 | 初次填充: R → P[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C5 | 初次填充: R → P[1] |
+| C0 | 8'h20 | 采样 A0(T0) | C4 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C5 | 填充: R → P[1] |
 | C2 | 8'h20 | 采样 A1(T0) | C6 | fusion: P[0] + (R << 4) → P[0] |
 | C3 | 8'h21 | 复用 A1(T0) | C7 | fusion: P[1] + (R << 4) → P[1] |
 | C4 | 8'h30 | 采样 A0(T1) | C8 | acc: P[0] + R → P[0] |
@@ -849,8 +868,8 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C4 | 初次填充: R → P[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C5 | 初次填充: R → P[1] |
+| C0 | 8'h20 | 采样 A0(T0) | C4 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C5 | 填充: R → P[1] |
 | C2 | 8'h20 | 采样 A1(T0) | C6 | fusion: P[0] + (R << 4) → P[0] |
 | C3 | 8'h21 | 复用 A1(T0) | C7 | fusion: P[1] + (R << 4) → P[1] |
 | C4 | 8'h20 | 采样 A2(T0) | C8 | fusion: P[0] + (R << 8) → P[0] |
@@ -873,8 +892,8 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C5 | 初次填充: R → P[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C6 | 初次填充: R → P[1] |
+| C0 | 8'h20 | 采样 A0(T0) | C5 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C6 | 填充: R → P[1] |
 | C2 | 8'h20 | 采样 A1(T0) | C7 | fusion: P[0] + (R << 4) → P[0] |
 | C3 | 8'h21 | 复用 A1(T0) | C8 | fusion: P[1] + (R << 4) → P[1] |
 | C4 | 8'h30 | 采样 A0(T1) | C9 | acc: P[0] + R → P[0] |
@@ -889,8 +908,8 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 输入周期 | wgt_raddr | ACT | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C0 | 8'h20 | 采样 A0(T0) | C5 | 初次填充: R → P[0] |
-| C1 | 8'h21 | 复用 A0(T0) | C6 | 初次填充: R → P[1] |
+| C0 | 8'h20 | 采样 A0(T0) | C5 | 填充: R → P[0] |
+| C1 | 8'h21 | 复用 A0(T0) | C6 | 填充: R → P[1] |
 | C2 | 8'h20 | 采样 A1(T0) | C7 | fusion: P[0] + (R << 4) → P[0] |
 | C3 | 8'h21 | 复用 A1(T0) | C8 | fusion: P[1] + (R << 4) → P[1] |
 | C4 | 8'h20 | 采样 A2(T0) | C9 | fusion: P[0] + (R << 8) → P[0] |

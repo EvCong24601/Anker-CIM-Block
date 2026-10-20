@@ -16,25 +16,19 @@ cluster_tb/
   README.md
 ```
 
-在本目录执行 `python py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_oc_default.log`。脚本也可从仓库根目录或其他目录调用；入口把源码和检查脚本复制到仓库外的 cluster_tb_work/local_sim/<日志名>，work、CSV、日志和波形均在副本内生成；--sim-dir 可指定仓库外目录。该副本不提交 Git，仓库 data/log 仅保存经核对的结果。
+在本目录执行 `python py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_single_tmp_default.log`。脚本也可从仓库根目录或其他目录调用；入口把源码和检查脚本复制到仓库外的 cluster_tb_work/local_sim/<日志名>，work、CSV、日志和波形均在副本内生成；--sim-dir 可指定仓库外目录。该副本不提交 Git，仓库 data/log 仅保存经核对的结果。
 
 ## 流水与存储
 
-归约终点 → 每 channel 的 `tmp_result` DFF → fusion/acc → tmp 状态或 Psum → 写回即按 OC 发布。channel=`4*group+OC`，并行 OC 不增加串行周期数，Context 共用组合运算逻辑。
+每个 OC 仅一个 tmp 数据寄存器，以及深度 OUTPUT_BUFFER_DEPTH（默认16）的 Psum Context buffer。每 OC 共用一套 fusion 和一套 acc；同一 OC 每拍仅选择一个 Context entry，其他深度保持。
 
-- `os=1`：在 tmp 完成 A8/A16 融合后直接输出，Psum buffer 全部关闭；A4 直接输出，不启用 fusion 状态 DFF。
-- `os>1`、WS/单 Context：相邻 phase 在 T[0] 融合当前 Tile；最高 phase 将融合结果填充到 P[ctx]，后续 Tile 与同深度旧 Psum 相加。
-- `os>1`、AS：首 Tile/A0 填充 P[ctx]；后续 Tile/A0 做 P[ctx]+tmp；A1..A3 做 P[ctx]+(tmp<<(4*phase))。每个 phase 回写同一 Context，fusion 与 acc 同拍二选一。
-- WS/单 Context 的 A8/A16 在后续 Tile 最后 phase 仍有 **fusion 加法器 → acc 加法器** 串联路径，中间无 DFF，需 STA。两个未使用加法器的输入均隔离为零；隔离不缩短有效串联路径。
-- AS 同 Context 的 slice 间隔 n=as_cnt 个有效发射周期，Tile 间隔 n*P，P=A位宽/4；不是 n*os_cnt，且不乘 OC 数。输入停顿另计。
+WS/单 Context：归约 R 与旧 tmp 做融合后写入 tmp，A0 直接覆盖；下一拍消费 tmp。os=1 最后 phase 直接输出，不写 Psum；os>1 仅最后 phase 填充或累加 Psum[ctx]。旧 tmp 的 acc 与新归约数据的 fusion 可同拍位于 tmp 两侧，属于不同输入结果。
 
-`OUTPUT_BUFFER_DEPTH=MAX_CONTEXTS` 统一控制每 OC 的 tmp 融合历史及 Psum Context 状态深度，默认16，RTL最小为1；Context 数不超过 min(MAX_CONTEXTS,OUTPUT_BUFFER_DEPTH)。六个标准例需要至少 2 个 Context 位置。最终输出不设 FIFO、无输出排队：每个 OC 的结果写回即发布一拍 out_valid_o[oc]，lane 数据保持到该 OC 下次发布，下游默认无反压。
+AS：归约 R 先写 tmp，下一拍首 Tile/A0 填充 Psum[ctx]，后续 Tile/A0 做 acc，高 phase 做 fusion。AS A8/A16 在 os=1 时也使用 Psum 保存各 Context 的 fusion 历史，跨 Tile acc 关闭；AS A4 os=1 直接输出。
 
-首条 cmd_i 握手时锁定整批配置：os>1 仅开放 Psum 深度 0..max(ws,as)-1，高地址 entry 整批关闭；os=1 全部关闭。这里的高地址指 entry，不是每个数据的高位。A4 的 T 状态全关；A8/A16 的 WS/单 Context 只开放 T[0]，os=1 的 AS 开放低 as 个 T 深度，os>1 的 AS 用 P 保存融合历史、T 全关。
+门控：tmp_input_cg_en 提前 tmp 捕获一拍；psum_cg_en 在捕获 tmp 时预测下一拍的唯一 Context 写回。首 Command 开放低 max(ws,as) 个所需 Psum entry，高地址整批关闭；WS os=1 和 AS A4 os=1 全关。门控请求逐 OC 至多一位有效，实际 ICG 时钟与关闭 DFF 保持由 TB 检查。
 
-`tmp_input_cg_en` 提前 tmp 捕获 1T 寄存；`tmp_state_cg_en/psum_cg_en` 在 tmp 捕获时寄存，提前运算写回 1T。每深度/每 channel 的数据 DFF 接专用 `MacroClockGate` latch-based ICG 模型；空拍/未选 OC/未写深度关闭。整批深度掩码保持到最后 Context 的最后 lane 发布，之后关闭；下一批在该边界后接收。valid 正常推进以免旧数据被误认为新结果。ASIC 需映射工艺库 cell。
-
-仿真参考状态用 longint 避免中间截断，最终 RAW 为 signed32，溢出时报错，不引入饱和。它仍是仿真 adapter，而非已通过综合/STA 的生产 Cluster RTL。
+同一结果的 fusion 和 acc 不串联。WS 归约末级与 fusion 在 tmp 前的路径需要 STA；AS 在 tmp 后二选一。未用组合块两个输入隔离为零。参考实现使用 longint，最终 raw signed32，未包含 requant，未做生产综合/STA/功耗签核。
 
 ## Reduce tree 与时延
 
@@ -65,16 +59,18 @@ psum_data_o 输出 raw signed32（1024 bit，32 channel）；out_valid_o 每 OC 
 完整 case 分类、六种数据 pattern、各精度 split 数量和参数作用范围见 [仓库首页的 tb_Cluster 测试 case](../../../README.md#tb_cluster-测试-case)。
 
 ```text
-python py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_oc_default.log
-python py/run_regression.py --en 81 --oc 84218421 --os 2 --depth 3 --patterns 2 --log regression_oc_sparse_depth3.log
+python py/run_regression.py --gate-unit --mixed-context --latency-audit --log regression_single_tmp_default.log
+python py/run_regression.py --en 81 --oc 84218421 --os 2 --depth 3 --patterns 2 --log regression_single_tmp_sparse_depth3.log
 ```
 
 默认1368个Cluster case：1200穷举数据case、84标准时序case、28 Command空拍/多Context交错case、56三Tile/三Context极值case。另有208个reduce-tree门控单元case。EN=FF时每符号合法split数为1,1,16,16,16,25,25，每组有效K严格小于256。AS 复用拍会故意改变外部 ACT，检查实际计算始终使用已保存的 Plane。
 
-检查独立整数点积、每channel到达周期、WS tmp状态、AS逐phase Psum历史、os=1 Psum保持、未用加法器输入隔离、真实ICG时钟、关闭DFF保持、高地址深度整批关闭和按序发布。`--latency-audit` 启用 `sv_code/latency_audit.sv`，采集 [latency_audit.csv](data/latency_audit.csv) 的140个标准Context输出；`py/audit_latency.py` 按六种配置公式核对，生成 [latency_audit_validation.log](log/latency_audit_validation.log)。Python检查器只依赖标准库，无需本地Word文档。
+检查独立整数点积、每channel到达周期、WS唯一tmp状态、AS（含os=1融合）的逐phase Psum历史、旁路 case 的 Psum保持、未用加法器输入隔离、真实ICG时钟、关闭DFF保持、高地址深度整批关闭和按序发布。`--latency-audit` 启用 `sv_code/latency_audit.sv`，采集 [latency_audit.csv](data/latency_audit.csv) 的140个标准Context输出；`py/audit_latency.py` 按六种配置公式核对，生成 [latency_audit_validation.log](log/latency_audit_validation.log)。Python检查器只依赖标准库，无需本地Word文档。
 
 要求 ModelSim 的 vlib/vlog/vsim 在 PATH。Python 入口按顺序编译 sv_code 中的源文件，自动定位 `../../macro/rtl`；也可用 `--macro-rtl PATH` 指定。`filelist.f` 可从本目录手动编译，仿真时选择具体顶层。`+DATA_DIR=路径` 控制 SV 的 CSV 输出位置，Python 入口自动传入本地副本的绝对 data 路径；直接运行 TB 时默认当前工作目录。
 
-OS_TILES 控制穷举 suite，范围1..14。UINT W8A16 的 ACT 限制到0..32768/os_cnt-1，使最终结果保持 signed32。验证入口对应的日志为 `log/regression_oc_default.log`、`log/regression_oc_default_reduce_gate.log`、`log/regression_oc_sparse_depth3.log` 和 `log/latency_audit_validation.log`。
+OS_TILES 控制穷举 suite，范围1..14。UINT W8A16 的 ACT 限制到0..32768/os_cnt-1，使最终结果保持 signed32。验证入口对应的日志为 `log/regression_single_tmp_default.log`、`log/regression_single_tmp_default_reduce_gate.log`、`log/regression_single_tmp_sparse_depth3.log` 和 `log/latency_audit_validation.log`。
 
 混合 Context 定向 suite 通过 --mixed-context 启用，额外24例覆盖 W4A4/A8/A16、两种符号、os=1/2、WS/AS双 Context，以及 pair/quad 同拍发布不同 Context。内部 Context 标签按 lane 保存。FSDB 由 CLUSTER_FSDB 宏控制，VCS Makefile 开启；ModelSim 默认不开启。--depth 设置 OUTPUT_BUFFER_DEPTH，--psum-depth 为同一参数的命令行别名。
+
+Cluster 数据 DFF 分布见[仓库首页](../../../README.md#cluster-数据-dff-位置)：ACT1024、归约中间级464、唯一tmp2048、Psum2048×OUTPUT_BUFFER_DEPTH、输出保持1024 bit；不含控制寄存器及SingleMacro内部。
