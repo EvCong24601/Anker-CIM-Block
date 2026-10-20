@@ -517,4 +517,11 @@ module tb_Cluster;
     $finish;
   end
   initial begin #200000000; $fatal(1,"Global watchdog"); end
+  // FSDB waveform dump for Verdi (tasks registered via -P novas.tab in Makefile)
+  initial begin : fsdb_dump
+    $display("The simulation started.");
+    $fsdbDumpfile("tb_Cluster_2026.fsdb");
+    $fsdbDumpvars(0, tb_Cluster, "+all");
+    $fsdbDumpon;
+  end
 endmodule

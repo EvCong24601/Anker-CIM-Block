@@ -1,14 +1,14 @@
 # Anker-CIM-Block VCS RTL 仿真流程（独立于 ModelSim/Verilator 流程）
 # 用法（在本目录下执行）：
 #   make com               # 编译（默认 TB=cluster，顶层 tb_Cluster）
-#   make sim               # 运行仿真，日志 work/${OUTPUT}.log
+#   make sim               # 运行仿真，日志 work/${OUTPUT}.log，波形 work/${OUTPUT}.fsdb
 #   make check             # 扫描日志 PASS/Fatal，并核对 split_cases.csv（仅 cluster）
 #   make vcd               # 用 UCLI 重跑仿真并 dump 波形 work/${OUTPUT}.vcd
 #   make debug             # 用 Verdi 打开 kdb 调试数据库
 #   make clean
 #   make com sim TB=macro  # 切换 macro 级（顶层 tb_SingleMacro）
 #   make sim PVALUE=-pvalue+tb_Cluster.OS_TILES=2   # 运行期覆盖 TB 参数
-.PHONY: com sim debug clean vcd check
+.PHONY: com sim debug wave clean vcd check
 
 # ---------------- 目标选择 ----------------
 TB       ?= cluster
@@ -25,6 +25,8 @@ WORK_DIR = ./work
 
 # 本仓库为纯 RTL，无需工艺库/宏模型；后续做门级或模拟宏仿真时，把 -v <cell>.v 追加到这里
 LIB_LIST =
+
+# FSDB dump：tb 内直接调用 $fsdbDump*（-kdb 会自动集成 Verdi PLI，无需 -P novas.tab）
 
 # SINGLE_MACRO_ASSERTIONS：使能 SingleMacro.sv 内的协议断言
 ALL_DEFINE = +define+SINGLE_MACRO_ASSERTIONS
@@ -63,6 +65,10 @@ vcd:
 
 debug:
 	cd ${WORK_DIR}; verdi -dbdir ${OUTPUT}.kdb.elab &
+
+# 用 Verdi 查看仿真生成的 FSDB 波形
+wave:
+	cd ${WORK_DIR}; verdi -ssf ${OUTPUT}.fsdb &
 
 ifeq ($(TB),cluster)
 check:
