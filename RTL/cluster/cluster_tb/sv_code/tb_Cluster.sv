@@ -43,6 +43,31 @@ module tb_Cluster;
   logic [1023:0] last_act;
   int buffer_gate_checks=0, high_depth_checks=0, bypass_psum_hold_checks=0;
   int operation_trace;
+  int act_buffer_checks=0, max_act_planes=0;
+
+  // Check the whole bank, including slices that are not read this cycle.
+  // An AS address-only command must never reload A0; a new ACT packet must
+  // wait until the preceding packet's final internal issue has consumed it.
+  always @(posedge clock) begin : act_buffer_scoreboard
+    logic [4095:0] wanted;
+    if(!reset) begin
+      wanted=dut.act_buffer;
+      if(cmd_valid_i && cmd_ready_o && !dut.packet_active)
+        wanted[0+:1024]=act_data_i;
+      if(dut.act_loading)
+        wanted[1024*dut.external_phase+:1024]=act_data_i;
+      if(dut.issue && (!dut.act_complete || dut.act_loading ||
+                       !dut.act_slice_valid[dut.phase]))
+        $fatal(1,"ACT buffer issued before its complete frame was received");
+      if(dut.issue && cmd_valid_i && cmd_ready_o)
+        $fatal(1,"ACT input overwrites a packet still being issued");
+      #0.002;
+      if(dut.act_buffer!==wanted) $fatal(1,"ACT bank write/hold mismatch");
+      if($countones(dut.act_slice_valid)>max_act_planes)
+        max_act_planes=$countones(dut.act_slice_valid);
+      act_buffer_checks++;
+    end
+  end
 
   function automatic int unsigned rand32();
     rng=rng^(rng<<13); rng=rng^(rng>>17); rng=rng^(rng<<5); return rng;
@@ -439,6 +464,31 @@ module tb_Cluster;
     $fdisplay(manifest,"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,group2_K,group3_K,group4_K,group5_K,group6_K,group7_K");
     repeat(4) @(negedge clock); reset=0;
     repeat(2) @(negedge clock);
+    if($test$plusargs("ACT_BUFFER_TEST")) begin
+      // Every precision/sign at full 256-digit plane occupancy, single/WS/AS,
+      // 1/2/16 Contexts, one/two Tiles, and with/without address-command gaps.
+      for(int p=0;p<7;p++) begin
+        case(wbits(p))
+          2: begin standard_en=8'h03; standard_slots=24'h000008; end
+          4: begin standard_en=8'h0f; standard_slots=24'h000688; end
+          default: begin standard_en=8'hff; standard_slots=24'hfac688; end
+        endcase
+        for(int sign_mode=0;sign_mode<2;sign_mode++)
+          for(int tiles=1;tiles<=2;tiles++) for(int mode=0;mode<5;mode++) begin
+            r=mode>=3 ? 16 : mode>=1 ? 2 : 1;
+            if(r>OUTPUT_BUFFER_DEPTH) continue;
+            for(int gaps=0;gaps<2;gaps++)
+              run_case(p,1'(sign_mode),7'h00,standard_en,32'hffffffff,standard_slots,
+                       0,tiles,(mode==1 || mode==3) ? r : 1,
+                       (mode==2 || mode==4) ? r : 1,1'(gaps));
+          end
+      end
+      if(max_act_planes!=4 || act_buffer_checks==0)
+        $fatal(1,"Missing complete ACT bank coverage");
+      $display("PASS act_buffer_capacity cases=%0d max_planes=%0d buffer_bits=4096 max_contexts=%0d checks=%0d",
+               cases_run,max_act_planes,OUTPUT_BUFFER_DEPTH,act_buffer_checks);
+      $finish;
+    end
     if($test$plusargs("FULL_ACT_TEST")) begin
       for(int sign_mode=0;sign_mode<2;sign_mode++) for(int tiles=1;tiles<=2;tiles++)
         for(int mode=0;mode<3;mode++)

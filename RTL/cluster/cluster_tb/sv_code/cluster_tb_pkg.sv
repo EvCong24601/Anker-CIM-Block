@@ -4,6 +4,8 @@ package cluster_tb_pkg;
   typedef struct packed {
     // All counts are >=1. ws>1 selects WS, as>1 selects AS;
     // ws=as=1 is a single Context, with no cross-Context reuse.
+    // WS reuses one Tile's weight for (ACT_bits/4)*ws_cnt internal
+    // compute issues; ws_cnt still counts complete ACTs / Contexts.
     logic [15:0] os_cnt, ws_cnt, as_cnt;
     logic [6:0] reduce_split_mask;
     logic [7:0] macro_en_mask;

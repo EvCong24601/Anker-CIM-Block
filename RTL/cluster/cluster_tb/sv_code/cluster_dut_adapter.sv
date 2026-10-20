@@ -55,9 +55,9 @@ module cluster_dut_adapter #(
   // OUTPUT_BUFFER_DEPTH is the per-OC Context state capacity, not a FIFO.
   logic [31:0] tmp_valid;
   tag_t tmp_tag[0:31];
-  longint signed tmp_result[0:31];
+  logic signed [31:0] tmp_result[0:31]; // one 32-bit data DFF per OC
   // One tmp data register per OC; Psum stores Context history.
-  longint signed psum [0:OUTPUT_BUFFER_DEPTH-1][0:31];
+  logic signed [31:0] psum [0:OUTPUT_BUFFER_DEPTH-1][0:31];
   logic [OUTPUT_BUFFER_DEPTH-1:0] psum_depth_open;
   logic batch_active, batch_input_done;
   int batch_contexts;
@@ -87,6 +87,8 @@ module cluster_dut_adapter #(
   logic [31:0] result_ready [0:MAX_CONTEXTS-1];
   logic [31:0] result_mask [0:MAX_CONTEXTS-1];
   // Internal observation only; no new external signal.
+  // raw_data is the no-requant test output: 32 bits per OC. The final
+  // output after requant is 8 bits per OC; requant is not implemented here.
   logic [31:0] raw_valid;
   int raw_context[0:31]; // internal per-lane tag; never an external pin
   logic [1023:0] raw_data;

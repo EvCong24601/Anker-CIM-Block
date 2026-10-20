@@ -1,0 +1,30 @@
+# vsim -c -onfinish stop work.tb_Cluster "+ACT_BUFFER_TEST" "+DATA_DIR=D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_act_capacity_depth2/data" -l D:\Document\2025B\anker\M1\cluster_tb_work\local_sim\regression_act_capacity_depth2\log\regression_act_capacity_depth2_act_buffer.log -do "run -all; quit -code 0" -gOUTPUT_BUFFER_DEPTH=2
+# Start time: 21:09:16 on Oct 20,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  ModelSim SE-64 2020.4 Oct 13 2020
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.cluster_tb_pkg(fast)
+# Loading work.tb_Cluster(fast)
+# Loading work.single_macro_pkg(fast)
+# Loading work.SingleMacro(fast)
+# run -all
+# PASS act_buffer_capacity cases=168 max_planes=4 buffer_bits=4096 max_contexts=2 checks=4476
+# ** Note: $finish    : D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_act_capacity_depth2/sv_code/tb_Cluster.sv(490)
+#    Time: 44800 ns  Iteration: 1  Instance: /tb_Cluster
+# Break at D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_act_capacity_depth2/sv_code/tb_Cluster.sv line 490
+# Stopped at D:/Document/2025B/anker/M1/cluster_tb_work/local_sim/regression_act_capacity_depth2/sv_code/tb_Cluster.sv line 490
+#  quit -code 0
+# End time: 21:09:21 on Oct 20,2026, Elapsed time: 0:00:05
+# Errors: 0, Warnings: 0

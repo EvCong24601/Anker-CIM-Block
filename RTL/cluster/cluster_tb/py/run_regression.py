@@ -53,6 +53,8 @@ def main():
                         help='also run 24 mixed-endpoint WS/AS Context cases')
     parser.add_argument('--full-act', action='store_true',
                         help='also run 12 W8A16 full-4096-bit/K256 ACT cases')
+    parser.add_argument('--act-buffer', action='store_true',
+                        help='also audit ACT bank at full plane occupancy and 1/2/16 Contexts')
     parser.add_argument('--sim-dir', type=Path,
                         help='local snapshot directory outside the Git checkout')
     args = parser.parse_args()
@@ -109,6 +111,17 @@ def main():
         if ('PASS mixed_context cases=24' not in mixed_text or
                 '** Fatal:' in mixed_text or '** Error:' in mixed_text):
             raise RuntimeError(f'Mixed Context test failed; see {mixed_log}')
+    if args.act_buffer:
+        act_log = log_path.with_name(log_path.stem + '_act_buffer.log')
+        run(['vsim', '-c', '-onfinish', 'stop', 'work.tb_Cluster',
+             f'-gOUTPUT_BUFFER_DEPTH={args.depth}', '+ACT_BUFFER_TEST',
+             f'+DATA_DIR={DATA_DIR.as_posix()}', '-l', str(act_log),
+             '-do', 'run -all; quit -code 0'])
+        act_text = act_log.read_text(errors='replace')
+        expected = 280 if args.depth >= 16 else 168
+        if (f'PASS act_buffer_capacity cases={expected}' not in act_text or
+                '** Fatal:' in act_text or '** Error:' in act_text):
+            raise RuntimeError(f'ACT bank capacity audit failed; see {act_log}')
     if args.full_act:
         full_log = log_path.with_name(log_path.stem + '_full_act.log')
         run(['vsim', '-c', '-onfinish', 'stop', 'work.tb_Cluster',

@@ -56,10 +56,10 @@ def operation(p, counts, k, c, ph):
     done = last and k == os - 1
     ps = f'P[{c}]'
     if ac > 1:
-        desc = f'fusion: {ps} + (R << {4*ph})' if fusion else f'acc: {ps} + R' if acc else '填充: R'
+        desc = f'fusion: {ps} + (R_slice << {4*ph})' if fusion else f'acc: {ps} + R_slice' if acc else '填充: R_slice'
         dest = ps if ps_write else '直接输出'
     else:
-        desc = f'tmp捕获前 fusion: tmp + (R << {4*ph})' if fusion else 'tmp捕获: R'
+        desc = f'tmp捕获前 fusion: tmp + (R_slice << {4*ph})' if fusion else 'tmp捕获: R_slice'
         if ps_write: desc += f'；下一拍 acc: {ps} + tmp' if acc else '；下一拍 tmp 填充 Psum'
         dest = 'tmp' + (f'；{ps}' if ps_write else '')
     if done and dest != '直接输出': dest += '；输出'
@@ -190,11 +190,12 @@ def main():
                         writer.writerow(r)
                         count += 1
     text = ['Cluster tmp / bit-fusion / Psum acc 逐拍操作清单',
-            'R=当前原始归约 slice；每OC一个tmp，WS保存Tile融合前缀，AS保存当前R；P[d]=Context Psum。',
+            'R_slice=当前原始归约slice；R=max(ws_cnt,as_cnt)为Context数；每OC一个32-bit tmp，WS保存Tile融合前缀，AS保存当前R_slice；P[d]=32-bit Context Psum。',
             '每个并行 channel=4*group+OC；OC 不串行。signed/unsigned 时序相同。',
             '外部完整ACT输入P=A位宽/4个Plane；首slice随该包首命令，其余slice连续采样。AS各Context独立给地址命令，共用完整ACT。',
             'C0为首外部Command+A0；q为内部发射周期。先收齐ACT和所需地址命令，再内部发射；tmp在C(q+D-1)捕获，完成C(q+D)。',
             '标准 W2/W4/W8 的 D=3/4/5T。无停顿、无 requant；WS归约末级与fusion在tmp前的路径需STA。',
+            'WS每Tile实际计算P*ws_cnt拍；ws_cnt仍为完整ACT/Context数，P=A位宽/4；单bank含ACT接收时每Tile共2*P*ws_cnt拍。',
             'WS的os=1不写Psum；AS的A8/A16即使os=1也写P[ctx]保存fusion历史。首Tile/A0填充，后续Tile/A0 acc，高phase fusion。',
             'AS中n=as_cnt，P=A位宽/4：同Tile同Context的slice间隔n；相邻Tile同一slice间隔max(P,n)+n*P，含下一包ACT/地址接收。',
             'Psum高地址深度d>=max(ws,as)整批关闭；每OC每拍只时钟一个Context entry。WS os=1及AS A4 os=1关闭Psum。', '']
