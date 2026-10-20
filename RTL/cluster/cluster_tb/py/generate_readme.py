@@ -21,19 +21,22 @@ RTL/
   macro/tb/                     单 Macro testbench
   cluster/cluster_tb/
     sv_code/                    Cluster 参考实现与 testbench
-    py/                         仿真入口和数据检查
+    py/                         枚举生成与数据检查
     data/                       配置、操作和时延 CSV
     log/                        回归日志和检查结果
 vcs-rtl/                        VCS 编译列表与 Makefile
 ```
 
-从仓库根目录执行：
+仓库提供VCS入口，从仓库根目录进入vcs-rtl后执行：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --full-act --act-buffer --latency-audit --log regression_act_capacity_default.log
+cd vcs-rtl
+make com
+make sim
+make check
 ```
 
-ModelSim 的 vlib/vlog/vsim 需在 PATH 中。脚本从任意工作目录调用均可，脚本将 SV、Macro RTL 和 Python 检查器复制到仓库外的本地仿真目录，work、波形、CSV 和日志均在该副本内生成；副本不纳入 Git。默认位置为仓库同级 cluster_tb_work/local_sim/<日志名>，可用 --sim-dir 指定仓库外目录。仓库 data/log 保存经检查的结果。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [cluster_tb README](RTL/cluster/cluster_tb/README.md)。
+ModelSim专用入口py/run_regression.py仅保留在本地，不纳入Git；下文ModelSim命令记录本地验证方式。该入口从任意工作目录调用均可，脚本将 SV、Macro RTL 和 Python 检查器复制到仓库外的本地仿真目录，work、波形、CSV 和日志均在该副本内生成；副本不纳入 Git。默认位置为仓库同级 cluster_tb_work/local_sim/<日志名>，可用 --sim-dir 指定仓库外目录。仓库 data/log 保存经检查的结果。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [cluster_tb README](RTL/cluster/cluster_tb/README.md)。
 
 ## 术语与 Context
 
@@ -335,9 +338,9 @@ UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw sig
 | 时钟门控与保持 | 独立预测 唯一 tmp 输入/Psum 的 ICG 使能并比对实际门控时钟；被门控 DFF 数据保持不变；os>1 批次的高地址 Context entry 整批关闭 |
 | 发布与批次边界 | 每个 OC 写回即发布一拍，lane 数据保持到该 OC 下次发布，同 OC 按 Context 顺序；权重复用覆盖计数非零；结束时检查全部 lane 已发布、批次关闭、无多余输出，tmp/fusion/acc 各路由与门控路径覆盖齐全 |
 
-### 运行、参数作用范围与结果
+### 本地验证参数与结果
 
-从仓库根目录运行默认回归、归约门控单测和独立时延核对：
+以下使用本地保留、不纳入Git的ModelSim入口，记录默认回归、门控单测及独立时延核对的调用：
 
 ```text
 python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --full-act --act-buffer --latency-audit --log regression_act_capacity_default.log

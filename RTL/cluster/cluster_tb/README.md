@@ -10,10 +10,12 @@ Context是同一channel内独立保存、独立输出的计算任务，Psum[ctx]
 
 ## 目录与入口
 
+Git仓库提供[VCS入口](../../../vcs-rtl/Makefile)，在vcs-rtl目录运行make com、make sim、make check。ModelSim专用py/run_regression.py仅保留在本地，不纳入Git；下文该脚本的命令用于记录本地验证方法。共用SV/TB与数据检查Python仍纳入Git。
+
 ```text
 cluster_tb/
   sv_code/    SystemVerilog、testbench、独立时延观察器
-  py/         仿真入口、split/逐拍生成器、时延检查器
+  py/         split/逐拍生成器、时延检查器
   log/        回归日志与时延核对报告
   data/       split 配置、逐拍事件、实测时延 CSV
   filelist.f  相对 cluster_tb 目录的完整 SV 文件列表
