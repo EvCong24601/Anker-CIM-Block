@@ -62,6 +62,8 @@ psum_data_o/out_valid_o 输出 raw signed32；不同 Context 独立，不包含 
 
 ## 验证
 
+完整 case 分类、六种数据 pattern、各精度 split 数量和参数作用范围见 [仓库首页的 tb_Cluster 测试 case](../../../README.md#tb_cluster-测试-case)。
+
 ```text
 python py/run_regression.py --gate-unit --latency-audit --log regression_tmp_default.log
 python py/run_regression.py --depth 1 --psum-depth 3 --patterns 2 --log regression_tmp_depth1.log

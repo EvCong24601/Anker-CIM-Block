@@ -165,6 +165,78 @@ WS/单 Context 顺序为 Tile→Context→phase；AS 为 Tile→phase→Context�
 
 验证包含 Command 停顿、输出反压、AS 外部 ACT 变化时内部 Plane 的复用、ICG 时钟、关闭 DFF 保持和高地址深度关闭。实现为仿真参考 adapter，未进行综合/STA/门级功耗验证，未包含 requant。
 
+## tb_Cluster 测试 case
+
+测试入口为 [tb_Cluster.sv](RTL/cluster/cluster_tb/sv_code/tb_Cluster.sv)。一个 case 指调用一次 `run_case`：先预加载本次使用的权重行，再发送完整的 Tile/Context/slice 序列，最后检查所有 Context 的 raw 结果和输出 FIFO 读出。一次 case 可包含多条 Command 和多个 Context 输出。
+
+### 默认参数与 case 数
+
+默认 `EN_MASK=8'hFF`、`OC_MASK=32'hFFFF_FFFF`、`OS_TILES=1`、`PATTERNS=6`、`OUTPUT_BUFFER_DEPTH=4`、`PSUM_BUFFER_DEPTH=16`、`SEED=32'h19E2_A407`。七种精度均测试 UINT×UINT 和 INT×INT；不包含混合符号乘法。
+
+默认运行以下四类，共 **1368 个 Cluster case**：
+
+1. **split 穷举：1200 个。** 从 7-bit split_mask 的 128 个值中选出 26 种规范树，再按每个归约组的 `K=有效 Macro 数×(256/W)<256` 筛选。每个合法 split 分别运行两种符号和六种数据 pattern；使用 `(os,ws,as)=(OS_TILES,1,1)`。组内有效 Macro 按编号分配不重叠 slot，编号从 0 开始。
+2. **六种标准配置：84 个。** 七种精度×两种符号×六种配置，每次使用随机 pattern 0。六种配置依次为 `(1,1,1)`、`(1,1,2)`、`(1,2,1)`、`(2,1,1)`、`(2,2,1)`、`(2,1,2)`，对应附录 A1..A6。每 Tile K=128，采用上文 W2/W4/W8 标准 split、EN 和 slot，OC 全开。默认连续发射，用于检查无停顿逐拍时序。
+3. **Command 空拍与输出反压：28 个。** 七种精度×两种符号×WS/AS。使用随机 pattern 0、`os=2`，Context 数 `r=min(OUTPUT_BUFFER_DEPTH+2,16,PSUM_BUFFER_DEPTH)`，默认 r=6；WS 为 `(2,r,1)`，AS 为 `(2,1,r)`。第 index 条输入前插入 `index%3` 个空拍；下游先保持不 ready，随后每四拍停一拍。默认 Context 数超过 FIFO 深度，检查写满、发射停顿、指针回绕及恢复后的结果顺序。
+4. **三 Tile 极值与历史保持：56 个。** 七种精度×两种符号×WS/AS×pattern 4/5。使用 `os=3`，Context 数 `r=min(3,PSUM_BUFFER_DEPTH)`，默认 r=3；WS 为 `(3,r,1)`，AS 为 `(3,1,r)`。同时插入 Command 空拍和输出反压，检查多 Tile、多 Context 交错后 fusion/acc 历史未被覆盖。
+
+EN=FF 时，七种精度的 split 穷举数量如下；“两种符号的 case 数”已包含六种 pattern，不包含后三类测试：
+
+- precision 0 / W2A4：每种符号 1 个 split，两种符号共 12 个 case。
+- precision 1 / W2A8：每种符号 1 个 split，两种符号共 12 个 case。
+- precision 2 / W4A4：每种符号 16 个 split，两种符号共 192 个 case。
+- precision 3 / W4A8：每种符号 16 个 split，两种符号共 192 个 case。
+- precision 4 / W4A16：每种符号 16 个 split，两种符号共 192 个 case。
+- precision 5 / W8A8：每种符号 25 个 split，两种符号共 300 个 case。
+- precision 6 / W8A16：每种符号 25 个 split，两种符号共 300 个 case。
+
+合法 split×符号共 200 个配置，故默认总数为 `200×6+84+28+56=1368`。`data/buffer_cycle_cases.csv` 中的 1200 个组合是这 200 个配置再展开六种 WS/AS/OS 调度后的逻辑时序清单，与上面的 1200 个数据 pattern 仿真 case 含义不同。
+
+### 六种输入数据 pattern
+
+pattern 同时用于产生 ACT 和 weight，按各自精度取值。令 INT 的 hi 为最大正数、lo 为最小负数；UINT 的 hi 为全 1、lo 为 0：
+
+- `0`：xorshift 伪随机位模式，由 SEED 决定；split 穷举的这一项插入 Command 空拍。
+- `1`：ACT 和 weight 全零。
+- `2`：ACT 和 weight 均取 hi。
+- `3`：ACT 和 weight 均取 lo。
+- `4`：各自按元素 index 在 lo/hi 间交替，偶数取 lo、奇数取 hi。
+- `5`：ACT 与 pattern 4 相同；weight 改为偶数取 hi、奇数取 lo。这里的 index 是数据生成函数的元素索引，不是输入周期。
+
+UINT W8A16 的 ACT 另外取模 `32768/os`，以使最终结果落在 raw signed32 范围内；这部分测试不覆盖完整 UINT16 数值范围。最终溢出会直接报错，没有 requant 或饱和处理。
+
+### 每个 case 检查什么
+
+- **数值与有效通道：** 使用完整 ACT/weight 整数计算独立点积，逐 channel 比较 raw 和 FIFO 读出结果，检查 OC mask、Context 顺序及输出无丢失、重复。
+- **发射与输入：** 检查 WS 的 Tile→Context→phase、AS 的 Tile→phase→Context 顺序，以及共享权重地址。WS/单 Context 地址为 `8'h20+16*Tile`；AS 另加 Context 编号。AS 复用拍故意向外部 ACT 驱动相反位模式，确认 DUT 仍使用已保存的 Plane；Command 被阻塞时检查所需 Command/ACT 保持稳定。
+- **流水与 buffer 历史：** 逐 channel 检查归约终点对应的 3T/4T/5T 写回，混合树检查各通道分别到达；逐 phase 检查 WS tmp、AS Psum 的中间值，以及 os=1 不写 Psum。检查 WS 最后 phase 的 fusion+acc 和 AS 单拍 fusion/acc 二选一路径。
+- **时钟门控与反压：** 检查提前产生的 ICG 使能、实际门控时钟、关闭 DFF 的数据保持、高地址 Context entry 整批关闭、未用加法器的两个输入为零，以及输出反压时 data/valid/mask 稳定。结束时检查 FIFO 排空和所需路径覆盖计数。
+
+### 运行、参数作用范围与结果
+
+从仓库根目录运行默认回归、归约门控单测和独立时延核对：
+
+```text
+python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --latency-audit --log regression_tmp_default.log
+```
+
+`--en`、`--oc`、`--os`、`--patterns` 只改变第一类 split 穷举 suite；其余三类仍使用标准 K128 映射、OC 全开及各自规定的 counts/pattern。改变 EN 会重新筛选合法 split；K 筛选按 EN 计算，不因关闭 OC 而放宽。`--patterns N` 选用前 N 种 pattern，因此不会关闭第四类固定使用的 pattern 4/5。`--depth`、`--psum-depth` 和 `--seed` 作用于整个 Cluster 回归。Python 入口要求 psum-depth 为 2..16；深度不足三 Context 时第四类按可用深度运行。输出深度为 1 时标准配置也会施加反压，独立无停顿时延核对要求输出深度至少 2。
+
+已有附加回归：
+
+```text
+python RTL/cluster/cluster_tb/py/run_regression.py --depth 1 --psum-depth 3 --patterns 2 --log regression_tmp_depth1.log
+python RTL/cluster/cluster_tb/py/run_regression.py --en 81 --oc 84218421 --os 2 --depth 3 --psum-depth 3 --patterns 2 --log regression_tmp_sparse_depth3.log
+```
+
+前者为 568 个 case，检查单 entry FIFO；后者为 888 个 case，其中 split×符号配置 360 个，检查稀疏 Macro/OC 和非二次幂深度 FIFO。这些计数分别记录在 [默认日志](RTL/cluster/cluster_tb/log/regression_tmp_default.log)、[深度 1 日志](RTL/cluster/cluster_tb/log/regression_tmp_depth1.log) 和 [稀疏配置日志](RTL/cluster/cluster_tb/log/regression_tmp_sparse_depth3.log)。
+
+- [split_cases.csv](RTL/cluster/cluster_tb/data/split_cases.csv)：第一类测试的 precision、符号、split、EN、OC、slot 和各组 K；不逐行记录六种 pattern 或其他三类测试。
+- [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)：六种标准配置的实际运算记录，无停顿回归共 480 条，每拍选取一个有效 channel 记录操作数、结果与完成标志。
+- [latency_audit.csv](RTL/cluster/cluster_tb/data/latency_audit.csv)：独立观察器记录的 140 个标准 Context 输出；[核对报告](RTL/cluster/cluster_tb/log/latency_audit_validation.log) 检查输入到输出周期。
+
+`--gate-unit` 另外运行 [tb_ClusterReduceTree.sv](RTL/cluster/cluster_tb/sv_code/tb_ClusterReduceTree.sv)，不计入上述 1368 个 Cluster case。它以八种 EN（FF、0F、F0、55、AA、81、01、00）分别遍历 26 种规范 split，共 208 个 case，OC 按 case 轮换 FFFFFFFF、84218421、12345678；检查各级终点数据、有效 mask、t1..t6 转发 DFF 的门控和保持。这是独立归约树单测，不应用 Cluster 的 K<256 精度限制。
+
 ## 附录 A 逐拍输入与运算
 
 C0 是首个 Command 的接受沿。每行均有 cmd_fire=1，地址属于该条 descriptor。ACT 列的“采样”表示该沿读取 act_data_i；“复用”表示不采样外部 ACT。写回周期采用实际输入起点；tmp 在该写回周期前一拍捕获，状态写回 ICG 使能在 tmp 捕获时寄存；tmp 输入 ICG 使能则提前 tmp 捕获一拍寄存。
