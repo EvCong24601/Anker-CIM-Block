@@ -4,7 +4,7 @@ Standard-library-only checker: no external DOCX file or Python package needed.
 """
 import csv
 from pathlib import Path
-from buffer_schedule import COUNTS, NAMES, STANDARD_DELAY, sequence, validate_trace
+from buffer_schedule import COUNTS, NAMES, STANDARD_DELAY, sequence, issue_cycle, validate_trace
 
 ROOT = Path(__file__).resolve().parents[1] / 'data'
 LOG_DIR = ROOT.parent / 'log'
@@ -14,8 +14,9 @@ def main():
     expected = {}
     for case, counts in enumerate(COUNTS, 1):
         for p in range(7):
-            for q, (k, c, ph) in enumerate(sequence(p, counts)):
-                expected[case, p, c] = q, q + STANDARD_DELAY[p]
+            for k,c,ph in sequence(p,counts):
+                q=issue_cycle(p,counts,k,c,ph)
+                expected[case,p,c]=q,q+STANDARD_DELAY[p]
     rows = list(csv.DictReader((ROOT / 'latency_audit.csv').open()))
     seen = set()
     for r in rows:
@@ -31,15 +32,15 @@ def main():
     assert seen == complete and len(rows) == 140, (len(seen), len(complete))
     events = validate_trace(ROOT / 'buffer_operations.csv')
     lines = ['PASS: 140 Context outputs and 480 buffer operations match the six schedules.',
-             'Signed/unsigned timing identical; C0 is first input; no stalls or requant.',
-             'From last input to raw: W2=3T, W4=4T, W8=5T.',
+             'Signed/unsigned timing identical; C0 is first external Command+A0; no stalls or requant.',
+             'From last internal issue to raw: W2=3T, W4=4T, W8=5T.',
              f'Operation trace checked: {events} events.', '']
     for case, counts in enumerate(COUNTS, 1):
         lines.append(f'case {case}: os={counts[0]}, ws={counts[1]}, as={counts[2]}')
     lines.append('')
     for p, name in enumerate(NAMES):
         final = [expected[c, p, max(ct[1:])-1][1] for c, ct in enumerate(COUNTS, 1)]
-        lines.append(f'precision={p} {name}: complete latency={STANDARD_DELAY[p]}T; final raw cycles={final}')
+        lines.append(f'precision={p} {name}: internal issue -> raw={STANDARD_DELAY[p]}T; external C0 -> final raw cycles={final}')
     report = '\n'.join(lines) + '\n'
     LOG_DIR.mkdir(exist_ok=True)
     (LOG_DIR / 'latency_audit_validation.log').write_text(report, encoding='utf-8')

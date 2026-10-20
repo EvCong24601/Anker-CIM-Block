@@ -25,6 +25,28 @@ def sequence(p, counts):
     return [(k, c, ph) for k in range(os) for c in range(n) for ph in range(phases)]
 
 
+def packet_start(p,counts,k,c):
+    _,ws,ac=counts;P=ABITS[p]//4;R=max(ws,ac)
+    return k*(max(P,R)+R*P) if ac>1 else (k*R+c)*2*P
+
+
+def issue_cycle(p,counts,k,c,ph):
+    _,ws,ac=counts;P=ABITS[p]//4;R=max(ws,ac)
+    return packet_start(p,counts,k,c)+(max(P,R)+ph*R+c if ac>1 else P+ph)
+
+
+def external_rows(p,counts):
+    os,ws,ac=counts;P=ABITS[p]//4;R=max(ws,ac)
+    for k in range(os):
+        for packet_ctx in range(1 if ac>1 else R):
+            start=packet_start(p,counts,k,packet_ctx)
+            for q in range(max(P,R) if ac>1 else P):
+                ctx=q if ac>1 else packet_ctx
+                yield dict(cycle=start+q,tile=k,context=ctx if (q<R if ac>1 else q==0) else None,
+                           command=(q<R if ac>1 else q==0),phase=q if q<P else None,
+                           address=0x20+16*k+(ctx if ac>1 else 0))
+
+
 def operation(p, counts, k, c, ph):
     os, ws, ac = counts
     last = ph == ABITS[p] // 4 - 1
@@ -60,9 +82,11 @@ def groups(split):
 
 def standard_rows(p, case):
     counts = COUNTS[case - 1]
-    for q, (k, c, ph) in enumerate(sequence(p, counts)):
+    for k,c,ph in sequence(p,counts):
+        q=issue_cycle(p,counts,k,c,ph)
         row = operation(p, counts, k, c, ph)
-        row.update(issue=q, tmp_capture=q + STANDARD_DELAY[p] - 1,
+        row.update(issue=q,external_command=packet_start(p,counts,k,c)+(c if counts[2]>1 else 0),
+                   external_act=packet_start(p,counts,k,c)+ph,tmp_capture=q + STANDARD_DELAY[p] - 1,
                    compute=q + STANDARD_DELAY[p], tile=k, context=c, phase=ph,
                    data=f'Tile{k} Ctx{c} A{ph}')
         yield row
@@ -70,9 +94,9 @@ def standard_rows(p, case):
 
 def validate_trace(path):
     rows = list(csv.DictReader(Path(path).open()))
-    expected = {(case, p, s, k, c, ph): (q + STANDARD_DELAY[p], operation(p, counts, k, c, ph))
+    expected = {(case, p, s, k, c, ph): (issue_cycle(p,counts,k,c,ph) + STANDARD_DELAY[p], operation(p, counts, k, c, ph))
                 for case, counts in enumerate(COUNTS, 1) for p in range(7) for s in range(2)
-                for q, (k, c, ph) in enumerate(sequence(p, counts))}
+                for k,c,ph in sequence(p,counts)}
     seen = set()
     for row in rows:
         key = tuple(int(row[x]) for x in ('case', 'precision', 'signed_en', 'tile', 'context', 'phase'))
@@ -95,6 +119,27 @@ def validate_trace(path):
     return len(rows)
 
 
+def validate_external_trace(path):
+    rows=list(csv.DictReader(Path(path).open(encoding='utf-8')))
+    expected={(case,p,sign,r['cycle']):r for case,counts in enumerate(COUNTS,1)
+              for p in range(7) for sign in range(2) for r in external_rows(p,counts)}
+    seen=set()
+    for row in rows:
+        key=tuple(int(row[x]) for x in ('case','precision','signed_en','input_cycle'))
+        assert key not in seen,key
+        seen.add(key);ref=expected[key]
+        assert int(row['command'])==int(ref['command'])
+        assert int(row['act_sample'])==int(ref['phase'] is not None)
+        if ref['command']:
+            assert int(row['context'])==ref['context']
+            assert int(row['weight_address'],16)==ref['address']
+        if ref['phase'] is not None:
+            assert int(row['phase'])==ref['phase']
+            assert len(row['act_hex'])==256
+    assert seen==expected.keys(),(len(seen),len(expected))
+    return len(rows)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--manifest', type=Path, default=ROOT / 'split_cases.csv')
@@ -105,12 +150,13 @@ def main():
     if args.psum_depth < 2: ap.error('six examples need Psum capacity >=2')
     if args.trace:
         print('PASS buffer operation trace:', validate_trace(args.trace), 'events')
+        print('PASS external input trace:',validate_external_trace(args.trace.parent/'external_inputs.csv'),'events')
     manifest = list(csv.DictReader(args.manifest.open()))
     fields = ['config', 'precision', 'signed_en', 'split', 'en', 'oc', 'case', 'os', 'ws', 'as',
               'group', 'lane_mask', 'issue_cycle', 'tmp_capture', 'compute_cycle',
               'tile', 'context', 'phase', 'weight_address', 'operation', 'description',
               'destination', 'fusion', 'acc', 'psum_write', 'tmp_write', 'done', 'serial',
-              'psum_depth_open_hex', 'fusion_cycle', 'icg_enable_cycle', 'act_sample', 'act_source']
+              'psum_depth_open_hex', 'fusion_cycle', 'icg_enable_cycle', 'act_buffer_read', 'external_cmd_cycle', 'external_act_cycle', 'act_source']
     count = 0
     with (ROOT / 'buffer_cycle_cases.csv').open('w', newline='', encoding='utf-8-sig') as f:
         writer = csv.DictWriter(f, fieldnames=fields)
@@ -125,7 +171,8 @@ def main():
                                if any(en >> m & 1 and oc >> (4 * m + c) & 1 for m in members))
                     if not mask: continue
                     d = 3 if len(members) <= 2 else 4 if len(members) == 4 else 5
-                    for q, (k, c, ph) in enumerate(sequence(p, counts)):
+                    for k,c,ph in sequence(p,counts):
+                        q=issue_cycle(p,counts,k,c,ph)
                         r = operation(p, counts, k, c, ph)
                         r.update(config=config, precision=p, signed_en=cfg['signed_en'],
                                  split=f'{split:02x}', en=f'{en:02x}', oc=f'{oc:08x}',
@@ -136,18 +183,20 @@ def main():
                                  psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if (os>1 or (ac>1 and ABITS[p]>4)) else 0:x}',
                                  fusion_cycle=(q+d-(0 if ac>1 else 1)) if ph>0 else '',
                                  icg_enable_cycle=q+d-1,
-                                 act_sample=int(ac<=1 or c==0),
+                                 act_buffer_read=1,
+                                 external_cmd_cycle=packet_start(p,counts,k,c)+(c if ac>1 else 0),
+                                 external_act_cycle=packet_start(p,counts,k,c)+ph,
                                  act_source=f'A{ph}(T{k})' if ac>1 else f'A{ph}(T{k},Ctx{c})')
                         writer.writerow(r)
                         count += 1
     text = ['Cluster tmp / bit-fusion / Psum acc 逐拍操作清单',
             'R=当前原始归约 slice；每OC一个tmp，WS保存Tile融合前缀，AS保存当前R；P[d]=Context Psum。',
             '每个并行 channel=4*group+OC；OC 不串行。signed/unsigned 时序相同。',
-            'ACT 无独立握手；随 cmd_fire 采样。AS 每 phase 仅 Ctx0 采样，其他 Context 复用。',
-            'C0 为首输入；tmp 在 C(q+D-1) 捕获，运算写回在 C(q+D)，ICG enable 提前一拍。',
+            '外部完整ACT输入P=A位宽/4个Plane；首slice随该包首命令，其余slice连续采样。AS各Context独立给地址命令，共用完整ACT。',
+            'C0为首外部Command+A0；q为内部发射周期。先收齐ACT和所需地址命令，再内部发射；tmp在C(q+D-1)捕获，完成C(q+D)。',
             '标准 W2/W4/W8 的 D=3/4/5T。无停顿、无 requant；WS归约末级与fusion在tmp前的路径需STA。',
             'WS的os=1不写Psum；AS的A8/A16即使os=1也写P[ctx]保存fusion历史。首Tile/A0填充，后续Tile/A0 acc，高phase fusion。',
-            'n=as_cnt，P=A位宽/4：同 Context slice 间隔 n，Tile 间隔 n*P（不是 n*os_cnt）。',
+            'AS中n=as_cnt，P=A位宽/4：同Tile同Context的slice间隔n；相邻Tile同一slice间隔max(P,n)+n*P，含下一包ACT/地址接收。',
             'Psum高地址深度d>=max(ws,as)整批关闭；每OC每拍只时钟一个Context entry。WS os=1及AS A4 os=1关闭Psum。', '']
     for p, name in enumerate(NAMES):
         for case, counts in enumerate(COUNTS, 1):

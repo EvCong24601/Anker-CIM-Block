@@ -32,6 +32,8 @@ module tb_Cluster;
   int cycle=0, issue_count, raw_count;
   int case_os, case_ws, case_as, case_r, case_p, first_issue, last_issue;
   int case_used_digits;
+  int first_external=-1,input_commands=0,act_planes_received=0;
+  int external_trace;
   int lane_due[0:MAX_CONTEXTS-1][0:31];
   bit raw_seen[0:MAX_CONTEXTS-1][0:31];
   bit monitoring=0, exact_ii=0;
@@ -194,8 +196,8 @@ module tb_Cluster;
       end
       #2;
       if(traced) begin
-        fc=cycle-first_issue-(trace_as ? 0 : 1);
-        $fdisplay(operation_trace,"%0d,%s,%0d",cycle-first_issue,trace_row,fc);$fflush(operation_trace);
+        fc=cycle-first_external-(trace_as ? 0 : 1);
+        $fdisplay(operation_trace,"%0d,%s,%0d",cycle-first_external,trace_row,fc);$fflush(operation_trace);
       end
       for(int l=0;l<32;l++) if(check_p[l] && dut.psum[cx[l]][l]!==want[l])
         $fatal(1,"Psum history mismatch ctx=%0d lane=%0d",cx[l],l);
@@ -204,7 +206,8 @@ module tb_Cluster;
 
   // Capture accepted compute events before NBA, inspect raw result after NBA.
   always @(posedge clock) begin : scoreboard
-    int t,c,p,idx,tag;
+    int t,c,p,idx,tag,external_ctx,external_ph;
+    bit act_sample,command_sample;
     cycle=cycle+1;
     if(!reset && monitoring) begin
       if(held_cmd && (!cmd_valid_i || cmd_i!==last_cmd))
@@ -213,6 +216,21 @@ module tb_Cluster;
         $fatal(1,"ACT payload changed while its Command was stalled");
       held_cmd=cmd_valid_i && !cmd_ready_o; last_cmd=cmd_i;
       held_act_for_cmd=cmd_valid_i && !cmd_ready_o && dut.need_plane; last_act=act_data_i;
+      if(cmd_valid_i && cmd_ready_o) begin
+        if(first_external<0) first_external=cycle;
+        input_commands++;
+      end
+      command_sample=cmd_valid_i && cmd_ready_o;
+      act_sample=dut.act_loading || (command_sample && !dut.packet_active);
+      if(act_sample) act_planes_received++;
+      external_ctx=case_as>1 ? (dut.packet_active ? dut.command_count : 0) : dut.context_idx;
+      external_ph=dut.act_loading ? dut.external_phase : 0;
+      if(standard_case!=0 && (command_sample || act_sample))
+        $fdisplay(external_trace,"%0d,%0d,%0d,%0d,%0d,%0d,%0d,%02h,%0d,%0d,%s",
+          cycle-first_external,standard_case,int'(cmd_i.precision),int'(cmd_i.signed_en),dut.tile,
+          int'(command_sample),command_sample ? external_ctx : -1,cmd_i.weight_cim_raddr,
+          int'(act_sample),act_sample ? external_ph : -1,
+          act_sample ? $sformatf("%0256h",act_data_i) : "");
       if(dut.issue) begin
         idx=issue_count; t=idx/(case_r*case_p);
         if(case_as>1) begin p=(idx/case_r)%case_p; c=idx%case_r; end
@@ -227,8 +245,14 @@ module tb_Cluster;
         if(dut.command.weight_cim_raddr!==8'('h20+16*t+(case_as>1 ? c : 0)))
           $fatal(1,"Descriptor weight address mismatch");
         if(issue_count==0) first_issue=cycle;
-        else if(exact_ii && cycle!=last_issue+1)
-          $fatal(1,"Unexpected bubble in v2.7 schedule");
+        if(exact_ii) begin
+          if(case_as>1) begin
+            if(cycle-first_external != t*((case_p>case_r ? case_p : case_r)+case_r*case_p)+
+                (case_p>case_r ? case_p : case_r)+p*case_r+c)
+              $fatal(1,"AS external-load/internal-issue timing mismatch");
+          end else if(cycle-first_external != (t*case_r+c)*2*case_p+case_p+p)
+            $fatal(1,"WS external-load/internal-issue timing mismatch");
+        end
         last_issue=cycle; issue_count++;
         if((dut.ren & ~dut.station)!=0) reuse_cycles++;
         if(p==case_p-1 && t==case_os-1)
@@ -271,12 +295,43 @@ module tb_Cluster;
     $fatal(1,"Command timeout");
   endtask
 
+  task automatic send_address(input cluster_ctrl_t d,input int gap);
+    @(negedge clock);repeat(gap) @(negedge clock);
+    cmd_i=d;cmd_valid_i=1;
+    for(int q=0;q<TIMEOUT_CYCLES;q++) begin
+      @(posedge clock);if(cmd_ready_o) begin #1;cmd_valid_i=0;return;end
+    end
+    $fatal(1,"AS descriptor timeout");
+  endtask
+  task automatic send_act_frame(input cluster_ctrl_t descriptor,input logic [4095:0] data,
+                                input int kt,gap,input bit bubbles);
+    cluster_ctrl_t d;
+    int pcount,rcount;
+    d=descriptor;pcount=abits(int'(d.precision))/4;rcount=d.as_cnt>1 ? int'(d.as_cnt) : 1;
+    send_compute(d,data[0+:1024],gap);
+    fork
+      begin
+        for(int ph=1;ph<pcount;ph++) begin
+          @(negedge clock);act_data_i=data[1024*ph+:1024];
+          @(posedge clock);#1;
+        end
+      end
+      begin
+        for(int cx=1;cx<rcount;cx++) begin
+          d.weight_cim_raddr=8'('h20+16*kt+cx);
+          send_address(d,bubbles ? cx%3 : 0);
+        end
+      end
+    join
+  endtask
+
   task automatic run_case(input int precision, input bit sign_en,
       input logic [6:0] split, input logic [7:0] en,
       input logic [31:0] oc, input logic [23:0] slots,
       input int pattern,os,ws,as_count, input bit bubbles);
     cluster_ctrl_t d;
     logic [1023:0] plane, row;
+    logic [4095:0] full_act;
     int wb,ab,kr,l,slot,a_ctx,c,p,t,groups,used_digits;
     int unsigned raw;
     longint signed w,a;
@@ -335,27 +390,28 @@ module tb_Cluster;
     for(int cx=0;cx<case_r;cx++) for(int ch=0;ch<32;ch++)
       if(expected[cx][ch]<-64'sd2147483648 || expected[cx][ch]>64'sd2147483647)
         $fatal(1,"Golden overflow: selected OS/pattern exceeds signed32");
-    issue_count=0; raw_count=0; first_issue=-1; last_issue=-1;
+    issue_count=0;raw_count=0;first_issue=-1;last_issue=-1;first_external=-1;input_commands=0;act_planes_received=0;
     exact_ii=!bubbles;
     held_cmd=0; held_act_for_cmd=0;
     monitoring=1;
-    for(int index=0;index<os*case_r*case_p;index++) begin
-      t=index/(case_r*case_p);
-      if(as_count>1) begin p=(index/case_r)%case_p; c=index%case_r; end
-      else begin c=(index/case_p)%case_r; p=index%case_p; end
-      d.weight_cim_raddr=8'('h20+16*t+(as_count>1 ? c : 0));
-      plane='0;
-      for(int k=0;k<used_digits;k++) plane[4*k+:4]=4'(activation[t][c][k]>>(4*p));
-      // Reused AS Contexts must ignore external ACT entirely.
-      send_compute(d,(as_count>1 && c>0) ? ~plane : plane,bubbles ? index%3 : 0);
+    for(int kt=0;kt<os;kt++) for(int cx=0;cx<(as_count>1 ? 1 : case_r);cx++) begin
+      d.weight_cim_raddr=8'('h20+16*kt);
+      full_act='0;
+      for(int ph=0;ph<case_p;ph++) for(int k=0;k<used_digits;k++)
+        full_act[1024*ph+4*k+:4]=4'(activation[kt][cx][k]>>(4*ph));
+      send_act_frame(d,full_act,kt,bubbles ? (kt+cx)%3 : 0,bubbles);
     end
+    // Internal distribution must use the saved ACT, not these external pins.
+    @(negedge clock);act_data_i=~full_act[0+:1024];
     for(int wait_cycles=0;wait_cycles<TIMEOUT_CYCLES;wait_cycles++) begin
       @(negedge clock);
       if(raw_count==case_r*$countones(expected_mask)) break;
       if(wait_cycles==TIMEOUT_CYCLES-1) $fatal(1,"Output timeout");
     end
-    if(raw_count!=case_r*$countones(expected_mask) || issue_count!=os*case_r*case_p)
+    if(raw_count!=case_r*$countones(expected_mask) || issue_count!=os*case_r*case_p || input_commands!=os*case_r)
       $fatal(1,"Lost/duplicate compute or result");
+    if(act_planes_received!=os*(as_count>1 ? 1 : case_r)*case_p)
+      $fatal(1,"ACT frame slice count mismatch");
     repeat(6) @(negedge clock);
     if(dut.raw_valid!=0 || dut.batch_active)
       $fatal(1,"Unexpected output after the final Context published");
@@ -376,11 +432,20 @@ module tb_Cluster;
     if($value$plusargs("DATA_DIR=%s",data_dir)) begin end
     manifest=$fopen($sformatf("%s/split_cases.csv",data_dir),"w");
     operation_trace=$fopen($sformatf("%s/buffer_operations.csv",data_dir),"w");
-    if(!manifest || !operation_trace) $fatal(1,"Cannot open CSV output directory %s",data_dir);
+    external_trace=$fopen($sformatf("%s/external_inputs.csv",data_dir),"w");
+    if(!manifest || !operation_trace || !external_trace) $fatal(1,"Cannot open CSV output directory %s",data_dir);
+    $fdisplay(external_trace,"input_cycle,case,precision,signed_en,tile,command,context,weight_address,act_sample,phase,act_hex");
     $fdisplay(operation_trace,"compute_cycle,case,precision,signed_en,tile,context,phase,lane,operation,tmp,fusion_a,fusion_b,acc_a,acc_b,result,done,tmp_stored,fusion_cycle");
     $fdisplay(manifest,"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,group2_K,group3_K,group4_K,group5_K,group6_K,group7_K");
     repeat(4) @(negedge clock); reset=0;
     repeat(2) @(negedge clock);
+    if($test$plusargs("FULL_ACT_TEST")) begin
+      for(int sign_mode=0;sign_mode<2;sign_mode++) for(int tiles=1;tiles<=2;tiles++)
+        for(int mode=0;mode<3;mode++)
+          run_case(6,1'(sign_mode),7'h00,8'hff,32'hffffffff,24'hfac688,
+                   0,tiles,mode==1 ? 2 : 1,mode==2 ? 2 : 1,0);
+      $display("PASS full_act_4096 cases=%0d",cases_run);$finish;
+    end
     // Separate directed suite: mixed pair/quad endpoints may publish
     // different Contexts on the same edge. Keep standard case IDs unchanged.
     if($test$plusargs("MIXED_CONTEXT_TEST")) begin
@@ -441,6 +506,7 @@ module tb_Cluster;
     end
     $fclose(manifest);
     $fclose(operation_trace);
+    $fclose(external_trace);
     if(reuse_cycles==0)
       $fatal(1,"Missing coverage: reuse=%0d",reuse_cycles);
     for(int n=1;n<7;n++) begin

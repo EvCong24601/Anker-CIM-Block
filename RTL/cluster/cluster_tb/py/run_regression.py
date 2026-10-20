@@ -51,6 +51,8 @@ def main():
                         help='also run the 208-case reduction clock-gating unit test')
     parser.add_argument('--mixed-context', action='store_true',
                         help='also run 24 mixed-endpoint WS/AS Context cases')
+    parser.add_argument('--full-act', action='store_true',
+                        help='also run 12 W8A16 full-4096-bit/K256 ACT cases')
     parser.add_argument('--sim-dir', type=Path,
                         help='local snapshot directory outside the Git checkout')
     args = parser.parse_args()
@@ -107,6 +109,16 @@ def main():
         if ('PASS mixed_context cases=24' not in mixed_text or
                 '** Fatal:' in mixed_text or '** Error:' in mixed_text):
             raise RuntimeError(f'Mixed Context test failed; see {mixed_log}')
+    if args.full_act:
+        full_log = log_path.with_name(log_path.stem + '_full_act.log')
+        run(['vsim', '-c', '-onfinish', 'stop', 'work.tb_Cluster',
+             f'-gOUTPUT_BUFFER_DEPTH={args.depth}', '+FULL_ACT_TEST',
+             f'+DATA_DIR={DATA_DIR.as_posix()}', '-l', str(full_log),
+             '-do', 'run -all; quit -code 0'])
+        full_text = full_log.read_text(errors='replace')
+        if ('PASS full_act_4096 cases=12' not in full_text or
+                '** Fatal:' in full_text or '** Error:' in full_text):
+            raise RuntimeError(f'Full ACT test failed; see {full_log}')
     tops = ['work.tb_Cluster'] + (['work.latency_audit'] if args.latency_audit else [])
     run(['vsim', '-c', '-onfinish', 'stop', *tops,
          f'-gOS_TILES={args.os}',

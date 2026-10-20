@@ -17,7 +17,14 @@ module cluster_dut_adapter #(
 );
   import cluster_tb_pkg::*;
   cluster_ctrl_t command;
-  logic [1023:0] held_plane, plane;
+  logic [4095:0] act_buffer; // four 1024-bit bit-slice planes, A0..A3
+  logic [1023:0] plane;
+  cluster_ctrl_t packet_cmd;
+  logic [7:0] context_address[0:MAX_CONTEXTS-1];
+  logic packet_active,act_loading,act_complete;
+  logic [3:0] act_slice_valid;
+  int external_phase,command_count;
+  wire cmd_accept=cmd_valid_i && cmd_ready_o;
   int phase, context_idx, tile, phases, contexts;
   logic need_plane, issue, final_issue;
   logic [31:0] issue_mask;
@@ -88,13 +95,15 @@ module cluster_dut_adapter #(
       $fatal(1,"Context capacity must be >= 1");
   end
   always_comb begin
-    command=cmd_i;
+    command=packet_cmd;
+    if(packet_cmd.as_cnt>1) command.weight_cim_raddr=context_address[context_idx];
     phases=abits(int'(command.precision))/4;
     contexts=command.ws_cnt>1 ? int'(command.ws_cnt) : int'(command.as_cnt);
-    need_plane=command.as_cnt<=1 || context_idx==0;
-    // ACT has no separate handshake. Ctx0 samples a new AS Plane on
-    // cmd_fire; later consumers use the captured Plane and ignore ACT pins.
-    plane=need_plane ? act_data_i : held_plane;
+    // A0 accompanies the first Context descriptor. A1..A3 follow on
+    // consecutive edges without ACT handshake. Other AS descriptors may
+    // arrive concurrently; they only provide their own weight addresses.
+    need_plane=!(packet_active && packet_cmd.as_cnt>1 && command_count<int'(packet_cmd.as_cnt));
+    plane=act_buffer[1024*phase+:1024];
     issue_mask='0; active='0;
     for(int m=0;m<8;m++) begin
       active[m]=command.macro_en_mask[m] && (|command.macro_oc_mask[4*m+:4]);
@@ -103,12 +112,14 @@ module cluster_dut_adapter #(
           issue_mask[4*group_of(command.reduce_split_mask,m)+c]=1;
     end
     final_issue=phase==phases-1 && tile==int'(command.os_cnt)-1;
-    issue=cmd_valid_i && cmd_ready_o;
+    issue=packet_active && act_complete && command_count==contexts && !batch_input_done;
+    if(packet_cmd.as_cnt<=1) issue=packet_active && act_complete && !batch_input_done;
     ren=active & {8{issue}};
     for(int m=0;m<8;m++)
       station[m]=!hold_valid[m] || hold_addr[m]!=command.weight_cim_raddr;
   end
-  assign cmd_ready_o=!reset && !batch_input_done;
+  assign cmd_ready_o=!reset && !batch_input_done &&
+    (!packet_active || (packet_cmd.as_cnt>1 && command_count<int'(packet_cmd.as_cnt)));
   // Registered publish: each pulsing out_valid_o bit marks a fresh lane
   // result on psum_data_o for one cycle; that lane's value holds until its
   // next publication.
@@ -256,7 +267,9 @@ module cluster_dut_adapter #(
     logic [31:0] captured;
     int ctx;
     if(reset) begin
-      held_plane<='0;
+      act_buffer<='0;packet_cmd<='0;packet_active<=0;act_loading<=0;act_complete<=0;
+      act_slice_valid<='0;external_phase<=0;command_count<=0;
+      for(int c=0;c<MAX_CONTEXTS;c++) context_address[c]<=0;
       phase<=0; context_idx<=0; tile<=0; hold_valid<='0;
       in_tag<='0; macro_tag<='0; red1_tag<='0; red2_tag<='0;
       raw_valid<='0; raw_data<='0;
@@ -271,7 +284,19 @@ module cluster_dut_adapter #(
         result_ready[c]='0; result_mask[c]='0;
       end
     end else begin
-      if(cmd_valid_i && cmd_ready_o) begin
+      if(cmd_accept) begin
+        if(!packet_active) begin
+          packet_cmd<=cmd_i;packet_active<=1;command_count<=1;
+          context_address[0]<=cmd_i.weight_cim_raddr;
+          act_buffer[0+:1024]<=act_data_i;act_slice_valid<=4'b0001;
+          external_phase<=1;
+          act_loading<=abits(int'(cmd_i.precision))>4;
+          act_complete<=abits(int'(cmd_i.precision))==4;
+        end else begin
+          if(command_count>=MAX_CONTEXTS) $fatal(1,"AS address capacity exceeded");
+          context_address[command_count]<=cmd_i.weight_cim_raddr;
+          command_count<=command_count+1;
+        end
         if(!batch_active) begin
           batch_active<=1; batch_command<=cmd_i;
           batch_contexts<=cmd_i.ws_cnt>1 ? int'(cmd_i.ws_cnt) : int'(cmd_i.as_cnt);
@@ -292,13 +317,23 @@ module cluster_dut_adapter #(
                     cmd_i.act_slot_sel!=batch_command.act_slot_sel)
           $fatal(1,"Batch descriptor fields changed before completion");
       end
+      if(act_loading) begin
+        act_buffer[1024*external_phase+:1024]<=act_data_i;
+        act_slice_valid[external_phase]<=1;
+        if(external_phase==abits(int'(packet_cmd.precision))/4-1) begin
+          act_loading<=0;act_complete<=1;
+        end else external_phase<=external_phase+1;
+      end
       for(int m=0;m<8;m++) begin
         if(weight_wen_i[m]) hold_valid[m]<=0;
         else if(ren[m]) begin hold_valid[m]<=1; hold_addr[m]<=command.weight_cim_raddr; end
       end
       in_tag.valid<=issue;
       if(issue) begin
-        if(need_plane) held_plane<=act_data_i;
+        if(!act_slice_valid[phase]) $fatal(1,"Internal issue before ACT slice loaded");
+        if(phase==phases-1 && (command.as_cnt<=1 || context_idx==contexts-1)) begin
+          packet_active<=0;act_complete<=0;command_count<=0;act_slice_valid<='0;
+        end
         if(command.precision>6 || !canonical(command.reduce_split_mask) ||
            command.os_cnt<1 || command.ws_cnt<1 || command.as_cnt<1 ||
            (command.ws_cnt>1 && command.as_cnt>1) ||

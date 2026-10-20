@@ -18,20 +18,20 @@ module latency_audit;
   end
   always @(posedge tb_Cluster.clock) begin
     tick++;
-    if(tb_Cluster.monitoring && tb_Cluster.dut.issue) begin
+    if(tb_Cluster.monitoring && tb_Cluster.cmd_valid_i && tb_Cluster.cmd_ready_o) begin
       if(tb_Cluster.cases_run!=last_case) begin
         last_case=tb_Cluster.cases_run;
         origin=tick;
         selected=tb_Cluster.exact_ii && tb_Cluster.standard_case!=0;
         case_id=tb_Cluster.standard_case;
-        precision_code=int'(tb_Cluster.dut.command.precision);
-        sign_mode=int'(tb_Cluster.dut.command.signed_en);
+        precision_code=int'(tb_Cluster.cmd_i.precision);
+        sign_mode=int'(tb_Cluster.cmd_i.signed_en);
         os=tb_Cluster.case_os; ws=tb_Cluster.case_ws; as_count=tb_Cluster.case_as;
         for(int c=0;c<16;c++) begin lane_seen[c]='0; logged[c]=0; end
       end
-      if(selected && tb_Cluster.dut.final_issue)
-        final_input[tb_Cluster.dut.context_idx]=tick-origin;
     end
+    if(selected && tb_Cluster.monitoring && tb_Cluster.dut.issue && tb_Cluster.dut.final_issue)
+      final_input[tb_Cluster.dut.context_idx]=tick-origin;
     #2;
     // Per-OC publication pulses out_valid_o per lane. Log one row per
     // Context once its LAST reserved lane has pulsed: the tick still marks
