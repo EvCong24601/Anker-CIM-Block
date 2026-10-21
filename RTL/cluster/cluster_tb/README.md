@@ -26,6 +26,8 @@ cluster_tb/
 
 ## 流水与存储
 
+调试日志默认逐条打印外部 i_cmd：`[CMD_SEND]` 为 TB 拉高 `cmd_valid_i` 的时刻，`[CMD_ACCEPT]` 为 `cmd_valid_i && cmd_ready_o` 的接受沿；时间戳明确使用 ns。每行包含 case、standard_case、命令序号、Tile/Context、ACT/ADDRESS 类型、WS/AS/SINGLE 模式、完整 descriptor 配置及 pattern、bubbles、Psum depth、seed。case、cmd、tile、context 均从 0 开始；case 与 scoreboard 报错编号一致，standard_case 保留原有六种标准时序编号（其他 case 为 0）。等待 ready 时不会重复打印 SEND，可对照同一 case/cmd 的两行定位停顿；AS 后续地址命令也会打印。
+
 每个OC仅一个32-bit tmp数据寄存器，以及深度 OUTPUT_BUFFER_DEPTH（默认16）的32-bit Psum Context buffer。每 OC 共用一套 fusion 和一套 acc；同一 OC 每拍仅选择一个 Context entry，其他深度保持。
 
 WS/单 Context：归约 R_slice 与旧 tmp 做融合后写入 tmp，A0 直接覆盖；下一拍消费 tmp。os=1 最后 phase 直接输出，不写 Psum；os>1 仅最后 phase 填充或累加 Psum[ctx]。旧 tmp 的 acc 与新归约数据的 fusion 可同拍位于 tmp 两侧，属于不同输入结果。

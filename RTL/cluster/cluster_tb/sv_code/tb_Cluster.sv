@@ -32,6 +32,8 @@ module tb_Cluster;
   int cycle=0, issue_count, raw_count;
   int case_os, case_ws, case_as, case_r, case_p, first_issue, last_issue;
   int case_used_digits;
+  int case_pattern;
+  bit case_bubbles;
   int first_external=-1,input_commands=0,act_planes_received=0;
   int external_trace;
   int lane_due[0:MAX_CONTEXTS-1][0:31];
@@ -229,6 +231,19 @@ module tb_Cluster;
     end
   end
 
+  // Log external descriptors, not the later internal Macro compute issues.
+  // cases_run and input_commands are zero-based and match the scoreboard.
+  task automatic display_command(input string event_name, input cluster_ctrl_t d);
+    $display("[CMD_%s] time=%0.3f ns cycle=%0d case=%0d standard_case=%0d cmd=%0d tile=%0d context=%0d kind=%0s mode=%0s precision=%0d W%0dA%0d signed_en=%0d pattern=%0d bubbles=%0d os_cnt=%0d ws_cnt=%0d as_cnt=%0d reduce_split_mask=0x%02h macro_en_mask=0x%02h macro_oc_mask=0x%08h weight_cim_raddr=0x%02h act_slot_sel=0x%06h depth=%0d seed=0x%08h",
+      event_name,$realtime,cycle,cases_run,standard_case,input_commands,
+      input_commands/case_r,input_commands%case_r,
+      (d.as_cnt>1 && input_commands%case_r!=0) ? "ADDRESS" : "ACT",
+      d.as_cnt>1 ? "AS" : d.ws_cnt>1 ? "WS" : "SINGLE",
+      d.precision,wbits(int'(d.precision)),abits(int'(d.precision)),d.signed_en,
+      case_pattern,case_bubbles,d.os_cnt,d.ws_cnt,d.as_cnt,d.reduce_split_mask,
+      d.macro_en_mask,d.macro_oc_mask,d.weight_cim_raddr,d.act_slot_sel,OUTPUT_BUFFER_DEPTH,SEED);
+  endtask
+
   // Capture accepted compute events before NBA, inspect raw result after NBA.
   always @(posedge clock) begin : scoreboard
     int t,c,p,idx,tag,external_ctx,external_ph;
@@ -242,6 +257,7 @@ module tb_Cluster;
       held_cmd=cmd_valid_i && !cmd_ready_o; last_cmd=cmd_i;
       held_act_for_cmd=cmd_valid_i && !cmd_ready_o && dut.need_plane; last_act=act_data_i;
       if(cmd_valid_i && cmd_ready_o) begin
+        display_command("ACCEPT",cmd_i);
         if(first_external<0) first_external=cycle;
         input_commands++;
       end
@@ -313,6 +329,7 @@ module tb_Cluster;
   task automatic send_compute(input cluster_ctrl_t d, input logic [1023:0] data, input int gap);
     @(negedge clock); repeat(gap) @(negedge clock);
     cmd_i=d; cmd_valid_i=1; act_data_i=data;
+    display_command("SEND",d);
     for(int t=0;t<TIMEOUT_CYCLES;t++) begin
       @(posedge clock);
       if(cmd_ready_o) begin #1; cmd_valid_i=0; return; end
@@ -323,6 +340,7 @@ module tb_Cluster;
   task automatic send_address(input cluster_ctrl_t d,input int gap);
     @(negedge clock);repeat(gap) @(negedge clock);
     cmd_i=d;cmd_valid_i=1;
+    display_command("SEND",d);
     for(int q=0;q<TIMEOUT_CYCLES;q++) begin
       @(posedge clock);if(cmd_ready_o) begin #1;cmd_valid_i=0;return;end
     end
@@ -362,6 +380,7 @@ module tb_Cluster;
     longint signed w,a;
     wb=wbits(precision); ab=abits(precision); kr=256/wb;
     case_os=os; case_ws=ws; case_as=as_count;
+    case_pattern=pattern; case_bubbles=bubbles;
     if(os<1 || ws<1 || as_count<1 || (ws>1 && as_count>1))
       $fatal(1,"Counts must be >=1; simultaneous WS/AS reuse is not defined");
     case_r=ws>1 ? ws : as_count; case_p=ab/4;
