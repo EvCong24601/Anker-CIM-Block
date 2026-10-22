@@ -110,7 +110,8 @@ module cluster_dut_adapter #(
     for(int m=0;m<8;m++) begin
       active[m]=command.macro_en_mask[m] && (|command.macro_oc_mask[4*m+:4]);
       for(int c=0;c<4;c++)
-        if(command.macro_en_mask[m] && command.macro_oc_mask[4*m+c])
+        if(command.macro_en_mask[m] &&
+           merge_contributes(command.reduce_split_mask,command.macro_oc_mask,m,c))
           issue_mask[4*group_of(command.reduce_split_mask,m)+c]=1;
     end
     final_issue=phase==phases-1 && tile==int'(command.os_cnt)-1;
@@ -339,8 +340,8 @@ module cluster_dut_adapter #(
         if(command.precision>6 || !canonical(command.reduce_split_mask) ||
            command.os_cnt<1 || command.ws_cnt<1 || command.as_cnt<1 ||
            (command.ws_cnt>1 && command.as_cnt>1) ||
-           contexts>MAX_CONTEXTS || contexts>OUTPUT_BUFFER_DEPTH || issue_mask==0)
-          $fatal(1,"Invalid descriptor / context capacity / empty output");
+           contexts>MAX_CONTEXTS || contexts>OUTPUT_BUFFER_DEPTH)
+          $fatal(1,"Invalid descriptor / context capacity");
         for(int m=0;m<8;m++) if(command.macro_en_mask[m]) begin
           if(int'(command.act_slot_sel[3*m+:3])>=wbits(int'(command.precision)))
             $fatal(1,"ACT slot outside plane");
@@ -438,9 +439,11 @@ module cluster_dut_adapter #(
       // strictly, and every completion cycle maps to exactly one issue
       // event. The batch closes only after every Context has reserved and
       // completed its lanes.
-      all_done=1;
+      // A leftmost mask can suppress every output while other Macros still
+      // issue. Empty batches complete after all inputs, without lane pulses.
+      all_done=batch_input_done;
       for(int c=0;c<batch_contexts;c++)
-        if(result_mask[c]==0 || result_ready[c]!=result_mask[c]) all_done=0;
+        if(result_ready[c]!=result_mask[c]) all_done=0;
       if(batch_active && all_done) begin
         batch_active<=0; batch_input_done<=0; psum_depth_open<='0;
       end

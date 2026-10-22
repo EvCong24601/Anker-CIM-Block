@@ -146,6 +146,16 @@ OC mask 为 `32'hFFFF_FFFF`。物理终点由 split 决定，不因某些 Macro 
 
 归约只合并同一输出、同一 Context/Tile/phase 的 Macro 贡献。不同 Context、group 和 OC 不相加。根节点为 bit0，左右 quad 为 bit1/2，四个 pair 为 bit3..6；bit=1 表示拆分，bit=0 表示本节点合并。未访问的后代 split 位为 0，共 26 种规范编码。
 
+每个 Macro 的 OC mask 独立配置。每个 merge 节点固定采用其覆盖范围内最左侧 Macro 的 mask：t3/t4/t5/t6 分别取 M0/M2/M4/M6，t1/t2 分别取 M0/M4，t0 取 M0。即使最左侧 Macro 未使能，也不改选其他 Macro；例如 t5、t2 均取 M4，而不是将组内 mask 做 OR。Macro 本地计算仍使用自身 mask。
+
+设 `left(t_i)` 为该节点覆盖范围内最小的 Macro 编号，则 `oc_mask(t_i)=macro_oc_mask[4*left(t_i)+:4]`。例如 M4 与 M5 的 mask 不同时，t5 沿用 M4；t2 合并 t5、t6 时继续沿用左子树 t5 的 mask，因此仍为 M4。其他组内 Macro 的 mask 不能重新打开 M4 已屏蔽的 OC。
+
+mask 逐级生效：被子节点屏蔽的 OC 不向父节点贡献数据；父节点只合并有效子树，不能读取被门控寄存器的旧数据。节点输出还要求其子树中存在有效且使能的贡献。转发 DFF 的 ICG、终点 tap、输出 lane 预留和批次完成判断遵循同一有效性规则。若所有输出都被屏蔽，该批次在内部输入全部发射后完成，不发布 out_valid_o。
+
+`--gate-unit` 的 208 例独立递归参考测试覆盖 26 种树、不同 EN 和不一致的 OC mask；本地 `--oc-merge` 另运行 288 例，覆盖 pair/quad/root/混合终点、最左侧 Macro 关闭、全屏蔽批次以及 WS/AS/OS 连续复用。
+
+VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运行该专项测试，成功标志为 `PASS oc_merge_leftmost cases=288`。该专项使用独立预期结果检查输出数值和有效性，不沿用旧的组内 mask OR 规则。
+
 归约终点从向父级转发 DFF 前取数。pair 终止时关闭相应 t3..t6；quad 终止时关闭相应 t1/t2；仅继续归约时打开转发 DFF。根结果进入通用 tmp，无额外 root-only 输出级。
 
 | 归约终点 | Macro 发射 | tmp 捕获 / WS fusion | AS fusion、acc、Psum 写回或输出 |

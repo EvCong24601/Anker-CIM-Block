@@ -20,7 +20,20 @@ module tb_ClusterReduceTree;
   logic [7:0] case_en[0:207];
   logic [31:0] case_oc[0:207];
   logic [31:0] masks[0:207][0:2];
+  longint signed leaf_data[0:207][0:31];
   longint signed expected[0:207][0:31];
+  // Independent recursive reference: each internal merge takes the mask
+  // of its fixed leftmost leaf. Invalid child data contributes zero.
+  function automatic bit reference_live(input int id,first,size,c);
+    if(size==1) return case_en[id][first] && case_oc[id][4*first+c];
+    return case_oc[id][4*first+c] &&
+           (reference_live(id,first,size/2,c) || reference_live(id,first+size/2,size/2,c));
+  endfunction
+  function automatic longint signed reference_sum(input int id,first,size,c);
+    if(!reference_live(id,first,size,c)) return 0;
+    if(size==1) return leaf_data[id][4*first+c];
+    return reference_sum(id,first,size/2,c)+reference_sum(id,first+size/2,size/2,c);
+  endfunction
   task automatic decode(input int node,first,size,input logic [6:0] s,inout int g);
     if(size==1 || !s[node]) begin
       for(int m=first;m<first+size;m++) begin
@@ -66,8 +79,7 @@ module tb_ClusterReduceTree;
       size=n<3 ? 4 : 2; first=n<3 ? (n-1)*4 : (n-3)*2;
       expected_gate=0;
       if(valids[stage] && case_width[id][first]>size)
-        for(int m=0;m<8;m++) if(m>=first && m<first+size)
-          for(int c=0;c<4;c++) if(case_en[id][m] && case_oc[id][4*m+c]) expected_gate[c]=1;
+        for(int c=0;c<4;c++) expected_gate[c]=reference_live(id,first,size,c);
       if(dut.reduce_cg_en[n]!== (|expected_gate) || dut.cg_channel_req[n]!==expected_gate)
         $fatal(1,"Incorrect forwarding gate at terminal/nonterminal node t%0d",n);
     end
@@ -85,7 +97,13 @@ module tb_ClusterReduceTree;
       for(int tree=0;tree<128;tree++) if(canonical(7'(tree))) begin
         @(negedge clock);
         index=case_count; early_valid_i=1; early_split_i=7'(tree); early_en_i=test_en;
-        early_oc_i=index%3==0 ? 32'hffffffff : index%3==1 ? 32'h84218421 : 32'h12345678;
+        case(index%5)
+          0: early_oc_i=32'hffffffff;
+          1: early_oc_i=32'h84218421; // t5 and t2 follow M4, not M5/M6/M7
+          2: early_oc_i=32'h12345678;
+          3: early_oc_i=32'hfffffff0; // no fallback from masked M0
+          default: early_oc_i=32'h00000000;
+        endcase
         g=0; decode(0,0,8,early_split_i,g);
         case_en[index]=early_en_i; case_oc[index]=early_oc_i;
         for(int m=0;m<8;m++) case_width[index][m]=widths[m];
@@ -93,11 +111,13 @@ module tb_ClusterReduceTree;
         for(int i=0;i<32;i++) expected[index][i]=0;
         for(int m=0;m<8;m++) for(int c=0;c<4;c++) begin
           early_data[72*m+18*c+:18]=18'((index%2 ? -1 : 1)*(1000+index*17+m*31+c*13));
-          if(early_en_i[m] && early_oc_i[4*m+c]) begin
-            l=4*owners[m]+c; masks[index][depths[m]][l]=1;
-            expected[index][l]+=$signed(early_data[72*m+18*c+:18]);
-          end
+          leaf_data[index][4*m+c]=$signed(early_data[72*m+18*c+:18]);
         end
+        for(int m=0;m<8;m++) if(m==0 || owners[m]!=owners[m-1])
+          for(int c=0;c<4;c++) if(reference_live(index,m,widths[m],c)) begin
+            l=4*owners[m]+c; masks[index][depths[m]][l]=1;
+            expected[index][l]=reference_sum(index,m,widths[m],c);
+          end
         for(int d=0;d<3;d++) if(masks[index][d]!=0) expected_events++;
         case_count++;
       end

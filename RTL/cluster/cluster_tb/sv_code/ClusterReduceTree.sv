@@ -42,12 +42,22 @@ module ClusterReduceTree (
   function automatic int size_of(input int n);
     return n==0 ? 8 : n<3 ? 4 : 2;
   endfunction
-  function automatic bit side_live(input ctrl_t ctrl,input int n,c,side);
-    int first,count;
-    count=size_of(n)/2; first=start_of(n)+side*count;
+  // Every merge inherits the fixed leftmost Macro's OC mask, even when
+  // that Macro is disabled. A masked child must not expose stale DFF data.
+  function automatic bit subtree_live(input ctrl_t ctrl,input int first,count,c);
+    if(count>=2 && !ctrl.oc[4*first+c]) return 0;
     for(int m=0;m<8;m++)
-      if(m>=first && m<first+count && ctrl.en[m] && ctrl.oc[4*m+c]) return 1;
+      if(m>=first && m<first+count && ctrl.en[m] && ctrl.oc[4*m+c]) begin
+        if(count>=4 && !ctrl.oc[4*((m/2)*2)+c]) continue;
+        if(count>=8 && !ctrl.oc[4*((m/4)*4)+c]) continue;
+        return 1;
+      end
     return 0;
+  endfunction
+  function automatic bit side_live(input ctrl_t ctrl,input int n,c,side);
+    int count;
+    count=size_of(n)/2;
+    return subtree_live(ctrl,start_of(n)+side*count,count,c);
   endfunction
   function automatic logic [3:0] forward_mask(input ctrl_t ctrl,input int n);
     logic [3:0] result;
@@ -57,7 +67,7 @@ module ClusterReduceTree (
     // leaves t3..t6 closed while its combinational result goes to the buffer.
     continue_up=n<3 ? !ctrl.split[0] : !ctrl.split[1+(n-3)/2];
     if(ctrl.valid && !ctrl.split[n] && continue_up)
-      for(int c=0;c<4;c++) result[c]=side_live(ctrl,n,c,0)||side_live(ctrl,n,c,1);
+      for(int c=0;c<4;c++) result[c]=subtree_live(ctrl,start_of(n),size_of(n),c);
     return result;
   endfunction
   function automatic int span(input logic [6:0] split,input int first);
@@ -172,7 +182,7 @@ module ClusterReduceTree (
               end
             end else begin
               n=width==2 ? 3+m/2 : width==4 ? 1+m/4 : 0;
-              if(side_live(ctrl,n,c,0)||side_live(ctrl,n,c,1)) begin
+              if(subtree_live(ctrl,start_of(n),size_of(n),c)) begin
                 tap_mask_o[stage][4*g+c]=1;
                 tap_data_o[stage][21*(4*g+c)+:21]=node_value[n][c];
               end

@@ -45,6 +45,16 @@ package cluster_tb_pkg;
       if (i<=m && first_leaf(s,i)!=first_leaf(s,i-1)) g++;
     return g;
   endfunction
+  // Effective leaf contribution after all merge masks up to its endpoint.
+  // Local Macro issue remains controlled by its own OC mask.
+  function automatic bit merge_contributes(
+      input logic [6:0] split, input logic [31:0] oc, input int m,c);
+    if(!oc[4*m+c]) return 0;
+    if(!split[3+m/2] && !oc[4*((m/2)*2)+c]) return 0;
+    if(!split[1+m/4] && !oc[4*((m/4)*4)+c]) return 0;
+    if(!split[0] && !oc[c]) return 0;
+    return 1;
+  endfunction
   function automatic longint signed number(
       input int unsigned raw, input int bits, input bit sign_en);
     longint signed n;

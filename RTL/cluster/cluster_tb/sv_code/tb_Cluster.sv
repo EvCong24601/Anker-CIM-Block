@@ -150,6 +150,22 @@ module tb_Cluster;
       decode_groups(s,2*node+2,start+size/2,size/2,group_id);
     end
   endtask
+  // Independent path walk for the numerical scoreboard. Only traverse
+  // merges within this leaf's decoded endpoint, not unrelated split groups.
+  function automatic bit golden_oc_path(input int m,c,input logic [31:0] oc);
+    int first,size;
+    first=m; size=1;
+    for(int j=0;j<8;j++) if(golden_group[j]==golden_group[m]) begin
+      if(j<first) first=j;
+    end
+    while(size<=8) begin
+      if(!oc[4*((m/size)*size)+c]) return 0;
+      if((m/size)*size==first &&
+         (first+size==8 || golden_group[first+size]!=golden_group[m])) return 1;
+      size*=2;
+    end
+    return 0;
+  endfunction
   function automatic bit legal_k(input int p, input logic [6:0] split);
     int count;
     for(int g=0;g<8;g++) begin
@@ -417,7 +433,7 @@ module tb_Cluster;
           for(int ocid=0;ocid<4;ocid++) for(int j=0;j<kr;j++) begin
             raw=sample_bits(wb,pattern,j+m*7+ocid*3+kt+wc*11,sign_en,1);
             for(int b=0;b<wb;b++) row[256*ocid+wb*j+b]=(raw>>b)&1;
-            if(en[m] && oc[4*m+ocid]) begin
+            if(en[m] && golden_oc_path(m,ocid,oc)) begin
               l=4*golden_group[m]+ocid; slot=int'(slots[3*m+:3]);
               for(int cx=0;cx<case_r;cx++) if(as_count<=1 || cx==wc) begin
                 w=number(raw,wb,sign_en);
@@ -449,7 +465,8 @@ module tb_Cluster;
     @(negedge clock);act_data_i=~full_act[0+:1024];
     for(int wait_cycles=0;wait_cycles<TIMEOUT_CYCLES;wait_cycles++) begin
       @(negedge clock);
-      if(raw_count==case_r*$countones(expected_mask)) break;
+      if(raw_count==case_r*$countones(expected_mask) &&
+         issue_count==os*case_r*case_p && !dut.batch_active) break;
       if(wait_cycles==TIMEOUT_CYCLES-1) $fatal(1,"Output timeout");
     end
     if(raw_count!=case_r*$countones(expected_mask) || issue_count!=os*case_r*case_p || input_commands!=os*case_r)
@@ -483,6 +500,19 @@ module tb_Cluster;
     $fdisplay(manifest,"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,group2_K,group3_K,group4_K,group5_K,group6_K,group7_K");
     repeat(4) @(negedge clock); reset=0;
     repeat(2) @(negedge clock);
+    if($test$plusargs("OC_MERGE_TEST")) begin
+      // Unequal masks at pair/quad/root/mixed endpoints, disabled owners,
+      // completely masked batches, and immediate reuse by the next case.
+      for(int p=5;p<=6;p++) for(int sign_mode=0;sign_mode<2;sign_mode++)
+        for(int tree=0;tree<4;tree++) for(int em=0;em<2;em++)
+          for(int om=0;om<3;om++) for(int mode=0;mode<3;mode++)
+            run_case(p,1'(sign_mode),tree==0 ? 7'h00 : tree==1 ? 7'h01 :
+                     tree==2 ? 7'h07 : 7'h03,em==0 ? 8'hff : 8'haa,
+                     om==0 ? 32'h84218421 : om==1 ? 32'hfffffff0 : 32'h0,
+                     24'hfac688,0,2,mode==1 ? 2 : 1,mode==2 ? 2 : 1,0);
+      $display("PASS oc_merge_leftmost cases=%0d",cases_run);
+      $finish;
+    end
     if($test$plusargs("ACT_BUFFER_TEST")) begin
       // Every precision/sign at full 256-digit plane occupancy, single/WS/AS,
       // 1/2/16 Contexts, one/two Tiles, and with/without address-command gaps.

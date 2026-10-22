@@ -2,6 +2,10 @@
 
 参考 adapter 连接八个真实 SingleMacro RTL，输出为 raw signed32，未包含 requant。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。
 
+每个 merge 节点采用其固定最左侧 Macro 的 OC mask，组内 mask 可以不同。t5、t2 均取 M4，t0 取 M0；不回退到首个使能 Macro。被屏蔽子树不贡献数据，转发门控、终点 mask 与批次输出预留采用相同规则。全部 OC 被屏蔽的批次在内部发射完成后结束，不产生输出脉冲。本地 `--gate-unit --oc-merge` 可运行 208 例归约单元测试及 288 例独立 mask 专项测试。
+
+mask 来源完整映射：`t3←M0, t4←M2, t5←M4, t6←M6, t1←M0, t2←M4, t0←M0`。父节点继承左子树的 mask；例如 t2 通过 t5 继承 M4，即使 M5、M6、M7 的 mask 不同也不改变来源。已编译的 VCS Cluster 仿真可用 `make sim PVALUE=+OC_MERGE_TEST` 运行专项测试，日志应包含 `PASS oc_merge_leftmost cases=288`。
+
 外部 ACT 为1024-bit Plane 流：首个 i_cmd 接受沿接收A0，随后P−1个周期连续接收A1..A(P−1)，P=A位宽/4；无 ACT 握手。完整数据保存于4096-bit act_buffer，收齐后再内部按precision、counts和slot分发。
 
 WS每个Tile/Context加载一个完整ACT并发送一次Command。AS每个Tile仅加载一次完整ACT，各Context仍各发送一次带自身权重地址的Command；后续地址命令可与ACT后续Slice重叠。内部发射等待完整ACT和全部AS地址收齐，首命令尚未接受时保持Command+A0；剩余ACT流一旦开始就逐拍接收。
