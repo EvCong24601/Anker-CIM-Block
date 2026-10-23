@@ -78,7 +78,7 @@ N 8..15:  16,  53,   8, 39,  45, 53, 36, 48
 
 ## 文件与复现
 
-- `tb_Cluster_GEMM.sv`：一个真实Cluster实例、矩阵存储与共享验证状态。
+- `tb_Cluster_GEMM_OS1_WS32.sv`：一个真实Cluster实例、矩阵存储与共享验证状态。
 - `include/cluster_gemm_driver.svh`：加载Python文件、独立SV矩阵点积复核、权重/ACT打包检查、SRAM预加载、两批Command/ACT驱动。
 - `include/cluster_gemm_scoreboard.svh`：按lane输出次序重建M/N，逐元素检查raw和INT8、逐拍检查地址/ACT/phase、权重刷新次数、Psum旁路、INT8延迟及寄存器保持。
 - `include/cluster_gemm_regression.svh`：两批N调度、排空、覆盖检查及完整观测矩阵输出。

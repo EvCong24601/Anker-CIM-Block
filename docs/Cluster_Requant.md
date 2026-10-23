@@ -50,7 +50,7 @@ AS可设置`REQUANT_CONTEXT_DEPTH>1`和`REQUANT_CONTEXT_LANES`（1～32）。首
 - 独立边界case：在上一batch最后量化捕获沿加载下一batch参数，检查旧结果用旧参数、新结果用新参数及跨配置保持。
 - 独立reset case：在raw发布后、量化寄存前复位，检查取消待输出结果并清零寄存器。
 - 4个配置负向case：per-channel、shift低于/高于当前范围、未知参数，必须捕获精确诊断。
-- `tb_Cluster_GEMM.sv`：单Cluster分两批N8计算M32/K128/N16的W8A16 WS32矩阵，验证已合入输入补偿的逐通道zp、权重地址0x40/0x41、512个raw和512个INT8元素。详见 [GEMM说明](Cluster_GEMM_WS32.md)。
+- `tb_Cluster_GEMM_OS1_WS32.sv`：单Cluster分两批N8计算M32/K128/N16的W8A16 WS32矩阵，验证已合入输入补偿的逐通道zp、权重地址0x40/0x41、512个raw和512个INT8元素。详见 [GEMM说明](Cluster_GEMM_WS32.md)。
 - `tb_Cluster_GEMM_OS2_AS4.sv`：单Cluster八Macro全归约，M32/K512/N16、OS2/AS4/WS1，检查512个raw、512个INT8、4096次Psum历史更新，以及Context容量、跨K Tile zp不一致的精确负向诊断。详见 [AS4说明](Cluster_GEMM_OS2_AS4.md)。
 
 每个case开始打印英文描述与时间戳。运行全部测试：

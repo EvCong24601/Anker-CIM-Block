@@ -58,7 +58,7 @@ def main():
         'MacroMul2x4.sv', 'MacroSliceFusion.sv', 'SingleMacro.sv')]
     sources += [cluster_rtl / name for name in ('cluster_pkg.sv', 'ClusterRequant.sv', 'ClusterReduceTree.sv',
                 'cluster_dut_adapter.sv')]
-    sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv', 'tb_ClusterRequant.sv','tb_Cluster_GEMM.sv','tb_Cluster_GEMM_OS2_AS4.sv')]
+    sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv', 'tb_ClusterRequant.sv','tb_Cluster_GEMM_OS1_WS32.sv','tb_Cluster_GEMM_OS2_AS4.sv')]
     sources += [macro / 'tb/tb_SingleMacro.sv']
     manifest = []
     for src in sources:
@@ -124,7 +124,7 @@ def main():
         data=dest/'gemm_data'
         meta=generate_gemm(data)
         print(f'GEMM parameters: multiplier={meta["multiplier"]} shift={meta["shift"]} act_zp={meta["act_zp"]} output_zp={meta["output_zp"]}',flush=True)
-        simulate('cluster_gemm','tb_Cluster_GEMM',['+GEMM_DATA_DIR='+data.as_posix()],
+        simulate('cluster_gemm','tb_Cluster_GEMM_OS1_WS32',['+GEMM_DATA_DIR='+data.as_posix()],
                  'PASS cluster_gemm M=32 K=128 N=16')
         verify_gemm(data)
         if args.gemm_only:

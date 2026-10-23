@@ -12,6 +12,6 @@
 tb_Cluster.sv
 tb_ClusterReduceTree.sv
 tb_ClusterRequant.sv
-tb_Cluster_GEMM.sv
+tb_Cluster_GEMM_OS1_WS32.sv
 tb_Cluster_GEMM_OS2_AS4.sv
 latency_audit.sv

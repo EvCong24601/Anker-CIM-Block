@@ -21,7 +21,7 @@ RTL/
       tb_Cluster.sv             Cluster 仿真顶层
       tb_ClusterReduceTree.sv    归约树单元测试
       tb_ClusterRequant.sv       无时钟 Requant 算术单元测试
-      tb_Cluster_GEMM.sv         单Cluster两批N8的完整WS32 GEMM测试
+      tb_Cluster_GEMM_OS1_WS32.sv         单Cluster两批N8的完整WS32 GEMM测试
       tb_Cluster_GEMM_OS2_AS4.sv  单Cluster八Macro归约的K512/OS2/AS4测试
       latency_audit.sv          时延观察器
       include/                  驱动、参考模型、检查器、case 与 suite

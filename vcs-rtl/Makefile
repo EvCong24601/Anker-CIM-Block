@@ -21,7 +21,7 @@ else ifeq ($(TB),requant)
 TOP        = tb_ClusterRequant
 V_FILE     = ./verilog_file_pl.f
 else ifeq ($(TB),gemm)
-TOP        = tb_Cluster_GEMM
+TOP        = tb_Cluster_GEMM_OS1_WS32
 V_FILE     = ./verilog_file_pl.f
 else ifeq ($(TB),gemm_as)
 TOP        = tb_Cluster_GEMM_OS2_AS4

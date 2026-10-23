@@ -40,7 +40,7 @@ SRAM 初始化状态的逐 OC 跟踪位于 RTL 的仿真检查分支，受 SINGL
 
 Requant功能实现位于 `RTL/cluster/rtl/ClusterRequant.sv`，无时钟纯组合；`cluster_dut_adapter.sv`负责batch配置锁存和INT8输出寄存器。量化valid严格比raw晚一拍。`tb_ClusterRequant.sv`使用Python任意精度整数向量，`cluster_requant_cases.svh`负责集成golden、配置锁存、延迟、保持、复位和跨batch边界检查。详细参数与测试范围见 [Requant说明](Cluster_Requant.md)。
 
-`tb_Cluster_GEMM.sv`仅实例化一个Cluster，分两批N8计算完整32×128乘128×16。`cluster_gemm_driver.svh`负责向量读取、打包核对、两行SRAM预加载和WS32驱动；`cluster_gemm_scoreboard.svh`检查地址/发射/权重Hold/输出矩阵及延迟；`cluster_gemm_regression.svh`负责两批调度、输出拼接和覆盖检查。`gemm_vectors.py`先从原始实数矩阵生成golden及校准参数，再输出物理激励；SV不共享Python的矩阵打包算法。详见 [GEMM说明](Cluster_GEMM_WS32.md)。
+`tb_Cluster_GEMM_OS1_WS32.sv`仅实例化一个Cluster，分两批N8计算完整32×128乘128×16。`cluster_gemm_driver.svh`负责向量读取、打包核对、两行SRAM预加载和WS32驱动；`cluster_gemm_scoreboard.svh`检查地址/发射/权重Hold/输出矩阵及延迟；`cluster_gemm_regression.svh`负责两批调度、输出拼接和覆盖检查。`gemm_vectors.py`先从原始实数矩阵生成golden及校准参数，再输出物理激励；SV不共享Python的矩阵打包算法。详见 [GEMM说明](Cluster_GEMM_WS32.md)。
 
 `tb_Cluster_GEMM_OS2_AS4.sv`是独立的M32/K512/N16矩阵TB，`cluster_gemm_as_driver/scoreboard/regression.svh`分别负责8个权重地址和Command/ACT、4096次Psum历史及逐Context输出、32行batch调度与矩阵收集。`gemm_os2_as4_vectors.py`生成golden，`--gemm-as-only`运行正向及2个配置负向场景；`--full`包含两组GEMM。输入offset已合入逐通道zp，AS Context首K Tile的Command加载各组zp。详见 [OS2 AS4说明](Cluster_GEMM_OS2_AS4.md)。
 

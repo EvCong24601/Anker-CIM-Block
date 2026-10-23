@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 // One physical Cluster computes two sequential N8 tiles for X[32,128]*W[128,16].
 // Each tile uses two K128/N4 reduction groups and WS32. X is replayed twice.
-module tb_Cluster_GEMM;
+module tb_Cluster_GEMM_OS1_WS32;
   import cluster_pkg::*;
   localparam int M=32,K=128,N=16,CLUSTERS=1,N_TILES=2;
   localparam logic [7:0] WEIGHT_ADDR=8'h40;
