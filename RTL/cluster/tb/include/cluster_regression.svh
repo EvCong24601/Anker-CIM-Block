@@ -5,6 +5,23 @@
   initial begin : regression
     string data_dir;
     int capacity_precision,capacity_sign,zero_count;
+    string requant_negative;
+    if($bits(requant_cfg_t)!=1067) $fatal(1,"TB: Requant config must be 1067 bits");
+    if($value$plusargs("REQUANT_NEGATIVE=%s",requant_negative)) begin
+      repeat(4) @(negedge clock);reset=0;
+      repeat(2) @(negedge clock);
+      $display("[CASE_START] time=%0.3f ns suite=requant_negative description=reject-invalid-config-%s",$realtime,requant_negative);
+      cmd_i='0;cmd_i.os_cnt=1;cmd_i.ws_cnt=1;cmd_i.as_cnt=1;
+      case(requant_negative)
+        "mode":requant_cfg_i.requant_mode=1;
+        "shift_low":requant_cfg_i.requant_shift=-32;
+        "shift_high":requant_cfg_i.requant_shift=32;
+        "unknown":requant_cfg_i.requant_multiplier='x;
+        default:$fatal(1,"TB: unknown Requant negative scenario");
+      endcase
+      cmd_valid_i=1;
+      @(posedge clock);#1;$fatal(1,"TB: missing Requant configuration rejection");
+    end
     if($bits(cluster_ctrl_t)!=107 || $bits(cmd_i.os_cnt)!=8 ||
        $bits(cmd_i.ws_cnt)!=8 || $bits(cmd_i.as_cnt)!=8)
       $fatal(1,"TB: descriptor must contain three eight-bit counts and total 107 bits");
@@ -71,6 +88,9 @@
     repeat(4) @(negedge clock); reset=0;
     repeat(2) @(negedge clock);
     // 专项 suite 独占一次仿真；默认 suite 另有 CSV、路由和门控覆盖检查。
+    if($test$plusargs("REQUANT_BOUNDARY_TEST")) begin run_requant_boundary_suite(); $finish; end
+    if($test$plusargs("REQUANT_RESET_TEST")) begin run_requant_reset_suite(); $finish; end
+    if($test$plusargs("REQUANT_TEST")) begin run_requant_suite(); $finish; end
     if($test$plusargs("INPUT_OVERLAP_TEST")) begin run_input_overlap_suite(); $finish; end
     if($test$plusargs("OS_COUNT_LIMIT_TEST")) begin run_os_count_limit_suite(); $finish; end
     if($test$plusargs("CONTEXT_STRESS_TEST")) begin run_context_stress_suite(); $finish; end

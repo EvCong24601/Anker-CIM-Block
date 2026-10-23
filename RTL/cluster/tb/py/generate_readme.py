@@ -6,16 +6,18 @@ REPO = Path(__file__).resolve().parents[4]
 
 BODY = r"""# CIM Cluster 输入与计算说明
 
-本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立输出 raw signed32，未包含 requant。
+本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立输出 raw signed32，经单级组合 per-tensor Requant 后，在下一拍锁存 INT8 输出及 valid。详见 [Requant 说明](docs/Cluster_Requant.md)。
 
 ## 逐拍输入时序文档
+
+[当前 Block 规格](docs/CIM_Block_Spec.docx)：包含逐通道 zp、组合 Requant、INT8 输出寄存器和两组完整 GEMM case。
 
 [历史逐拍输入时序 Word 文档](docs/CIM_Cluster_逐拍输入时序_v2.7.docx)：同包重叠后的周期以本 README 和 [重叠说明](docs/Cluster_Input_Overlap.md) 为准。历史文档包含 Cluster 输入 pin、七种精度的 ACT slice、WS/AS/OS 配置、权重地址、逐拍操作和输入到输出时延。
 
 ## 目录与运行
 
 ```text
-docs/                           逐拍输入时序 Word 文档
+docs/                           Block 规格、逐拍时序与功能说明
 RTL/
   macro/rtl/                    SingleMacro 计算与权重存储
   macro/tb/                     单 Macro testbench
@@ -24,6 +26,9 @@ RTL/
     tb/
       tb_Cluster.sv             Cluster 仿真顶层
       tb_ClusterReduceTree.sv    归约树单元测试
+      tb_ClusterRequant.sv       无时钟 Requant 算术单元测试
+      tb_Cluster_GEMM.sv         单Cluster两批N8的完整WS32 GEMM测试
+      tb_Cluster_GEMM_OS2_AS4.sv  单Cluster八Macro归约的K512/OS2/AS4测试
       latency_audit.sv          时延观察器
       include/                  驱动、参考模型、检查器、case 与 suite
       py/                       仿真入口、枚举生成与数据检查
@@ -265,7 +270,7 @@ WS/单 Context、OS1 AS 顺序为 Tile→Context→phase；OS>1 AS 为 Tile→ph
 
 默认回归为1368个 Cluster case，另有208个归约门控、24个混合Context、12个完整ACT与280个ACT容量定向case；检查140个 Context 输出周期和480个标准运算事件。EN=FF 时每符号在七种 precision 下的合法 split 数为1、1、16、16、16、25、25，要求每组有效 K<256。
 
-验证包含 Command 停顿、完整 ACT 加载后外部 ACT 变化时的 buffer 复用、ICG 时钟、关闭 DFF 保持和高地址深度关闭。实现为仿真参考 adapter，未进行综合/STA/门级功耗验证，未包含 requant。
+验证包含 Command 停顿、完整 ACT 加载后外部 ACT 变化时的 buffer 复用、ICG 时钟、关闭 DFF 保持和高地址深度关闭。新增 Requant 独立整数向量、集成、配置边界和复位测试，所有计算case同时检查量化输出。实现为仿真参考 adapter，未进行综合/STA/门级功耗验证。
 
 ## Cluster 数据 DFF 位置
 
@@ -278,10 +283,11 @@ WS/单 Context、OS1 AS 顺序为 Tile→Context→phase；OS>1 AS 为 Tile→ph
 | quad 转发级 | t1/t2 的 result_q | 2节点×4 OC×20 | 160 |
 | 唯一 tmp | tmp_result | 32 OC×32 | 1024 |
 | Context Psum | psum[d][l] | DEPTH×32 OC×32 | 1024×DEPTH |
-| 测试版输出保持 | raw_data | 32 OC×32 | 1024 |
-| 合计 | 不含控制/标签/计数器 | 6608+1024×DEPTH | DEPTH=16时22992 |
+| Raw 输出保持 | raw_data | 32 OC×32 | 1024 |
+| INT8 输出保持 | requant_data_o | 32 OC×8 | 256 |
+| 合计 | 不含控制/标签/计数器 | 6864+1024×DEPTH | DEPTH=16时23248 |
 
-raw_data的32-bit/OC用于未加requant的测试版本，逐OC发布并保持到该OC下次发布。最终requant后每OC为8 bit，32路输出保持合计256 bit；requant本身的逻辑与流水寄存器另计。
+raw_data保留32-bit/OC，逐OC发布并保持到下次发布。requant_data_o为8-bit/OC，共256bit输出寄存器，valid比raw晚1T；raw直接进入组合Requant。1067-bit batch配置包含公共multiplier/shift和32×INT32逐通道zp，输入补偿已由参数生成端合入zp。AS4额外保存4组×4lane的zp，共512bit。
 
 归约树 root 没有独立转发 DFF；fusion 与 acc 是组合块，二者之间使用唯一 tmp，没有额外 tmp 历史数组或 acc 中间 buffer。raw_data 是现有输出保持寄存器，与 tmp/Psum 分开计数。
 
@@ -386,7 +392,7 @@ pattern 同时决定 ACT 和 weight 的取值，各按自身精度位数采样�
 
 交替项的 index 是数据生成函数的元素索引，不是输入周期：ACT 的 index=digit 序号 k+7×Context 序号+Tile 序号（AS 复用 Context 复制 Ctx0 的 ACT）；weight 的 index=K_row 内序号 j+7×Macro 序号+3×OC 序号+Tile 序号+11×预加载 Context 序号（WS/单 Context 恒为 0）。
 
-UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw signed32；这部分 case 不覆盖完整 UINT16 数值范围。golden 结果一旦超出 signed32 直接报错，没有 requant 或饱和处理。
+UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw signed32；这部分 case 不覆盖完整 UINT16 数值范围。raw golden 超出 signed32 直接报错；最终合法raw经过Requant，单独检查INT8舍入和裁剪。
 
 ### 每个 case 检查什么
 

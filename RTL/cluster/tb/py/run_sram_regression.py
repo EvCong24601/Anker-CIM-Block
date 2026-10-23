@@ -5,6 +5,9 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+from requant_vectors import write_vectors
+from gemm_vectors import generate as generate_gemm, verify_outputs as verify_gemm
+from gemm_os2_as4_vectors import generate as generate_as_gemm
 
 
 def summarize_simulation(name, log, expected, returncode, negative=False):
@@ -35,6 +38,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sim-dir', type=Path)
     parser.add_argument('--full', action='store_true', help='also run all Cluster suites and large-Context capacity checks')
+    parser.add_argument('--gemm-only',action='store_true',help='run only the single-Cluster two-N-tile W8A16 M32/K128/N16 WS GEMM')
+    parser.add_argument('--gemm-as-only',action='store_true',help='run only W8A16 M32/K512/N16 OS2/AS4 and its Context-config negative checks')
     parser.add_argument('--context-stress', action='store_true',
                         help='also check OS1 WS/AS64 and OS2 WS/AS8 with Psum depth 16')
     parser.add_argument('--input-overlap', action='store_true',
@@ -51,9 +56,9 @@ def main():
     sources = [macro / 'rtl' / name for name in (
         'single_macro_pkg.sv', 'MacroClockGate.sv', 'MacroWeightSRAM.sv',
         'MacroMul2x4.sv', 'MacroSliceFusion.sv', 'SingleMacro.sv')]
-    sources += [cluster_rtl / name for name in ('cluster_pkg.sv', 'ClusterReduceTree.sv',
+    sources += [cluster_rtl / name for name in ('cluster_pkg.sv', 'ClusterRequant.sv', 'ClusterReduceTree.sv',
                 'cluster_dut_adapter.sv')]
-    sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv')]
+    sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv', 'tb_ClusterRequant.sv','tb_Cluster_GEMM.sv','tb_Cluster_GEMM_OS2_AS4.sv')]
     sources += [macro / 'tb/tb_SingleMacro.sv']
     manifest = []
     for src in sources:
@@ -95,6 +100,38 @@ def main():
         summary.append(status)
         print(summary[-1], flush=True)
 
+    if args.full or args.gemm_as_only:
+        data=dest/'gemm_as_data'
+        meta=generate_as_gemm(data)
+        print(f'AS GEMM parameters: multiplier={meta["multiplier"]} shift={meta["shift"]} act_zp={meta["act_zp"]} per-channel zp={meta["requant_zp"]}',flush=True)
+        simulate('gemm_os2_as4','tb_Cluster_GEMM_OS2_AS4',['+GEMM_DATA_DIR='+data.as_posix()],
+                 'PASS gemm_os2_as4 M=32 K=512 N=16')
+        verify_gemm(data)
+        for name,options,message in (
+            ('as_context_capacity',['-gZP_DEPTH=2'],'AS context zp depth exceeded'),
+            ('as_context_zp_reload',['+NEGATIVE_ZP_RELOAD'],'AS context zp changed across K Tiles'),
+        ):
+            data=dest/name
+            generate_as_gemm(data)
+            simulate(name,'tb_Cluster_GEMM_OS2_AS4',options+['+GEMM_DATA_DIR='+data.as_posix()],
+                     'CLUSTER_REQUANT_CONFIG: '+message,True)
+        if args.gemm_as_only:
+            summary.append('PASS regression: suites=3 expected_rejections=2')
+            (dest/'validation.log').write_text('\n'.join(summary)+'\n',encoding='utf-8')
+            print(summary[-1],flush=True)
+            return
+    if args.full or args.gemm_only:
+        data=dest/'gemm_data'
+        meta=generate_gemm(data)
+        print(f'GEMM parameters: multiplier={meta["multiplier"]} shift={meta["shift"]} act_zp={meta["act_zp"]} output_zp={meta["output_zp"]}',flush=True)
+        simulate('cluster_gemm','tb_Cluster_GEMM',['+GEMM_DATA_DIR='+data.as_posix()],
+                 'PASS cluster_gemm M=32 K=128 N=16')
+        verify_gemm(data)
+        if args.gemm_only:
+            summary.append('PASS regression: suites=1 expected_rejections=0')
+            (dest/'validation.log').write_text('\n'.join(summary)+'\n',encoding='utf-8')
+            print(summary[-1],flush=True)
+            return
     simulate('sram_rw', 'tb_Cluster', ['+SRAM_RW_TEST'], 'PASS sram_rw')
     simulate('sram_preload_conflict', 'tb_Cluster', ['+SRAM_CONFLICT_PRELOAD'],
              'CLUSTER_SRAM_PROTOCOL: regular access overlaps preload', True)
@@ -116,6 +153,30 @@ def main():
     for case, message in negatives.items():
         simulate('macro_negative_'+case, 'tb_SingleMacro', ['+NEGATIVE='+case], 'SM_PROTOCOL: '+message, True)
     if args.full:
+        vector_count=write_vectors(dest/'requant_vectors.txt')
+        simulate('requant_unit', 'tb_ClusterRequant',
+                 ['+REQUANT_VECTORS='+(dest/'requant_vectors.txt').as_posix()],
+                 f'PASS requant_unit cases={vector_count}')
+        for scenario, message in (
+            ('mode','per-channel scale mode is not supported'),
+            ('shift_low','shift must be -31..31'),
+            ('shift_high','shift must be -31..31'),
+            ('unknown','unknown configuration'),
+        ):
+            simulate('requant_negative_'+scenario,'tb_Cluster',
+                     ['+REQUANT_NEGATIVE='+scenario], 'CLUSTER_REQUANT_CONFIG: '+message, True)
+        data=dest/'requant_integration_data'
+        data.mkdir(exist_ok=True)
+        simulate('requant_integration','tb_Cluster',
+                 ['+REQUANT_TEST','+DATA_DIR='+data.as_posix()], 'PASS requant_integration cases=168')
+        data=dest/'requant_reset_data'
+        data.mkdir(exist_ok=True)
+        simulate('requant_reset','tb_Cluster',
+                 ['+REQUANT_RESET_TEST','+DATA_DIR='+data.as_posix()], 'PASS requant_reset')
+        data=dest/'requant_boundary_data'
+        data.mkdir(exist_ok=True)
+        simulate('requant_boundary','tb_Cluster',
+                 ['+REQUANT_BOUNDARY_TEST','+DATA_DIR='+data.as_posix()], 'PASS requant_boundary')
         for field in range(3):
             simulate(f'zero_count_{field}', 'tb_Cluster', [f'+ZERO_COUNT={field}'],
                      'CLUSTER_COUNT_RANGE: counts must be 1..255', True)

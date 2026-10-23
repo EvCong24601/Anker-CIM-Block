@@ -10,6 +10,7 @@
     endcase
   endfunction
   function automatic string cluster_suite();
+    if($test$plusargs("REQUANT_TEST")) return "per-tensor-combinational-requant";
     if($test$plusargs("INPUT_OVERLAP_TEST")) return "same-packet-input-issue-overlap";
     if($test$plusargs("CONTEXT_STRESS_TEST")) return "OS1-WS64-AS64/OS2-WS8-AS8";
     if($test$plusargs("OC_MERGE_TEST")) return "leftmost-OC-mask";
@@ -25,7 +26,7 @@
     cluster_ctrl_t d;
     logic [1023:0] plane, row;
     logic [4095:0] full_act;
-    int wb,ab,kr,l,slot,a_ctx,c,p,t,groups,used_digits;
+    int wb,ab,kr,l,slot,a_ctx,c,p,t,groups,used_digits,requant_checks_before;
     int unsigned raw;
     longint signed w,a;
     // 1. 记录 case 目的和配置；所有后续 scoreboard 使用这份固定配置。
@@ -33,6 +34,8 @@
       $realtime,cases_run,standard_case,cluster_suite(),pattern_name(pattern),ws>1 ? "WS" : as_count>1 ? "AS" : "SINGLE",
       wbits(precision),abits(precision),sign_en,pattern,os,ws,as_count,split,en,oc,slots,bubbles,OUTPUT_BUFFER_DEPTH,SEED);
     wb=wbits(precision); ab=abits(precision); kr=256/wb;
+    configure_requant(cases_run);
+    requant_checks_before=requant_checks;
     case_os=os; case_ws=ws; case_as=as_count;
     case_pattern=pattern; case_bubbles=bubbles;
     if(os<1 || os>255 || ws<1 || ws>255 || as_count<1 || as_count>255 || (ws>1 && as_count>1))
@@ -128,7 +131,9 @@
       $fatal(1,"Missing address wait after the full ACT stream was received");
     // 6. 排空后再检查无额外输出，防止重复结果混入下一个 case。
     repeat(6) @(negedge clock);
-    if(dut.raw_valid!=0 || dut.batch_active)
+    if(dut.raw_valid!=0 || dut.batch_active || requant_valid_o!=0)
       $fatal(1,"Unexpected output after the final Context published");
+    if(requant_checks-requant_checks_before!=raw_count)
+      $fatal(1,"Missing/duplicate Requant result after drain");
     monitoring=0; cases_run++;
   endtask

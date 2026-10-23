@@ -15,6 +15,12 @@ module tb_Cluster;
   always #5 clock=~clock;
   logic reset=1;
   cluster_ctrl_t cmd_i='0;
+  requant_cfg_t requant_cfg_i='{requant_mode:1'b0,requant_multiplier:32'sd1,
+                              requant_shift:10'sd0,requant_zp:32'sd0};
+  requant_cfg_t expected_requant_cfg;
+  wire [255:0] requant_data_o;
+  wire [31:0] requant_valid_o;
+  int requant_checks=0, requant_config_hold_checks=0;
   logic cmd_valid_i=0;
   wire cmd_ready_o;
   wire [31:0] out_valid_o;
@@ -68,6 +74,7 @@ module tb_Cluster;
   // include 不增加模块层次，latency_audit 和已有波形路径保持有效。
   `include "include/cluster_reference.svh"
   `include "include/cluster_driver.svh"
+  `include "include/cluster_requant_cases.svh"
   `include "include/cluster_scoreboards.svh"
   `include "include/cluster_compute_cases.svh"
   `include "include/cluster_sram_cases.svh"

@@ -1,5 +1,14 @@
 `timescale 1ns/1ps
 package cluster_pkg;
+  // Independent batch configuration; not part of the compute descriptor.
+  typedef struct packed {
+    logic requant_mode; // multiplier/shift: 0 per-tensor, 1 reserved per-channel
+    logic signed [31:0] requant_multiplier;
+    logic signed [9:0] requant_shift; // This implementation supports -31..31
+    // Per-channel INT32 effective zero point supplied by the parameter
+    // producer, including input-offset compensation. mode controls scale only.
+    logic [1023:0] requant_zp; // lane l: [32*l+:32], signed two's complement
+  } requant_cfg_t;
   // Cluster descriptor: three eight-bit counts, total packed width 107 bits.
   typedef struct packed {
     // All counts are >=1. ws>1 selects WS, as>1 selects AS;

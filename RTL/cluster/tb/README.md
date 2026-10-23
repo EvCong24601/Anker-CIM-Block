@@ -1,6 +1,6 @@
 # Cluster testbench：tmp、bit fusion、Psum acc 与 ICG
 
-参考 adapter 连接八个真实 SingleMacro RTL，输出为 raw signed32，未包含 requant。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。
+参考 adapter 连接八个真实 SingleMacro RTL，保留 raw signed32，新增 per-tensor 组合 Requant 与32×8-bit输出寄存器，量化valid比raw晚一拍。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。公式、配置和测试见 [Requant说明](../../../docs/Cluster_Requant.md)。
 
 每个 merge 节点采用其固定最左侧 Macro 的 OC mask，组内 mask 可以不同。t5、t2 均取 M4，t0 取 M0；不回退到首个使能 Macro。被屏蔽子树不贡献数据，转发门控、终点 mask 与批次输出预留采用相同规则。全部 OC 被屏蔽的批次在内部发射完成后结束，不产生输出脉冲。本地 `--gate-unit --oc-merge` 可运行 208 例归约单元测试及 288 例独立 mask 专项测试。
 
@@ -22,7 +22,7 @@ Context是同一channel内独立保存、独立输出的计算任务，Psum[ctx]
 
 ## TB 文件拆分
 
-顶层 tb_Cluster.sv 只保留连接与共享状态；include/ 目录按 reference、driver、scoreboards、compute_cases、sram_cases、suites、regression 分为七个 include。先从 cluster_suites.svh 找场景，再到对应 case/检查器阅读实现。文件职责、采样顺序与新增 case 方法见 [Testbench 阅读指南](../../../docs/Testbench_Guide.md)。.svh 不单独编译，文件清单和 Python 副本入口已配置 include 路径。
+顶层 tb_Cluster.sv 只保留连接与共享状态；include/ 按职责拆分，新增 cluster_requant_cases.svh 负责量化golden、参数profile、1T延迟/输出保持检查和专项case。先从 cluster_suites.svh 找原有场景；Requant专项从对应include阅读。文件职责、采样顺序与新增 case 方法见 [Testbench 阅读指南](../../../docs/Testbench_Guide.md)。.svh 不单独编译，文件清单和 Python 副本入口已配置 include 路径。
 
 功能源码在 [../rtl/](../rtl/)，文件职责与整体结构见 [Cluster 目录说明](../README.md)。
 
@@ -34,6 +34,9 @@ Git仓库提供[VCS入口](../../../vcs-rtl/Makefile)，在vcs-rtl目录运行ma
 tb/
   tb_Cluster.sv             Cluster 仿真顶层
   tb_ClusterReduceTree.sv   归约树单元测试
+  tb_ClusterRequant.sv      无时钟Requant算术单元测试
+  tb_Cluster_GEMM.sv        单Cluster两批N8，W8A16 M32/K128/N16 WS32矩阵
+  tb_Cluster_GEMM_OS2_AS4.sv 单Cluster八Macro全归约，W8A16 M32/K512/N16
   latency_audit.sv          时延观察器
   include/                 驱动、golden、scoreboard、case 和 suite
   py/         split/逐拍生成器、时延检查器
@@ -57,7 +60,7 @@ OS>1 AS：归约 R_slice 先写 tmp，下一拍首 Tile/A0 填充 Psum[ctx]，�
 
 门控：tmp_input_cg_en 提前 tmp 捕获一拍；psum_cg_en 在捕获 tmp 时预测下一拍的唯一 Context 写回。首 Command 开放低 max(ws,as) 个所需 Psum entry，高地址整批关闭；所有 os=1 模式全关。门控请求逐 OC 至多一位有效，实际 ICG 时钟与关闭 DFF 保持由 TB 检查。
 
-同一结果的 fusion 和 acc 不串联。WS/OS1 AS 归约末级与 fusion 在 tmp 前的路径需要 STA；OS>1 AS 在 tmp 后二选一。未用组合块两个输入隔离为零。存储tmp/Psum为32 bit，组合参考计算及TB golden使用64-bit longint；当前测试输出raw signed32，未包含 requant，未做生产综合/STA/功耗签核。
+同一结果的 fusion 和 acc 不串联。WS/OS1 AS 归约末级与 fusion 在 tmp 前的路径需要 STA；OS>1 AS 在 tmp 后二选一。未用组合块两个输入隔离为零。存储tmp/Psum为32 bit，组合参考计算及TB golden使用64-bit longint；Requant使用signed64乘积和signed96组合中间值，输出INT8寄存器；未做生产综合/STA/功耗签核。
 
 ## Reduce tree 与时延
 
@@ -102,7 +105,7 @@ OS_TILES 控制穷举 suite，范围1..14。UINT W8A16 的 ACT 限制到0..32768
 
 混合 Context 定向 suite 通过 --mixed-context 启用，额外24例覆盖 W4A4/A8/A16、两种符号、os=1/2、WS/AS双 Context，以及 pair/quad 同拍发布不同 Context。内部 Context 标签按 lane 保存。FSDB 由 CLUSTER_FSDB 宏控制，VCS Makefile 开启；ModelSim 默认不开启。--depth 设置 OUTPUT_BUFFER_DEPTH，--psum-depth 为同一参数的命令行别名。
 
-Cluster 数据 DFF 分布见[仓库首页](../../../README.md#cluster-数据-dff-位置)：ACT4096、归约中间级464、唯一tmp1024、Psum1024×OUTPUT_BUFFER_DEPTH、输出保持1024 bit；不含控制寄存器及SingleMacro内部。
+Cluster 数据 DFF 分布见[仓库首页](../../../README.md#cluster-数据-dff-位置)：ACT4096、归约中间级464、唯一tmp1024、Psum1024×OUTPUT_BUFFER_DEPTH、raw输出保持1024 bit、INT8输出保持256 bit；不含控制寄存器及SingleMacro内部。
 
 外部输入实测见[external_inputs.csv](data/external_inputs.csv)，含396条标准输入事件；act_sample是日志标记，并非输入pin。所有C周期以首个外部i_cmd+A0为C0；latency_audit.csv的last_input是末内部发射，delta为内部路径3/4/5T。整批完成周期按同包重叠公式计算，地址空拍按就绪条件延长；单bank在内部发射结束后接收下一包。
 
@@ -110,7 +113,7 @@ WS每Tile有效计算为P×ws_cnt拍，P=A位宽/4；ws_cnt仍是完整ACT/Conte
 
 容量结论：完整ACT为256×A位宽bit，最大4096；WS逐Context换入，AS跨Context保持同一份ACT，OS逐Tile换入。因此容量不乘ws/as/os。必须遵守首命令ready及后续ACT连续输入，单bank不支持接收下一包与内部发射重叠。--act-buffer提供280个全Plane容量case，覆盖七精度、两种符号、os1/2、1/2/16 Context及命令空拍。
 
-输出保持raw_data为未加requant的测试版本，每OC 32 bit（32路共1024 bit）；最终每OC输出8 bit（共256 bit）。requant逻辑与流水不计入当前DFF统计。
+raw_data每OC 32 bit（共1024 bit），额外requant_data_o每OC 8 bit（共256 bit输出寄存器）。raw在Ck发布，量化在C(k+1)发布；无valid时各lane独立保持，reset清零。Requant内部没有数据流水寄存器。
 
 ## 回归输出格式
 

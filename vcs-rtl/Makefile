@@ -7,14 +7,25 @@
 #   make debug             # 用 Verdi 打开 kdb 调试数据库
 #   make clean
 #   make com sim TB=macro  # 切换 macro 级（顶层 tb_SingleMacro）
+#   make requant-vectors
+#   make com sim TB=requant PVALUE=+REQUANT_VECTORS=/absolute/path/work/requant_vectors.txt
 #   make sim PVALUE=-pvalue+tb_Cluster.OS_TILES=2   # 运行期覆盖 TB 参数
-.PHONY: com sim debug wave clean vcd check sram
+.PHONY: com sim debug wave clean vcd check sram requant-vectors gemm-vectors gemm-as-vectors
 
 # ---------------- 目标选择 ----------------
 TB       ?= cluster
 ifeq ($(TB),macro)
 TOP        = tb_SingleMacro
 V_FILE     = ./verilog_file_macro.f
+else ifeq ($(TB),requant)
+TOP        = tb_ClusterRequant
+V_FILE     = ./verilog_file_pl.f
+else ifeq ($(TB),gemm)
+TOP        = tb_Cluster_GEMM
+V_FILE     = ./verilog_file_pl.f
+else ifeq ($(TB),gemm_as)
+TOP        = tb_Cluster_GEMM_OS2_AS4
+V_FILE     = ./verilog_file_pl.f
 else
 TOP        = tb_Cluster
 V_FILE     = ./verilog_file_pl.f
@@ -55,7 +66,19 @@ SIM = ./${OUTPUT} -l ${OUTPUT}.log ${PVALUE}
 
 com:
 	mkdir -p ${WORK_DIR}
-	${VCS} -f ${V_FILE} ${ALL_DEFINE} ${PARAMETERS}
+	${VCS} -top ${TOP} -f ${V_FILE} ${ALL_DEFINE} ${PARAMETERS}
+
+requant-vectors:
+	mkdir -p ${WORK_DIR}
+	python3 ../RTL/cluster/tb/py/requant_vectors.py ${WORK_DIR}/requant_vectors.txt
+
+gemm-vectors:
+	mkdir -p ${WORK_DIR}/gemm_data
+	python3 ../RTL/cluster/tb/py/gemm_vectors.py ${WORK_DIR}/gemm_data
+
+gemm-as-vectors:
+	mkdir -p ${WORK_DIR}/gemm_as_data
+	python3 ../RTL/cluster/tb/py/gemm_os2_as4_vectors.py ${WORK_DIR}/gemm_as_data
 
 sim:
 	cd ${WORK_DIR}; ${SIM}
@@ -82,6 +105,18 @@ check:
 	grep -q "PASS configurations=" ${WORK_DIR}/${OUTPUT}.log
 	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
 	python3 ../RTL/cluster/tb/py/verify_manifest.py ${WORK_DIR}/split_cases.csv
+else ifeq ($(TB),requant)
+check:
+	grep -q "PASS requant_unit" ${WORK_DIR}/${OUTPUT}.log
+	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
+else ifeq ($(TB),gemm)
+check:
+	grep -q "PASS cluster_gemm M=32 K=128 N=16" ${WORK_DIR}/${OUTPUT}.log
+	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
+else ifeq ($(TB),gemm_as)
+check:
+	grep -q "PASS gemm_os2_as4 M=32 K=512 N=16" ${WORK_DIR}/${OUTPUT}.log
+	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
 else
 check:
 	grep -q "PASS clock_gating=" ${WORK_DIR}/${OUTPUT}.log

@@ -6,8 +6,12 @@
 ../../macro/rtl/MacroSliceFusion.sv
 ../../macro/rtl/SingleMacro.sv
 ../rtl/cluster_pkg.sv
+../rtl/ClusterRequant.sv
 ../rtl/ClusterReduceTree.sv
 ../rtl/cluster_dut_adapter.sv
 tb_Cluster.sv
 tb_ClusterReduceTree.sv
+tb_ClusterRequant.sv
+tb_Cluster_GEMM.sv
+tb_Cluster_GEMM_OS2_AS4.sv
 latency_audit.sv

@@ -1,12 +1,15 @@
 `timescale 1ns/1ps
-// Simulation reference Cluster. Existing ports carry RAW Psum, no requant.
+// Simulation reference Cluster, with raw Psum and combinational INT8 Requant.
 module cluster_dut_adapter #(
   parameter int WGT_RADDR_BUFFER_DEPTH = 64,
   parameter int MAX_CONTEXTS = WGT_RADDR_BUFFER_DEPTH,
-  parameter int OUTPUT_BUFFER_DEPTH = 16
+  parameter int OUTPUT_BUFFER_DEPTH = 16,
+  parameter int REQUANT_CONTEXT_DEPTH = 1,
+  parameter int REQUANT_CONTEXT_LANES = 32
 ) (
   input logic clock, reset,
   input cluster_pkg::cluster_ctrl_t cmd_i,
+  input cluster_pkg::requant_cfg_t requant_cfg_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,
   input logic [1023:0] act_data_i,
@@ -21,7 +24,9 @@ module cluster_dut_adapter #(
   input logic [1023:0] cim_wrdata,
   output wire [1023:0] cim_rd_data,
   output logic [1023:0] psum_data_o,
-  output logic [31:0] out_valid_o
+  output logic [31:0] out_valid_o,
+  output logic [255:0] requant_data_o,
+  output logic [31:0] requant_valid_o
 );
   import cluster_pkg::*;
   cluster_ctrl_t command;
@@ -43,6 +48,12 @@ module cluster_dut_adapter #(
   wire [31:0] macro_mask;
   wire [15:0] macro_phase;
   logic batch_active, batch_input_done;
+  requant_cfg_t batch_requant_cfg;
+  // Optional AS Context banks. Depth=1 preserves the original batch-wide
+  // per-lane zp configuration. Only the first K Tile loads enabled banks.
+  logic [32*REQUANT_CONTEXT_LANES-1:0] requant_context_zp[0:REQUANT_CONTEXT_DEPTH-1];
+  logic [REQUANT_CONTEXT_DEPTH-1:0] requant_context_valid;
+  requant_cfg_t selected_requant_cfg;
   wire [2:0] regular_macro_id = {cim_macro_group,cim_bank_sel};
   wire regular_access = !reset && cim_cs_en;
   wire regular_read = regular_access && !cim_wr_en;
@@ -107,6 +118,8 @@ module cluster_dut_adapter #(
   longint signed acc_a[0:31], acc_b[0:31], acc_result[0:31];
   longint signed tmp_store_data[0:31], arithmetic_result[0:31];
   logic [31:0] fusion_enable, acc_enable, psum_write, result_done;
+  wire [255:0] requant_comb_data;
+  wire [31:0] requant_comb_valid;
   // Internal operation coverage; no extra external interface.
   int tmp_only_steps, as_seed_steps, as_fusion_steps, as_acc_steps;
   int ws_fusion_steps, ws_acc_steps, ws_tile_commits, a4_acc_steps;
@@ -118,13 +131,13 @@ module cluster_dut_adapter #(
   logic [31:0] result_ready [0:MAX_CONTEXTS-1];
   logic [31:0] result_mask [0:MAX_CONTEXTS-1];
   // Internal observation only; no new external signal.
-  // raw_data is the no-requant test output: 32 bits per OC. The final
-  // output after requant is 8 bits per OC; requant is not implemented here.
+  // Raw observations remain available for the independent compute scoreboard.
   logic [31:0] raw_valid;
   int raw_context[0:31]; // internal per-lane tag; never an external pin
   logic [1023:0] raw_data;
   initial begin
-    if(MAX_CONTEXTS<1 || OUTPUT_BUFFER_DEPTH<1 || WGT_RADDR_BUFFER_DEPTH<1)
+    if(MAX_CONTEXTS<1 || OUTPUT_BUFFER_DEPTH<1 || WGT_RADDR_BUFFER_DEPTH<1 ||
+       REQUANT_CONTEXT_DEPTH<1 || REQUANT_CONTEXT_LANES<1 || REQUANT_CONTEXT_LANES>32)
       $fatal(1,"Context capacity must be >= 1");
   end
   always_comb begin
@@ -163,6 +176,35 @@ module cluster_dut_adapter #(
   always_comb begin
     out_valid_o=raw_valid;
     psum_data_o=raw_data;
+  end
+  // Registered raw Psum -> combinational Requant -> INT8 output registers.
+  // NBA semantics capture the PREVIOUS raw publication and configuration.
+  // A new batch may load its configuration on that same capture edge.
+  always_comb begin
+    selected_requant_cfg=batch_requant_cfg;
+    if(REQUANT_CONTEXT_DEPTH>1 && batch_command.as_cnt>1)
+      for(int l=0;l<REQUANT_CONTEXT_LANES;l++) if(raw_valid[l] && raw_context[l]<REQUANT_CONTEXT_DEPTH) begin
+        selected_requant_cfg.requant_zp[32*l+:32]=requant_context_zp[raw_context[l]][32*l+:32];
+      end
+  end
+  ClusterRequant u_requant (
+    .cfg_i(selected_requant_cfg), .psum_i(raw_data), .valid_i(raw_valid),
+    .data_o(requant_comb_data), .valid_o(requant_comb_valid)
+  );
+  always_ff @(posedge clock) begin
+    if(reset) begin
+      requant_valid_o<='0;
+      requant_data_o<='0;
+    end else begin
+      requant_valid_o<=requant_comb_valid;
+      for(int l=0;l<32;l++) if(requant_comb_valid[l]) begin
+        if(REQUANT_CONTEXT_DEPTH>1 && batch_command.as_cnt>1 &&
+           (l>=REQUANT_CONTEXT_LANES || raw_context[l]>=REQUANT_CONTEXT_DEPTH ||
+            !requant_context_valid[raw_context[l]]))
+          $fatal(1,"CLUSTER_REQUANT_CONFIG: missing AS context zp");
+        requant_data_o[8*l+:8]<=requant_comb_data[8*l+:8];
+      end
+    end
   end
   for(genvar m=0;m<8;m++) begin: g_macro
     logic [511:0] idata;
@@ -307,7 +349,7 @@ module cluster_dut_adapter #(
   always @(posedge clock or posedge reset) begin : pipeline
     bit all_done;
     logic [31:0] captured;
-    int ctx;
+    int ctx,zp_ctx;
     if(reset) begin
       act_buffer<='0;packet_cmd<='0;packet_active<=0;act_loading<=0;act_complete<=0;
       act_slice_valid<='0;external_phase<=0;command_count<=0;
@@ -318,6 +360,12 @@ module cluster_dut_adapter #(
       for(int l=0;l<32;l++) raw_context[l]<=0;
       tmp_valid<='0;
       batch_active<=0; batch_input_done<=0; batch_contexts<=0;
+      batch_requant_cfg<='{requant_mode:1'b0,requant_multiplier:32'sd1,
+                          requant_shift:10'sd0,requant_zp:32'sd0};
+      requant_context_valid<='0;
+      for(int z=0;z<REQUANT_CONTEXT_DEPTH;z++) begin
+        requant_context_zp[z]<='0;
+      end
       batch_command<='0; psum_depth_open<='0;
       tmp_only_steps=0; as_seed_steps=0; as_fusion_steps=0; as_acc_steps=0;
       ws_fusion_steps=0; ws_acc_steps=0; ws_tile_commits=0; a4_acc_steps=0;
@@ -338,6 +386,20 @@ module cluster_dut_adapter #(
         if(cmd_i.os_cnt>1 &&
            (cmd_i.ws_cnt>OUTPUT_BUFFER_DEPTH || cmd_i.as_cnt>OUTPUT_BUFFER_DEPTH))
           $fatal(1,"CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
+        if(REQUANT_CONTEXT_DEPTH>1 && cmd_i.as_cnt>REQUANT_CONTEXT_DEPTH)
+          $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded");
+        if(REQUANT_CONTEXT_DEPTH>1 && cmd_i.as_cnt>1) begin
+          zp_ctx=packet_active ? command_count : 0;
+          if($isunknown(requant_cfg_i.requant_zp[0+:32*REQUANT_CONTEXT_LANES]))
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: unknown AS context zp");
+          if(!batch_active || tile==0) begin
+            if(!batch_active) requant_context_valid<='0;
+            requant_context_zp[zp_ctx]<=requant_cfg_i.requant_zp[0+:32*REQUANT_CONTEXT_LANES];
+            requant_context_valid[zp_ctx]<=1;
+          end else if(!requant_context_valid[zp_ctx] ||
+                      requant_cfg_i.requant_zp[0+:32*REQUANT_CONTEXT_LANES]!==requant_context_zp[zp_ctx])
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles");
+        end
         if(!packet_active) begin
           packet_cmd<=cmd_i;packet_active<=1;command_count<=1;
           context_address[0]<=cmd_i.weight_cim_raddr;
@@ -351,6 +413,13 @@ module cluster_dut_adapter #(
           command_count<=command_count+1;
         end
         if(!batch_active) begin
+          if ($isunknown(requant_cfg_i))
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: unknown configuration");
+          if (requant_cfg_i.requant_mode)
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: per-channel scale mode is not supported");
+          if ($signed(requant_cfg_i.requant_shift)<-31 || $signed(requant_cfg_i.requant_shift)>31)
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: shift must be -31..31");
+          batch_requant_cfg<=requant_cfg_i;
           batch_active<=1; batch_command<=cmd_i;
           batch_contexts<=cmd_i.ws_cnt>1 ? int'(cmd_i.ws_cnt) : int'(cmd_i.as_cnt);
           // Clear per-lane completion tracking for the whole batch; the
@@ -382,6 +451,9 @@ module cluster_dut_adapter #(
       end
       in_tag.valid<=issue;
       if(issue) begin
+        if(REQUANT_CONTEXT_DEPTH>1 && command.as_cnt>1 &&
+           (issue_mask >> REQUANT_CONTEXT_LANES)!=0)
+          $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context zp lane capacity exceeded");
         if(!act_slice_valid[phase]) $fatal(1,"Internal issue before ACT slice loaded");
         if(phase==phases-1 && (command.as_cnt<=1 || context_idx==contexts-1)) begin
           packet_active<=0;act_complete<=0;command_count<=0;act_slice_valid<='0;

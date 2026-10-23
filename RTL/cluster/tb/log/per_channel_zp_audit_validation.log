@@ -1,0 +1,13 @@
+PASS final regression RTL/TB SHA256 fingerprints: 35 files
+PASS original raw arithmetic, external-input and split traces unchanged
+PASS gemm_ws32: vector hashes, 512 raw and 512 INT8 exact; effective per-channel zp includes input offset
+PASS gemm_os2_as4: vector hashes, 512 raw and 512 INT8 exact; effective per-channel zp includes input offset
+PASS AS4: 16 INT32 zp entries, 512 bits; 4 entries selected per cycle; no independent correction interface
+PASS functional, TB and VCS filelist paths resolve
+PASS Python syntax
+PASS English display/diagnostic format strings: 278
+PASS current original Block DOCX copied to repository; final 19 pages rendered and visually reviewed
+PASS test driver SHA256 gemm_vectors.py: cbcf7d0e667f176b17badaa92ca24aecef2a4f2df5cdb05dae3c83703921fddc
+PASS test driver SHA256 gemm_os2_as4_vectors.py: c9d74a12567846b7d2c8c2ddfc22c5ddde3cc9d294736aae62a88106c9e60f21
+PASS test driver SHA256 requant_vectors.py: 9495546861f51c1398789c8c0fa57d4ee678e8cb66f7702cab71cf3fae9545b9
+PASS test driver SHA256 run_sram_regression.py: 0128b0be0c9b9228f7458e36b29b9c3e5b62a0dd22c82face17bf70f4f9ee6fa

@@ -38,6 +38,12 @@ SRAM 初始化状态的逐 OC 跟踪位于 RTL 的仿真检查分支，受 SINGL
 
 ## 新增 case 的位置
 
+Requant功能实现位于 `RTL/cluster/rtl/ClusterRequant.sv`，无时钟纯组合；`cluster_dut_adapter.sv`负责batch配置锁存和INT8输出寄存器。量化valid严格比raw晚一拍。`tb_ClusterRequant.sv`使用Python任意精度整数向量，`cluster_requant_cases.svh`负责集成golden、配置锁存、延迟、保持、复位和跨batch边界检查。详细参数与测试范围见 [Requant说明](Cluster_Requant.md)。
+
+`tb_Cluster_GEMM.sv`仅实例化一个Cluster，分两批N8计算完整32×128乘128×16。`cluster_gemm_driver.svh`负责向量读取、打包核对、两行SRAM预加载和WS32驱动；`cluster_gemm_scoreboard.svh`检查地址/发射/权重Hold/输出矩阵及延迟；`cluster_gemm_regression.svh`负责两批调度、输出拼接和覆盖检查。`gemm_vectors.py`先从原始实数矩阵生成golden及校准参数，再输出物理激励；SV不共享Python的矩阵打包算法。详见 [GEMM说明](Cluster_GEMM_WS32.md)。
+
+`tb_Cluster_GEMM_OS2_AS4.sv`是独立的M32/K512/N16矩阵TB，`cluster_gemm_as_driver/scoreboard/regression.svh`分别负责8个权重地址和Command/ACT、4096次Psum历史及逐Context输出、32行batch调度与矩阵收集。`gemm_os2_as4_vectors.py`生成golden，`--gemm-as-only`运行正向及2个配置负向场景；`--full`包含两组GEMM。输入offset已合入逐通道zp，AS Context首K Tile的Command加载各组zp。详见 [OS2 AS4说明](Cluster_GEMM_OS2_AS4.md)。
+
 计算新配置通常只需在 `cluster_suites.svh` 的对应 suite 调用 `run_case`。需要新的输入驱动方式时修改 driver；需要新判定规则时修改 scoreboard，并保留独立预期。常规读写场景放在 `cluster_sram_cases.svh`；单 Macro 非法输入放在 `macro_negative_cases.svh`，同时为 Python 回归入口补充精确诊断匹配。
 
 所有 case 在开始时输出 `[CASE_START] time=... ns suite=... description=...`。新增独立场景应沿用该格式，描述测试目的并列出关键参数。现有 Command 日志仍用于区分“何时驱动”和“何时真正接受”。
@@ -58,6 +64,8 @@ python RTL/cluster/tb/py/run_sram_regression.py --full
 ```
 
 默认执行常规 SRAM、2 类冲突、SingleMacro 门控开/关和 15 类协议负向检查。`--full` 追加默认 Cluster 1368 例、归约树 208 例、OC merge 288 例、ACT 容量 280 例、完整 ACT 12 例和混合 Context 24 例、大 Context 正向 224 例、容量负向 18 例和包内输入重叠 168 例。各专项 CSV 分目录存放，默认计算 suite 的 CSV 得以保留。
+
+`--full`同时运行Requant独立9,611个向量、168个集成case、输出寄存前reset、最早跨batch参数切换，以及4个精确配置负向诊断。所有原有计算suite均增加Requant数值与1T延迟检查，保留raw golden及原有时序检查。负向配置只在batch首命令检查，batch内外部配置变化不应重载参数。
 
 VCS 仍使用 `make com`、`make sim`；`make sram` 运行 SRAM 专项，`make com sim TB=macro` 运行单 Macro。也可通过 `PVALUE=+OC_MERGE_TEST` 等 plusarg 选择专项。
 

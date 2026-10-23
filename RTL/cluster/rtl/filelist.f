@@ -6,5 +6,6 @@
 ../macro/rtl/MacroSliceFusion.sv
 ../macro/rtl/SingleMacro.sv
 rtl/cluster_pkg.sv
+rtl/ClusterRequant.sv
 rtl/ClusterReduceTree.sv
 rtl/cluster_dut_adapter.sv
