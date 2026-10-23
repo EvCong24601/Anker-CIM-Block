@@ -2,6 +2,7 @@
 // Independent per-tap check: all 26 trees, 8 EN patterns, changing every cycle.
 module tb_ClusterReduceTree;
   import cluster_tb_pkg::*;
+  // 1. 接口和按流水深度对齐的预期状态（独立于 Cluster ACT/Context 调度）。
   logic clock=0,reset=1;
   always #5 clock=~clock;
   logic early_valid_i=0,valid_i=0;
@@ -45,6 +46,7 @@ module tb_ClusterReduceTree;
       decode(node*2+2,first+size/2,size/2,s,g);
     end
   endtask
+  // 2. 驱动对齐：early 输入先寄存，case ID/valid 与各深度 tap 同步推进。
   always_ff @(posedge clock or posedge reset) begin
     if(reset) begin
       valid_i<=0; split_i<=0; en_i<=0; oc_i<=0; macro_data_i<=0;
@@ -56,6 +58,7 @@ module tb_ClusterReduceTree;
       valids[0]<=early_valid_i; valids[1]<=valids[0]; valids[2]<=valids[1];
     end
   end
+  // 3. 采样在 NBA 后：核对终点数据/有效位，以及转发级门控请求。
   always @(posedge clock) begin : check
     logic [31:0] mask;
     logic [3:0] expected_gate;
@@ -84,6 +87,7 @@ module tb_ClusterReduceTree;
         $fatal(1,"Incorrect forwarding gate at terminal/nonterminal node t%0d",n);
     end
   end
+  // 4. 场景目录：8 种 Macro 使能 × 26 种规范树；每拍一例，共 208 例。
   initial begin : run
     int g,l,case_count;
     logic [7:0] test_en;
@@ -105,6 +109,8 @@ module tb_ClusterReduceTree;
           default: early_oc_i=32'h00000000;
         endcase
         g=0; decode(0,0,8,early_split_i,g);
+        $display("[CASE_START] time=%0.3f ns suite=reduce_tree case=%0d description=recursive-golden/terminal-tap/clock-gating split=%02h en=%02h oc=%08h",
+          $realtime,index,early_split_i,early_en_i,early_oc_i);
         case_en[index]=early_en_i; case_oc[index]=early_oc_i;
         for(int m=0;m<8;m++) case_width[index][m]=widths[m];
         for(int d=0;d<3;d++) masks[index][d]='0;

@@ -4,7 +4,7 @@ from buffer_schedule import COUNTS, NAMES, ABITS, STANDARD_DELAY, sequence, stan
 
 REPO = Path(__file__).resolve().parents[4]
 
-BODY = """# CIM Cluster 输入与计算说明
+BODY = r"""# CIM Cluster 输入与计算说明
 
 本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；收齐 ACT 及所需 Context 地址后，内部按 WS/AS 顺序分发。ACT buffer 为4096 bit。WS 在 tmp 写入前做 fusion、下一拍做 Psum acc；AS 先写 tmp，下一拍选择 fusion 或 acc。各 Context 独立输出 raw signed32，未包含 requant。
 
@@ -64,9 +64,14 @@ WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计
 | cmd_i | 输入，131 bit | 每个 Tile/Context 的完整 descriptor，含共享权重地址 |
 | cmd_valid_i / cmd_ready_o | 输入 / 输出，各 1 bit | Command 接受握手 |
 | act_data_i | 输入，1024 bit | 一个 Plane，含256个4-bit digit；首个命令接受沿为A0，随后连续采样A1..A(P−1) |
-| weight_wen_i | 输入，8 bit | 预加载时选择写入的 Macro |
-| weight_waddr_i | 输入，8 bit | 预加载行号 |
-| weight_wdata_i | 输入，8192 bit | 八个 Macro 各一条 1024-bit 权重行 |
+| cim_cs_en / cim_wr_en | 输入，各 1 bit | 常规片选；wr_en=1 写、0 读 |
+| cim_macro_group / cim_bank_sel | 输入，1 / 2 bit | 拼接为 3-bit macro_id，选择八个 Macro 之一 |
+| cim_row_addr | 输入，8 bit | 所选 Macro 的四个 OC 共用行地址 |
+| cim_wmask | 输入，4 bit | 每位对应一个 32 B OC：1 屏蔽并保持，0 写入；读忽略 |
+| cim_wrdata / cim_rd_data | 输入 / 输出，各 1024 bit | 单个 Macro 的完整 128 B 权重行 |
+| weight_wen_i | 输入，8 bit | 仅 TB preload：选择写入的 Macro |
+| weight_waddr_i | 输入，8 bit | 仅 TB preload：共享写行号 |
+| weight_wdata_i | 输入，8192 bit | 仅 TB preload：八个 Macro 各一条 1024-bit 权重行 |
 | psum_data_o | 输出，1024 bit | 32 个 channel 的 raw signed32 结果 |
 | out_valid_o | 输出，32 bit | 每个 OC 一位的单拍发布脉冲：该 OC 的 raw 结果写回时置位一拍，下游无反压 |
 
@@ -81,6 +86,16 @@ ACT 没有独立握手信号。`cmd_fire=cmd_valid_i&&cmd_ready_o` 仅表示外�
 A16、WS、ws=2：C0 为 Ctx0 的 i_cmd+A0，C1/A1、C2/A2、C3/A3；C4..C7 内部分发 Ctx0；C8 接受 Ctx1 的 i_cmd+A0，C9..C11 接收后续 Slice，C12..C15 内部分发 Ctx1。
 
 A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、C3/A3；C4..C11 按 A0/Ctx0、A0/Ctx1、A1/Ctx0、A1/Ctx1、A2/Ctx0、A2/Ctx1、A3/Ctx0、A3/Ctx1 发射。例中地址20/21由外部分别提供，硬件不自动递增。
+
+TB 按职责拆分，文件索引、采样时序和新增 case 的位置见 [Testbench 阅读指南](docs/Testbench_Guide.md)。
+
+## Cluster 常规 SRAM 读写
+
+`macro_id={cim_macro_group,cim_bank_sel}`，加 8-bit cim_row_addr 定位一个 Macro 的 128 B 行，四个 OC 各占 32 B。wmask=0000 全写、1111 全屏蔽，0010 只屏蔽 OC1；cim_cs_en=0 不写，读操作忽略 wmask。有效写入仅使所选 Macro 的权重 Hold 失效，写后计算必须刷新；全屏蔽写与原始读不使 Hold 失效。
+
+常规读写与计算/preload 分阶段；当前参考模型采用上升沿掩码写和使能组合读，非读期间返回零。物理 IP 的读回时序仍待冻结。接口、寻址、模型时序和完整测试入口见 [常规权重 SRAM 规格](docs/Cluster_Weight_SRAM_Interface.md)。
+
+从仓库根目录运行 `python RTL/cluster/cluster_tb/py/run_sram_regression.py --full`，或在 vcs-rtl 运行 `make sram`。测试覆盖全地址、全部16种掩码、保持与隔离、复位、连续访问和真实计算刷新。所有 suite 在每个 case 开始打印 `[CASE_START] time=... ns suite=... description=...`，时间为仿真时间；原 Command 日志保留。
 
 ## ACT buffer 容量与适用条件
 
@@ -151,6 +166,16 @@ OC mask 为 `32'hFFFF_FFFF`。物理终点由 split 决定，不因某些 Macro 
 ## 归约与时延
 
 归约只合并同一输出、同一 Context/Tile/phase 的 Macro 贡献。不同 Context、group 和 OC 不相加。根节点为 bit0，左右 quad 为 bit1/2，四个 pair 为 bit3..6；bit=1 表示拆分，bit=0 表示本节点合并。未访问的后代 split 位为 0，共 26 种规范编码。
+
+每个 Macro 的 OC mask 独立配置。每个 merge 节点固定采用其覆盖范围内最左侧 Macro 的 mask：t3/t4/t5/t6 分别取 M0/M2/M4/M6，t1/t2 分别取 M0/M4，t0 取 M0。即使最左侧 Macro 未使能，也不改选其他 Macro；例如 t5、t2 均取 M4，而不是将组内 mask 做 OR。Macro 本地计算仍使用自身 mask。
+
+设 `left(t_i)` 为该节点覆盖范围内最小的 Macro 编号，则 `oc_mask(t_i)=macro_oc_mask[4*left(t_i)+:4]`。例如 M4 与 M5 的 mask 不同时，t5 沿用 M4；t2 合并 t5、t6 时继续沿用左子树 t5 的 mask，因此仍为 M4。其他组内 Macro 的 mask 不能重新打开 M4 已屏蔽的 OC。
+
+mask 逐级生效：被子节点屏蔽的 OC 不向父节点贡献数据；父节点只合并有效子树，不能读取被门控寄存器的旧数据。节点输出还要求其子树中存在有效且使能的贡献。转发 DFF 的 ICG、终点 tap、输出 lane 预留和批次完成判断遵循同一有效性规则。若所有输出都被屏蔽，该批次在内部输入全部发射后完成，不发布 out_valid_o。
+
+`--gate-unit` 的 208 例独立递归参考测试覆盖 26 种树、不同 EN 和不一致的 OC mask；本地 `--oc-merge` 另运行 288 例，覆盖 pair/quad/root/混合终点、最左侧 Macro 关闭、全屏蔽批次以及 WS/AS/OS 连续复用。
+
+VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运行该专项测试，成功标志为 `PASS oc_merge_leftmost cases=288`。该专项使用独立预期结果检查输出数值和有效性，不沿用旧的组内 mask OR 规则。
 
 归约终点从向父级转发 DFF 前取数。pair 终止时关闭相应 t3..t6；quad 终止时关闭相应 t1/t2；仅继续归约时打开转发 DFF。根结果进入通用 tmp，无额外 root-only 输出级。
 
@@ -381,11 +406,6 @@ python RTL/cluster/cluster_tb/py/run_regression.py --en a5 --oc 84218421 --depth
 
 SV 中的 FSDB 调用由 `CLUSTER_FSDB` 编译宏控制；VCS Makefile 开启该宏，ModelSim 入口不启用。`OUTPUT_BUFFER_DEPTH` 控制 Context 状态深度，与输出 ready/valid 反压无关；输出无需 ready，out_valid_o[l] 每个有效周期发布一个新结果。深度1支持单 Context；完整回归需要至少2。`--psum-depth` 是 `--depth` 的命令行别名，不是第二个硬件深度参数。
 
-## 附录 A 逐拍输入与运算
-
-C0 是首个外部 i_cmd+A0 的接受沿。每例先列外部接受事件，再列内部发射与运算。内部表的ACT来自act_buffer，地址来自已接收descriptor；内部发射不要求外部cmd_fire。所有C周期使用同一实际时钟起点；tmp 在该写回周期前一拍捕获，状态写回 ICG 使能在 tmp 捕获时寄存；tmp 输入 ICG 使能则提前 tmp 捕获一拍寄存。
-
-操作中的 R_slice 是对应行输入的原始归约 slice；tmp 每 OC 唯一，P[c] 的索引为 Context 深度。WS 填充/fusion 在所列完成周期前一拍写 tmp，AS 的 fusion 与 acc 在所列周期写 Psum，“输出”表示该 Context raw 就绪。signed_en=0/1 共用时序。
 """
 
 

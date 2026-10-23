@@ -1,4 +1,5 @@
 // Anker-CIM-Block cluster 级回归源文件（路径相对本目录 vcs-rtl/）
++incdir+../RTL/cluster/cluster_tb/sv_code
 ../RTL/macro/rtl/single_macro_pkg.sv
 ../RTL/macro/rtl/MacroClockGate.sv
 ../RTL/macro/rtl/MacroWeightSRAM.sv

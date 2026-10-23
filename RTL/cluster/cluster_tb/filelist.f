@@ -1,3 +1,4 @@
++incdir+sv_code
 ../../macro/rtl/single_macro_pkg.sv
 ../../macro/rtl/MacroClockGate.sv
 ../../macro/rtl/MacroWeightSRAM.sv

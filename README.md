@@ -58,9 +58,14 @@ WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计
 | cmd_i | 输入，131 bit | 每个 Tile/Context 的完整 descriptor，含共享权重地址 |
 | cmd_valid_i / cmd_ready_o | 输入 / 输出，各 1 bit | Command 接受握手 |
 | act_data_i | 输入，1024 bit | 一个 Plane，含256个4-bit digit；首个命令接受沿为A0，随后连续采样A1..A(P−1) |
-| weight_wen_i | 输入，8 bit | 预加载时选择写入的 Macro |
-| weight_waddr_i | 输入，8 bit | 预加载行号 |
-| weight_wdata_i | 输入，8192 bit | 八个 Macro 各一条 1024-bit 权重行 |
+| cim_cs_en / cim_wr_en | 输入，各 1 bit | 常规片选；wr_en=1 写、0 读 |
+| cim_macro_group / cim_bank_sel | 输入，1 / 2 bit | 拼接为 3-bit macro_id，选择八个 Macro 之一 |
+| cim_row_addr | 输入，8 bit | 所选 Macro 的四个 OC 共用行地址 |
+| cim_wmask | 输入，4 bit | 每位对应一个 32 B OC：1 屏蔽并保持，0 写入；读忽略 |
+| cim_wrdata / cim_rd_data | 输入 / 输出，各 1024 bit | 单个 Macro 的完整 128 B 权重行 |
+| weight_wen_i | 输入，8 bit | 仅 TB preload：选择写入的 Macro |
+| weight_waddr_i | 输入，8 bit | 仅 TB preload：共享写行号 |
+| weight_wdata_i | 输入，8192 bit | 仅 TB preload：八个 Macro 各一条 1024-bit 权重行 |
 | psum_data_o | 输出，1024 bit | 32 个 channel 的 raw signed32 结果 |
 | out_valid_o | 输出，32 bit | 每个 OC 一位的单拍发布脉冲：该 OC 的 raw 结果写回时置位一拍，下游无反压 |
 
@@ -75,6 +80,16 @@ ACT 没有独立握手信号。`cmd_fire=cmd_valid_i&&cmd_ready_o` 仅表示外�
 A16、WS、ws=2：C0 为 Ctx0 的 i_cmd+A0，C1/A1、C2/A2、C3/A3；C4..C7 内部分发 Ctx0；C8 接受 Ctx1 的 i_cmd+A0，C9..C11 接收后续 Slice，C12..C15 内部分发 Ctx1。
 
 A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、C3/A3；C4..C11 按 A0/Ctx0、A0/Ctx1、A1/Ctx0、A1/Ctx1、A2/Ctx0、A2/Ctx1、A3/Ctx0、A3/Ctx1 发射。例中地址20/21由外部分别提供，硬件不自动递增。
+
+TB 按职责拆分，文件索引、采样时序和新增 case 的位置见 [Testbench 阅读指南](docs/Testbench_Guide.md)。
+
+## Cluster 常规 SRAM 读写
+
+`macro_id={cim_macro_group,cim_bank_sel}`，加 8-bit cim_row_addr 定位一个 Macro 的 128 B 行，四个 OC 各占 32 B。wmask=0000 全写、1111 全屏蔽，0010 只屏蔽 OC1；cim_cs_en=0 不写，读操作忽略 wmask。有效写入仅使所选 Macro 的权重 Hold 失效，写后计算必须刷新；全屏蔽写与原始读不使 Hold 失效。
+
+常规读写与计算/preload 分阶段；当前参考模型采用上升沿掩码写和使能组合读，非读期间返回零。物理 IP 的读回时序仍待冻结。接口、寻址、模型时序和完整测试入口见 [常规权重 SRAM 规格](docs/Cluster_Weight_SRAM_Interface.md)。
+
+从仓库根目录运行 `python RTL/cluster/cluster_tb/py/run_sram_regression.py --full`，或在 vcs-rtl 运行 `make sram`。测试覆盖全地址、全部16种掩码、保持与隔离、复位、连续访问和真实计算刷新。所有 suite 在每个 case 开始打印 `[CASE_START] time=... ns suite=... description=...`，时间为仿真时间；原 Command 日志保留。
 
 ## ACT buffer 容量与适用条件
 

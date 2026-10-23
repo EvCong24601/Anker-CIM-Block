@@ -18,6 +18,10 @@ module SingleMacro #(
     input  logic          cim_wen,
     input  logic [7:0]    cim_waddr,
     input  logic [1023:0] cim_wdata,
+    input  logic [3:0]    cim_wmask,
+    input  logic          sram_ren,
+    input  logic [7:0]    sram_raddr,
+    output wire [1023:0]  sram_rdata,
     output logic [71:0]   cim_odata,
     output logic          cim_odata_valid,
     output logic [3:0]    cim_odata_oc_mask,
@@ -36,9 +40,10 @@ module SingleMacro #(
     logic [1:0] phase_in;            // ACT digit phase returned with the result.
 
     wire issue = !reset && cim_ren && (|cim_oc_mask);
+    wire write_active = cim_wen && !(&cim_wmask);
     wire macro_clock;
     // Include output valid to preserve the final valid-clearing edge n+2.
-    wire clock_active = !reset && (issue || cim_wen || in_valid || cim_odata_valid);
+    wire clock_active = !reset && (issue || write_active || in_valid || cim_odata_valid);
     generate
         if (USE_CLOCK_GATING) begin : g_icg
             MacroClockGate u_clock_gate (
@@ -58,11 +63,14 @@ module SingleMacro #(
     wire [1023:0] compute_weight = !in_valid ? 1024'b0
                                 : station_in ? sram_read_data : held_weight;
     MacroWeightSRAM u_weight_sram (
-        .clock(macro_clock), .write_enable(!reset && cim_wen),
-        .write_address(cim_waddr), .write_data(cim_wdata),
-        .read_enable(sram_read_enable), .read_address(read_address_in),
+        .clock(macro_clock), .write_enable(!reset && write_active),
+        .write_address(cim_waddr), .write_data(cim_wdata), .write_mask(cim_wmask),
+        .read_enable(sram_read_enable || (!reset && sram_ren)),
+        .read_address(sram_ren ? sram_raddr : read_address_in),
         .read_data(sram_read_data)
     );
+    // Regular read and CIM refresh share the existing SRAM read path.
+    assign sram_rdata = !reset && sram_ren ? sram_read_data : 1024'b0;
 
     // Persistent storage/reuse state, not a current-request pipeline stage.
     // Hold payload need not reset: only a valid, correctly addressed Hold may
@@ -75,7 +83,7 @@ module SingleMacro #(
         if (reset) begin
             held_address <= '0;
             hold_valid <= 1'b0;
-        end else if (cim_wen) begin
+        end else if (write_active) begin
             hold_valid <= 1'b0;
         end else if (in_valid && station_in) begin
             held_address <= read_address_in;
@@ -182,9 +190,12 @@ module SingleMacro #(
 `ifndef SYNTHESIS
 `ifdef SINGLE_MACRO_ASSERTIONS
     // Verification state only; SRAM initialization survives logic reset.
-    logic [255:0] initialized_rows = '0;
+    logic [3:0] initialized_ocs [0:255];
+    initial for (int a=0; a<256; a++) initialized_ocs[a]='0;
     always @(posedge clock) begin
         if (!reset) begin
+            if (sram_ren && (cim_ren || in_valid || cim_wen))
+                $fatal(1, "SM_PROTOCOL: regular read overlaps compute/write");
             if (cim_wen) begin
                 if (cim_ren)
                     $fatal(1, "SM_PROTOCOL: simultaneous read/write");
@@ -193,9 +204,9 @@ module SingleMacro #(
                     $fatal(1, "SM_PROTOCOL: write before pipeline drain");
                 // Reduction catches X/Z without simulator-specific handling of
                 // $isunknown on a wide, temporary concatenation.
-                if ((^{cim_waddr, cim_wdata}) === 1'bx)
+                if ((^{cim_waddr, cim_wdata, cim_wmask}) === 1'bx)
                     $fatal(1, "SM_PROTOCOL: unknown write input");
-                initialized_rows[cim_waddr] <= 1'b1;
+                initialized_ocs[cim_waddr] <= initialized_ocs[cim_waddr] | ~cim_wmask;
             end
             if (issue) begin
                 if ((^{cim_precision, cim_phase, cim_signed_en,
@@ -203,10 +214,7 @@ module SingleMacro #(
                     $fatal(1, "SM_PROTOCOL: unknown compute input");
                 if (!legal_phase(cim_precision, cim_phase))
                     $fatal(1, "SM_PROTOCOL: illegal precision/phase");
-                if (cim_station) begin
-                    if (!initialized_rows[cim_raddr])
-                        $fatal(1, "SM_PROTOCOL: read uninitialized row");
-                end else begin
+                if (!cim_station) begin
                     // A preceding refresh commits at THIS edge; evaluate the
                     // resulting logical Hold rather than stale pre-NBA flags.
                     if (in_valid && station_in) begin
@@ -219,6 +227,10 @@ module SingleMacro #(
                             $fatal(1, "SM_PROTOCOL: reuse address mismatch");
                     end
                 end
+                // A partial write initializes only its unmasked OCs, even
+                // when an earlier refresh already captured the whole row.
+                if ((initialized_ocs[cim_raddr] & cim_oc_mask) != cim_oc_mask)
+                    $fatal(1, "SM_PROTOCOL: read uninitialized row");
             end
         end
     end

@@ -12,6 +12,18 @@ WS每个Tile/Context加载一个完整ACT并发送一次Command。AS每个Tile�
 
 Context是同一channel内独立保存、独立输出的计算任务，Psum[ctx]为其深度位置。WS的Context对应不同ACT，AS的Context对应不同权重地址；os表示每个Context累加的K Tile数。各Context不互相相加。术语、外部接收和内部发射的逐拍表见[仓库首页](../../../README.md)。
 
+## 常规 SRAM 与 case 开始日志
+
+常规读写接口通过 `{cim_macro_group,cim_bank_sel}` 选择一个 Macro，由 cim_row_addr 选择四个 OC 共用的 128 B 行。cim_wmask 每位为 1 屏蔽对应 OC 的 32 B，为 0 允许写入；读忽略该掩码。TB preload 保留为独立验证辅助接口。接口时序、互斥约束和测试覆盖见 [常规权重 SRAM 规格](../../../docs/Cluster_Weight_SRAM_Interface.md)。
+
+从仓库根目录执行 `python RTL/cluster/cluster_tb/py/run_sram_regression.py --full`；VCS 使用 `make sram` 或 `+SRAM_RW_TEST`。SRAM 专项在打开标准 CSV 前运行，不覆盖原计算回归的数据文件。
+
+每个 Cluster、SRAM、归约树及 SingleMacro case 开始都会输出 `[CASE_START] time=... ns suite=... description=...`，包含当前仿真时间和场景/参数；CMD_SEND、CMD_ACCEPT 继续独立记录命令驱动和接受时间。
+
+## TB 文件拆分
+
+顶层 tb_Cluster.sv 只保留连接与共享状态；tb/ 目录按 reference、driver、scoreboards、compute_cases、sram_cases、suites、regression 分为七个 include。先从 cluster_suites.svh 找场景，再到对应 case/检查器阅读实现。文件职责、采样顺序与新增 case 方法见 [Testbench 阅读指南](../../../docs/Testbench_Guide.md)。.svh 不单独编译，文件清单和 Python 副本入口已配置 include 路径。
+
 ## 目录与入口
 
 Git仓库提供[VCS入口](../../../vcs-rtl/Makefile)，在vcs-rtl目录运行make com、make sim、make check。ModelSim专用py/run_regression.py仅保留在本地，不纳入Git；下文该脚本的命令用于记录本地验证方法。共用SV/TB与数据检查Python仍纳入Git。

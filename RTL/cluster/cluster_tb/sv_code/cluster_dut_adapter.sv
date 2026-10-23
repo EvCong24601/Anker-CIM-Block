@@ -12,6 +12,13 @@ module cluster_dut_adapter #(
   input logic [7:0] weight_wen_i,
   input logic [7:0] weight_waddr_i,
   input logic [8191:0] weight_wdata_i,
+  input logic cim_cs_en, cim_wr_en,
+  input logic cim_macro_group,
+  input logic [1:0] cim_bank_sel,
+  input logic [7:0] cim_row_addr,
+  input logic [3:0] cim_wmask,
+  input logic [1023:0] cim_wrdata,
+  output wire [1023:0] cim_rd_data,
   output logic [1023:0] psum_data_o,
   output logic [31:0] out_valid_o
 );
@@ -34,6 +41,30 @@ module cluster_dut_adapter #(
   wire [7:0] macro_valid;
   wire [31:0] macro_mask;
   wire [15:0] macro_phase;
+  logic batch_active, batch_input_done;
+  wire [2:0] regular_macro_id = {cim_macro_group,cim_bank_sel};
+  wire regular_access = !reset && cim_cs_en;
+  wire regular_read = regular_access && !cim_wr_en;
+  wire regular_write = regular_access && cim_wr_en && !(&cim_wmask);
+  wire [7:0] memory_wen = reset ? 8'b0 : regular_access
+                         ? (regular_write ? (8'b1 << regular_macro_id) : 8'b0)
+                         : weight_wen_i;
+  wire [8191:0] regular_read_data;
+  // Reference timing: asynchronous read, zero outside a selected read.
+  // Product SRAM read latency remains an integration choice.
+  assign cim_rd_data = regular_read ? regular_read_data[1024*regular_macro_id+:1024] : 1024'b0;
+  always @(posedge clock) if (!reset) begin
+    if (cim_cs_en && (batch_active || packet_active || cmd_valid_i || (|macro_valid)))
+      $fatal(1,"CLUSTER_SRAM_PROTOCOL: regular access overlaps compute");
+    if (cim_cs_en && (|weight_wen_i))
+      $fatal(1,"CLUSTER_SRAM_PROTOCOL: regular access overlaps preload");
+    if ((|weight_wen_i) && batch_active)
+      $fatal(1,"CLUSTER_SRAM_PROTOCOL: preload overlaps compute");
+    if (cim_cs_en && ((^{cim_wr_en,cim_macro_group,cim_bank_sel,cim_row_addr}) === 1'bx))
+      $fatal(1,"CLUSTER_SRAM_PROTOCOL: unknown regular address/control");
+    if (cim_cs_en && cim_wr_en && ((^{cim_wmask,cim_wrdata}) === 1'bx))
+      $fatal(1,"CLUSTER_SRAM_PROTOCOL: unknown regular write data/mask");
+  end
   typedef struct packed {
     logic valid;
     cluster_ctrl_t cmd;
@@ -59,7 +90,6 @@ module cluster_dut_adapter #(
   // One tmp data register per OC; Psum stores Context history.
   logic signed [31:0] psum [0:OUTPUT_BUFFER_DEPTH-1][0:31];
   logic [OUTPUT_BUFFER_DEPTH-1:0] psum_depth_open;
-  logic batch_active, batch_input_done;
   int batch_contexts;
   cluster_ctrl_t batch_command;
   // Explicit advance ICG enables: registered at tmp capture, consumed by
@@ -121,7 +151,7 @@ module cluster_dut_adapter #(
     for(int m=0;m<8;m++)
       station[m]=!hold_valid[m] || hold_addr[m]!=command.weight_cim_raddr;
   end
-  assign cmd_ready_o=!reset && !batch_input_done &&
+  assign cmd_ready_o=!reset && !cim_cs_en && !batch_input_done &&
     (!packet_active || (packet_cmd.as_cnt>1 && command_count<int'(packet_cmd.as_cnt)));
   // Registered publish: each pulsing out_valid_o bit marks a fresh lane
   // result on psum_data_o for one cycle; that lane's value holds until its
@@ -145,8 +175,12 @@ module cluster_dut_adapter #(
       .cim_raddr(command.weight_cim_raddr), .cim_station(station[m]),
       .cim_oc_mask(command.macro_oc_mask[4*m+:4]),
       .cim_precision(command.precision), .cim_signed_en(command.signed_en),
-      .cim_phase(2'(phase)), .cim_wen(weight_wen_i[m]),
-      .cim_waddr(weight_waddr_i), .cim_wdata(weight_wdata_i[1024*m+:1024]),
+      .cim_phase(2'(phase)), .cim_wen(memory_wen[m]),
+      .cim_waddr(regular_access ? cim_row_addr : weight_waddr_i),
+      .cim_wdata(regular_access ? cim_wrdata : weight_wdata_i[1024*m+:1024]),
+      .cim_wmask(regular_access ? cim_wmask : 4'b0000),
+      .sram_ren(regular_read && regular_macro_id==m), .sram_raddr(cim_row_addr),
+      .sram_rdata(regular_read_data[1024*m+:1024]),
       .cim_odata(macro_data[72*m+:72]), .cim_odata_valid(macro_valid[m]),
       .cim_odata_oc_mask(macro_mask[4*m+:4]), .cim_odata_phase(macro_phase[2*m+:2])
     );
@@ -328,7 +362,7 @@ module cluster_dut_adapter #(
         end else external_phase<=external_phase+1;
       end
       for(int m=0;m<8;m++) begin
-        if(weight_wen_i[m]) hold_valid[m]<=0;
+        if(memory_wen[m]) hold_valid[m]<=0;
         else if(ren[m]) begin hold_valid[m]<=1; hold_addr[m]<=command.weight_cim_raddr; end
       end
       in_tag.valid<=issue;

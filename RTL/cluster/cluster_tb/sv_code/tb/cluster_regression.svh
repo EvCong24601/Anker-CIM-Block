@@ -1,0 +1,81 @@
+// 唯一回归入口：选 suite、初始化/关闭 CSV、检查覆盖率；含 watchdog 与 FSDB。
+// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
+// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+
+  initial begin : regression
+    string data_dir;
+    if($test$plusargs("SRAM_RW_TEST") || $test$plusargs("SRAM_CONFLICT_PRELOAD") ||
+       $test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
+      repeat(4) @(negedge clock); reset=0;
+      repeat(2) @(negedge clock);
+      if($test$plusargs("SRAM_CONFLICT_PRELOAD")) begin
+        $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-access-overlapping-preload",$realtime);
+        cim_cs_en=1; weight_wen_i=1;
+        @(posedge clock); #1; $fatal(1,"Missing SRAM/preload conflict rejection");
+      end
+      if($test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
+        $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-access-overlapping-compute-command",$realtime);
+        cim_cs_en=1; cmd_valid_i=1;
+        @(posedge clock); #1; $fatal(1,"Missing SRAM/compute conflict rejection");
+      end
+      run_sram_cases(); $finish;
+    end
+    if(OS_TILES<1 || OS_TILES>14 || PATTERNS<1 || PATTERNS>6 || SEED==0)
+      $fatal(1,"Require OS_TILES 1..14 (distinct preload rows), PATTERNS 1..6, nonzero seed");
+    for(int mask=0;mask<128;mask++) if(canonical(7'(mask))) canonical_count++;
+    if(canonical_count!=26) $fatal(1,"Expected 26 canonical trees");
+    data_dir=".";
+    if($value$plusargs("DATA_DIR=%s",data_dir)) begin end
+    manifest=$fopen($sformatf("%s/split_cases.csv",data_dir),"w");
+    operation_trace=$fopen($sformatf("%s/buffer_operations.csv",data_dir),"w");
+    external_trace=$fopen($sformatf("%s/external_inputs.csv",data_dir),"w");
+    if(!manifest || !operation_trace || !external_trace) $fatal(1,"Cannot open CSV output directory %s",data_dir);
+    $fdisplay(external_trace,"input_cycle,case,precision,signed_en,tile,command,context,weight_address,act_sample,phase,act_hex");
+    $fdisplay(operation_trace,"compute_cycle,case,precision,signed_en,tile,context,phase,lane,operation,tmp,fusion_a,fusion_b,acc_a,acc_b,result,done,tmp_stored,fusion_cycle");
+    $fdisplay(manifest,"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,group2_K,group3_K,group4_K,group5_K,group6_K,group7_K");
+    repeat(4) @(negedge clock); reset=0;
+    repeat(2) @(negedge clock);
+    // 专项 suite 独占一次仿真；默认 suite 另有 CSV、路由和门控覆盖检查。
+    if($test$plusargs("OC_MERGE_TEST")) begin run_oc_merge_suite(); $finish; end
+    if($test$plusargs("ACT_BUFFER_TEST")) begin run_act_buffer_suite(); $finish; end
+    if($test$plusargs("FULL_ACT_TEST")) begin run_full_act_suite(); $finish; end
+    if($test$plusargs("MIXED_CONTEXT_TEST")) begin run_mixed_context_suite(); $finish; end
+    run_default_suite();
+    $fclose(manifest);
+    $fclose(operation_trace);
+    $fclose(external_trace);
+    if(reuse_cycles==0)
+      $fatal(1,"Missing coverage: reuse=%0d",reuse_cycles);
+    for(int n=1;n<7;n++) begin
+      if(dut.u_reduce.gated_checks[n]==0) $fatal(1,"No gated hold checks for node %0d",n);
+      $display("CG node=t%0d active_edges=%0d gated_OC_checks=%0d",n,
+        dut.u_reduce.active_edges[n],dut.u_reduce.gated_checks[n]);
+    end
+    if(dut.tmp_only_steps==0 || dut.as_seed_steps==0 || dut.as_fusion_steps==0 ||
+       dut.as_acc_steps==0 || dut.ws_fusion_steps==0 || dut.ws_acc_steps==0 ||
+       dut.ws_tile_commits==0 || dut.a4_acc_steps==0)
+      $fatal(1,"Missing tmp/fusion/acc routing coverage");
+    $display("TMP_ROUTES os1=%0d AS_seed=%0d AS_fusion=%0d AS_acc=%0d WS_fusion=%0d WS_acc=%0d WS_tile_commit=%0d A4_acc=%0d",
+      dut.tmp_only_steps,dut.as_seed_steps,dut.as_fusion_steps,dut.as_acc_steps,
+      dut.ws_fusion_steps,dut.ws_acc_steps,dut.ws_tile_commits,dut.a4_acc_steps);
+    if(buffer_gate_checks==0 || bypass_psum_hold_checks==0 ||
+       (OUTPUT_BUFFER_DEPTH>2 && high_depth_checks==0)) $fatal(1,"Missing buffer gate checks");
+    $display("BUFFER_ICG checks=%0d high_depth=%0d bypass_Psum_hold=%0d depth=%0d",
+      buffer_gate_checks,high_depth_checks,bypass_psum_hold_checks,OUTPUT_BUFFER_DEPTH);
+    $display("PASS configurations=%0d cases=%0d reuse=%0d seed=%08h",
+      configurations,cases_run,reuse_cycles,SEED);
+`ifdef CLUSTER_FSDB
+    $fsdbDumpoff;
+`endif
+    $finish;
+  end
+  initial begin #200000000; $fatal(1,"Global watchdog"); end
+  // FSDB waveform dump for Verdi (tasks registered via -P novas.tab in Makefile)
+`ifdef CLUSTER_FSDB
+  initial begin : fsdb_dump
+    $display("The simulation started.");
+    $fsdbDumpfile("tb_Cluster_2026.fsdb");
+    $fsdbDumpvars(0, tb_Cluster, "+all");
+    $fsdbDumpon;
+  end
+`endif

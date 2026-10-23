@@ -8,7 +8,7 @@
 #   make clean
 #   make com sim TB=macro  # 切换 macro 级（顶层 tb_SingleMacro）
 #   make sim PVALUE=-pvalue+tb_Cluster.OS_TILES=2   # 运行期覆盖 TB 参数
-.PHONY: com sim debug wave clean vcd check
+.PHONY: com sim debug wave clean vcd check sram
 
 # ---------------- 目标选择 ----------------
 TB       ?= cluster
@@ -71,6 +71,11 @@ wave:
 	cd ${WORK_DIR}; verdi -ssf ${OUTPUT}.fsdb &
 
 ifeq ($(TB),cluster)
+sram: com
+	cd ${WORK_DIR}; ./${OUTPUT} +SRAM_RW_TEST -l sram_rw.log
+	grep -q "PASS sram_rw" ${WORK_DIR}/sram_rw.log
+	! grep -qiE "fatal|error-" ${WORK_DIR}/sram_rw.log
+
 check:
 	grep -q "PASS configurations=" ${WORK_DIR}/${OUTPUT}.log
 	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
