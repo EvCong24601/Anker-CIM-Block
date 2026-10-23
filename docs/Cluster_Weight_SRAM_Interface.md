@@ -39,10 +39,10 @@ weight_wen_i/weight_waddr_i/weight_wdata_i 保留为 TB preload 验证辅助接�
 从仓库根目录运行：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_sram_regression.py --full
+python RTL/cluster/tb/py/run_sram_regression.py --full
 ```
 
-入口需要 ModelSim 的 vlib/vlog/vsim，仿真源码、日志及 SHA256 清单保存在仓库同级 cluster_tb_work/local_sim/sram_rw；可用 --sim-dir 指定仓库外目录。默认运行 SRAM 正向测试、两种冲突负向测试，以及 SingleMacro 门控开/关回归和 15 类协议负向 case（含部分初始化行的刷新/复用）；--full 追加默认 Cluster、归约树、OC merge、ACT 容量、完整 ACT 与混合 Context 回归。冲突测试必须命中指定协议诊断，正向测试要求 PASS 且没有 Fatal/Error。
+入口需要 ModelSim 的 vlib/vlog/vsim，仿真源码、日志及 SHA256 清单保存在仓库同级 cluster_tb_work/local_sim/sram_rw；可用 --sim-dir 指定仓库外目录。默认运行 SRAM 正向测试、两种冲突负向测试，以及 SingleMacro 门控开/关回归和 15 类协议负向 case（含部分初始化行的刷新/复用）；--full 追加默认 Cluster、归约树、OC merge、ACT 容量、完整 ACT、混合 Context 和大 Context/Psum 容量回归。冲突测试必须命中指定协议诊断，正向测试要求 PASS 且没有 Fatal/Error。
 
 VCS 从 vcs-rtl 目录执行 `make sram`；或在已完成编译后执行 `make sim PVALUE=+SRAM_RW_TEST`。专项成功标志为 `PASS sram_rw`。该专项不生成或覆盖默认计算 suite 的 split/operation CSV，不适用默认 make check。
 

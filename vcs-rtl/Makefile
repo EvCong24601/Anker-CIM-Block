@@ -22,6 +22,8 @@ endif
 
 OUTPUT   = ${TOP}_2026
 WORK_DIR = ./work
+# Compile-time parameter overrides, e.g. -pvalue+tb_Cluster.MAX_CONTEXTS=64
+PARAMETERS ?=
 
 # 本仓库为纯 RTL，无需工艺库/宏模型；后续做门级或模拟宏仿真时，把 -v <cell>.v 追加到这里
 LIB_LIST =
@@ -53,7 +55,7 @@ SIM = ./${OUTPUT} -l ${OUTPUT}.log ${PVALUE}
 
 com:
 	mkdir -p ${WORK_DIR}
-	${VCS} -f ${V_FILE} ${ALL_DEFINE}
+	${VCS} -f ${V_FILE} ${ALL_DEFINE} ${PARAMETERS}
 
 sim:
 	cd ${WORK_DIR}; ${SIM}
@@ -79,7 +81,7 @@ sram: com
 check:
 	grep -q "PASS configurations=" ${WORK_DIR}/${OUTPUT}.log
 	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
-	python3 ../RTL/cluster/cluster_tb/py/verify_manifest.py ${WORK_DIR}/split_cases.csv
+	python3 ../RTL/cluster/tb/py/verify_manifest.py ${WORK_DIR}/split_cases.csv
 else
 check:
 	grep -q "PASS clock_gating=" ${WORK_DIR}/${OUTPUT}.log

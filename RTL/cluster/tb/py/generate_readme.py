@@ -6,11 +6,11 @@ REPO = Path(__file__).resolve().parents[4]
 
 BODY = r"""# CIM Cluster 输入与计算说明
 
-本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；收齐 ACT 及所需 Context 地址后，内部按 WS/AS 顺序分发。ACT buffer 为4096 bit。WS 在 tmp 写入前做 fusion、下一拍做 Psum acc；AS 先写 tmp，下一拍选择 fusion 或 acc。各 Context 独立输出 raw signed32，未包含 requant。
+本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 在 tmp 写入前做 fusion、下一拍做 Psum acc；AS 先写 tmp，下一拍选择 fusion 或 acc。各 Context 独立输出 raw signed32，未包含 requant。
 
 ## 逐拍输入时序文档
 
-[下载 CIM_Cluster_逐拍输入时序_v2.7.docx](docs/CIM_Cluster_逐拍输入时序_v2.7.docx)：包含 Cluster 输入 pin、七种精度的 ACT slice、WS/AS/OS 配置、权重地址、逐拍操作和输入到输出时延。
+[历史逐拍输入时序 Word 文档](docs/CIM_Cluster_逐拍输入时序_v2.7.docx)：同包重叠后的周期以本 README 和 [重叠说明](docs/Cluster_Input_Overlap.md) 为准。历史文档包含 Cluster 输入 pin、七种精度的 ACT slice、WS/AS/OS 配置、权重地址、逐拍操作和输入到输出时延。
 
 ## 目录与运行
 
@@ -19,11 +19,16 @@ docs/                           逐拍输入时序 Word 文档
 RTL/
   macro/rtl/                    SingleMacro 计算与权重存储
   macro/tb/                     单 Macro testbench
-  cluster/cluster_tb/
-    sv_code/                    Cluster 参考实现与 testbench
-    py/                         枚举生成与数据检查
-    data/                       配置、操作和时延 CSV
-    log/                        回归日志和检查结果
+  cluster/
+    rtl/                        Cluster 功能实现与共享 package
+    tb/
+      tb_Cluster.sv             Cluster 仿真顶层
+      tb_ClusterReduceTree.sv    归约树单元测试
+      latency_audit.sv          时延观察器
+      include/                  驱动、参考模型、检查器、case 与 suite
+      py/                       仿真入口、枚举生成与数据检查
+      data/                     配置、操作和时延 CSV
+      log/                      回归日志和检查结果
 vcs-rtl/                        VCS 编译列表与 Makefile
 ```
 
@@ -36,11 +41,11 @@ make sim
 make check
 ```
 
-ModelSim专用入口py/run_regression.py仅保留在本地，不纳入Git；下文ModelSim命令记录本地验证方式。该入口从任意工作目录调用均可，脚本将 SV、Macro RTL 和 Python 检查器复制到仓库外的本地仿真目录，work、波形、CSV 和日志均在该副本内生成；副本不纳入 Git。默认位置为仓库同级 cluster_tb_work/local_sim/<日志名>，可用 --sim-dir 指定仓库外目录。仓库 data/log 保存经检查的结果。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [cluster_tb README](RTL/cluster/cluster_tb/README.md)。
+ModelSim专用入口py/run_regression.py仅保留在本地，不纳入Git；下文ModelSim命令记录本地验证方式。该入口从任意工作目录调用均可，脚本将 SV、Macro RTL 和 Python 检查器复制到仓库外的本地仿真目录，work、波形、CSV 和日志均在该副本内生成；副本不纳入 Git。默认位置为仓库同级 cluster_tb_work/local_sim/<日志名>，可用 --sim-dir 指定仓库外目录。仓库 data/log 保存经检查的结果。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [Cluster TB README](RTL/cluster/tb/README.md)。
 
 ## 术语与 Context
 
-**Context 是同一输出 channel 内独立保存、独立输出的一项计算任务。** Context 编号 c 对应 Psum[c] 的深度索引；不同 Context 的结果不相加。OUTPUT_BUFFER_DEPTH 是每个 channel 可保存的 Context 数。
+**Context 是同一输出 channel 内独立保存、独立输出的一项计算任务。** 需要 Psum 时，Context 编号 c 对应 Psum[c] 的深度索引；不同 Context 的结果不相加。OUTPUT_BUFFER_DEPTH 是每个 channel 可保存的 Context 数。
 
 - WS、ws=2：同一 Tile 的权重复用两次，两个不同完整 ACT 分别生成 Ctx0、Ctx1。
 - AS、as=2：同一完整 ACT 配合两个分别提交的权重地址，分别生成 Ctx0、Ctx1。
@@ -50,9 +55,13 @@ OC 是 Macro 内的四个输出之一；归约组 group 与局部 OC 共同组�
 
 Descriptor 是 cmd_i 携带的配置和权重地址。外部接受是 cmd_valid_i&&cmd_ready_o；内部发射是 ACT buffer 向 Macro 提交一次计算，二者有各自的周期。Bit fusion 将不同 Slice 的点积移位相加；acc 将同一 Context 的不同 K Tile 相加。tmp 是每 OC 唯一的中间结果寄存器，Psum 是按 Context 寻址的历史。raw 是未经 requant 的 signed32 结果；ICG 是集成时钟门控单元。
 
-WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计算拍数为 **P×ws_cnt**，P=A位宽/4。A16、ws_cnt=2是2个Context、8次计算，Psum深度按2个Context设置。单bank含ACT接收时，本Tile占2×P×ws_cnt个时钟沿；计算拍数不等于这段总时间。
+WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计算拍数为 **P×ws_cnt**，P=A位宽/4。A16、ws_cnt=2是2个Context、8次计算，Psum深度按2个Context设置。单bank含ACT接收时，无空拍时本Tile占(P+1)×ws_cnt个时钟沿；计算拍数不等于这段总时间。
 
-计算符号：R=max(ws_cnt,as_cnt)是Context数，R_slice是原始归约结果；S是ACT包起始周期，L=max(P,R)，D是内部路径时延，DEPTH=OUTPUT_BUFFER_DEPTH是Psum深度。W/A是权重/ACT位宽，K是归约组点积项数，K_row=256/W。DFF是边沿触发寄存器，latch是电平锁存器，MUX为选择器；bank是一组独立存储，entry是一项Context状态；SRAM存权重，Hold复用已读行，preload为计算前写权重；STA是静态时序分析，II是连续计算接受间隔。RTL为寄存器传输级描述，TB为测试平台，golden为独立预期结果，adapter是Cluster仿真参考实现，longint用于64-bit参考计算；packet为一份ACT及对应地址命令组成的包，EN/OC_MASK/split_mask分别简称三个descriptor mask字段。
+计算符号：R=max(ws_cnt,as_cnt)是Context数，R_slice是原始归约结果；S是ACT包起始周期，D是内部路径时延，DEPTH=OUTPUT_BUFFER_DEPTH是Psum深度。W/A是权重/ACT位宽，K是归约组点积项数，K_row=256/W。DFF是边沿触发寄存器，latch是电平锁存器，MUX为选择器；bank是一组独立存储，entry是一项Context状态；SRAM存权重，Hold复用已读行，preload为计算前写权重；STA是静态时序分析，II是连续计算接受间隔。RTL为寄存器传输级描述，TB为测试平台，golden为独立预期结果，adapter是Cluster仿真参考实现，longint用于64-bit参考计算；packet为一份ACT及对应地址命令组成的包，EN/OC_MASK/split_mask分别简称三个descriptor mask字段。
+
+## 同包输入与发射重叠
+
+同包重叠规则、AS地址空拍、示例和168个专项case见 [输入重叠说明](docs/Cluster_Input_Overlap.md)。`python RTL/cluster/tb/py/run_sram_regression.py --input-overlap` 运行专项；`--full` 自动包含该专项。
 
 ## Cluster 接口
 
@@ -80,14 +89,14 @@ ACT 没有独立握手信号。`cmd_fire=cmd_valid_i&&cmd_ready_o` 仅表示外�
 - WS/单 Context：每个 Tile、每个 Context 发送一次 i_cmd+A0，随后 P−1 拍连续提供剩余 Slice，P=A位宽/4。
 - AS：每个 Tile 仅加载一次完整 ACT；Ctx0 的 i_cmd 与 A0 同拍。Ctx1..Ctx(R−1) 分别通过后续 Command 提供自己的地址，可与 A1..A3 重叠；这些地址命令不重新加载 A0。所有 Context 的公共配置相同。
 - 首命令尚未接受时保持 Command+A0。首命令接受后，剩余 ACT Slice 每拍固定接收，与后续 cmd_valid/cmd_ready 无关。没有 ACT valid/ready pin。
-- 收齐完整 ACT 及 AS 的全部 Context 地址后，下一拍开始内部发射。内部 phase 从 act_buffer[1024×phase+:1024] 读取，再按 slot 分给 Macro。
+- 当前 Plane 和对应 Context 地址已收到，即可在下一拍内部发射；不等待同包后续 Plane 或地址。内部 phase 从 act_buffer[1024×phase+:1024] 读取，再按 slot 分给 Macro。
 - 单个4096-bit ACT buffer；当前包完成内部发射后，下一拍可接受下一包。内部发射期间不加载下一完整 ACT。
 
 A16、WS、ws=2：C0 为 Ctx0 的 i_cmd+A0，C1/A1、C2/A2、C3/A3；C4..C7 内部分发 Ctx0；C8 接受 Ctx1 的 i_cmd+A0，C9..C11 接收后续 Slice，C12..C15 内部分发 Ctx1。
 
 A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、C3/A3；C4..C11 按 A0/Ctx0、A0/Ctx1、A1/Ctx0、A1/Ctx1、A2/Ctx0、A2/Ctx1、A3/Ctx0、A3/Ctx1 发射。例中地址20/21由外部分别提供，硬件不自动递增。
 
-TB 按职责拆分，文件索引、采样时序和新增 case 的位置见 [Testbench 阅读指南](docs/Testbench_Guide.md)。
+功能代码位于 RTL/cluster/rtl，验证代码位于 RTL/cluster/tb；完整目录说明见 [Cluster 目录说明](RTL/cluster/README.md)。TB 按职责拆分，文件索引、采样时序和新增 case 的位置见 [Testbench 阅读指南](docs/Testbench_Guide.md)。
 
 ## Cluster 常规 SRAM 读写
 
@@ -95,7 +104,7 @@ TB 按职责拆分，文件索引、采样时序和新增 case 的位置见 [Tes
 
 常规读写与计算/preload 分阶段；当前参考模型采用上升沿掩码写和使能组合读，非读期间返回零。物理 IP 的读回时序仍待冻结。接口、寻址、模型时序和完整测试入口见 [常规权重 SRAM 规格](docs/Cluster_Weight_SRAM_Interface.md)。
 
-从仓库根目录运行 `python RTL/cluster/cluster_tb/py/run_sram_regression.py --full`，或在 vcs-rtl 运行 `make sram`。测试覆盖全地址、全部16种掩码、保持与隔离、复位、连续访问和真实计算刷新。所有 suite 在每个 case 开始打印 `[CASE_START] time=... ns suite=... description=...`，时间为仿真时间；原 Command 日志保留。
+从仓库根目录运行 `python RTL/cluster/tb/py/run_sram_regression.py --full`，或在 vcs-rtl 运行 `make sram`。测试覆盖全地址、全部16种掩码、保持与隔离、复位、连续访问和真实计算刷新。所有 suite 在每个 case 开始打印 `[CASE_START] time=... ns suite=... description=...`，时间为仿真时间；原 Command 日志保留。
 
 ## ACT buffer 容量与适用条件
 
@@ -106,9 +115,9 @@ TB 按职责拆分，文件索引、采样时序和新增 case 的位置见 [Tes
 - OS：Tile按顺序接收，旧ACT消费后的计算结果已进入Macro/后级流水和tmp/Psum，容量不乘os_cnt。
 - slot读取必须落在256个digit内，相同slot表示相同ACT数据；EN、OC mask和split不会额外增加ACT份数。W8A16八Macro全归约K256占满4096 bit。
 
-以上适用于1≤max(ws,as)≤min(OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS)，ws/as不同时大于1，首Command遵守cmd_ready_o，接受后ACT尾部Plane固定连续到达。单bank在内部发射期间不能接收下一完整ACT；容量足够，但不支持输入下一包与当前包内部发射重叠。AS地址命令未收齐时继续保存ACT，等待不会增加容量。
+以上适用于1≤max(ws,as)≤MAX_CONTEXTS；当 os>1 或 AS 的 A8/A16 需要 Psum 时，还要求 max(ws,as)≤OUTPUT_BUFFER_DEPTH，ws/as不同时大于1，首Command遵守cmd_ready_o，接受后ACT尾部Plane固定连续到达。单bank在内部发射期间不能接收下一完整ACT；容量足够，但不支持输入下一包与当前包内部发射重叠。AS仅在轮到尚未收到地址的Context时暂停发射，保持phase/Context不变，等待不会增加容量。
 
-`--act-buffer` 额外运行280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、完整ACT收齐前不发射、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
+`--act-buffer` 额外运行280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、当前Plane/地址有效才发射、后续输入与当前发射重叠、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
 
 ## Descriptor
 
@@ -198,11 +207,26 @@ VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运�
 
 WS 的 fusion 与 acc 分属 tmp 两侧的相邻流水级，同一结果不串联经过这两个加法器。WS 的归约末级逻辑与 fusion 在 tmp 前可能形成串联路径，需要 STA。AS 在 tmp 后每拍只选择 fusion 或 acc；未使用组合块的两个输入均隔离为零。WS 处理旧 tmp 的 acc 时，可以同时融合下一条归约数据并写入同一个 tmp，DFF 上升沿使用旧值。
 
-AS 的相邻 slice 间隔为 n 个有效发射周期，n=as_cnt；相邻 Tile 的同一 Slice 间隔为 max(P,n)+n×P，P=A位宽/4；包含下一包的 ACT/地址收集时间。OC 并行计算，不乘 OC 数。
+AS 的相邻 slice 间隔为 n 个有效发射周期，n=as_cnt；相邻 Tile 的同一 Slice 间隔为 1+n×P，P=A位宽/4；包含下一包的 ACT/地址收集时间。OC 并行计算，不乘 OC 数。
+
+## 大 Context 与 Psum 容量专项
+
+专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16；专项仅将标签和 AS 地址表容量 MAX_CONTEXTS 配置为 64，默认配置仍为 16。
+
+OS1 WS 的连续 slice 在唯一 tmp 中融合；OS1 A4 AS 每 Context 只有一个 slice，均可旁路 Psum。当前 AS 仍采用 phase→Context 顺序，因此 OS1 A8/A16 的 AS64 需要 64 项融合历史，超过 16 深度，作为预期容量错误验证。OS2 WS8/AS8 使用 8 项 Psum，容量合法。
+
+正向共 184 例：OS1 WS64 为 56 例，OS1 A4 AS64 为 16 例，OS2 WS8/AS8 各 56 例；覆盖 UINT/INT、随机/交替极值及有无 Command 空拍。另有 10 个 A8/A16 AS64 负向 case，要求在首个 Command 接受时准确捕获 CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded，禁止先进入越界计算。
+
+```text
+python RTL/cluster/tb/py/run_sram_regression.py --full
+python RTL/cluster/tb/py/run_sram_regression.py --context-stress
+```
+
+VCS 从 vcs-rtl 编译时可传 `PARAMETERS="-pvalue+tb_Cluster.MAX_CONTEXTS=64"`，然后以 `PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。容量负向专项使用 +CONTEXT_CAPACITY_TEST、+CAPACITY_PRECISION=1/3/4/5/6 和 +CAPACITY_SIGN=0/1；完整自动判定由上述 Python 入口执行。Psum 默认 16 保持不变。
 
 ## Buffer 深度与 ICG
 
-OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 每 OC 固定一个。Context 数不超过 min(OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS)，MAX_CONTEXTS=16。RTL 最小深度1，完整六种标准配置需要至少2。输出逐 OC 发布，无输出反压。
+OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 每 OC 固定一个。Context 数不超过 MAX_CONTEXTS（默认16，可独立配置）；仅需 Psum 时还受 OUTPUT_BUFFER_DEPTH 限制。RTL 最小深度1，完整六种标准配置需要至少2。输出逐 OC 发布，无输出反压。
 
 首条 Command 接受时锁定深度掩码：os>1 或 AS 的 A8/A16 需要 Psum，仅开放低 max(ws,as) 个 entry；高地址 entry 整批关闭。WS/单 Context 的 os=1、AS A4 的 os=1 全部关闭 Psum。掩码保持至全部 Context 的有效 channel 发布完成。
 
@@ -223,9 +247,9 @@ OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 
 
 WS/单 Context 顺序为 Tile→Context→phase；AS 为 Tile→phase→Context。C0 为首个外部 i_cmd+A0 的接受沿。令 R=max(ws,as)、P=A位宽/4，D 为内部路径延迟；无外部空拍时：
 
-- WS/单 Context：第 t 个 Tile、第 c 个 Context 的包起点 S=(t×R+c)×2P；ACT Aphase 在 C(S+phase) 接收，内部在 C(S+P+phase) 发射。
-- AS：L=max(P,R)，第 t 个 Tile 包起点 S=t×(L+R×P)；第 c 个地址命令在 C(S+c)，ACT Aphase 在 C(S+phase)，内部在 C(S+L+phase×R+c) 发射。
-- 整批末次内部发射：WS 为 C(os×R×2P−1)，AS 为 C(os×(L+R×P)−1)；最后 raw 再加 D。地址命令有空拍时按实际接受沿顺延。
+- WS/单 Context：第 t 个 Tile、第 c 个 Context 的包起点 S=(t×R+c)×(P+1)；ACT Aphase 在 C(S+phase) 接收，内部在 C(S+1+phase) 发射。
+- AS：第 t 个 Tile 包起点 S=t×(1+R×P)；第 c 个地址命令在 C(S+c)，ACT Aphase 在 C(S+phase)，内部在 C(S+1+phase×R+c) 发射。
+- 整批末次内部发射：WS 为 C(os×R×(P+1)−1)，AS 为 C(os×(1+R×P)−1)；最后 raw 再加 D。地址有空拍时，下一次发射取上一发射后一拍、当前Plane接收后一拍、当前地址接收后一拍三者的最晚沿；已完成的发射不顺延。
 
 默认回归为1368个 Cluster case，另有208个归约门控、24个混合Context、12个完整ACT与280个ACT容量定向case；检查140个 Context 输出周期和480个标准运算事件。EN=FF 时每符号在七种 precision 下的合法 split 数为1、1、16、16、16、25、25，要求每组有效 K<256。
 
@@ -253,12 +277,12 @@ AS 地址表 context_address 为8×MAX_CONTEXTS bit，默认128 bit，计入控�
 
 ## tb_Cluster 测试 case
 
-测试入口为 [tb_Cluster.sv](RTL/cluster/cluster_tb/sv_code/tb_Cluster.sv)。
+测试入口为 [tb_Cluster.sv](RTL/cluster/tb/tb_Cluster.sv)。
 
 **一个 case 的含义：** 调用一次 `run_case`，按固定参数跑完一批完整计算，依次经过四个阶段：
 
 1. **权重预加载：** 按本 case 的 Tile 数和 Context 数，把所有用到的权重行写入对应地址，预加载完成后才开始计算。
-2. **输入发射：** 外部发送 os×r 条 Command；WS发送os×r个完整ACT，AS发送os个完整ACT。每个ACT为P个连续Plane。收齐后内部按WS（Tile→Context→phase）或AS（Tile→phase→Context）发射os×r×P次计算。
+2. **输入发射：** 外部发送 os×r 条 Command；WS发送os×r个完整ACT，AS发送os个完整ACT。每个ACT为P个连续Plane。当前Plane/地址就绪后内部按WS（Tile→Context→phase）或AS（Tile→phase→Context）发射os×r×P次计算。
 3. **逐拍监视：** 四个独立监视器（数值、运算历史、时钟门控、完整ACT bank）全程比对 DUT 与独立参考模型。
 4. **结果核对：** 检查每个 OC 脉冲的到达时刻、数值与同 OC 的 Context 顺序，最后确认全部 lane 均已发布且批次关闭。
 
@@ -308,7 +332,7 @@ case 按三个维度展开：
 | 5 | W8A8 | 25 | 300 |
 | 6 | W8A16 | 25 | 300 |
 
-每个配置的 precision、符号、split、EN、OC、slot 和各组 K 记录在 [split_cases.csv](RTL/cluster/cluster_tb/data/split_cases.csv)，不逐行记录 pattern 与其他三类 suite。`data/buffer_cycle_cases.csv` 的 1200 个组合是这 200 个配置再展开六种 WS/AS/OS 调度后的逻辑时序清单，与本 suite 的 1200 个数据 pattern 仿真 case 含义不同。
+每个配置的 precision、符号、split、EN、OC、slot 和各组 K 记录在 [split_cases.csv](RTL/cluster/tb/data/split_cases.csv)，不逐行记录 pattern 与其他三类 suite。`data/buffer_cycle_cases.csv` 的 1200 个组合是这 200 个配置再展开六种 WS/AS/OS 调度后的逻辑时序清单，与本 suite 的 1200 个数据 pattern 仿真 case 含义不同。
 
 #### suite 2：六种标准配置（84 case）
 
@@ -316,8 +340,8 @@ case 按三个维度展开：
 
 - 展开：7 种精度×2 种符号×6 种 `(os,ws,as)`，依次为 `(1,1,1)`、`(1,1,2)`、`(1,2,1)`、`(2,1,1)`、`(2,2,1)`、`(2,1,2)`，对应附录 A1..A6；每 Tile K=128，ACT 高 512 bit 补零。
 - 数据：固定随机 pattern 0。
-- 发射：不注入额外 Command 空拍；核对完整 ACT 接收、AS 地址收集、内部发射的实际周期与上文包时序公式。包内内部连续发射，包间需要接收下一完整ACT。
-- 副产物：本 suite 的每个运算写回拍选一个有效 channel 写入 [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)，默认回归共 480 条（对应 84 个 case 的运算事件），记录操作类型、tmp、fusion/acc 操作数、结果与完成标志；`--latency-audit` 时由独立观察器把 140 个无停顿 Context 输出周期写入 [latency_audit.csv](RTL/cluster/cluster_tb/data/latency_audit.csv)（每精度×符号下六配置共 10 个 Context，7×2×10=140）。
+- 发射：不注入额外 Command 空拍；核对完整 ACT 接收、AS 地址收集、内部发射的实际周期与上文包时序公式。无空拍时包内连续发射，且与同包后续输入重叠；包间仍保留新包首输入的一拍发射间隔。
+- 副产物：本 suite 的每个运算写回拍选一个有效 channel 写入 [buffer_operations.csv](RTL/cluster/tb/data/buffer_operations.csv)，默认回归共 480 条（对应 84 个 case 的运算事件），记录操作类型、tmp、fusion/acc 操作数、结果与完成标志；`--latency-audit` 时由独立观察器把 140 个无停顿 Context 输出周期写入 [latency_audit.csv](RTL/cluster/tb/data/latency_audit.csv)（每精度×符号下六配置共 10 个 Context，7×2×10=140）。
 
 #### suite 3：Command 空拍与多 Context 交错（28 case）
 
@@ -368,7 +392,7 @@ UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw sig
 以下使用本地保留、不纳入Git的ModelSim入口，记录默认回归、门控单测及独立时延核对的调用：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context --full-act --act-buffer --latency-audit --log regression_act_capacity_default.log
+python RTL/cluster/tb/py/run_regression.py --gate-unit --mixed-context --full-act --act-buffer --latency-audit --log regression_act_capacity_default.log
 ```
 
 | 参数 | 默认 | 作用范围 |
@@ -382,17 +406,17 @@ python RTL/cluster/cluster_tb/py/run_regression.py --gate-unit --mixed-context -
 已有附加回归：
 
 ```text
-python RTL/cluster/cluster_tb/py/run_regression.py --en a5 --oc 84218421 --depth 3 --full-act --mixed-context --latency-audit --log regression_act_frame_sparse_depth3.log
+python RTL/cluster/tb/py/run_regression.py --en a5 --oc 84218421 --depth 3 --full-act --mixed-context --latency-audit --log regression_act_frame_sparse_depth3.log
 ```
 
-该回归检查稀疏 Macro/OC 与非二次幂的 Context 深度；实际配置数和 case 数见日志。计数记录在 [默认日志](RTL/cluster/cluster_tb/log/regression_act_capacity_default.log) 和 [稀疏配置日志](RTL/cluster/cluster_tb/log/regression_act_frame_sparse_depth3.log)。
+该回归检查稀疏 Macro/OC 与非二次幂的 Context 深度；实际配置数和 case 数见日志。计数记录在 [默认日志](RTL/cluster/tb/log/regression_act_capacity_default.log) 和 [稀疏配置日志](RTL/cluster/tb/log/regression_act_frame_sparse_depth3.log)。
 
-- [split_cases.csv](RTL/cluster/cluster_tb/data/split_cases.csv)：suite 1 每个配置一行（precision、符号、split、EN、OC、slot、各组 K），默认 200 行；不逐行记录 pattern 与其他三类 suite。
-- [external_inputs.csv](RTL/cluster/cluster_tb/data/external_inputs.csv)：396条标准外部输入事件，分别记录Command接受、地址、ACT采样及1024-bit数据；act_sample仅为日志标记，并非外部pin。
-- [buffer_operations.csv](RTL/cluster/cluster_tb/data/buffer_operations.csv)：suite 2 的逐拍运算记录，默认回归 480 条，compute_cycle 字段为相对首个输入的运算写回拍号、精度、Tile/Context/phase、操作类型、tmp、fusion/acc 操作数、结果与完成标志。
-- [latency_audit.csv](RTL/cluster/cluster_tb/data/latency_audit.csv)：独立观察器记录的 140 个标准 Context 输出周期；[核对报告](RTL/cluster/cluster_tb/log/latency_audit_validation.log) 按六种配置公式逐条核对输入到输出周期。
+- [split_cases.csv](RTL/cluster/tb/data/split_cases.csv)：suite 1 每个配置一行（precision、符号、split、EN、OC、slot、各组 K），默认 200 行；不逐行记录 pattern 与其他三类 suite。
+- [external_inputs.csv](RTL/cluster/tb/data/external_inputs.csv)：396条标准外部输入事件，分别记录Command接受、地址、ACT采样及1024-bit数据；act_sample仅为日志标记，并非外部pin。
+- [buffer_operations.csv](RTL/cluster/tb/data/buffer_operations.csv)：suite 2 的逐拍运算记录，默认回归 480 条，compute_cycle 字段为相对首个输入的运算写回拍号、精度、Tile/Context/phase、操作类型、tmp、fusion/acc 操作数、结果与完成标志。
+- [latency_audit.csv](RTL/cluster/tb/data/latency_audit.csv)：独立观察器记录的 140 个标准 Context 输出周期；[核对报告](RTL/cluster/tb/log/latency_audit_validation.log) 按六种配置公式逐条核对输入到输出周期。
 
-`--gate-unit` 另外运行 [tb_ClusterReduceTree.sv](RTL/cluster/cluster_tb/sv_code/tb_ClusterReduceTree.sv)，不计入上述 1368 个 Cluster case。8 种 EN（FF、0F、F0、55、AA、81、01、00）×26 种规范 split=208 个 case，OC 按 case 序号轮换 FFFFFFFF、84218421、12345678；检查三级终点的数据与有效 mask、t1..t6 转发 DFF 的门控与保持、下游加法器被门控时的数据保持。这是独立归约树单测，不应用 Cluster 的 K<256 精度限制。
+`--gate-unit` 另外运行 [tb_ClusterReduceTree.sv](RTL/cluster/tb/tb_ClusterReduceTree.sv)，不计入上述 1368 个 Cluster case。8 种 EN（FF、0F、F0、55、AA、81、01、00）×26 种规范 split=208 个 case，OC 按 case 序号轮换 FFFFFFFF、84218421、12345678；检查三级终点的数据与有效 mask、t1..t6 转发 DFF 的门控与保持、下游加法器被门控时的数据保持。这是独立归约树单测，不应用 Cluster 的 K<256 精度限制。
 
 ### 完整 ACT 与混合 Context
 

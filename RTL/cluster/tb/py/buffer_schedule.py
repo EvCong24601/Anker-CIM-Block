@@ -27,12 +27,12 @@ def sequence(p, counts):
 
 def packet_start(p,counts,k,c):
     _,ws,ac=counts;P=ABITS[p]//4;R=max(ws,ac)
-    return k*(max(P,R)+R*P) if ac>1 else (k*R+c)*2*P
+    return k*(1+R*P) if ac>1 else (k*R+c)*(P+1)
 
 
 def issue_cycle(p,counts,k,c,ph):
     _,ws,ac=counts;P=ABITS[p]//4;R=max(ws,ac)
-    return packet_start(p,counts,k,c)+(max(P,R)+ph*R+c if ac>1 else P+ph)
+    return packet_start(p,counts,k,c)+1+(ph*R+c if ac>1 else ph)
 
 
 def external_rows(p,counts):
@@ -193,11 +193,11 @@ def main():
             'R_slice=当前原始归约slice；R=max(ws_cnt,as_cnt)为Context数；每OC一个32-bit tmp，WS保存Tile融合前缀，AS保存当前R_slice；P[d]=32-bit Context Psum。',
             '每个并行 channel=4*group+OC；OC 不串行。signed/unsigned 时序相同。',
             '外部完整ACT输入P=A位宽/4个Plane；首slice随该包首命令，其余slice连续采样。AS各Context独立给地址命令，共用完整ACT。',
-            'C0为首外部Command+A0；q为内部发射周期。先收齐ACT和所需地址命令，再内部发射；tmp在C(q+D-1)捕获，完成C(q+D)。',
+            'C0为首外部Command+A0；q为内部发射周期。当前Plane/地址寄存后一拍即可发射，与同包后续输入重叠；tmp在C(q+D-1)捕获，完成C(q+D)。',
             '标准 W2/W4/W8 的 D=3/4/5T。无停顿、无 requant；WS归约末级与fusion在tmp前的路径需STA。',
-            'WS每Tile实际计算P*ws_cnt拍；ws_cnt仍为完整ACT/Context数，P=A位宽/4；单bank含ACT接收时每Tile共2*P*ws_cnt拍。',
+            'WS每Tile实际计算P*ws_cnt拍；ws_cnt仍为完整ACT/Context数，P=A位宽/4；无空拍时每Tile共(P+1)*ws_cnt拍。',
             'WS的os=1不写Psum；AS的A8/A16即使os=1也写P[ctx]保存fusion历史。首Tile/A0填充，后续Tile/A0 acc，高phase fusion。',
-            'AS中n=as_cnt，P=A位宽/4：同Tile同Context的slice间隔n；相邻Tile同一slice间隔max(P,n)+n*P，含下一包ACT/地址接收。',
+            'AS中n=as_cnt，P=A位宽/4：同Tile同Context的slice间隔n；相邻Tile同一slice间隔1+n*P，含下一包ACT/地址接收。',
             'Psum高地址深度d>=max(ws,as)整批关闭；每OC每拍只时钟一个Context entry。WS os=1及AS A4 os=1关闭Psum。', '']
     for p, name in enumerate(NAMES):
         for case, counts in enumerate(COUNTS, 1):

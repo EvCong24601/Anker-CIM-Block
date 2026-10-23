@@ -5,7 +5,7 @@ module cluster_dut_adapter #(
   parameter int OUTPUT_BUFFER_DEPTH = MAX_CONTEXTS
 ) (
   input logic clock, reset,
-  input cluster_tb_pkg::cluster_ctrl_t cmd_i,
+  input cluster_pkg::cluster_ctrl_t cmd_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,
   input logic [1023:0] act_data_i,
@@ -22,7 +22,7 @@ module cluster_dut_adapter #(
   output logic [1023:0] psum_data_o,
   output logic [31:0] out_valid_o
 );
-  import cluster_tb_pkg::*;
+  import cluster_pkg::*;
   cluster_ctrl_t command;
   logic [4095:0] act_buffer; // four 1024-bit bit-slice planes, A0..A3
   logic [1023:0] plane;
@@ -145,8 +145,11 @@ module cluster_dut_adapter #(
           issue_mask[4*group_of(command.reduce_split_mask,m)+c]=1;
     end
     final_issue=phase==phases-1 && tile==int'(command.os_cnt)-1;
-    issue=packet_active && act_complete && command_count==contexts && !batch_input_done;
-    if(packet_cmd.as_cnt<=1) issue=packet_active && act_complete && !batch_input_done;
+    // Consume only registered inputs: a Plane/address accepted on this edge
+    // becomes eligible on the next edge. Later Planes and AS descriptors may
+    // still be loading; keep the existing phase/Context order when stalled.
+    issue=packet_active && act_slice_valid[phase] && !batch_input_done &&
+          (packet_cmd.as_cnt<=1 || context_idx<command_count);
     ren=active & {8{issue}};
     for(int m=0;m<8;m++)
       station[m]=!hold_valid[m] || hold_addr[m]!=command.weight_cim_raddr;
@@ -322,6 +325,13 @@ module cluster_dut_adapter #(
       end
     end else begin
       if(cmd_accept) begin
+        // Context tags/AS addresses and Psum entries are separate resources.
+        // OS1 WS and OS1 A4 AS bypass Psum and may exceed its depth.
+        if(cmd_i.ws_cnt>MAX_CONTEXTS || cmd_i.as_cnt>MAX_CONTEXTS)
+          $fatal(1,"CLUSTER_CONTEXT_CAPACITY: context metadata exceeded");
+        if((cmd_i.os_cnt>1 || (cmd_i.as_cnt>1 && abits(int'(cmd_i.precision))>4)) &&
+           (cmd_i.ws_cnt>OUTPUT_BUFFER_DEPTH || cmd_i.as_cnt>OUTPUT_BUFFER_DEPTH))
+          $fatal(1,"CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
         if(!packet_active) begin
           packet_cmd<=cmd_i;packet_active<=1;command_count<=1;
           context_address[0]<=cmd_i.weight_cim_raddr;
@@ -374,7 +384,9 @@ module cluster_dut_adapter #(
         if(command.precision>6 || !canonical(command.reduce_split_mask) ||
            command.os_cnt<1 || command.ws_cnt<1 || command.as_cnt<1 ||
            (command.ws_cnt>1 && command.as_cnt>1) ||
-           contexts>MAX_CONTEXTS || contexts>OUTPUT_BUFFER_DEPTH)
+           contexts>MAX_CONTEXTS ||
+           ((command.os_cnt>1 || (command.as_cnt>1 && abits(int'(command.precision))>4)) &&
+            contexts>OUTPUT_BUFFER_DEPTH))
           $fatal(1,"Invalid descriptor / context capacity");
         for(int m=0;m<8;m++) if(command.macro_en_mask[m]) begin
           if(int'(command.act_slot_sel[3*m+:3])>=wbits(int'(command.precision)))

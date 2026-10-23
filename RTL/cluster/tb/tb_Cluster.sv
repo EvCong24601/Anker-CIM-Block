@@ -1,15 +1,15 @@
 `timescale 1ns/1ps
 // 顶层只保留参数、接口、DUT 与共享状态；阅读顺序见末尾 include 列表。
 module tb_Cluster;
-  import cluster_tb_pkg::*;
+  import cluster_pkg::*;
   parameter logic [7:0] EN_MASK=8'hff;
   parameter logic [31:0] OC_MASK=32'hffff_ffff;
   parameter int OS_TILES=1;
   parameter int PATTERNS=6;
   parameter int OUTPUT_BUFFER_DEPTH=16; // Context entries per channel
+  parameter int MAX_CONTEXTS=16; // Address/tag capacity; independent of Psum depth
   parameter int TIMEOUT_CYCLES=4000;
   parameter logic [31:0] SEED=32'h19e2a407;
-  localparam int MAX_CONTEXTS=16;
   logic clock=0;
   always #5 clock=~clock;
   logic reset=1;
@@ -55,6 +55,7 @@ module tb_Cluster;
   int buffer_gate_checks=0, high_depth_checks=0, bypass_psum_hold_checks=0;
   int operation_trace;
   int act_buffer_checks=0, max_act_planes=0;
+  int act_issue_overlap, address_issue_overlap, address_wait_cycles, late_address_wait;
 
 
   // Independent byte-oriented model: no hierarchical reads of DUT SRAM.
@@ -63,11 +64,11 @@ module tb_Cluster;
 
   // 先定义参考函数和驱动，再安装检查器，最后定义 case 与启动回归。
   // include 不增加模块层次，latency_audit 和已有波形路径保持有效。
-  `include "tb/cluster_reference.svh"
-  `include "tb/cluster_driver.svh"
-  `include "tb/cluster_scoreboards.svh"
-  `include "tb/cluster_compute_cases.svh"
-  `include "tb/cluster_sram_cases.svh"
-  `include "tb/cluster_suites.svh"
-  `include "tb/cluster_regression.svh"
+  `include "include/cluster_reference.svh"
+  `include "include/cluster_driver.svh"
+  `include "include/cluster_scoreboards.svh"
+  `include "include/cluster_compute_cases.svh"
+  `include "include/cluster_sram_cases.svh"
+  `include "include/cluster_suites.svh"
+  `include "include/cluster_regression.svh"
 endmodule

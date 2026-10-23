@@ -64,6 +64,68 @@
       $display("PASS mixed_context cases=%0d",cases_run);
   endtask
 
+  // 包内重叠专项：七精度、符号、OS1/2、单 Context/WS2/AS2。
+  // run_case 必须观察到多 slice 的采样/发射重叠、连续 AS 地址/发射
+  // 重叠，以及有空拍时等待未到达地址；数值和时延仍走独立检查器。
+  task automatic run_input_overlap_suite();
+    logic [23:0] slots;
+    logic [7:0] en;
+    logic [6:0] split;
+    for(int p=0;p<7;p++) begin
+      case(wbits(p))
+        2: begin slots=24'h208208; en=8'h55; split=7'h07; end
+        4: begin slots=24'h688688; en=8'h33; split=7'h01; end
+        default: begin slots=24'hfac688; en=8'h0f; split=0; end
+      endcase
+      for(int sign_mode=0;sign_mode<2;sign_mode++)
+        for(int tiles=1;tiles<=2;tiles++) for(int mode=0;mode<3;mode++)
+          for(int gaps=0;gaps<2;gaps++)
+            run_case(p,1'(sign_mode),split,en,32'hffffffff,slots,
+                     0,tiles,mode==1 ? 2 : 1,mode==2 ? 2 : 1,1'(gaps));
+    end
+    if(cases_run!=168) $fatal(1,"Missing input overlap scenario coverage");
+    $display("PASS input_overlap cases=%0d registered_input_delay=1",cases_run);
+  endtask
+
+  // 大 Context 专项：Psum 保持 16 深度，仅标签/地址容量配置为 64。
+  // WS 与 AS 分开运行；A8/A16 的 OS1 AS64 由容量负向用例验证。
+  task automatic run_context_stress_suite();
+    logic [23:0] slots;
+    logic [7:0] en;
+    logic [6:0] split;
+    int tiles,ws,as_count;
+    int mode_count[0:3];
+    if(MAX_CONTEXTS<64 || OUTPUT_BUFFER_DEPTH!=16)
+      $fatal(1,"TB: context stress requires MAX_CONTEXTS>=64 and OUTPUT_BUFFER_DEPTH=16");
+    for(int mode=0;mode<4;mode++) mode_count[mode]=0;
+    for(int p=0;p<7;p++) begin
+      case(wbits(p))
+        2: begin slots=24'h208208; en=8'h55; split=7'h07; end
+        4: begin slots=24'h688688; en=8'h33; split=7'h01; end
+        default: begin slots=24'hfac688; en=8'h0f; split=0; end
+      endcase
+      for(int sign_mode=0;sign_mode<2;sign_mode++)
+        for(int mode=0;mode<4;mode++) begin
+          // AS retains one history per Context for multi-slice activations.
+          if(mode==1 && abits(p)>4) continue;
+          tiles=mode<2 ? 1 : 2;
+          ws=(mode==0) ? 64 : (mode==2) ? 8 : 1;
+          as_count=(mode==1) ? 64 : (mode==3) ? 8 : 1;
+          for(int pattern=0;pattern<=4;pattern+=4)
+            for(int gaps=0;gaps<2;gaps++) begin
+              run_case(p,1'(sign_mode),split,en,32'hffffffff,slots,
+                       pattern,tiles,ws,as_count,1'(gaps));
+              mode_count[mode]++;
+            end
+        end
+    end
+    if(cases_run!=184 || mode_count[0]!=56 || mode_count[1]!=16 ||
+       mode_count[2]!=56 || mode_count[3]!=56)
+      $fatal(1,"TB: missing large-Context scenario coverage");
+    $display("PASS context_stress cases=%0d OS1_WS64=%0d OS1_AS64_A4=%0d OS2_WS8=%0d OS2_AS8=%0d psum_depth=%0d max_contexts=%0d",
+      cases_run,mode_count[0],mode_count[1],mode_count[2],mode_count[3],OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS);
+  endtask
+
   // 默认回归：合法 split 穷举 + 六种标准时序 + 多 Context/多 Tile 极值。
   // 各 suite 共用 run_case，避免维护第二套驱动和数值预期。
   task automatic run_default_suite();

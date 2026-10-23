@@ -1,0 +1,19 @@
+PASS: 140 Context outputs and 480 buffer operations match the six schedules.
+Signed/unsigned timing identical; C0 is first external Command+A0; no stalls or requant.
+From last internal issue to raw: W2=3T, W4=4T, W8=5T.
+Operation trace checked: 480 events.
+
+case 1: os=1, ws=1, as=1
+case 2: os=1, ws=1, as=2
+case 3: os=1, ws=2, as=1
+case 4: os=2, ws=1, as=1
+case 5: os=2, ws=2, as=1
+case 6: os=2, ws=1, as=2
+
+precision=0 W2A4: internal issue -> raw=3T; external C0 -> final raw cycles=[4, 5, 6, 6, 10, 8]
+precision=1 W2A8: internal issue -> raw=3T; external C0 -> final raw cycles=[5, 7, 8, 8, 14, 12]
+precision=2 W4A4: internal issue -> raw=4T; external C0 -> final raw cycles=[5, 6, 7, 7, 11, 9]
+precision=3 W4A8: internal issue -> raw=4T; external C0 -> final raw cycles=[6, 8, 9, 9, 15, 13]
+precision=4 W4A16: internal issue -> raw=4T; external C0 -> final raw cycles=[8, 12, 13, 13, 23, 21]
+precision=5 W8A8: internal issue -> raw=5T; external C0 -> final raw cycles=[7, 9, 10, 10, 16, 14]
+precision=6 W8A16: internal issue -> raw=5T; external C0 -> final raw cycles=[9, 13, 14, 14, 24, 22]

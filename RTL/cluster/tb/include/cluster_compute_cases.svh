@@ -10,6 +10,8 @@
     endcase
   endfunction
   function automatic string cluster_suite();
+    if($test$plusargs("INPUT_OVERLAP_TEST")) return "same-packet-input-issue-overlap";
+    if($test$plusargs("CONTEXT_STRESS_TEST")) return "OS1-WS64-AS64/OS2-WS8-AS8";
     if($test$plusargs("OC_MERGE_TEST")) return "leftmost-OC-mask";
     if($test$plusargs("ACT_BUFFER_TEST")) return "full-plane-ACT-capacity";
     if($test$plusargs("FULL_ACT_TEST")) return "W8A16-K256-full-ACT";
@@ -90,6 +92,7 @@
         $fatal(1,"Golden overflow: selected OS/pattern exceeds signed32");
     issue_count=0;raw_count=0;first_issue=-1;last_issue=-1;first_external=-1;input_commands=0;act_planes_received=0;
     exact_ii=!bubbles;
+    act_issue_overlap=0;address_issue_overlap=0;address_wait_cycles=0;late_address_wait=0;
     held_cmd=0; held_act_for_cmd=0;
     // 4. 开启计算检查窗口；driver 负责握手/Plane 时序，scoreboard 负责判定。
     monitoring=1;
@@ -113,6 +116,16 @@
       $fatal(1,"Lost/duplicate compute or result");
     if(act_planes_received!=os*(as_count>1 ? 1 : case_r)*case_p)
       $fatal(1,"ACT frame slice count mismatch");
+    if(first_issue!=first_external+1)
+      $fatal(1,"First issue did not follow the first registered Plane/address");
+    if(case_p>1 && act_issue_overlap==0)
+      $fatal(1,"Missing same-packet ACT load/issue overlap");
+    if(as_count>1 && !bubbles && address_issue_overlap==0)
+      $fatal(1,"Missing same-packet AS address/issue overlap");
+    if(as_count>1 && bubbles && address_wait_cycles==0)
+      $fatal(1,"Missing wait for delayed AS Context address");
+    if($test$plusargs("INPUT_OVERLAP_TEST") && as_count>1 && bubbles && late_address_wait==0)
+      $fatal(1,"Missing address wait after the full ACT stream was received");
     // 6. 排空后再检查无额外输出，防止重复结果混入下一个 case。
     repeat(6) @(negedge clock);
     if(dut.raw_valid!=0 || dut.batch_active)

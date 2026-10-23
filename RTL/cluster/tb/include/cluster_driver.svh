@@ -51,7 +51,10 @@
       begin
         for(int cx=1;cx<rcount;cx++) begin
           d.weight_cim_raddr=8'('h20+16*kt+cx);
-          send_address(d,bubbles ? cx%3 : 0);
+          // The overlap suite deliberately withholds Context1 until after
+          // the entire ACT stream, proving that only that Context stalls.
+          send_address(d,bubbles ?
+            (($test$plusargs("INPUT_OVERLAP_TEST") && cx==1) ? pcount : cx%3) : 0);
         end
       end
     join

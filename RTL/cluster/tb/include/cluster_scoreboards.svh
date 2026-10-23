@@ -14,11 +14,27 @@
         wanted[0+:1024]=act_data_i;
       if(dut.act_loading)
         wanted[1024*dut.external_phase+:1024]=act_data_i;
-      if(dut.issue && (!dut.act_complete || dut.act_loading ||
-                       !dut.act_slice_valid[dut.phase]))
-        $fatal(1,"ACT buffer issued before its complete frame was received");
-      if(dut.issue && cmd_valid_i && cmd_ready_o)
+      if(dut.issue && !dut.act_slice_valid[dut.phase])
+        $fatal(1,"ACT buffer issued before the selected Plane was received");
+      if(dut.issue && dut.packet_cmd.as_cnt>1 && dut.context_idx>=dut.command_count)
+        $fatal(1,"Internal issue before the selected Context address was received");
+      if(dut.issue && cmd_valid_i && cmd_ready_o && !dut.packet_active)
         $fatal(1,"ACT input overwrites a packet still being issued");
+      if(monitoring) begin
+        // Readiness is checked independently of the DUT's issue expression.
+        // A later AS address can arrive while an earlier Context is issued.
+        if(dut.packet_active && !dut.batch_input_done &&
+           dut.act_slice_valid[dut.phase] &&
+           (case_as<=1 || dut.context_idx<dut.command_count) && !dut.issue)
+          $fatal(1,"Ready Plane/Context was unnecessarily stalled");
+        if(dut.issue && dut.act_loading) act_issue_overlap++;
+        if(dut.issue && cmd_valid_i && cmd_ready_o) address_issue_overlap++;
+        if(dut.packet_active && dut.act_slice_valid[dut.phase] &&
+           case_as>1 && dut.context_idx>=dut.command_count) begin
+          address_wait_cycles++;
+          if(dut.act_complete) late_address_wait++;
+        end
+      end
       #0.002;
       if(dut.act_buffer!==wanted) $fatal(1,"ACT bank write/hold mismatch");
       if($countones(dut.act_slice_valid)>max_act_planes)
@@ -34,6 +50,7 @@
     bit want_p[0:OUTPUT_BUFFER_DEPTH-1][0:31];
     logic [31:0] want_input;
     int c,ph,ab,writes;
+    bit writes_psum;
     if(!reset) begin
       want_input=dut.capture_valid;
       for(int l=0;l<32;l++) begin
@@ -47,9 +64,14 @@
       for(int l=0;l<32;l++) if(dut.tmp_valid[l]) begin
         c=dut.tmp_tag[l].ctx; ph=dut.tmp_tag[l].ph;
         ab=abits(int'(dut.tmp_tag[l].cmd.precision));
-        want_p[c][l]=dut.tmp_tag[l].cmd.as_cnt>1 ?
+        writes_psum=dut.tmp_tag[l].cmd.as_cnt>1 ?
           (dut.tmp_tag[l].cmd.os_cnt>1 || ab>4) :
           (dut.tmp_tag[l].cmd.os_cnt>1 && ph==ab/4-1);
+        // A bypass Context can have an ID beyond the physical Psum array.
+        if(writes_psum) begin
+          if(c>=OUTPUT_BUFFER_DEPTH) $fatal(1,"TB: Psum Context exceeds depth");
+          want_p[c][l]=1;
+        end
       end
       #0.001;
       if(dut.tmp_input_clock!==want_input) $fatal(1,"Advance tmp ICG mismatch");
@@ -178,10 +200,9 @@
         if(issue_count==0) first_issue=cycle;
         if(exact_ii) begin
           if(case_as>1) begin
-            if(cycle-first_external != t*((case_p>case_r ? case_p : case_r)+case_r*case_p)+
-                (case_p>case_r ? case_p : case_r)+p*case_r+c)
+            if(cycle-first_external != t*(1+case_r*case_p)+1+p*case_r+c)
               $fatal(1,"AS external-load/internal-issue timing mismatch");
-          end else if(cycle-first_external != (t*case_r+c)*2*case_p+case_p+p)
+          end else if(cycle-first_external != (t*case_r+c)*(case_p+1)+1+p)
             $fatal(1,"WS external-load/internal-issue timing mismatch");
         end
         last_issue=cycle; issue_count++;

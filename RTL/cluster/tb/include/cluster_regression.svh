@@ -4,6 +4,25 @@
 
   initial begin : regression
     string data_dir;
+    int capacity_precision,capacity_sign;
+    if($test$plusargs("CONTEXT_CAPACITY_TEST")) begin
+      capacity_precision=1;capacity_sign=0;
+      if($value$plusargs("CAPACITY_PRECISION=%d",capacity_precision)) begin end
+      if($value$plusargs("CAPACITY_SIGN=%d",capacity_sign)) begin end
+      if(MAX_CONTEXTS<64 || OUTPUT_BUFFER_DEPTH!=16 ||
+         capacity_precision<0 || capacity_precision>6 || abits(capacity_precision)<=4)
+        $fatal(1,"TB: capacity test requires 64 metadata entries, Psum depth 16, and A8/A16");
+      repeat(4) @(negedge clock);reset=0;
+      repeat(2) @(negedge clock);
+      $display("[CASE_START] time=%0.3f ns suite=context_capacity description=reject-OS1-AS64-multi-slice-history-overflow W%0dA%0d signed=%0d os=1 ws=1 as=64 psum_depth=%0d max_contexts=%0d",
+        $realtime,wbits(capacity_precision),abits(capacity_precision),capacity_sign,OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS);
+      cmd_i='0;cmd_i.os_cnt=1;cmd_i.ws_cnt=1;cmd_i.as_cnt=64;
+      cmd_i.precision=3'(capacity_precision);cmd_i.signed_en=1'(capacity_sign);
+      cmd_i.macro_en_mask=8'hff;cmd_i.macro_oc_mask=32'hffffffff;
+      cmd_valid_i=1;
+      @(posedge clock);#1;
+      $fatal(1,"TB: missing Psum capacity rejection");
+    end
     if($test$plusargs("SRAM_RW_TEST") || $test$plusargs("SRAM_CONFLICT_PRELOAD") ||
        $test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
       repeat(4) @(negedge clock); reset=0;
@@ -36,6 +55,8 @@
     repeat(4) @(negedge clock); reset=0;
     repeat(2) @(negedge clock);
     // 专项 suite 独占一次仿真；默认 suite 另有 CSV、路由和门控覆盖检查。
+    if($test$plusargs("INPUT_OVERLAP_TEST")) begin run_input_overlap_suite(); $finish; end
+    if($test$plusargs("CONTEXT_STRESS_TEST")) begin run_context_stress_suite(); $finish; end
     if($test$plusargs("OC_MERGE_TEST")) begin run_oc_merge_suite(); $finish; end
     if($test$plusargs("ACT_BUFFER_TEST")) begin run_act_buffer_suite(); $finish; end
     if($test$plusargs("FULL_ACT_TEST")) begin run_full_act_suite(); $finish; end

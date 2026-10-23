@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 // Independent per-tap check: all 26 trees, 8 EN patterns, changing every cycle.
 module tb_ClusterReduceTree;
-  import cluster_tb_pkg::*;
+  import cluster_pkg::*;
   // 1. 接口和按流水深度对齐的预期状态（独立于 Cluster ACT/Context 调度）。
   logic clock=0,reset=1;
   always #5 clock=~clock;

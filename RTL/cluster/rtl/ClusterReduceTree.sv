@@ -16,7 +16,7 @@ module ClusterReduceTree (
   output logic [31:0] tap_mask_o[0:2],
   output logic [671:0] tap_data_o[0:2]
 );
-  import cluster_tb_pkg::*;
+  import cluster_pkg::*;
   typedef struct packed {
     logic valid;
     logic [6:0] split;
