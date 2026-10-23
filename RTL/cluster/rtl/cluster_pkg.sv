@@ -1,12 +1,12 @@
 `timescale 1ns/1ps
 package cluster_pkg;
-  // Cluster descriptor: three 16-bit counts, total packed width 131 bits.
+  // Cluster descriptor: three eight-bit counts, total packed width 107 bits.
   typedef struct packed {
     // All counts are >=1. ws>1 selects WS, as>1 selects AS;
     // ws=as=1 is a single Context, with no cross-Context reuse.
     // WS reuses one Tile's weight for (ACT_bits/4)*ws_cnt internal
     // compute issues; ws_cnt still counts complete ACTs / Contexts.
-    logic [15:0] os_cnt, ws_cnt, as_cnt;
+    logic [7:0] os_cnt, ws_cnt, as_cnt; // 1..255; WS/AS also obey capacity limits
     logic [6:0] reduce_split_mask;
     logic [7:0] macro_en_mask;
     logic [31:0] macro_oc_mask;

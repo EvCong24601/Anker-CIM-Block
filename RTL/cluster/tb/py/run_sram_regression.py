@@ -116,6 +116,14 @@ def main():
     for case, message in negatives.items():
         simulate('macro_negative_'+case, 'tb_SingleMacro', ['+NEGATIVE='+case], 'SM_PROTOCOL: '+message, True)
     if args.full:
+        for field in range(3):
+            simulate(f'zero_count_{field}', 'tb_Cluster', [f'+ZERO_COUNT={field}'],
+                     'CLUSTER_COUNT_RANGE: counts must be 1..255', True)
+        data = dest / 'os_count_limit_data'
+        data.mkdir(exist_ok=True)
+        simulate('os_count_limit', 'tb_Cluster',
+                 ['+OS_COUNT_LIMIT_TEST', '+DATA_DIR='+data.as_posix()],
+                 'PASS os_count_limit cases=12')
         simulate('cluster_default', 'tb_Cluster', [], 'PASS configurations=')
         simulate('reduce_tree', 'tb_ClusterReduceTree', [], 'PASS reduce_clock_gating cases=208')
         for name, option, marker in (
@@ -140,13 +148,25 @@ def main():
         capacity_config = ['-gMAX_CONTEXTS=64', '-gOUTPUT_BUFFER_DEPTH=16']
         simulate('context_stress', 'tb_Cluster',
                  capacity_config + ['+CONTEXT_STRESS_TEST', '+DATA_DIR='+data.as_posix()],
-                 'PASS context_stress cases=184')
-        for precision in (1, 3, 4, 5, 6):
+                 'PASS context_stress cases=224')
+        for precision in range(7):
             for sign in (0, 1):
                 simulate(f'context_capacity_p{precision}_s{sign}', 'tb_Cluster',
                          capacity_config + ['+CONTEXT_CAPACITY_TEST',
                                             f'+CAPACITY_PRECISION={precision}', f'+CAPACITY_SIGN={sign}'],
                          'CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded', True)
+        # The address array and completion metadata are independent resources.
+        for resource, override, flag, message in (
+            ('address', '-gWGT_RADDR_BUFFER_DEPTH=32', '+ADDRESS_CAPACITY_TEST',
+             'weight address depth exceeded'),
+            ('metadata', '-gMAX_CONTEXTS=32', '+METADATA_CAPACITY_TEST',
+             'context metadata exceeded'),
+        ):
+            for sign in (0, 1):
+                simulate(f'{resource}_capacity_s{sign}', 'tb_Cluster',
+                         [override, '+CONTEXT_CAPACITY_TEST', flag,
+                          '+CAPACITY_PRECISION=6', f'+CAPACITY_SIGN={sign}'],
+                         'CLUSTER_CONTEXT_CAPACITY: '+message, True)
     suite_count = len(summary)
     expected_rejections = sum(': caught expected ' in line for line in summary)
     summary.append(f'PASS regression: suites={suite_count} expected_rejections={expected_rejections}')

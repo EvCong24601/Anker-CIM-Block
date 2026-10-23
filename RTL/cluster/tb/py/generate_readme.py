@@ -6,7 +6,7 @@ REPO = Path(__file__).resolve().parents[4]
 
 BODY = r"""# CIM Cluster 输入与计算说明
 
-本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 在 tmp 写入前做 fusion、下一拍做 Psum acc；AS 先写 tmp，下一拍选择 fusion 或 acc。各 Context 独立输出 raw signed32，未包含 requant。
+本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立输出 raw signed32，未包含 requant。
 
 ## 逐拍输入时序文档
 
@@ -63,6 +63,12 @@ WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计
 
 同包重叠规则、AS地址空拍、示例和168个专项case见 [输入重叠说明](docs/Cluster_Input_Overlap.md)。`python RTL/cluster/tb/py/run_sram_regression.py --input-overlap` 运行专项；`--full` 自动包含该专项。
 
+## OS1 AS 先融合与权重地址表
+
+仅 OS1 AS 采用 Context→Slice；OS>1 AS 保留 Slice→Context。两种 AS 均复用 64×8-bit 权重地址表。详见 [AS 融合与地址暂存说明](docs/Cluster_AS_OS1_Fusion.md)。
+
+三个 count 均为8 bit，取值1～255；WS/AS另受容量限制。0非法，256不可编码。descriptor总宽107 bit。
+
 ## Cluster 接口
 
 方向以 Cluster 为视角。
@@ -70,7 +76,7 @@ WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计
 | 信号 | 方向与位宽 | 语义 |
 |---|---|---|
 | clock / reset | 输入，各 1 bit | 上升沿时钟，高有效异步复位 |
-| cmd_i | 输入，131 bit | 每个 Tile/Context 的完整 descriptor，含共享权重地址 |
+| cmd_i | 输入，107 bit | 每个 Tile/Context 的完整 descriptor，含共享权重地址 |
 | cmd_valid_i / cmd_ready_o | 输入 / 输出，各 1 bit | Command 接受握手 |
 | act_data_i | 输入，1024 bit | 一个 Plane，含256个4-bit digit；首个命令接受沿为A0，随后连续采样A1..A(P−1) |
 | cim_cs_en / cim_wr_en | 输入，各 1 bit | 常规片选；wr_en=1 写、0 读 |
@@ -111,11 +117,11 @@ A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、
 单个完整ACT最多256个元素，每元素最多16 bit，需求为256×A位宽，即A4/A8/A16分别为1024/2048/4096 bit。固定4096-bit bank足够覆盖七种精度；每Tile WS实际计算拍数依次为ws_cnt、2×ws_cnt、ws_cnt、2×ws_cnt、4×ws_cnt、2×ws_cnt、4×ws_cnt。
 
 - WS/单Context：一次只存一个Context的完整ACT，发完P个phase后释放，再接收下一份，容量不乘ws_cnt。
-- AS：一次只存一个Tile的完整ACT，保持到全部Context的全部phase发完，容量不乘as_cnt；各Context地址另存8×MAX_CONTEXTS-bit地址表。
+- AS：一次只存一个Tile的完整ACT，保持到全部Context的全部phase发完，容量不乘as_cnt；各Context地址另存8×WGT_RADDR_BUFFER_DEPTH-bit地址表。
 - OS：Tile按顺序接收，旧ACT消费后的计算结果已进入Macro/后级流水和tmp/Psum，容量不乘os_cnt。
 - slot读取必须落在256个digit内，相同slot表示相同ACT数据；EN、OC mask和split不会额外增加ACT份数。W8A16八Macro全归约K256占满4096 bit。
 
-以上适用于1≤max(ws,as)≤MAX_CONTEXTS；当 os>1 或 AS 的 A8/A16 需要 Psum 时，还要求 max(ws,as)≤OUTPUT_BUFFER_DEPTH，ws/as不同时大于1，首Command遵守cmd_ready_o，接受后ACT尾部Plane固定连续到达。单bank在内部发射期间不能接收下一完整ACT；容量足够，但不支持输入下一包与当前包内部发射重叠。AS仅在轮到尚未收到地址的Context时暂停发射，保持phase/Context不变，等待不会增加容量。
+以上适用于1≤max(ws,as)≤MAX_CONTEXTS；当 仅 os>1 需要 Psum 时，还要求 max(ws,as)≤OUTPUT_BUFFER_DEPTH，ws/as不同时大于1，首Command遵守cmd_ready_o，接受后ACT尾部Plane固定连续到达。单bank在内部发射期间不能接收下一完整ACT；容量足够，但不支持输入下一包与当前包内部发射重叠。AS仅在轮到尚未收到地址的Context时暂停发射，保持phase/Context不变，等待不会增加容量。
 
 `--act-buffer` 额外运行280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、当前Plane/地址有效才发射、后续输入与当前发射重叠、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
 
@@ -123,9 +129,9 @@ A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、
 
 | 字段 | 位宽 | 定义 |
 |---|---:|---|
-| os_cnt | 16 | 每个 Context 的完整 K Tile 数，最小 1 |
-| ws_cnt | 16 | WS完整ACT/Context数，最小1；每Tile实际计算P×ws_cnt拍 |
-| as_cnt | 16 | AS 复用的 Context 数，最小 1 |
+| os_cnt | 8 | 每个 Context 的完整 K Tile 数，最小 1 |
+| ws_cnt | 8 | WS完整ACT/Context数，最小1；每Tile实际计算P×ws_cnt拍 |
+| as_cnt | 8 | AS 复用的 Context 数，最小 1 |
 | reduce_split_mask | 7 | 物理归约树 split 配置，bit0 为根 |
 | macro_en_mask | 8 | bit m 使能 Macro m 的贡献 |
 | macro_oc_mask | 32 | bit 4*m+c 使能 Macro m 的 OC c |
@@ -188,7 +194,7 @@ VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运�
 
 归约终点从向父级转发 DFF 前取数。pair 终止时关闭相应 t3..t6；quad 终止时关闭相应 t1/t2；仅继续归约时打开转发 DFF。根结果进入通用 tmp，无额外 root-only 输出级。
 
-| 归约终点 | Macro 发射 | tmp 捕获 / WS fusion | AS fusion、acc、Psum 写回或输出 |
+| 归约终点 | Macro 发射 | tmp 捕获 / WS、OS1 AS fusion | OS>1 AS fusion、acc、Psum 写回或输出 |
 |---|---|---|---|
 | 叶子 / pair | Cq | C(q+2) | C(q+3) |
 | quad | Cq | C(q+3) | C(q+4) |
@@ -200,37 +206,43 @@ VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运�
 
 每个 channel=4×group+OC 只有一个 tmp 数据寄存器，以及深度为 OUTPUT_BUFFER_DEPTH 的 Psum buffer。每 OC 共用一套 fusion 和一套 acc 组合块，所有 Context 共享；同一 OC 每拍最多更新一个 Context entry。不同 OC 可独立处理各自到达的 Context。
 
-令 R_slice 为当前原始归约 slice，P[c] 为 Context c 的 Psum。WS/单 Context 的 tmp 保存当前 Tile 的融合前缀；AS 的 tmp 保存当前原始 R_slice。
+令 R_slice 为当前原始归约 slice，P[c] 为 Context c 的 Psum。WS/单 Context 和 OS1 AS 的 tmp 保存当前 Tile 的融合前缀；OS>1 AS 的 tmp 保存当前原始 R_slice。
 
-- WS/单 Context：A0 在 C(q+D−1) 用 R_slice 覆盖 tmp；A1..A3 在写 tmp 前计算 `tmp+(R_slice<<(4*phase))`。C(q+D) 消费这个 tmp；os=1 的最后 phase 直接输出，Psum 关闭；os>1 的最后 phase 将首 Tile 的 tmp 填充 P[c]，后续 Tile 执行 `P[c]+tmp`。非最后 phase 不写 Psum。
-- AS：先在 C(q+D−1) 把 R_slice 写入唯一 tmp，C(q+D) 更新当前 P[c]。首 Tile/A0 填充；后续 Tile/A0 做 `P[c]+tmp`；A1..A3 做 `P[c]+(tmp<<(4*phase))`。因此 os=1 的 A8/A16 也使用 P[c] 保存交错 Context 的 fusion 历史，但不启用跨 Tile acc；os=1 的 A4 直接从 tmp 输出，不写 Psum。
+- WS/单 Context 与 OS1 AS：A0 在 C(q+D−1) 用 R_slice 覆盖 tmp；A1..A3 在写 tmp 前计算 `tmp+(R_slice<<(4*phase))`。C(q+D) 消费这个 tmp；os=1 的最后 phase 直接输出，Psum 关闭；os>1 的最后 phase 将首 Tile 的 tmp 填充 P[c]，后续 Tile 执行 `P[c]+tmp`。非最后 phase 不写 Psum。
+- OS>1 AS：先在 C(q+D−1) 把 R_slice 写入唯一 tmp，C(q+D) 更新当前 P[c]。首 Tile/A0 填充；后续 Tile/A0 做 `P[c]+tmp`；A1..A3 做 `P[c]+(tmp<<(4*phase))`。该路径保留 Slice→Context 调度，不使用 OS1 的逐 Context 融合方式。
 
-WS 的 fusion 与 acc 分属 tmp 两侧的相邻流水级，同一结果不串联经过这两个加法器。WS 的归约末级逻辑与 fusion 在 tmp 前可能形成串联路径，需要 STA。AS 在 tmp 后每拍只选择 fusion 或 acc；未使用组合块的两个输入均隔离为零。WS 处理旧 tmp 的 acc 时，可以同时融合下一条归约数据并写入同一个 tmp，DFF 上升沿使用旧值。
+WS 与 OS1 AS 的 fusion 与 acc 分属 tmp 两侧的相邻流水级，同一结果不串联经过这两个加法器。WS 与 OS1 AS 的归约末级逻辑与 fusion 在 tmp 前可能形成串联路径，需要 STA。OS>1 AS 在 tmp 后每拍只选择 fusion 或 acc；未使用组合块的两个输入均隔离为零。WS 处理旧 tmp 的 acc 时，可以同时融合下一条归约数据并写入同一个 tmp，DFF 上升沿使用旧值。
 
-AS 的相邻 slice 间隔为 n 个有效发射周期，n=as_cnt；相邻 Tile 的同一 Slice 间隔为 1+n×P，P=A位宽/4；包含下一包的 ACT/地址收集时间。OC 并行计算，不乘 OC 数。
+OS1 AS 同 Context 的相邻 slice 连续发射；OS>1 AS 的相邻 slice 间隔为 n 个有效发射周期，n=as_cnt；相邻 Tile 的同一 Slice 间隔为 1+n×P，P=A位宽/4；包含下一包的 ACT/地址收集时间。OC 并行计算，不乘 OC 数。
+
+## 8-bit count 边界验证
+
+三个count均为8 bit，0非法、256不可编码；OS最多255个K Tile，仍需满足signed32数值范围。WS/AS的实际上限由容量决定。`--full`追加12个OS255非零累加case和3个零count拒绝case；专项可用`+OS_COUNT_LIMIT_TEST`或`+ZERO_COUNT=0/1/2`选择。当前完整回归为50组suite、38个预期拒绝。
 
 ## 大 Context 与 Psum 容量专项
 
-专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16；专项仅将标签和 AS 地址表容量 MAX_CONTEXTS 配置为 64，默认配置仍为 16。
+专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16。`WGT_RADDR_BUFFER_DEPTH=64` 定义供所有 AS 模式共用的 64 项权重行地址表，每项仅 8 bit，共 512 bit（64 B）；`MAX_CONTEXTS=64` 定义标签/完成状态容量，二者与 Psum 深度独立。
 
-OS1 WS 的连续 slice 在唯一 tmp 中融合；OS1 A4 AS 每 Context 只有一个 slice，均可旁路 Psum。当前 AS 仍采用 phase→Context 顺序，因此 OS1 A8/A16 的 AS64 需要 64 项融合历史，超过 16 深度，作为预期容量错误验证。OS2 WS8/AS8 使用 8 项 Psum，容量合法。
+仅 OS1 AS 改为 Context→Slice：先在每 OC 唯一 tmp 中融合一个 Context 的全部 slice，再切换 Context。因此 OS1 AS64 的 A4/A8/A16 全部合法，不读写 Psum。OS>1 AS 保留 Slice→Context 顺序：同一 slice 遍历所有 Context，再进入下一 slice，融合历史及跨 Tile 累加仍保存在 Psum。OS2 AS8 合法，OS2 AS64 仍超过 Psum 深度 16。
 
-正向共 184 例：OS1 WS64 为 56 例，OS1 A4 AS64 为 16 例，OS2 WS8/AS8 各 56 例；覆盖 UINT/INT、随机/交替极值及有无 Command 空拍。另有 10 个 A8/A16 AS64 负向 case，要求在首个 Command 接受时准确捕获 CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded，禁止先进入越界计算。
+OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice 间保持地址，再切换下一个地址；OS>1 每轮 slice 都重访各 Context 地址。表中保存行号，不保存权重数据，权重仍预先装载在 Macro SRAM；不需要为八个 Macro 各复制一份表，因为计算端使用共享 8-bit 行地址。
+
+正向共 224 例：OS1 WS64、OS1 AS64、OS2 WS8、OS2 AS8 各 56 例，覆盖七精度、UINT/INT、随机/交替极值及有无 Command 空拍。OS1 AS64 检查所有 64 个 Context 的结果，且 Psum 整批保持关闭。另有 14 个 OS2 AS64 容量负向例（七精度×两种符号），以及地址深度 32、标签容量 32 时请求 AS64 的各两例，要求命中各自准确诊断。
 
 ```text
 python RTL/cluster/tb/py/run_sram_regression.py --full
 python RTL/cluster/tb/py/run_sram_regression.py --context-stress
 ```
 
-VCS 从 vcs-rtl 编译时可传 `PARAMETERS="-pvalue+tb_Cluster.MAX_CONTEXTS=64"`，然后以 `PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。容量负向专项使用 +CONTEXT_CAPACITY_TEST、+CAPACITY_PRECISION=1/3/4/5/6 和 +CAPACITY_SIGN=0/1；完整自动判定由上述 Python 入口执行。Psum 默认 16 保持不变。
+默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。追加 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
 
 ## Buffer 深度与 ICG
 
-OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 每 OC 固定一个。Context 数不超过 MAX_CONTEXTS（默认16，可独立配置）；仅需 Psum 时还受 OUTPUT_BUFFER_DEPTH 限制。RTL 最小深度1，完整六种标准配置需要至少2。输出逐 OC 发布，无输出反压。
+OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 每 OC 固定一个。Context 数不超过 MAX_CONTEXTS（默认64）；AS 另受 WGT_RADDR_BUFFER_DEPTH（默认64）限制，只有 os>1 时还受 OUTPUT_BUFFER_DEPTH 限制。RTL 最小深度1，完整六种标准配置需要至少2。输出逐 OC 发布，无输出反压。
 
-首条 Command 接受时锁定深度掩码：os>1 或 AS 的 A8/A16 需要 Psum，仅开放低 max(ws,as) 个 entry；高地址 entry 整批关闭。WS/单 Context 的 os=1、AS A4 的 os=1 全部关闭 Psum。掩码保持至全部 Context 的有效 channel 发布完成。
+首条 Command 接受时锁定深度掩码：仅 os>1 需要 Psum，仅开放低 max(ws,as) 个 entry；高地址 entry 整批关闭。所有 os=1 模式全部关闭 Psum。掩码保持至全部 Context 的有效 channel 发布完成。
 
-`tmp_input_cg_en` 在 tmp 捕获前一拍寄存。`psum_cg_en[d][l]` 在 tmp 捕获时按已对齐的 Context/phase 标签寄存，供下一拍的 Psum 写回：AS 每个有效 phase 选当前 Context，WS 仅 os>1 的最后 phase 选当前 Context。每 OC 的 Psum 门控请求至多一位有效，其他深度保持。ICG 使用 MacroClockGate 模型，ASIC 需映射工艺库 cell。
+`tmp_input_cg_en` 在 tmp 捕获前一拍寄存。`psum_cg_en[d][l]` 在 tmp 捕获时按已对齐的 Context/phase 标签寄存，供下一拍的 Psum 写回：OS>1 AS 每个有效 phase 选当前 Context，WS 仅 os>1 的最后 phase 选当前 Context，OS1 AS 不写 Psum。每 OC 的 Psum 门控请求至多一位有效，其他深度保持。ICG 使用 MacroClockGate 模型，ASIC 需映射工艺库 cell。
 
 复位清除控制、valid、标签和状态，不清除权重 SRAM。最终 RAW 为 signed32；参考计算使用 longint 避免中间截断，最终溢出时报错。
 
@@ -245,10 +257,10 @@ OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 
 | A5 / 5 | 2 | 2 | 1 | 两 Tile、WS 两个 Context |
 | A6 / 6 | 2 | 1 | 2 | 两 Tile、AS 两个 Context |
 
-WS/单 Context 顺序为 Tile→Context→phase；AS 为 Tile→phase→Context。C0 为首个外部 i_cmd+A0 的接受沿。令 R=max(ws,as)、P=A位宽/4，D 为内部路径延迟；无外部空拍时：
+WS/单 Context、OS1 AS 顺序为 Tile→Context→phase；OS>1 AS 为 Tile→phase→Context。C0 为首个外部 i_cmd+A0 的接受沿。令 R=max(ws,as)、P=A位宽/4，D 为内部路径延迟；无外部空拍时：
 
 - WS/单 Context：第 t 个 Tile、第 c 个 Context 的包起点 S=(t×R+c)×(P+1)；ACT Aphase 在 C(S+phase) 接收，内部在 C(S+1+phase) 发射。
-- AS：第 t 个 Tile 包起点 S=t×(1+R×P)；第 c 个地址命令在 C(S+c)，ACT Aphase 在 C(S+phase)，内部在 C(S+1+phase×R+c) 发射。
+- AS：第 t 个 Tile 包起点 S=t×(1+R×P)；第 c 个地址命令在 C(S+c)，ACT Aphase 在 C(S+phase)，OS1 内部在 C(S+1+c×P+phase) 发射，OS>1 内部在 C(S+1+phase×R+c) 发射。
 - 整批末次内部发射：WS 为 C(os×R×(P+1)−1)，AS 为 C(os×(1+R×P)−1)；最后 raw 再加 D。地址有空拍时，下一次发射取上一发射后一拍、当前Plane接收后一拍、当前地址接收后一拍三者的最晚沿；已完成的发射不顺延。
 
 默认回归为1368个 Cluster case，另有208个归约门控、24个混合Context、12个完整ACT与280个ACT容量定向case；检查140个 Context 输出周期和480个标准运算事件。EN=FF 时每符号在七种 precision 下的合法 split 数为1、1、16、16、16、25、25，要求每组有效 K<256。
@@ -273,7 +285,7 @@ raw_data的32-bit/OC用于未加requant的测试版本，逐OC发布并保持到
 
 归约树 root 没有独立转发 DFF；fusion 与 acc 是组合块，二者之间使用唯一 tmp，没有额外 tmp 历史数组或 acc 中间 buffer。raw_data 是现有输出保持寄存器，与 tmp/Psum 分开计数。
 
-AS 地址表 context_address 为8×MAX_CONTEXTS bit，默认128 bit，计入控制。另有 ACT Slice 有效位与接收计数。其余控制包括 valid、phase/Context/Tile 标签、Command 流水、批次状态、权重 Hold 地址/有效位及 ICG 请求等控制寄存器。Psum写请求为32×DEPTH bit、深度掩码为DEPTH bit、tmp请求为32 bit；reduce tree 的有效节点总使能为6 bit、逐OC请求为24 bit，另有两级48-bit控制流水。参考 adapter 的 int/完整 descriptor 标签和验证计数不作为优化后的控制面积估算。MacroClockGate 内部的 enable_latched 是 latch，不计为 DFF；未使用组合信号也不计存储。
+AS 地址表 context_address 为8×WGT_RADDR_BUFFER_DEPTH bit，默认64×8=512 bit，供所有 AS 模式共用，计入控制。另有 ACT Slice 有效位与接收计数。其余控制包括 valid、phase/Context/Tile 标签、Command 流水、批次状态、权重 Hold 地址/有效位及 ICG 请求等控制寄存器。Psum写请求为32×DEPTH bit、深度掩码为DEPTH bit、tmp请求为32 bit；reduce tree 的有效节点总使能为6 bit、逐OC请求为24 bit，另有两级48-bit控制流水。参考 adapter 的 int/完整 descriptor 标签和验证计数不作为优化后的控制面积估算。MacroClockGate 内部的 enable_latched 是 latch，不计为 DFF；未使用组合信号也不计存储。
 
 ## tb_Cluster 测试 case
 
@@ -282,7 +294,7 @@ AS 地址表 context_address 为8×MAX_CONTEXTS bit，默认128 bit，计入控�
 **一个 case 的含义：** 调用一次 `run_case`，按固定参数跑完一批完整计算，依次经过四个阶段：
 
 1. **权重预加载：** 按本 case 的 Tile 数和 Context 数，把所有用到的权重行写入对应地址，预加载完成后才开始计算。
-2. **输入发射：** 外部发送 os×r 条 Command；WS发送os×r个完整ACT，AS发送os个完整ACT。每个ACT为P个连续Plane。当前Plane/地址就绪后内部按WS（Tile→Context→phase）或AS（Tile→phase→Context）发射os×r×P次计算。
+2. **输入发射：** 外部发送 os×r 条 Command；WS发送os×r个完整ACT，AS发送os个完整ACT。每个ACT为P个连续Plane。当前Plane/地址就绪后内部按WS（Tile→Context→phase）或AS（OS1 为 Tile→Context→phase，OS>1 为 Tile→phase→Context）发射os×r×P次计算。
 3. **逐拍监视：** 四个独立监视器（数值、运算历史、时钟门控、完整ACT bank）全程比对 DUT 与独立参考模型。
 4. **结果核对：** 检查每个 OC 脉冲的到达时刻、数值与同 OC 的 Context 顺序，最后确认全部 lane 均已发布且批次关闭。
 
@@ -381,9 +393,9 @@ UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw sig
 | 类别 | 内容 |
 |---|---|
 | 数值与有效通道 | 用完整 ACT/weight 整数独立计算点积（longint 无中间截断），逐 channel 比较 out_valid_o 脉冲与发布值；检查 OC mask、同 OC 的 Context 顺序，输出无丢失、重复、乱序 |
-| 发射与输入 | WS 的 Tile→Context→phase、AS 的 Tile→phase→Context 发射顺序；权重地址 `8'h20+16*Tile`（AS 再加 Context 号）；逐 digit 比对 DUT 实际采样的 ACT Plane；完整ACT加载后改变外部ACT，确认内部发射逐digit使用act_buffer；首Command被阻塞时保持Command+A0，后续Slice连续采样 |
+| 发射与输入 | WS 的 Tile→Context→phase、AS 的 OS1 Tile→Context→phase、OS>1 Tile→phase→Context 发射顺序；权重地址 `8'h20+16*Tile`（AS 再加 Context 号）；逐 digit 比对 DUT 实际采样的 ACT Plane；完整ACT加载后改变外部ACT，确认内部发射逐digit使用act_buffer；首Command被阻塞时保持Command+A0，后续Slice连续采样 |
 | 到达时延 | 每个 channel 按自身归约终点在末次内部发射后3T/4T/5T 写回并独立发布 out_valid_o 脉冲，不提前、不迟到；混合树各通道分别到达、分别发布 |
-| 中间运算状态 | 逐 phase 检查 WS 唯一 tmp 的融合前缀、AS 的 Context Psum 历史；仅 WS/单 Context os=1 和 AS A4 os=1 全关 Psum；AS 同拍 fusion/acc 二选一，WS fusion 在 tmp 前、acc 在 tmp 后；未用加法器的两个输入隔离为零 |
+| 中间运算状态 | 逐 phase 检查 WS/OS1 AS 唯一 tmp 的融合前缀、OS>1 AS 的 Context Psum 历史；所有 os=1 模式全关 Psum；OS>1 AS 同拍 fusion/acc 二选一，WS/OS1 AS fusion 在 tmp 前、acc 在 tmp 后；未用加法器的两个输入隔离为零 |
 | 时钟门控与保持 | 独立预测 唯一 tmp 输入/Psum 的 ICG 使能并比对实际门控时钟；被门控 DFF 数据保持不变；os>1 批次的高地址 Context entry 整批关闭 |
 | 发布与批次边界 | 每个 OC 写回即发布一拍，lane 数据保持到该 OC 下次发布，同 OC 按 Context 顺序；权重复用覆盖计数非零；结束时检查全部 lane 已发布、批次关闭、无多余输出，tmp/fusion/acc 各路由与门控路径覆盖齐全 |
 

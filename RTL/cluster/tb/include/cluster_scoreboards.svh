@@ -55,7 +55,7 @@
       want_input=dut.capture_valid;
       for(int l=0;l<32;l++) begin
         old_tmp[l]=dut.tmp_result[l]; want_tmp[l]=dut.capture_data[l];
-        if(dut.capture_valid[l] && dut.capture_tag[l].cmd.as_cnt<=1 && dut.capture_tag[l].ph>0)
+        if(dut.capture_valid[l] && (dut.capture_tag[l].cmd.as_cnt<=1 || dut.capture_tag[l].cmd.os_cnt==1) && dut.capture_tag[l].ph>0)
           want_tmp[l]=old_tmp[l]+(dut.capture_data[l] <<< (4*dut.capture_tag[l].ph));
       end
       for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) begin
@@ -64,7 +64,7 @@
       for(int l=0;l<32;l++) if(dut.tmp_valid[l]) begin
         c=dut.tmp_tag[l].ctx; ph=dut.tmp_tag[l].ph;
         ab=abits(int'(dut.tmp_tag[l].cmd.precision));
-        writes_psum=dut.tmp_tag[l].cmd.as_cnt>1 ?
+        writes_psum=(dut.tmp_tag[l].cmd.as_cnt>1 && dut.tmp_tag[l].cmd.os_cnt>1) ?
           (dut.tmp_tag[l].cmd.os_cnt>1 || ab>4) :
           (dut.tmp_tag[l].cmd.os_cnt>1 && ph==ab/4-1);
         // A bypass Context can have an ID beyond the physical Psum array.
@@ -94,8 +94,7 @@
           $fatal(1,"Single tmp register data/hold mismatch lane=%0d",l);
       for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) for(int l=0;l<32;l++) if(!want_p[d][l]) begin
         if(dut.psum[d][l]!==old_p[d][l]) $fatal(1,"Gated Psum DFF changed");
-        if(dut.batch_active && dut.batch_command.os_cnt==1 &&
-           (dut.batch_command.as_cnt<=1 || abits(int'(dut.batch_command.precision))==4))
+        if(dut.batch_active && dut.batch_command.os_cnt==1)
           bypass_psum_hold_checks++;
       end
     end
@@ -119,7 +118,7 @@
           $fatal(1,"Unused acc operands not isolated");
         if(dut.tmp_valid[l]) begin
           c=dut.tmp_tag[l].ctx;ph=dut.tmp_tag[l].ph;kt=dut.tmp_tag[l].kt;
-          is_as=dut.tmp_tag[l].cmd.as_cnt>1;cx[l]=c;
+          is_as=dut.tmp_tag[l].cmd.as_cnt>1 && dut.tmp_tag[l].cmd.os_cnt>1;cx[l]=c;
           if(ph==0 && kt==0) running_sum[c][l]=0;
           running_sum[c][l]+=raw_slice[l] <<< (4*ph);want[l]=running_sum[c][l];
           check_p[l]=is_as ? (dut.tmp_tag[l].cmd.os_cnt>1 || abits(int'(dut.tmp_tag[l].cmd.precision))>4) :
@@ -186,7 +185,7 @@
           act_sample ? $sformatf("%0256h",act_data_i) : "");
       if(dut.issue) begin
         idx=issue_count; t=idx/(case_r*case_p);
-        if(case_as>1) begin p=(idx/case_r)%case_p; c=idx%case_r; end
+        if(case_as>1 && case_os>1) begin p=(idx/case_r)%case_p; c=idx%case_r; end
         else begin c=(idx/case_p)%case_r; p=idx%case_p; end
         if(dut.phase!=p || dut.context_idx!=c || dut.tile!=t)
           $fatal(1,"Issue order differs from spec at index %0d",idx);
@@ -200,7 +199,7 @@
         if(issue_count==0) first_issue=cycle;
         if(exact_ii) begin
           if(case_as>1) begin
-            if(cycle-first_external != t*(1+case_r*case_p)+1+p*case_r+c)
+            if(cycle-first_external != t*(1+case_r*case_p)+1+(case_os==1 ? c*case_p+p : p*case_r+c))
               $fatal(1,"AS external-load/internal-issue timing mismatch");
           end else if(cycle-first_external != (t*case_r+c)*(case_p+1)+1+p)
             $fatal(1,"WS external-load/internal-issue timing mismatch");

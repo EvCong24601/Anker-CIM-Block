@@ -4,24 +4,40 @@
 
   initial begin : regression
     string data_dir;
-    int capacity_precision,capacity_sign;
+    int capacity_precision,capacity_sign,zero_count;
+    if($bits(cluster_ctrl_t)!=107 || $bits(cmd_i.os_cnt)!=8 ||
+       $bits(cmd_i.ws_cnt)!=8 || $bits(cmd_i.as_cnt)!=8)
+      $fatal(1,"TB: descriptor must contain three eight-bit counts and total 107 bits");
+    if($value$plusargs("ZERO_COUNT=%d",zero_count)) begin
+      repeat(4) @(negedge clock);reset=0;
+      repeat(2) @(negedge clock);
+      $display("[CASE_START] time=%0.3f ns suite=count_range description=reject-zero-count field=%0d",$realtime,zero_count);
+      cmd_i='0;cmd_i.os_cnt=1;cmd_i.ws_cnt=1;cmd_i.as_cnt=1;
+      case(zero_count)
+        0:cmd_i.os_cnt=0;
+        1:cmd_i.ws_cnt=0;
+        2:cmd_i.as_cnt=0;
+        default:$fatal(1,"TB: zero-count field must be 0..2");
+      endcase
+      cmd_valid_i=1;
+      @(posedge clock);#1;$fatal(1,"TB: missing zero-count rejection");
+    end
     if($test$plusargs("CONTEXT_CAPACITY_TEST")) begin
       capacity_precision=1;capacity_sign=0;
       if($value$plusargs("CAPACITY_PRECISION=%d",capacity_precision)) begin end
       if($value$plusargs("CAPACITY_SIGN=%d",capacity_sign)) begin end
-      if(MAX_CONTEXTS<64 || OUTPUT_BUFFER_DEPTH!=16 ||
-         capacity_precision<0 || capacity_precision>6 || abits(capacity_precision)<=4)
-        $fatal(1,"TB: capacity test requires 64 metadata entries, Psum depth 16, and A8/A16");
+      if(capacity_precision<0 || capacity_precision>6)
+        $fatal(1,"TB: capacity precision must be 0..6");
       repeat(4) @(negedge clock);reset=0;
       repeat(2) @(negedge clock);
-      $display("[CASE_START] time=%0.3f ns suite=context_capacity description=reject-OS1-AS64-multi-slice-history-overflow W%0dA%0d signed=%0d os=1 ws=1 as=64 psum_depth=%0d max_contexts=%0d",
-        $realtime,wbits(capacity_precision),abits(capacity_precision),capacity_sign,OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS);
-      cmd_i='0;cmd_i.os_cnt=1;cmd_i.ws_cnt=1;cmd_i.as_cnt=64;
+      $display("[CASE_START] time=%0.3f ns suite=context_capacity description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=64 psum_depth=%0d max_contexts=%0d weight_address_depth=%0d",
+        $realtime,wbits(capacity_precision),abits(capacity_precision),capacity_sign,$test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST") ? 1 : 2,OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS,WGT_RADDR_BUFFER_DEPTH);
+      cmd_i='0;cmd_i.os_cnt=($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;cmd_i.ws_cnt=1;cmd_i.as_cnt=64;
       cmd_i.precision=3'(capacity_precision);cmd_i.signed_en=1'(capacity_sign);
       cmd_i.macro_en_mask=8'hff;cmd_i.macro_oc_mask=32'hffffffff;
       cmd_valid_i=1;
       @(posedge clock);#1;
-      $fatal(1,"TB: missing Psum capacity rejection");
+      $fatal(1,"TB: missing resource capacity rejection");
     end
     if($test$plusargs("SRAM_RW_TEST") || $test$plusargs("SRAM_CONFLICT_PRELOAD") ||
        $test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
@@ -56,6 +72,7 @@
     repeat(2) @(negedge clock);
     // 专项 suite 独占一次仿真；默认 suite 另有 CSV、路由和门控覆盖检查。
     if($test$plusargs("INPUT_OVERLAP_TEST")) begin run_input_overlap_suite(); $finish; end
+    if($test$plusargs("OS_COUNT_LIMIT_TEST")) begin run_os_count_limit_suite(); $finish; end
     if($test$plusargs("CONTEXT_STRESS_TEST")) begin run_context_stress_suite(); $finish; end
     if($test$plusargs("OC_MERGE_TEST")) begin run_oc_merge_suite(); $finish; end
     if($test$plusargs("ACT_BUFFER_TEST")) begin run_act_buffer_suite(); $finish; end

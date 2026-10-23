@@ -7,7 +7,8 @@ module tb_Cluster;
   parameter int OS_TILES=1;
   parameter int PATTERNS=6;
   parameter int OUTPUT_BUFFER_DEPTH=16; // Context entries per channel
-  parameter int MAX_CONTEXTS=16; // Address/tag capacity; independent of Psum depth
+  parameter int WGT_RADDR_BUFFER_DEPTH=64; // Eight-bit AS addresses only
+  parameter int MAX_CONTEXTS=64; // Completion/tag capacity; independent of Psum
   parameter int TIMEOUT_CYCLES=4000;
   parameter logic [31:0] SEED=32'h19e2a407;
   logic clock=0;
@@ -28,7 +29,8 @@ module tb_Cluster;
   logic [1023:0] cim_wrdata=0;
   wire [1023:0] cim_rd_data;
   wire [1023:0] psum_data_o;
-  cluster_dut_adapter #(.MAX_CONTEXTS(MAX_CONTEXTS),
+  cluster_dut_adapter #(.WGT_RADDR_BUFFER_DEPTH(WGT_RADDR_BUFFER_DEPTH),
+                        .MAX_CONTEXTS(MAX_CONTEXTS),
                         .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH)) dut(.*);
   // 计算参考模型、输出预期及 case/握手计数。
   logic [31:0] rng=SEED;

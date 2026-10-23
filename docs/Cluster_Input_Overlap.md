@@ -15,11 +15,11 @@
 令 P=A位宽/4，R=max(ws_cnt,as_cnt)，t 为 Tile，c 为 Context，p 为 Slice。C0 为首包命令与 A0 的接受沿。以下公式要求后续命令无额外空拍，所有序号从零开始。
 
 - WS/单 Context：包起点 `S=(t*R+c)*(P+1)`；A[p] 在 `S+p` 接收，在 `S+1+p` 发射。下一包起点为 `S+P+1`。
-- AS：包起点 `S=t*(1+R*P)`；Context c 地址在 `S+c` 接收，A[p] 在 `S+p` 接收，在 `S+1+p*R+c` 发射。下一 Tile 包起点为 `S+1+R*P`。
+- AS：包起点 `S=t*(1+R*P)`；Context c 地址在 `S+c` 接收，A[p] 在 `S+p` 接收，OS1 在 `S+1+c*P+p` 发射，OS>1 在 `S+1+p*R+c` 发射。下一 Tile 包起点为 `S+1+R*P`。
 - 地址有空拍时，每次发射沿为“前一次发射后一拍、当前 Plane 接收后一拍、当前 Context 地址接收后一拍”三者的最晚沿；第一发射只取当前 Plane 和地址的就绪沿。
 - 发射后的 Macro、归约、tmp/Psum 路径保持原有时延；标准 W2/W4/W8 路径从末次发射到 raw 分别为 3/4/5T。精确 lane 时延仍取决于归约终点。
 
-WS 仍按 Tile→Context→Slice，AS 仍按 Tile→Slice→Context 执行。接收与计算重叠不会改变 AS 的融合历史需求。
+WS 和 OS1 AS 按 Tile→Context→Slice 执行；OS>1 AS 保留 Tile→Slice→Context。OS1 AS 先在 tmp 中融合，所有 OS1 模式关闭 Psum；OS>1 AS 保留 Psum 融合历史。两种 AS 都使用同一份 64×8-bit 权重地址表，详见 [OS1 AS 融合与权重地址暂存](Cluster_AS_OS1_Fusion.md)。
 
 ## A16 单 Context 示例
 
@@ -30,7 +30,7 @@ WS 仍按 Tile→Context→Slice，AS 仍按 Tile→Slice→Context 执行。接
 - C4：发射 A3。
 - C5：可接受下一包命令、A0；上一包结果仍可能在后级流水中。
 
-## A16 AS2 示例
+## A16 OS>1 AS2 示例
 
 - C0：接收 Context0 地址与 A0。
 - C1：接收 Context1 地址与 A1；发射 A0/Context0。
@@ -41,13 +41,13 @@ WS 仍按 Tile→Context→Slice，AS 仍按 Tile→Slice→Context 执行。接
 - C7、C8：依次发射 A3/Context0、A3/Context1。
 - C9：可接受下一 Tile 包。
 
-如果 Context1 地址延迟到 C5 接受，C1 仍发射 A0/Context0，C2～C5 等待地址，C6 发射 A0/Context1，然后按原顺序继续。C2、C3 的 ACT 采样仍照常进行。
+以下仅指 OS>1；OS1 AS2 的逐 Context 示例见上述融合说明。如果 Context1 地址延迟到 C5 接受，C1 仍发射 A0/Context0，C2～C5 等待地址，C6 发射 A0/Context1，然后按原顺序继续。C2、C3 的 ACT 采样仍照常进行。
 
 ## 容量与边界
 
 A8/A16 的合法单 Context、WS、AS case 均能重叠后续 Plane 接收和发射。A4 没有后续 Plane，但 AS 多 Context 能重叠后续地址与已有 Context 的发射。OS1/OS2 均支持；符号和权重位宽不改变输入就绪规则。
 
-Psum 深度保持 16。OS1 WS64 合法；OS1 AS64 仅 A4 合法；OS1 AS64 的 A8/A16 仍作为容量错误验证。OS2 WS8/AS8 合法。批次末次发射后仍等待全部结果发布，再接受下一批。
+Psum 深度保持 16。OS1 WS64 合法；OS1 AS64 的 A4/A8/A16 均合法且不使用 Psum；OS2 AS64 仍作为 Psum 容量错误验证。OS2 WS8/AS8 合法。批次末次发射后仍等待全部结果发布，再接受下一批。
 
 ## 代码与验证
 

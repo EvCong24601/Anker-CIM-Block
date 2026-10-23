@@ -1,0 +1,4 @@
+PASS committed trace comparison: 416 unchanged non-OS1-AS events, including 320 OS2 events.
+PASS source hashes: final RTL and TB match the full regression snapshot.
+PASS English display/diagnostic format strings: 154.
+PASS Python syntax.

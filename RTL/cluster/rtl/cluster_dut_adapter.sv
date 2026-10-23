@@ -1,8 +1,9 @@
 `timescale 1ns/1ps
 // Simulation reference Cluster. Existing ports carry RAW Psum, no requant.
 module cluster_dut_adapter #(
-  parameter int MAX_CONTEXTS = 16,
-  parameter int OUTPUT_BUFFER_DEPTH = MAX_CONTEXTS
+  parameter int WGT_RADDR_BUFFER_DEPTH = 64,
+  parameter int MAX_CONTEXTS = WGT_RADDR_BUFFER_DEPTH,
+  parameter int OUTPUT_BUFFER_DEPTH = 16
 ) (
   input logic clock, reset,
   input cluster_pkg::cluster_ctrl_t cmd_i,
@@ -27,7 +28,7 @@ module cluster_dut_adapter #(
   logic [4095:0] act_buffer; // four 1024-bit bit-slice planes, A0..A3
   logic [1023:0] plane;
   cluster_ctrl_t packet_cmd;
-  logic [7:0] context_address[0:MAX_CONTEXTS-1];
+  logic [7:0] context_address[0:WGT_RADDR_BUFFER_DEPTH-1];
   logic packet_active,act_loading,act_complete;
   logic [3:0] act_slice_valid;
   int external_phase,command_count;
@@ -123,7 +124,7 @@ module cluster_dut_adapter #(
   int raw_context[0:31]; // internal per-lane tag; never an external pin
   logic [1023:0] raw_data;
   initial begin
-    if(MAX_CONTEXTS<1 || OUTPUT_BUFFER_DEPTH<1)
+    if(MAX_CONTEXTS<1 || OUTPUT_BUFFER_DEPTH<1 || WGT_RADDR_BUFFER_DEPTH<1)
       $fatal(1,"Context capacity must be >= 1");
   end
   always_comb begin
@@ -232,7 +233,7 @@ module cluster_dut_adapter #(
                        terminal_lanes(early_tmp_tag[2],2);
       for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++) psum_cg_en[d]<='0;
       for(int l=0;l<32;l++) if(capture_valid[l]) begin
-        if(capture_tag[l].cmd.as_cnt>1) begin
+        if(capture_tag[l].cmd.as_cnt>1 && capture_tag[l].cmd.os_cnt>1) begin
           if(capture_tag[l].cmd.os_cnt>1 || abits(int'(capture_tag[l].cmd.precision))>4)
             psum_cg_en[capture_tag[l].ctx][l]<=1;
         end else if(capture_tag[l].cmd.os_cnt>1 &&
@@ -259,30 +260,31 @@ module cluster_dut_adapter #(
     end
   end
   // One fusion block and one acc block per OC, shared by all Contexts.
-  // WS: reduction + old tmp -> fusion -> tmp DFF; next edge tmp -> acc -> Psum.
-  // AS: reduction -> tmp DFF; next edge tmp + Psum[ctx] -> fusion OR acc -> Psum.
-  // TIMING: WS terminal reduction logic and fusion may cascade before tmp;
-  // AS has one selected adder after tmp. Fusion and acc never cascade.
+  // WS and OS1 AS: reduction + old tmp -> fusion -> tmp DFF.
+  // OS1 bypasses Psum; WS OS>1 commits the final phase through acc.
+  // OS>1 AS is unchanged: reduction -> tmp -> fusion OR acc -> Psum.
+  // TIMING: WS / OS1 AS reduction and fusion may cascade before tmp;
+  // OS>1 AS has one selected adder after tmp. Fusion and acc never cascade.
   // Both operands of an unused adder are isolated to zero. ASIC STA required.
   always_comb begin : arithmetic
     for(int l=0;l<32;l++) begin
       fusion_enable[l]=0; acc_enable[l]=0; psum_write[l]=0;
       fusion_a[l]=0; fusion_b[l]=0; acc_a[l]=0; acc_b[l]=0;
-      if(capture_valid[l] && capture_tag[l].cmd.as_cnt<=1 && capture_tag[l].ph>0) begin
+      if(capture_valid[l] && (capture_tag[l].cmd.as_cnt<=1 || capture_tag[l].cmd.os_cnt==1) && capture_tag[l].ph>0) begin
         fusion_enable[l]=1;
         fusion_a[l]=tmp_result[l];
         fusion_b[l]=capture_data[l] <<< (4*capture_tag[l].ph);
       end
-      if(tmp_valid[l] && tmp_tag[l].cmd.as_cnt>1 && tmp_tag[l].ph>0) begin
+      if(tmp_valid[l] && tmp_tag[l].cmd.as_cnt>1 && tmp_tag[l].cmd.os_cnt>1 && tmp_tag[l].ph>0) begin
         fusion_enable[l]=1;
         fusion_a[l]=psum[tmp_tag[l].ctx][l];
         fusion_b[l]=tmp_result[l] <<< (4*tmp_tag[l].ph);
       end
       fusion_result[l]=fusion_a[l]+fusion_b[l];
-      tmp_store_data[l]=(capture_valid[l] && capture_tag[l].cmd.as_cnt<=1 &&
+      tmp_store_data[l]=(capture_valid[l] && (capture_tag[l].cmd.as_cnt<=1 || capture_tag[l].cmd.os_cnt==1) &&
                          capture_tag[l].ph>0) ? fusion_result[l] : capture_data[l];
       if(tmp_valid[l]) begin
-        if(tmp_tag[l].cmd.as_cnt>1) begin
+        if(tmp_tag[l].cmd.as_cnt>1 && tmp_tag[l].cmd.os_cnt>1) begin
           psum_write[l]=tmp_tag[l].cmd.os_cnt>1 || abits(int'(tmp_tag[l].cmd.precision))>4;
           acc_enable[l]=tmp_tag[l].ph==0 && tmp_tag[l].kt>0;
         end else begin
@@ -296,7 +298,7 @@ module cluster_dut_adapter #(
       end
       acc_result[l]=acc_a[l]+acc_b[l];
       arithmetic_result[l]=acc_enable[l] ? acc_result[l] :
-        (tmp_valid[l] && tmp_tag[l].cmd.as_cnt>1 && tmp_tag[l].ph>0) ?
+        (tmp_valid[l] && tmp_tag[l].cmd.as_cnt>1 && tmp_tag[l].cmd.os_cnt>1 && tmp_tag[l].ph>0) ?
         fusion_result[l] : tmp_result[l];
       result_done[l]=tmp_valid[l] && tmp_tag[l].ph==abits(int'(tmp_tag[l].cmd.precision))/4-1 &&
                      tmp_tag[l].kt==int'(tmp_tag[l].cmd.os_cnt)-1;
@@ -309,7 +311,7 @@ module cluster_dut_adapter #(
     if(reset) begin
       act_buffer<='0;packet_cmd<='0;packet_active<=0;act_loading<=0;act_complete<=0;
       act_slice_valid<='0;external_phase<=0;command_count<=0;
-      for(int c=0;c<MAX_CONTEXTS;c++) context_address[c]<=0;
+      for(int c=0;c<WGT_RADDR_BUFFER_DEPTH;c++) context_address[c]<=0;
       phase<=0; context_idx<=0; tile<=0; hold_valid<='0;
       in_tag<='0; macro_tag<='0; red1_tag<='0; red2_tag<='0;
       raw_valid<='0; raw_data<='0;
@@ -325,11 +327,15 @@ module cluster_dut_adapter #(
       end
     end else begin
       if(cmd_accept) begin
+        if(cmd_i.os_cnt==0 || cmd_i.ws_cnt==0 || cmd_i.as_cnt==0)
+          $fatal(1,"CLUSTER_COUNT_RANGE: counts must be 1..255");
         // Context tags/AS addresses and Psum entries are separate resources.
-        // OS1 WS and OS1 A4 AS bypass Psum and may exceed its depth.
+        // All OS1 modes fuse in tmp and may exceed the Psum depth.
         if(cmd_i.ws_cnt>MAX_CONTEXTS || cmd_i.as_cnt>MAX_CONTEXTS)
           $fatal(1,"CLUSTER_CONTEXT_CAPACITY: context metadata exceeded");
-        if((cmd_i.os_cnt>1 || (cmd_i.as_cnt>1 && abits(int'(cmd_i.precision))>4)) &&
+        if(cmd_i.as_cnt>WGT_RADDR_BUFFER_DEPTH)
+          $fatal(1,"CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded");
+        if(cmd_i.os_cnt>1 &&
            (cmd_i.ws_cnt>OUTPUT_BUFFER_DEPTH || cmd_i.as_cnt>OUTPUT_BUFFER_DEPTH))
           $fatal(1,"CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
         if(!packet_active) begin
@@ -340,7 +346,7 @@ module cluster_dut_adapter #(
           act_loading<=abits(int'(cmd_i.precision))>4;
           act_complete<=abits(int'(cmd_i.precision))==4;
         end else begin
-          if(command_count>=MAX_CONTEXTS) $fatal(1,"AS address capacity exceeded");
+          if(command_count>=WGT_RADDR_BUFFER_DEPTH) $fatal(1,"AS address capacity exceeded");
           context_address[command_count]<=cmd_i.weight_cim_raddr;
           command_count<=command_count+1;
         end
@@ -351,8 +357,7 @@ module cluster_dut_adapter #(
           // per-Context reservation masks are (re)written at final_issue.
           for(int c=0;c<MAX_CONTEXTS;c++) begin result_ready[c]='0; result_mask[c]='0; end
           for(int d=0;d<OUTPUT_BUFFER_DEPTH;d++)
-            psum_depth_open[d]<=(cmd_i.os_cnt>1 ||
-              (cmd_i.as_cnt>1 && abits(int'(cmd_i.precision))>4)) &&
+            psum_depth_open[d]<=cmd_i.os_cnt>1 &&
               d<int'(cmd_i.ws_cnt>1 ? cmd_i.ws_cnt : cmd_i.as_cnt);
         end else if(cmd_i.os_cnt!=batch_command.os_cnt ||
                     cmd_i.ws_cnt!=batch_command.ws_cnt || cmd_i.as_cnt!=batch_command.as_cnt ||
@@ -384,8 +389,8 @@ module cluster_dut_adapter #(
         if(command.precision>6 || !canonical(command.reduce_split_mask) ||
            command.os_cnt<1 || command.ws_cnt<1 || command.as_cnt<1 ||
            (command.ws_cnt>1 && command.as_cnt>1) ||
-           contexts>MAX_CONTEXTS ||
-           ((command.os_cnt>1 || (command.as_cnt>1 && abits(int'(command.precision))>4)) &&
+            contexts>MAX_CONTEXTS || command.as_cnt>WGT_RADDR_BUFFER_DEPTH ||
+            (command.os_cnt>1 &&
             contexts>OUTPUT_BUFFER_DEPTH))
           $fatal(1,"Invalid descriptor / context capacity");
         for(int m=0;m<8;m++) if(command.macro_en_mask[m]) begin
@@ -405,7 +410,7 @@ module cluster_dut_adapter #(
           // take any short path.
           result_mask[context_idx]<=issue_mask;
         end
-        if(command.as_cnt>1) begin
+        if(command.as_cnt>1 && command.os_cnt>1) begin
           if(context_idx==contexts-1) begin
             context_idx<=0;
             if(phase==phases-1) begin phase<=0; tile<=final_issue ? 0 : tile+1; end
@@ -435,11 +440,15 @@ module cluster_dut_adapter #(
       raw_valid<='0;
       // Consume the PREVIOUS tmp DFF contents. NBA state writes preserve
       // consecutive-phase feedback and prevent zero-time procedural cascades.
-      for(int l=0;l<32;l++) if(capture_valid[l] && capture_tag[l].cmd.as_cnt<=1 &&
-                               capture_tag[l].ph>0) ws_fusion_steps++;
+      for(int l=0;l<32;l++) if(capture_valid[l] && capture_tag[l].ph>0 &&
+        (capture_tag[l].cmd.as_cnt<=1 || capture_tag[l].cmd.os_cnt==1)) begin
+        if(capture_tag[l].cmd.as_cnt>1) as_fusion_steps++;
+        else ws_fusion_steps++;
+      end
       for(int l=0;l<32;l++) if(tmp_valid[l]) begin
         if(tmp_tag[l].cmd.as_cnt>1) begin
-          if(tmp_tag[l].ph>0) as_fusion_steps++;
+          if(tmp_tag[l].cmd.os_cnt==1) tmp_only_steps++;
+          if(tmp_tag[l].cmd.os_cnt>1 && tmp_tag[l].ph>0) as_fusion_steps++;
           else if(acc_enable[l]) as_acc_steps++;
           else if(psum_write[l]) as_seed_steps++;
         end else begin

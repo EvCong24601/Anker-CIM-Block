@@ -35,10 +35,10 @@
     wb=wbits(precision); ab=abits(precision); kr=256/wb;
     case_os=os; case_ws=ws; case_as=as_count;
     case_pattern=pattern; case_bubbles=bubbles;
-    if(os<1 || ws<1 || as_count<1 || (ws>1 && as_count>1))
-      $fatal(1,"Counts must be >=1; simultaneous WS/AS reuse is not defined");
+    if(os<1 || os>255 || ws<1 || ws>255 || as_count<1 || as_count>255 || (ws>1 && as_count>1))
+      $fatal(1,"Counts must be 1..255; simultaneous WS/AS reuse is not defined");
     case_r=ws>1 ? ws : as_count; case_p=ab/4;
-    d='0; d.os_cnt=16'(os); d.ws_cnt=16'(ws); d.as_cnt=16'(as_count);
+    d='0; d.os_cnt=8'(os); d.ws_cnt=8'(ws); d.as_cnt=8'(as_count);
     d.precision=3'(precision); d.signed_en=sign_en; d.reduce_split_mask=split;
     d.macro_en_mask=en; d.macro_oc_mask=oc; d.act_slot_sel=slots;
     used_digits=0;
@@ -122,7 +122,7 @@
       $fatal(1,"Missing same-packet ACT load/issue overlap");
     if(as_count>1 && !bubbles && address_issue_overlap==0)
       $fatal(1,"Missing same-packet AS address/issue overlap");
-    if(as_count>1 && bubbles && address_wait_cycles==0)
+    if(as_count>1 && bubbles && (case_p==1 || $test$plusargs("INPUT_OVERLAP_TEST")) && address_wait_cycles==0)
       $fatal(1,"Missing wait for delayed AS Context address");
     if($test$plusargs("INPUT_OVERLAP_TEST") && as_count>1 && bubbles && late_address_wait==0)
       $fatal(1,"Missing address wait after the full ACT stream was received");

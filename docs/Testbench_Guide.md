@@ -57,7 +57,7 @@ SRAM 初始化状态的逐 OC 跟踪位于 RTL 的仿真检查分支，受 SINGL
 python RTL/cluster/tb/py/run_sram_regression.py --full
 ```
 
-默认执行常规 SRAM、2 类冲突、SingleMacro 门控开/关和 15 类协议负向检查。`--full` 追加默认 Cluster 1368 例、归约树 208 例、OC merge 288 例、ACT 容量 280 例、完整 ACT 12 例和混合 Context 24 例、大 Context 正向 184 例、容量负向 10 例和包内输入重叠 168 例。各专项 CSV 分目录存放，默认计算 suite 的 CSV 得以保留。
+默认执行常规 SRAM、2 类冲突、SingleMacro 门控开/关和 15 类协议负向检查。`--full` 追加默认 Cluster 1368 例、归约树 208 例、OC merge 288 例、ACT 容量 280 例、完整 ACT 12 例和混合 Context 24 例、大 Context 正向 224 例、容量负向 18 例和包内输入重叠 168 例。各专项 CSV 分目录存放，默认计算 suite 的 CSV 得以保留。
 
 VCS 仍使用 `make com`、`make sim`；`make sram` 运行 SRAM 专项，`make com sim TB=macro` 运行单 Macro。也可通过 `PVALUE=+OC_MERGE_TEST` 等 plusarg 选择专项。
 
@@ -68,26 +68,31 @@ VCS 仍使用 `make com`、`make sim`；`make sram` 运行 SRAM 专项，`make c
 ```text
 PASS macro_negative_read_write: caught expected SM_PROTOCOL: simultaneous read/write
 PASS macro_negative_write_busy: caught expected SM_PROTOCOL: write before pipeline drain
-PASS regression: suites=38 expected_rejections=27
+PASS regression: suites=50 expected_rejections=38
 ```
 
 单个仿真的原始日志保留真实 Fatal，便于定位断言触发位置；控制台和 validation.log 的汇总将它标明为预期捕获。SV 的 display/诊断字符串及 case 描述使用英文，源代码中的中文解释注释不受影响。
 
 ## 大 Context 与 Psum 容量专项
 
-专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16；专项仅将标签和 AS 地址表容量 MAX_CONTEXTS 配置为 64，默认配置仍为 16。
+专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16。`WGT_RADDR_BUFFER_DEPTH=64` 定义供所有 AS 模式共用的 64 项权重行地址表，每项仅 8 bit，共 512 bit（64 B）；`MAX_CONTEXTS=64` 定义标签/完成状态容量，二者与 Psum 深度独立。
 
-OS1 WS 的连续 slice 在唯一 tmp 中融合；OS1 A4 AS 每 Context 只有一个 slice，均可旁路 Psum。当前 AS 仍采用 phase→Context 顺序，因此 OS1 A8/A16 的 AS64 需要 64 项融合历史，超过 16 深度，作为预期容量错误验证。OS2 WS8/AS8 使用 8 项 Psum，容量合法。
+仅 OS1 AS 改为 Context→Slice：先在每 OC 唯一 tmp 中融合一个 Context 的全部 slice，再切换 Context。因此 OS1 AS64 的 A4/A8/A16 全部合法，不读写 Psum。OS>1 AS 保留 Slice→Context 顺序：同一 slice 遍历所有 Context，再进入下一 slice，融合历史及跨 Tile 累加仍保存在 Psum。OS2 AS8 合法，OS2 AS64 仍超过 Psum 深度 16。
 
-正向共 184 例：OS1 WS64 为 56 例，OS1 A4 AS64 为 16 例，OS2 WS8/AS8 各 56 例；覆盖 UINT/INT、随机/交替极值及有无 Command 空拍。另有 10 个 A8/A16 AS64 负向 case，要求在首个 Command 接受时准确捕获 CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded，禁止先进入越界计算。
+OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice 间保持地址，再切换下一个地址；OS>1 每轮 slice 都重访各 Context 地址。表中保存行号，不保存权重数据，权重仍预先装载在 Macro SRAM；不需要为八个 Macro 各复制一份表，因为计算端使用共享 8-bit 行地址。
+
+正向共 224 例：OS1 WS64、OS1 AS64、OS2 WS8、OS2 AS8 各 56 例，覆盖七精度、UINT/INT、随机/交替极值及有无 Command 空拍。OS1 AS64 检查所有 64 个 Context 的结果，且 Psum 整批保持关闭。另有 14 个 OS2 AS64 容量负向例（七精度×两种符号），以及地址深度 32、标签容量 32 时请求 AS64 的各两例，要求命中各自准确诊断。
 
 ```text
 python RTL/cluster/tb/py/run_sram_regression.py --full
 python RTL/cluster/tb/py/run_sram_regression.py --context-stress
 ```
 
-VCS 从 vcs-rtl 编译时可传 `PARAMETERS="-pvalue+tb_Cluster.MAX_CONTEXTS=64"`，然后以 `PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。容量负向专项使用 +CONTEXT_CAPACITY_TEST、+CAPACITY_PRECISION=1/3/4/5/6 和 +CAPACITY_SIGN=0/1；完整自动判定由上述 Python 入口执行。Psum 默认 16 保持不变。
-
+默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。追加 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
 ## 同包输入与发射重叠
 
 规则与公式见 [Cluster 输入重叠说明](Cluster_Input_Overlap.md)。`cluster_scoreboards.svh` 逐沿检查当前Plane及地址就绪条件；`run_case` 强制覆盖多slice采样/发射重叠、连续AS地址/发射重叠、有空拍时等待地址，以及首命令后一拍发射。`+INPUT_OVERLAP_TEST` 专项168例由 `--full` 自动执行，也可用 `--input-overlap` 单独追加运行。Python `buffer_schedule.py` 和 README 生成器共用更新后的无空拍公式。
+
+## 8-bit count 边界
+
+os_cnt/ws_cnt/as_cnt 均为8 bit，合法字段值为1～255，0非法；packed descriptor总宽107 bit。实际WS/AS仍受容量限制。`+OS_COUNT_LIMIT_TEST`覆盖12个OS255非零累加case：W2A4/A8、UINT/INT、单Context/WS2/AS2；使用固定极值权重以允许8-bit行地址回绕后重访相同内容。`+ZERO_COUNT=0/1/2`分别拒绝OS/WS/AS为0。`--full`自动包含这些检查，当前共50组suite、38个预期拒绝。

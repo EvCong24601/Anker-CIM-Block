@@ -87,8 +87,19 @@
     $display("PASS input_overlap cases=%0d registered_input_delay=1",cases_run);
   endtask
 
+  // OS255 上限：固定极值权重允许行号回绕后重访相同内容；
+  // 验证8-bit最大计数、Tile推进、AS旧调度及累加，避免只测零结果。
+  task automatic run_os_count_limit_suite();
+    for(int p=0;p<2;p++) for(int sign_mode=0;sign_mode<2;sign_mode++)
+      for(int mode=0;mode<3;mode++)
+        run_case(p,1'(sign_mode),7'h00,8'h03,32'hffffffff,24'h000008,
+                 2,255,mode==1 ? 2 : 1,mode==2 ? 2 : 1,0);
+    if(cases_run!=12) $fatal(1,"Missing OS255 scenario coverage");
+    $display("PASS os_count_limit cases=%0d os_max=255 descriptor_bits=%0d",cases_run,$bits(cluster_ctrl_t));
+  endtask
+
   // 大 Context 专项：Psum 保持 16 深度，仅标签/地址容量配置为 64。
-  // WS 与 AS 分开运行；A8/A16 的 OS1 AS64 由容量负向用例验证。
+  // WS 与 AS 分开运行；OS1 AS64 的全部精度在 tmp 内先完成融合。
   task automatic run_context_stress_suite();
     logic [23:0] slots;
     logic [7:0] en;
@@ -97,6 +108,8 @@
     int mode_count[0:3];
     if(MAX_CONTEXTS<64 || OUTPUT_BUFFER_DEPTH!=16)
       $fatal(1,"TB: context stress requires MAX_CONTEXTS>=64 and OUTPUT_BUFFER_DEPTH=16");
+    if(WGT_RADDR_BUFFER_DEPTH!=64 || $bits(dut.context_address)!=64*8)
+      $fatal(1,"TB: weight address buffer must contain exactly 64 eight-bit entries");
     for(int mode=0;mode<4;mode++) mode_count[mode]=0;
     for(int p=0;p<7;p++) begin
       case(wbits(p))
@@ -106,8 +119,6 @@
       endcase
       for(int sign_mode=0;sign_mode<2;sign_mode++)
         for(int mode=0;mode<4;mode++) begin
-          // AS retains one history per Context for multi-slice activations.
-          if(mode==1 && abits(p)>4) continue;
           tiles=mode<2 ? 1 : 2;
           ws=(mode==0) ? 64 : (mode==2) ? 8 : 1;
           as_count=(mode==1) ? 64 : (mode==3) ? 8 : 1;
@@ -119,11 +130,11 @@
             end
         end
     end
-    if(cases_run!=184 || mode_count[0]!=56 || mode_count[1]!=16 ||
+    if(cases_run!=224 || mode_count[0]!=56 || mode_count[1]!=56 ||
        mode_count[2]!=56 || mode_count[3]!=56)
       $fatal(1,"TB: missing large-Context scenario coverage");
-    $display("PASS context_stress cases=%0d OS1_WS64=%0d OS1_AS64_A4=%0d OS2_WS8=%0d OS2_AS8=%0d psum_depth=%0d max_contexts=%0d",
-      cases_run,mode_count[0],mode_count[1],mode_count[2],mode_count[3],OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS);
+    $display("PASS context_stress cases=%0d OS1_WS64=%0d OS1_AS64=%0d OS2_WS8=%0d OS2_AS8=%0d psum_depth=%0d max_contexts=%0d weight_address_depth=%0d weight_address_bits=%0d",
+      cases_run,mode_count[0],mode_count[1],mode_count[2],mode_count[3],OUTPUT_BUFFER_DEPTH,MAX_CONTEXTS,WGT_RADDR_BUFFER_DEPTH,$bits(dut.context_address));
   endtask
 
   // 默认回归：合法 split 穷举 + 六种标准时序 + 多 Context/多 Tile 极值。
