@@ -57,6 +57,6 @@ Psum 深度保持 16。OS1 WS64 合法；OS1 AS64 的 A4/A8/A16 均合法且不�
 - `RTL/cluster/tb/include/cluster_suites.svh`：`run_input_overlap_suite` 提供 168 例，覆盖七精度、UINT/INT、OS1/2、单 Context/WS2/AS2、有无 Command 空拍。有空拍的 AS case 特意将 Context1 地址延迟到整份 ACT 收完后，检查先发射 Context0，再暂停并恢复。
 - `RTL/cluster/tb/py/buffer_schedule.py`：独立 Python 周期公式，供输入/运算 trace、时延核对和 README 示例生成使用。
 
-从仓库根目录运行 `python RTL/cluster/tb/py/run_sram_regression.py --input-overlap`；`--full` 自动包含该专项、原回归及大 Context 容量验证。VCS 编译后可运行 `make sim PVALUE=+INPUT_OVERLAP_TEST`。
+仿真使用 [VCS case 入口](../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 所有 case 开始日志与 display/诊断使用英文。Markdown 及 README 生成器已采用上述新周期；此前 Word 文档中的“收齐后发射”及旧公式属于历史版本，不应用于当前 RTL。

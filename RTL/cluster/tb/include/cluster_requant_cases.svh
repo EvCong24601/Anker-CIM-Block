@@ -2,9 +2,10 @@
 // arithmetic is exact. Full INT32 parameter extremes use Python vector golden.
 function automatic logic signed [7:0] requant_expected(input longint signed psum,input int lane=0);
   longint signed value, magnitude, divisor, quotient, remainder;
-  int shift_amount;
-  value=psum*longint'($signed(expected_requant_cfg.requant_multiplier));
-  shift_amount=int'($signed(expected_requant_cfg.requant_shift));
+  int shift_amount,entry_id;
+  entry_id=expected_requant_cfg.requant_mode ? lane%4 : 0;
+  value=psum*longint'($signed(expected_requant_cfg.requant_multiplier[32*entry_id+:32]));
+  shift_amount=int'($signed(expected_requant_cfg.requant_shift[10*entry_id+:10]));
   if(shift_amount>=0) value*=64'sd1<<shift_amount;
   else begin
     divisor=64'sd1<<(-shift_amount);
@@ -13,7 +14,7 @@ function automatic logic signed [7:0] requant_expected(input longint signed psum
     if(remainder>=divisor/2) quotient++;
     value=value<0 ? -quotient : quotient;
   end
-  value+=longint'($signed(expected_requant_cfg.requant_zp[32*lane+:32]));
+  value+=longint'($signed(expected_requant_cfg.requant_zp[32*(lane%4)+:32]));
   if(value>127) return 8'sd127;
   if(value< -128) return -8'sd128;
   return 8'(value);
@@ -33,7 +34,19 @@ task automatic configure_requant(input int profile);
   endcase
   // Existing profiles use a common zp; GEMM independently exercises unequal
   // zero points across lanes while retaining one per-tensor multiplier/shift.
-  expected_requant_cfg.requant_zp={32{expected_requant_cfg.requant_zp[31:0]}};
+  expected_requant_cfg.requant_zp={4{expected_requant_cfg.requant_zp[31:0]}};
+  if($test$plusargs("REQUANT_CHANNEL_TEST")) begin
+    expected_requant_cfg.conv_mode=1;expected_requant_cfg.requant_mode=1;
+    expected_requant_cfg.requant_multiplier={32'sd0,32'sd7,-32'sd3,32'sd1};
+    expected_requant_cfg.requant_shift={10'sd0,-10'sd19,-10'sd15,-10'sd13};
+    for(int lane=0;lane<4;lane++)
+      case(lane%4)
+        0:expected_requant_cfg.requant_zp[32*lane+:32]=-32'sd11;
+        1:expected_requant_cfg.requant_zp[32*lane+:32]=32'sd23;
+        2:expected_requant_cfg.requant_zp[32*lane+:32]=-32'sd7;
+        3:expected_requant_cfg.requant_zp[32*lane+:32]=32'sd97;
+      endcase
+  end
   requant_cfg_i=expected_requant_cfg;
 endtask
 
@@ -46,10 +59,12 @@ task automatic run_requant_boundary_suite();
   for(int k=0;k<128;k++) weight_wdata_i[2*k+:2]=2'd1;
   @(negedge clock);weight_wen_i=0;
   cmd_i='0;cmd_i.os_cnt=1;cmd_i.ws_cnt=1;cmd_i.as_cnt=1;
-  cmd_i.macro_en_mask=1;cmd_i.macro_oc_mask=1;cmd_i.weight_cim_raddr=8'h20;
+  cmd_i.macro_en_mask=3;cmd_i.reduce_split_mask=7'h07;
+  cmd_i.act_slot_sel=24'h000008;
+  cmd_i.macro_oc_mask=1;cmd_i.weight_cim_raddr=8'h20;
   act_data_i='0;
   for(int k=0;k<128;k++) act_data_i[4*k+:4]=4'd1;
-  requant_cfg_i='{requant_mode:1'b0,requant_multiplier:32'sd1,requant_shift:-10'sd1,requant_zp:32'sd0};
+  requant_cfg_i='{requant_mode:1'b0,requant_multiplier:32'sd1,requant_shift:-10'sd1,requant_zp:32'sd0,default:'0};
   cmd_valid_i=1;
   @(posedge clock);if(!cmd_ready_o) $fatal(1,"Boundary first command not accepted");
   @(negedge clock);cmd_valid_i=0;
@@ -57,7 +72,7 @@ task automatic run_requant_boundary_suite();
   if(psum_data_o[31:0]!==32'd128 || requant_valid_o!==0)
     $fatal(1,"Boundary first raw or Requant delay mismatch");
   @(negedge clock);
-  requant_cfg_i='{requant_mode:1'b0,requant_multiplier:32'sd3,requant_shift:-10'sd2,requant_zp:32'sd0};
+  requant_cfg_i='{requant_mode:1'b0,requant_multiplier:32'sd3,requant_shift:-10'sd2,requant_zp:32'sd0,default:'0};
   cmd_valid_i=1;
   @(posedge clock);if(!cmd_ready_o) $fatal(1,"Boundary next batch not accepted at earliest edge");
   #1;
@@ -80,7 +95,30 @@ endtask
 // mode. Only the first accepted Command is allowed to load configuration.
 always @(negedge clock) if(!reset && monitoring && dut.batch_active)
   requant_cfg_i='{requant_mode:1'b1,requant_multiplier:32'sd7,
-                  requant_shift:10'sd1,requant_zp:32'sd99};
+                  requant_shift:10'sd1,requant_zp:32'sd99,default:'0};
+
+// All aligned groups, every OC mask (including holes), seven precisions,
+// signed/unsigned, OS1/2 and Single/WS/AS. No masked-channel compaction.
+task automatic run_requant_channel_suite();
+  logic [7:0] en;
+  logic [6:0] split;
+  logic [23:0] slots;
+  int count;
+  count=0;
+  for(int p=0;p<7;p++) for(int first=0;first<8;first+=wbits(p)) begin
+    en=8'(((1<<wbits(p))-1)<<first);
+    split=wbits(p)==8 ? 7'h00 : wbits(p)==4 ? 7'h01 : 7'h07;
+    slots='0;
+    for(int m=first;m<first+wbits(p);m++) slots[3*m+:3]=3'(m-first);
+    for(int mask=0;mask<16;mask++) for(int os=1;os<=2;os++) for(int mode=0;mode<3;mode++) begin
+      run_case(p,1'(mask%2),split,en,{8{4'(mask)}},slots,
+               0,os,mode==1 ? 2 : 1,mode==2 ? 2 : 1,1'(mask%2));
+      count++;
+    end
+  end
+  if(count!=1536 || requant_checks==0) $fatal(1,"Missing four-channel mapping coverage");
+  $display("PASS requant_channel cases=%0d masks=16 groups=7 precisions=7 checks=%0d latency=1",count,requant_checks);
+endtask
 
 // Sample raw before the edge; quantization is published AFTER that edge.
 // This checks exactly one cycle, not merely matching eventual values.
@@ -94,7 +132,7 @@ always @(posedge clock) begin : requant_protocol_scoreboard
     if(monitoring && previous_raw_valid[lane])
       wanted_data[8*lane+:8]=requant_expected(expected[dut.raw_context[lane]][lane],lane);
   #1;
-  if(!reset && requant_valid_o!==previous_raw_valid)
+  if(!reset && requant_valid_o!==(ENABLE_REQUANT ? previous_raw_valid : 32'b0))
     $fatal(1,"Requant valid must follow raw valid by exactly one cycle");
   if(reset && requant_valid_o!==0)
     $fatal(1,"Requant valid during reset");
@@ -128,7 +166,7 @@ task automatic run_requant_suite();
     endcase
     for(int sign_mode=0;sign_mode<2;sign_mode++)
       for(int os=1;os<=2;os++) for(int mode=0;mode<3;mode++) for(int gap=0;gap<2;gap++)
-        run_case(p,1'(sign_mode),7'h00,en,32'hdb6db6db,slots,
+        run_case(p,1'(sign_mode),wbits(p)==8 ? 7'h00 : wbits(p)==4 ? 7'h01 : 7'h07,en,32'hdb6db6db,slots,
                  0,os,mode==1 ? 2 : 1,mode==2 ? 2 : 1,1'(gap));
   end
   if(cases_run!=168 || requant_checks==0 || requant_config_hold_checks==0)
@@ -142,7 +180,7 @@ endtask
 task automatic run_requant_reset_suite();
   $display("[CASE_START] time=%0.3f ns suite=requant_reset description=cancel-pending-quant-output-on-reset",$realtime);
   fork: interrupted_case
-    run_case(1,1'b1,7'h00,8'h03,32'hffffffff,24'h000008,0,1,1,1,0);
+    run_case(1,1'b1,7'h07,8'h03,32'hffffffff,24'h000008,0,1,1,1,0);
     begin
       wait(|out_valid_o);
       @(negedge clock);

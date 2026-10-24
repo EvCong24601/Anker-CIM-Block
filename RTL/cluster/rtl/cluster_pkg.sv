@@ -2,12 +2,13 @@
 package cluster_pkg;
   // Independent batch configuration; not part of the compute descriptor.
   typedef struct packed {
-    logic requant_mode; // multiplier/shift: 0 per-tensor, 1 reserved per-channel
-    logic signed [31:0] requant_multiplier;
-    logic signed [9:0] requant_shift; // This implementation supports -31..31
+    logic conv_mode; // Convolution: one enabled 4-OC reduction group
+    logic requant_mode; // 0: shared entry 0; 1: entry c corresponds to OC c
+    logic [127:0] requant_multiplier; // INT32 entry c: [32*c+:32]
+    logic [39:0] requant_shift; // INT10 entry c: [10*c+:10], -31..31
     // Per-channel INT32 effective zero point supplied by the parameter
     // producer, including input-offset compensation. mode controls scale only.
-    logic [1023:0] requant_zp; // lane l: [32*l+:32], signed two's complement
+    logic [127:0] requant_zp; // OC c: [32*c+:32], never compact masked OCs
   } requant_cfg_t;
   // Cluster descriptor: three eight-bit counts, total packed width 107 bits.
   typedef struct packed {
@@ -53,6 +54,19 @@ package cluster_pkg;
     for (int i=1;i<8;i++)
       if (i<=m && first_leaf(s,i)!=first_leaf(s,i-1)) g++;
     return g;
+  endfunction
+  // Convolution enables exactly one aligned 8/4/2-Macro reduction group.
+  function automatic bit conv_group_legal(input cluster_ctrl_t cmd);
+    int count,first;
+    count=wbits(int'(cmd.precision)); first=-1;
+    if(count==0 || !canonical(cmd.reduce_split_mask)) return 0;
+    for(int m=0;m<8;m++) if(cmd.macro_en_mask[m] && first<0) first=m;
+    if(first<0 || first%count!=0 || cmd.macro_en_mask!=8'(((1<<count)-1)<<first)) return 0;
+    for(int m=0;m<8;m++) begin
+      if(cmd.macro_en_mask[m] && first_leaf(cmd.reduce_split_mask,m)!=first) return 0;
+      if(!cmd.macro_en_mask[m] && first_leaf(cmd.reduce_split_mask,m)==first) return 0;
+    end
+    return 1;
   endfunction
   // Effective leaf contribution after all merge masks up to its endpoint.
   // Local Macro issue remains controlled by its own OC mask.

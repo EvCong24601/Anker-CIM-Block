@@ -6,11 +6,15 @@ REPO = Path(__file__).resolve().parents[4]
 
 BODY = r"""# CIM Cluster 输入与计算说明
 
-本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立输出 raw signed32，经单级组合 per-tensor Requant 后，在下一拍锁存 INT8 输出及 valid。详见 [Requant 说明](docs/Cluster_Requant.md)。
+本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立输出 raw signed32；启用 Requant 时限制一个归约组、最多4OC，经四通道组合算术后下一拍锁存 INT8 及 valid，scale 支持 per-tensor/per-channel，合并后的 zp 始终 per-channel。详见 [Requant 说明](docs/Cluster_Requant.md)。
 
 ## 逐拍输入时序文档
 
 [当前 Block 规格](docs/CIM_Block_Spec.docx)：包含逐通道 zp、组合 Requant、INT8 输出寄存器和两组完整 GEMM case。
+
+[当前逐拍输入时序 v2.8](docs/CIM_Cluster_逐拍输入时序_v2.8.docx)：同步四通道Requant接口、AS参数加载与容量、量化输出晚1T及新增端到端GEMM；原raw周期表保留。
+
+[GEMM高位置组与边界验证](docs/Cluster_GEMM_Edges.md)：新增W4/W2高位置组、N尾部和舍入/饱和矩阵，七组端到端测试由 VCS 的七个 `gemm_edge_*` case 运行。
 
 [历史逐拍输入时序 Word 文档](docs/CIM_Cluster_逐拍输入时序_v2.7.docx)：同包重叠后的周期以本 README 和 [重叠说明](docs/Cluster_Input_Overlap.md) 为准。历史文档包含 Cluster 输入 pin、七种精度的 ACT slice、WS/AS/OS 配置、权重地址、逐拍操作和输入到输出时延。
 
@@ -27,8 +31,9 @@ RTL/
       tb_Cluster.sv             Cluster 仿真顶层
       tb_ClusterReduceTree.sv    归约树单元测试
       tb_ClusterRequant.sv       无时钟 Requant 算术单元测试
-      tb_Cluster_GEMM_OS1_WS32.sv         单Cluster两批N8的完整WS32 GEMM测试
+      tb_Cluster_GEMM_OS1_WS32.sv         单Cluster四批N4的完整WS32 GEMM测试
       tb_Cluster_GEMM_OS2_AS4.sv  单Cluster八Macro归约的K512/OS2/AS4测试
+      tb_Cluster_GEMM_Edges.sv   W4/W2高位置组、N尾部、舍入饱和矩阵测试
       latency_audit.sv          时延观察器
       include/                  驱动、参考模型、检查器、case 与 suite
       py/                       仿真入口、枚举生成与数据检查
@@ -46,7 +51,7 @@ make sim
 make check
 ```
 
-ModelSim专用入口py/run_regression.py仅保留在本地，不纳入Git；下文ModelSim命令记录本地验证方式。该入口从任意工作目录调用均可，脚本将 SV、Macro RTL 和 Python 检查器复制到仓库外的本地仿真目录，work、波形、CSV 和日志均在该副本内生成；副本不纳入 Git。默认位置为仓库同级 cluster_tb_work/local_sim/<日志名>，可用 --sim-dir 指定仓库外目录。仓库 data/log 保存经检查的结果。VCS 入口位于 vcs-rtl；测试参数及其他运行方法见 [Cluster TB README](RTL/cluster/tb/README.md)。
+仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 ## 术语与 Context
 
@@ -66,7 +71,7 @@ WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计
 
 ## 同包输入与发射重叠
 
-同包重叠规则、AS地址空拍、示例和168个专项case见 [输入重叠说明](docs/Cluster_Input_Overlap.md)。`python RTL/cluster/tb/py/run_sram_regression.py --input-overlap` 运行专项；`--full` 自动包含该专项。
+仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 ## OS1 AS 先融合与权重地址表
 
@@ -115,7 +120,7 @@ A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、
 
 常规读写与计算/preload 分阶段；当前参考模型采用上升沿掩码写和使能组合读，非读期间返回零。物理 IP 的读回时序仍待冻结。接口、寻址、模型时序和完整测试入口见 [常规权重 SRAM 规格](docs/Cluster_Weight_SRAM_Interface.md)。
 
-从仓库根目录运行 `python RTL/cluster/tb/py/run_sram_regression.py --full`，或在 vcs-rtl 运行 `make sram`。测试覆盖全地址、全部16种掩码、保持与隔离、复位、连续访问和真实计算刷新。所有 suite 在每个 case 开始打印 `[CASE_START] time=... ns suite=... description=...`，时间为仿真时间；原 Command 日志保留。
+仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 ## ACT buffer 容量与适用条件
 
@@ -128,7 +133,7 @@ A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、
 
 以上适用于1≤max(ws,as)≤MAX_CONTEXTS；当 仅 os>1 需要 Psum 时，还要求 max(ws,as)≤OUTPUT_BUFFER_DEPTH，ws/as不同时大于1，首Command遵守cmd_ready_o，接受后ACT尾部Plane固定连续到达。单bank在内部发射期间不能接收下一完整ACT；容量足够，但不支持输入下一包与当前包内部发射重叠。AS仅在轮到尚未收到地址的Context时暂停发射，保持phase/Context不变，等待不会增加容量。
 
-`--act-buffer` 额外运行280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、当前Plane/地址有效才发射、后续输入与当前发射重叠、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
+`CASE=act_buffer` 额外运行280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、当前Plane/地址有效才发射、后续输入与当前发射重叠、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
 
 ## Descriptor
 
@@ -193,7 +198,7 @@ OC mask 为 `32'hFFFF_FFFF`。物理终点由 split 决定，不因某些 Macro 
 
 mask 逐级生效：被子节点屏蔽的 OC 不向父节点贡献数据；父节点只合并有效子树，不能读取被门控寄存器的旧数据。节点输出还要求其子树中存在有效且使能的贡献。转发 DFF 的 ICG、终点 tap、输出 lane 预留和批次完成判断遵循同一有效性规则。若所有输出都被屏蔽，该批次在内部输入全部发射后完成，不发布 out_valid_o。
 
-`--gate-unit` 的 208 例独立递归参考测试覆盖 26 种树、不同 EN 和不一致的 OC mask；本地 `--oc-merge` 另运行 288 例，覆盖 pair/quad/root/混合终点、最左侧 Macro 关闭、全屏蔽批次以及 WS/AS/OS 连续复用。
+`CASE=reduce_tree` 的 208 例独立递归参考测试覆盖 26 种树、不同 EN 和不一致的 OC mask；本地 `CASE=oc_merge` 另运行 288 例，覆盖 pair/quad/root/混合终点、最左侧 Macro 关闭、全屏蔽批次以及 WS/AS/OS 连续复用。
 
 VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运行该专项测试，成功标志为 `PASS oc_merge_leftmost cases=288`。该专项使用独立预期结果检查输出数值和有效性，不沿用旧的组内 mask OR 规则。
 
@@ -222,7 +227,7 @@ OS1 AS 同 Context 的相邻 slice 连续发射；OS>1 AS 的相邻 slice 间隔
 
 ## 8-bit count 边界验证
 
-三个count均为8 bit，0非法、256不可编码；OS最多255个K Tile，仍需满足signed32数值范围。WS/AS的实际上限由容量决定。`--full`追加12个OS255非零累加case和3个零count拒绝case；专项可用`+OS_COUNT_LIMIT_TEST`或`+ZERO_COUNT=0/1/2`选择。当前完整回归为50组suite、38个预期拒绝。
+三个count均为8 bit，0非法、256不可编码；OS最多255个K Tile，仍需满足signed32数值范围。WS/AS的实际上限由容量决定。`make regression`追加12个OS255非零累加case和3个零count拒绝case；专项可用`+OS_COUNT_LIMIT_TEST`或`+ZERO_COUNT=0/1/2`选择。当前完整回归为50组suite、38个预期拒绝。
 
 ## 大 Context 与 Psum 容量专项
 
@@ -234,10 +239,7 @@ OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice �
 
 正向共 224 例：OS1 WS64、OS1 AS64、OS2 WS8、OS2 AS8 各 56 例，覆盖七精度、UINT/INT、随机/交替极值及有无 Command 空拍。OS1 AS64 检查所有 64 个 Context 的结果，且 Psum 整批保持关闭。另有 14 个 OS2 AS64 容量负向例（七精度×两种符号），以及地址深度 32、标签容量 32 时请求 AS64 的各两例，要求命中各自准确诊断。
 
-```text
-python RTL/cluster/tb/py/run_sram_regression.py --full
-python RTL/cluster/tb/py/run_sram_regression.py --context-stress
-```
+VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](vcs-rtl/README.md)。
 
 默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。追加 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
 
@@ -287,7 +289,7 @@ WS/单 Context、OS1 AS 顺序为 Tile→Context→phase；OS>1 AS 为 Tile→ph
 | INT8 输出保持 | requant_data_o | 32 OC×8 | 256 |
 | 合计 | 不含控制/标签/计数器 | 6864+1024×DEPTH | DEPTH=16时23248 |
 
-raw_data保留32-bit/OC，逐OC发布并保持到下次发布。requant_data_o为8-bit/OC，共256bit输出寄存器，valid比raw晚1T；raw直接进入组合Requant。1067-bit batch配置包含公共multiplier/shift和32×INT32逐通道zp，输入补偿已由参数生成端合入zp。AS4额外保存4组×4lane的zp，共512bit。
+raw_data保留32-bit/OC，逐OC发布并保持到下次发布。requant_data_o为8-bit/OC，共256bit输出寄存器，valid比raw晚1T；raw直接进入组合Requant。298-bit配置包含conv_mode、requant_mode、四组INT32 multiplier/INT10 shift及四项INT32 zp。合并输入补偿后的zp仍为per-channel，与OC0～3固定对应。启用Requant只允许一个归约组、最多4OC；per-tensor取第0项scale，per-channel各取对应项。AS4保存512bit zp和672bit scale。
 
 归约树 root 没有独立转发 DFF；fusion 与 acc 是组合块，二者之间使用唯一 tmp，没有额外 tmp 历史数组或 acc 中间 buffer。raw_data 是现有输出保持寄存器，与 tmp/Psum 分开计数。
 
@@ -359,7 +361,7 @@ case 按三个维度展开：
 - 展开：7 种精度×2 种符号×6 种 `(os,ws,as)`，依次为 `(1,1,1)`、`(1,1,2)`、`(1,2,1)`、`(2,1,1)`、`(2,2,1)`、`(2,1,2)`，对应附录 A1..A6；每 Tile K=128，ACT 高 512 bit 补零。
 - 数据：固定随机 pattern 0。
 - 发射：不注入额外 Command 空拍；核对完整 ACT 接收、AS 地址收集、内部发射的实际周期与上文包时序公式。无空拍时包内连续发射，且与同包后续输入重叠；包间仍保留新包首输入的一拍发射间隔。
-- 副产物：本 suite 的每个运算写回拍选一个有效 channel 写入 [buffer_operations.csv](RTL/cluster/tb/data/buffer_operations.csv)，默认回归共 480 条（对应 84 个 case 的运算事件），记录操作类型、tmp、fusion/acc 操作数、结果与完成标志；`--latency-audit` 时由独立观察器把 140 个无停顿 Context 输出周期写入 [latency_audit.csv](RTL/cluster/tb/data/latency_audit.csv)（每精度×符号下六配置共 10 个 Context，7×2×10=140）。
+- 副产物：本 suite 的每个运算写回拍选一个有效 channel 写入 [buffer_operations.csv](RTL/cluster/tb/data/buffer_operations.csv)，默认回归共 480 条（对应 84 个 case 的运算事件），记录操作类型、tmp、fusion/acc 操作数、结果与完成标志；`时延观察器` 时由独立观察器把 140 个无停顿 Context 输出周期写入 [latency_audit.csv](RTL/cluster/tb/data/latency_audit.csv)（每精度×符号下六配置共 10 个 Context，7×2×10=140）。
 
 #### suite 3：Command 空拍与多 Context 交错（28 case）
 
@@ -405,48 +407,28 @@ UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw sig
 | 时钟门控与保持 | 独立预测 唯一 tmp 输入/Psum 的 ICG 使能并比对实际门控时钟；被门控 DFF 数据保持不变；os>1 批次的高地址 Context entry 整批关闭 |
 | 发布与批次边界 | 每个 OC 写回即发布一拍，lane 数据保持到该 OC 下次发布，同 OC 按 Context 顺序；权重复用覆盖计数非零；结束时检查全部 lane 已发布、批次关闭、无多余输出，tmp/fusion/acc 各路由与门控路径覆盖齐全 |
 
-### 本地验证参数与结果
+### 验证入口与结果
 
-以下使用本地保留、不纳入Git的ModelSim入口，记录默认回归、门控单测及独立时延核对的调用：
-
-```text
-python RTL/cluster/tb/py/run_regression.py --gate-unit --mixed-context --full-act --act-buffer --latency-audit --log regression_act_capacity_default.log
-```
-
-| 参数 | 默认 | 作用范围 |
-|---|---|---|
-| `--en` / `--oc` | ff / ffffffff | 只改 suite 1 的 EN/OC mask。改 EN 会重新筛选合法 split（K 筛选按 EN 计算，不因关闭 OC 放宽）；suite 2..4 仍用标准 K128 映射与 OC 全开 |
-| `--os` | 1 | 只改 suite 1 的 Tile 数（OS_TILES，1..14）；suite 2..4 的 os 固定为 1/2/3 |
-| `--patterns` | 6 | 只改 suite 1 使用前 N 种 pattern；suite 2/3 固定 pattern 0，suite 4 固定 pattern 4/5，均不受影响 |
-| `--depth` | 16 | OUTPUT_BUFFER_DEPTH，全局每 OC Context 状态深度，限 2..16；suite 3/4 的 r 按其截断，不足 3 时 suite 4 按可用深度运行 |
-| `--seed` | 19e2a407 | 全局 pattern 0 种子 |
-
-已有附加回归：
-
-```text
-python RTL/cluster/tb/py/run_regression.py --en a5 --oc 84218421 --depth 3 --full-act --mixed-context --latency-audit --log regression_act_frame_sparse_depth3.log
-```
-
-该回归检查稀疏 Macro/OC 与非二次幂的 Context 深度；实际配置数和 case 数见日志。计数记录在 [默认日志](RTL/cluster/tb/log/regression_act_capacity_default.log) 和 [稀疏配置日志](RTL/cluster/tb/log/regression_act_frame_sparse_depth3.log)。
+VCS 使用 `make run CASE=cluster_default`；附加场景与参数见 [VCS case 说明](vcs-rtl/README.md)。
 
 - [split_cases.csv](RTL/cluster/tb/data/split_cases.csv)：suite 1 每个配置一行（precision、符号、split、EN、OC、slot、各组 K），默认 200 行；不逐行记录 pattern 与其他三类 suite。
 - [external_inputs.csv](RTL/cluster/tb/data/external_inputs.csv)：396条标准外部输入事件，分别记录Command接受、地址、ACT采样及1024-bit数据；act_sample仅为日志标记，并非外部pin。
 - [buffer_operations.csv](RTL/cluster/tb/data/buffer_operations.csv)：suite 2 的逐拍运算记录，默认回归 480 条，compute_cycle 字段为相对首个输入的运算写回拍号、精度、Tile/Context/phase、操作类型、tmp、fusion/acc 操作数、结果与完成标志。
 - [latency_audit.csv](RTL/cluster/tb/data/latency_audit.csv)：独立观察器记录的 140 个标准 Context 输出周期；[核对报告](RTL/cluster/tb/log/latency_audit_validation.log) 按六种配置公式逐条核对输入到输出周期。
 
-`--gate-unit` 另外运行 [tb_ClusterReduceTree.sv](RTL/cluster/tb/tb_ClusterReduceTree.sv)，不计入上述 1368 个 Cluster case。8 种 EN（FF、0F、F0、55、AA、81、01、00）×26 种规范 split=208 个 case，OC 按 case 序号轮换 FFFFFFFF、84218421、12345678；检查三级终点的数据与有效 mask、t1..t6 转发 DFF 的门控与保持、下游加法器被门控时的数据保持。这是独立归约树单测，不应用 Cluster 的 K<256 精度限制。
+`CASE=reduce_tree` 另外运行 [tb_ClusterReduceTree.sv](RTL/cluster/tb/tb_ClusterReduceTree.sv)，不计入上述 1368 个 Cluster case。8 种 EN（FF、0F、F0、55、AA、81、01、00）×26 种规范 split=208 个 case，OC 按 case 序号轮换 FFFFFFFF、84218421、12345678；检查三级终点的数据与有效 mask、t1..t6 转发 DFF 的门控与保持、下游加法器被门控时的数据保持。这是独立归约树单测，不应用 Cluster 的 K<256 精度限制。
 
 ### 完整 ACT 与混合 Context
 
-`--full-act` 额外运行12个 W8A16 定向case：两种符号×os=1/2×单Context/WS2/AS2。EN=FF、split=00、slots=[0,1,2,3,4,5,6,7]，使用完整256个ACT digit、四个1024-bit Plane和八个Macro root归约（K=256），检查全部4096-bit ACT存储及分发。此定向suite独立于默认K<256穷举。
+`CASE=full_act` 额外运行12个 W8A16 定向case：两种符号×os=1/2×单Context/WS2/AS2。EN=FF、split=00、slots=[0,1,2,3,4,5,6,7]，使用完整256个ACT digit、四个1024-bit Plane和八个Macro root归约（K=256），检查全部4096-bit ACT存储及分发。此定向suite独立于默认K<256穷举。
 
-### 混合 Context 与本地仿真副本
+### 混合 Context
 
-`--mixed-context` 在默认 suite 前额外运行24个定向 case：W4A4/A8/A16×两种符号×os=1/2×WS/AS双 Context。split=03、EN=55、slots=24'h040000、OC全开，同一树中同时存在 pair 与 quad 终点，检查不同 Context 的 channel 同拍发布。内部 raw_context 按 lane 保存，仅用于验证；没有新增对外 Context pin。默认1368个 case 的编号和计数保持独立。
+`CASE=mixed_context` 在默认 suite 前额外运行24个定向 case：W4A4/A8/A16×两种符号×os=1/2×WS/AS双 Context。split=03、EN=55、slots=24'h040000、OC全开，同一树中同时存在 pair 与 quad 终点，检查不同 Context 的 channel 同拍发布。内部 raw_context 按 lane 保存，仅用于验证；没有新增对外 Context pin。默认1368个 case 的编号和计数保持独立。
 
-本地 ModelSim 使用仓库外的源码副本，默认在仓库同级 `cluster_tb_work/local_sim/<日志名>/` 下生成 sv_code、py、work、data、log 和 source_manifest.json。源文件指纹记录本次实际仿真的输入。`--sim-dir PATH` 可指定仓库外的独立目录；该副本及仿真工作文件不提交 Git。
+仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
-SV 中的 FSDB 调用由 `CLUSTER_FSDB` 编译宏控制；VCS Makefile 开启该宏，ModelSim 入口不启用。`OUTPUT_BUFFER_DEPTH` 控制 Context 状态深度，与输出 ready/valid 反压无关；输出无需 ready，out_valid_o[l] 每个有效周期发布一个新结果。深度1支持单 Context；完整回归需要至少2。`--psum-depth` 是 `--depth` 的命令行别名，不是第二个硬件深度参数。
+FSDB 由 `CLUSTER_FSDB` 编译宏控制，VCS Makefile 默认开启。`OUTPUT_BUFFER_DEPTH` 控制每 OC 的 Psum Context 深度；输出采用 valid-only 接口，不支持下游反压。
 
 """
 

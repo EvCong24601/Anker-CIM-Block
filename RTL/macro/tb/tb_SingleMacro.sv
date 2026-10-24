@@ -62,5 +62,16 @@ module tb_SingleMacro;
     `include "include/macro_scoreboard.svh"
     `include "include/macro_negative_cases.svh"
     `include "include/macro_regression.svh"
+
+  // VCS supplies a case-specific path; direct runs retain a descriptive default.
+`ifdef CLUSTER_FSDB
+  initial begin : case_fsdb_dump
+    string fsdb_file;
+    if(!$value$plusargs("FSDB_FILE=%s",fsdb_file)) fsdb_file="tb_SingleMacro_default.fsdb";
+    $display("[WAVE] file=%s",fsdb_file);
+    $fsdbDumpfile(fsdb_file);
+    $fsdbDumpvars(0, tb_SingleMacro, "+all");
+  end
+`endif
 endmodule
 `default_nettype wire

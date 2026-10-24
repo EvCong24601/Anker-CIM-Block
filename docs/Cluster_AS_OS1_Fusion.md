@@ -47,4 +47,4 @@ OS1 AS64 的七种精度全部合法；OS2 AS8 合法，OS2 AS64 因需要 64 �
 
 ## 验证入口
 
-`python RTL/cluster/tb/py/run_sram_regression.py --full` 包含原有回归、168 个同包重叠 case、224 个大 Context 正向 case，以及 Psum/地址表/标签容量边界检查。正向大 Context 中 OS1 AS64 共 56 例，覆盖七精度、UINT/INT、随机/交替极值和有无地址空拍；检查全部 64 个结果及 Psum 保持。OS>1 AS 的发射顺序、tmp 原始 slice、Psum 融合/累加历史仍由原有检查器验证。
+仿真使用 [VCS case 入口](../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。

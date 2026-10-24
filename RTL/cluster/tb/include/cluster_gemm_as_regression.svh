@@ -1,6 +1,7 @@
 initial begin:as_gemm_regression
   int fd;
   load_as_gemm_vectors();
+  $display("[CASE_START] time=%0.3f ns suite=gemm_as_weight_quantization description=per-output-channel-or-tensor-W8-scale per_channel=%0d",$realtime,$test$plusargs("PER_CHANNEL_SCALE"));
   $display("[CASE_START] time=%0.3f ns suite=gemm_os2_as4 description=single-Cluster-eight-Macro-reduction-asymmetric-A16-symmetric-W8 M=32 K=512 N=16 os=2 as=4 ws=1 multiplier=%0d shift=%0d act_zp=%0d output_zp=%0d",$realtime,multiplier,shift,act_zp,output_zp);
   trace_fd=$fopen({data_dir,"/gemm_observed_events.csv"},"w");
   if(!trace_fd) $fatal(1,"AS GEMM: cannot open event trace");

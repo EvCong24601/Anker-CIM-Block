@@ -1,9 +1,9 @@
 `timescale 1ns/1ps
-// One physical Cluster computes two sequential N8 tiles for X[32,128]*W[128,16].
-// Each tile uses two K128/N4 reduction groups and WS32. X is replayed twice.
+// One physical Cluster computes four sequential N4 tiles for X[32,128]*W[128,16].
+// Eight Macros reduce K256 with a zero-padded K tail; X is replayed four times.
 module tb_Cluster_GEMM_OS1_WS32;
   import cluster_pkg::*;
-  localparam int M=32,K=128,N=16,CLUSTERS=1,N_TILES=2;
+  localparam int M=32,K=128,N=16,CLUSTERS=1,N_TILES=4;
   localparam logic [7:0] WEIGHT_ADDR=8'h40;
   logic clock=0,reset=1;
   always #5 clock=~clock;
@@ -51,18 +51,31 @@ module tb_Cluster_GEMM_OS1_WS32;
   logic [15:0] x_q[0:M*K-1];
   logic [7:0] w_q[0:K*N-1],quant_golden[0:M*N-1];
   logic [31:0] raw_golden[0:M*N-1],centered_golden[0:M*N-1],zp[0:N-1];
-  logic [1023:0] weight_rows[0:15],act_planes[0:M*4-1];
+  logic [31:0] channel_multiplier[0:N-1];
+  logic [9:0] channel_shift[0:N-1];
+  logic [1023:0] weight_rows[0:31],act_planes[0:M*4-1];
   logic [31:0] observed_raw[0:M*N-1];
   logic [7:0] observed_quant[0:M*N-1];
   int multiplier,shift,output_zp,act_zp;
   string data_dir;
   int cycle=0,active_tile=0,raw_checks=0,quant_checks=0;
   int first_accept[N_TILES],accepted[N_TILES],issues[N_TILES],refreshes[N_TILES][8];
-  int raw_rows[N_TILES][8],quant_rows[N_TILES][8];
+  int raw_rows[N_TILES][4],quant_rows[N_TILES][4];
   bit monitoring=0;
   int trace_fd;
 
   `include "include/cluster_gemm_driver.svh"
   `include "include/cluster_gemm_scoreboard.svh"
   `include "include/cluster_gemm_regression.svh"
+
+  // VCS supplies a case-specific path; direct runs retain a descriptive default.
+`ifdef CLUSTER_FSDB
+  initial begin : case_fsdb_dump
+    string fsdb_file;
+    if(!$value$plusargs("FSDB_FILE=%s",fsdb_file)) fsdb_file="tb_Cluster_GEMM_OS1_WS32_default.fsdb";
+    $display("[WAVE] file=%s",fsdb_file);
+    $fsdbDumpfile(fsdb_file);
+    $fsdbDumpvars(0, tb_Cluster_GEMM_OS1_WS32, "+all");
+  end
+`endif
 endmodule

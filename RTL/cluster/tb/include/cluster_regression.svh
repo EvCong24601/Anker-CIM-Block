@@ -6,17 +6,24 @@
     string data_dir;
     int capacity_precision,capacity_sign,zero_count;
     string requant_negative;
-    if($bits(requant_cfg_t)!=1067) $fatal(1,"TB: Requant config must be 1067 bits");
+    if($bits(requant_cfg_t)!=298) $fatal(1,"TB: Requant config must be 298 bits");
     if($value$plusargs("REQUANT_NEGATIVE=%s",requant_negative)) begin
       repeat(4) @(negedge clock);reset=0;
       repeat(2) @(negedge clock);
       $display("[CASE_START] time=%0.3f ns suite=requant_negative description=reject-invalid-config-%s",$realtime,requant_negative);
       cmd_i='0;cmd_i.os_cnt=1;cmd_i.ws_cnt=1;cmd_i.as_cnt=1;
+      cmd_i.precision=6;cmd_i.macro_en_mask=8'hff;
       case(requant_negative)
         "mode":requant_cfg_i.requant_mode=1;
         "shift_low":requant_cfg_i.requant_shift=-32;
         "shift_high":requant_cfg_i.requant_shift=32;
         "unknown":requant_cfg_i.requant_multiplier='x;
+        "channel_shift":begin requant_cfg_i.conv_mode=1;requant_cfg_i.requant_mode=1;
+          requant_cfg_i.requant_shift[30+:10]=32;cmd_i.precision=6;cmd_i.macro_en_mask=8'hff;end
+        "conv_group":begin requant_cfg_i.conv_mode=1;cmd_i.precision=4;
+          cmd_i.macro_en_mask=8'hff;cmd_i.reduce_split_mask=1;end
+        "zp_group":begin cmd_i.precision=6;cmd_i.macro_en_mask=8'hff;
+          cmd_i.reduce_split_mask=1;end
         default:$fatal(1,"TB: unknown Requant negative scenario");
       endcase
       cmd_valid_i=1;
@@ -91,6 +98,7 @@
     if($test$plusargs("REQUANT_BOUNDARY_TEST")) begin run_requant_boundary_suite(); $finish; end
     if($test$plusargs("REQUANT_RESET_TEST")) begin run_requant_reset_suite(); $finish; end
     if($test$plusargs("REQUANT_TEST")) begin run_requant_suite(); $finish; end
+    if($test$plusargs("REQUANT_CHANNEL_TEST")) begin run_requant_channel_suite(); $finish; end
     if($test$plusargs("INPUT_OVERLAP_TEST")) begin run_input_overlap_suite(); $finish; end
     if($test$plusargs("OS_COUNT_LIMIT_TEST")) begin run_os_count_limit_suite(); $finish; end
     if($test$plusargs("CONTEXT_STRESS_TEST")) begin run_context_stress_suite(); $finish; end
@@ -128,12 +136,3 @@
     $finish;
   end
   initial begin #200000000; $fatal(1,"Global watchdog"); end
-  // FSDB waveform dump for Verdi (tasks registered via -P novas.tab in Makefile)
-`ifdef CLUSTER_FSDB
-  initial begin : fsdb_dump
-    $display("The simulation started.");
-    $fsdbDumpfile("tb_Cluster_2026.fsdb");
-    $fsdbDumpvars(0, tb_Cluster, "+all");
-    $fsdbDumpon;
-  end
-`endif

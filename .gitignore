@@ -1,2 +1,6 @@
 # Local ModelSim driver; shared SV/TB and Python data checkers are tracked.
 /RTL/cluster/tb/py/run_regression.py
+
+/vcs-rtl/work/
+
+**/__pycache__/

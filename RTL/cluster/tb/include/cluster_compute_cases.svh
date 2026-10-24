@@ -10,6 +10,7 @@
     endcase
   endfunction
   function automatic string cluster_suite();
+    if($test$plusargs("REQUANT_CHANNEL_TEST")) return "four-channel-fixed-OC-scale-mapping";
     if($test$plusargs("REQUANT_TEST")) return "per-tensor-combinational-requant";
     if($test$plusargs("INPUT_OVERLAP_TEST")) return "same-packet-input-issue-overlap";
     if($test$plusargs("CONTEXT_STRESS_TEST")) return "OS1-WS64-AS64/OS2-WS8-AS8";
@@ -133,7 +134,7 @@
     repeat(6) @(negedge clock);
     if(dut.raw_valid!=0 || dut.batch_active || requant_valid_o!=0)
       $fatal(1,"Unexpected output after the final Context published");
-    if(requant_checks-requant_checks_before!=raw_count)
+    if(requant_checks-requant_checks_before!=(ENABLE_REQUANT ? raw_count : 0))
       $fatal(1,"Missing/duplicate Requant result after drain");
     monitoring=0; cases_run++;
   endtask

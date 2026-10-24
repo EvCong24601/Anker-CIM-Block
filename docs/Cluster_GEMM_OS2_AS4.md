@@ -63,9 +63,9 @@ Context2: -72, -85, -74, -92
 Context3: -65, -64, -55, -36
 ```
 
-配置`REQUANT_CONTEXT_DEPTH=4`、`REQUANT_CONTEXT_LANES=4`。首K Tile各Context Command提供4个zp，第二K Tile重复提供并校验一致。参数表仅保存16×INT32 zp，共512bit；每拍按最终raw的Context选4项。multiplier/shift只在batch首命令锁存，默认depth=1继续使用batch级逐lane配置。
+配置`REQUANT_CONTEXT_DEPTH=4`。首K Tile各Context Command提供4个zp，第二K Tile重复提供并校验一致。参数表保存16×INT32 zp共512bit，以及四Context×四组scale共672bit；每拍按最终raw的Context选四项。per-tensor使用batch第0项scale，per-channel使用当前Context四组scale，均按OC固定索引。默认depth=1使用batch四通道配置。
 
-`requant_cfg_t`为1067bit：mode1+multiplier32+shift10+32×32 zp。107-bit compute descriptor不变，本例只使用低4个lane，其余清零。raw输出保持编码点积，直接经组合Requant在下一沿锁存INT8。
+`requant_cfg_t`为298bit：conv_mode1+requant_mode1+4×INT32 multiplier+4×INT10 shift+4×INT32 zp。107-bit compute descriptor不变，所有量化计算最多4OC、一个对齐归约组。raw输出保持编码点积，直接经组合Requant在下一沿锁存INT8。
 
 ## 文件与测试
 
@@ -75,10 +75,18 @@ Context3: -65, -64, -55, -36
 
 独立运行：
 
-```text
-python RTL/cluster/tb/py/run_sram_regression.py --gemm-as-only
-```
+VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../vcs-rtl/README.md)。
 
-该入口检查正向矩阵及2类精确负向诊断：Context参数表容量不足、跨K Tile改变zp。`--full`覆盖这组和原WS32等全部suite。VCS选择`TB=gemm_as`，用`make gemm-as-vectors`生成数据，仿真传入`+GEMM_DATA_DIR=绝对路径`；本机实测使用ModelSim。
+仿真使用 [VCS case 入口](../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 硬件必须与本接口的Python整数golden完全一致。Python另存实数与中心化数学参考，记录参数折算和舍入差异，不将其当作RTL比较容差。组合路径未进行综合/STA签核。
+
+## Per-channel weight版本
+
+同一tb_Cluster_GEMM_OS2_AS4.sv通过+PER_CHANNEL_SCALE运行新增版本，矩阵尺寸、地址0x60～0x67、OS2/AS4和ACT时序不变。Python的--per-channel按每个输出列n的最大绝对值独立计算W_scale[n]，使用signed W8对称量化；ACT仍为per-tensor A16非对称，输出scale共用。由ACT_scale×W_scale[n]/output_scale得到各列multiplier/shift，输入补偿合入各列zp。
+
+每个Context命令提供该4列的multiplier、shift和zp，参数c固定对应OC c；首K Tile加载，第二Tile必须保持一致。REQUANT_CONTEXT_DEPTH=4，16组scale共672bit，加16个zp共512bit，总1184bit。每拍只使用当前Context的4组，raw和量化输出周期不变。
+
+per-channel版本重新生成编码W、raw和INT8 golden，独立检查512个raw、512个INT8和4096次Psum更新。data/gemm_os2_as4_per_channel/保存该数据。AS4的五个VCS case运行两个weight版本及三类负向诊断，共5个suite。权重per-channel并不改变合并zp的逐通道属性；两种weight版本的zp均为per-channel。
+
+VCS执行 `make run CASE=gemm_as4_tensor` 或 `make run CASE=gemm_as4_channel`，自动生成相应数据并设置参数。三类负向使用 `as_context_capacity`、`as_context_zp_reload`、`as_context_scale_reload`。Python的--per-channel开关也可独立生成。

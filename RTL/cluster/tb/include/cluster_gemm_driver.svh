@@ -16,6 +16,10 @@ task automatic load_gemm_vectors();
   $readmemh({data_dir,"/centered_golden.hex"},centered_golden);
   $readmemh({data_dir,"/quant_golden.hex"},quant_golden);
   $readmemh({data_dir,"/requant_zp.hex"},zp);
+  if($test$plusargs("PER_CHANNEL_SCALE")) begin
+    $readmemh({data_dir,"/requant_multiplier.hex"},channel_multiplier);
+    $readmemh({data_dir,"/requant_shift.hex"},channel_shift);
+  end
   $readmemh({data_dir,"/weight_rows.hex"},weight_rows);
   $readmemh({data_dir,"/act_planes.hex"},act_planes);
   // Independent unpacked matrix dot products catch a common packing error in
@@ -33,9 +37,9 @@ task automatic load_gemm_vectors();
   requant_cfg_i[0]='0;
   for(int tile=0;tile<N_TILES;tile++) begin
     for(int macro=0;macro<8;macro++) begin
-      k0=32*(macro%4);n0=8*tile+4*(macro/4);
+      k0=32*macro;n0=4*tile;
       for(int oc=0;oc<4;oc++) for(int j=0;j<32;j++)
-        if(weight_rows[8*tile+macro][256*oc+8*j+:8]!==w_q[(k0+j)*N+n0+oc])
+        if(weight_rows[8*tile+macro][256*oc+8*j+:8]!==((k0+j<K) ? w_q[(k0+j)*N+n0+oc] : 8'b0))
           $fatal(1,"GEMM: weight packing mismatch tile=%0d macro=%0d oc=%0d k=%0d",tile,macro,oc,j);
     end
   end
@@ -48,7 +52,7 @@ task automatic load_gemm_vectors();
   end
 endtask
 
-// Preload both N tiles into rows 0x40/0x41 of the SAME eight Macros.
+// Preload four N4 tiles into rows 0x40..0x43 of the SAME eight Macros.
 // Selecting a new row at the next batch changes N without reloading SRAM.
 task automatic load_gemm_weights();
   for(int tile=0;tile<N_TILES;tile++) for(int macro=0;macro<8;macro++) begin
@@ -57,7 +61,7 @@ task automatic load_gemm_weights();
     cim_cs_en=1;cim_wr_en=1;cim_macro_group=1'(macro/4);cim_bank_sel=2'(macro%4);
     cim_wrdata[0]=weight_rows[8*tile+macro];
     $display("[WEIGHT_WRITE] time=%0.3f ns description=load-single-cluster-N-tile tile=%0d macro=%0d address=0x%02h k=%0d..%0d",
-      $realtime,tile,macro,cim_row_addr,32*(macro%4),32*(macro%4)+31);
+      $realtime,tile,macro,cim_row_addr,32*macro,32*macro+31);
   end
   @(negedge clock);cim_wr_en=0;
   for(int tile=0;tile<N_TILES;tile++) for(int macro=0;macro<8;macro++) begin
@@ -75,17 +79,24 @@ task automatic send_gemm_rows(input int tile);
   requant_cfg_i[0]='0;
   requant_cfg_i[0].requant_multiplier=32'(multiplier);
   requant_cfg_i[0].requant_shift=10'(shift);
-  for(int lane=0;lane<8;lane++) begin
-    requant_cfg_i[0].requant_zp[32*lane+:32]=zp[8*tile+lane];
+  if($test$plusargs("PER_CHANNEL_SCALE")) begin
+    requant_cfg_i[0].conv_mode=1;requant_cfg_i[0].requant_mode=1;
+    for(int oc=0;oc<4;oc++) begin
+      requant_cfg_i[0].requant_multiplier[32*oc+:32]=channel_multiplier[4*tile+oc];
+      requant_cfg_i[0].requant_shift[10*oc+:10]=channel_shift[4*tile+oc];
+    end
+  end
+  for(int lane=0;lane<4;lane++) begin
+    requant_cfg_i[0].requant_zp[32*lane+:32]=zp[4*tile+lane];
   end
   cmd_i='0;
   cmd_i.os_cnt=1;cmd_i.ws_cnt=32;cmd_i.as_cnt=1;
   cmd_i.precision=6;cmd_i.signed_en=1;
-  cmd_i.reduce_split_mask=7'h01;cmd_i.macro_en_mask=8'hff;cmd_i.macro_oc_mask=32'hffffffff;
-  cmd_i.weight_cim_raddr=WEIGHT_ADDR+8'(tile);cmd_i.act_slot_sel=24'h688688;
+  cmd_i.reduce_split_mask=7'h00;cmd_i.macro_en_mask=8'hff;cmd_i.macro_oc_mask=32'hffffffff;
+  cmd_i.weight_cim_raddr=WEIGHT_ADDR+8'(tile);cmd_i.act_slot_sel=24'hfac688;
   for(int m=0;m<M;m++) begin
     @(negedge clock);cmd_valid_i=1;act_data_i=act_planes[4*m];
-    $display("[CMD_SEND] time=%0.3f ns description=WS-GEMM-row tile=%0d row=%0d address=0x%02h os=1 ws=32 as=1 split=0x01 slots=0x688688",
+    $display("[CMD_SEND] time=%0.3f ns description=WS-GEMM-row tile=%0d row=%0d address=0x%02h os=1 ws=32 as=1 split=0x00 slots=0xfac688",
       $realtime,tile,m,cmd_i.weight_cim_raddr);
     @(posedge clock);
     if(cmd_ready_o!==1'b1) $fatal(1,"GEMM: Command was not accepted by the single Cluster");

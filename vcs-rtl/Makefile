@@ -1,127 +1,98 @@
-# Anker-CIM-Block VCS RTL 仿真流程（独立于 ModelSim/Verilator 流程）
-# 用法（在本目录下执行）：
-#   make com               # 编译（默认 TB=cluster，顶层 tb_Cluster）
-#   make sim               # 运行仿真，日志 work/${OUTPUT}.log，波形 work/${OUTPUT}.fsdb
-#   make check             # 扫描日志 PASS/Fatal，并核对 split_cases.csv（仅 cluster）
-#   make vcd               # 用 UCLI 重跑仿真并 dump 波形 work/${OUTPUT}.vcd
-#   make debug             # 用 Verdi 打开 kdb 调试数据库
-#   make clean
-#   make com sim TB=macro  # 切换 macro 级（顶层 tb_SingleMacro）
-#   make requant-vectors
-#   make com sim TB=requant PVALUE=+REQUANT_VECTORS=/absolute/path/work/requant_vectors.txt
-#   make sim PVALUE=-pvalue+tb_Cluster.OS_TILES=2   # 运行期覆盖 TB 参数
-.PHONY: com sim debug wave clean vcd check sram requant-vectors gemm-vectors gemm-as-vectors
-
-# ---------------- 目标选择 ----------------
-TB       ?= cluster
-ifeq ($(TB),macro)
-TOP        = tb_SingleMacro
-V_FILE     = ./verilog_file_macro.f
-else ifeq ($(TB),requant)
-TOP        = tb_ClusterRequant
-V_FILE     = ./verilog_file_pl.f
-else ifeq ($(TB),gemm)
-TOP        = tb_Cluster_GEMM_OS1_WS32
-V_FILE     = ./verilog_file_pl.f
-else ifeq ($(TB),gemm_as)
-TOP        = tb_Cluster_GEMM_OS2_AS4
-V_FILE     = ./verilog_file_pl.f
-else
-TOP        = tb_Cluster
-V_FILE     = ./verilog_file_pl.f
+# Run from vcs-rtl: make run CASE=gemm_ws32_channel
+.DEFAULT_GOAL := help
+CASE ?=
+TB ?= cluster
+PYTHON ?= python3
+WORK_DIR ?= work
+RUN_DIR = $(WORK_DIR)/$(CASE_TAG)
+include cases.mk
+ifneq ($(strip $(CASE)),)
+ifeq ($(filter $(CASE),$(VALID_CASES)),)
+$(error Unknown CASE '$(CASE)'; run make list)
 endif
-
-OUTPUT   = ${TOP}_2026
-WORK_DIR = ./work
-# Compile-time parameter overrides, e.g. -pvalue+tb_Cluster.MAX_CONTEXTS=64
+override TB := $(CASE_TB)
+endif
+TOP_cluster := tb_Cluster
+TOP_macro := tb_SingleMacro
+TOP_reduce := tb_ClusterReduceTree
+TOP_requant := tb_ClusterRequant
+TOP_gemm := tb_Cluster_GEMM_OS1_WS32
+TOP_gemm_as := tb_Cluster_GEMM_OS2_AS4
+TOP_gemm_edges := tb_Cluster_GEMM_Edges
+TOP := $(TOP_$(TB))
+ifeq ($(strip $(TOP)),)
+$(error Unknown TB '$(TB)')
+endif
+FILE_cluster := verilog_file_cluster.f
+FILE_macro := verilog_file_macro.f
+FILE_reduce := verilog_file_reduce.f
+FILE_requant := verilog_file_requant.f
+FILE_gemm := verilog_file_gemm_ws32.f
+FILE_gemm_as := verilog_file_gemm_as4.f
+FILE_gemm_edges := verilog_file_gemm_edges.f
+V_FILE := $(FILE_$(TB))
+CASE_TAG ?= $(if $(CASE),$(CASE),$(TB)_custom)
+OUTPUT ?= $(TOP)
+FSDB_FILE ?= $(OUTPUT)_$(CASE_TAG).fsdb
 PARAMETERS ?=
+PVALUE ?=
+LIB_LIST ?=
+ALL_DEFINE ?= +define+SINGLE_MACRO_ASSERTIONS +define+CLUSTER_FSDB
+CASE_PARAMETERS = $(foreach p,$(CASE_PARAMS),-pvalue+$(TOP).$(p))
+VCS_FLAGS ?= -sverilog +v2k +libext+.v+.sv -full64 -timescale=1ns/10ps -debug_access+all -kdb +vcs+flush+all +lint=TFIPC-L
 
-# 本仓库为纯 RTL，无需工艺库/宏模型；后续做门级或模拟宏仿真时，把 -v <cell>.v 追加到这里
-LIB_LIST =
-
-# FSDB dump：tb 内直接调用 $fsdbDump*（-kdb 会自动集成 Verdi PLI，无需 -P novas.tab）
-
-# SINGLE_MACRO_ASSERTIONS：使能 SingleMacro.sv 内的协议断言
-ALL_DEFINE = +define+SINGLE_MACRO_ASSERTIONS +define+CLUSTER_FSDB
-
-VCS = vcs 	-sverilog +v2k                \
-          	+libext+.v+.sv                \
-	    	-debug_access+all             \
-	    	-debug_region+cell            \
-	    	-kdb                          \
-	    	+warn=noRWSI                  \
-	    	+vcs+flush+all                \
-	    	-Mdir=${WORK_DIR}/csrc        \
-	    	-o ${WORK_DIR}/${OUTPUT}      \
-	    	-timescale=1ns/10ps           \
-	    	-l ${WORK_DIR}/compile_${OUTPUT}.log  \
-	    	-Mupdate                      \
-	    	-full64                       \
-	    	+lint=TFIPC-L                 \
-	    	+neg_tchk                     \
-	    	-negdelay                     \
-		${LIB_LIST}
-
-SIM = ./${OUTPUT} -l ${OUTPUT}.log ${PVALUE}
-
-com:
-	mkdir -p ${WORK_DIR}
-	${VCS} -top ${TOP} -f ${V_FILE} ${ALL_DEFINE} ${PARAMETERS}
-
-requant-vectors:
-	mkdir -p ${WORK_DIR}
-	python3 ../RTL/cluster/tb/py/requant_vectors.py ${WORK_DIR}/requant_vectors.txt
-
-gemm-vectors:
-	mkdir -p ${WORK_DIR}/gemm_data
-	python3 ../RTL/cluster/tb/py/gemm_vectors.py ${WORK_DIR}/gemm_data
-
-gemm-as-vectors:
-	mkdir -p ${WORK_DIR}/gemm_as_data
-	python3 ../RTL/cluster/tb/py/gemm_os2_as4_vectors.py ${WORK_DIR}/gemm_as_data
-
-sim:
-	cd ${WORK_DIR}; ${SIM}
-
-# 重新仿真并 dump 波形：编译已带 -debug_access+all，运行期经 UCLI dump；
-# 需要调整层级改 -depth，需要 VPD/FSDB 就换 -file 扩展名（或加 -type）
-vcd:
-	cd ${WORK_DIR}; ./${OUTPUT} -ucli -do "dump -add ${TOP} -depth 10 -file ${OUTPUT}.vcd; run; quit" -l vcd_${OUTPUT}.log
-
-debug:
-	cd ${WORK_DIR}; verdi -dbdir ${OUTPUT}.kdb.elab &
-
-# 用 Verdi 查看仿真生成的 FSDB 波形
-wave:
-	cd ${WORK_DIR}; verdi -ssf ${OUTPUT}.fsdb &
-
-ifeq ($(TB),cluster)
-sram: com
-	cd ${WORK_DIR}; ./${OUTPUT} +SRAM_RW_TEST -l sram_rw.log
-	grep -q "PASS sram_rw" ${WORK_DIR}/sram_rw.log
-	! grep -qiE "fatal|error-" ${WORK_DIR}/sram_rw.log
-
-check:
-	grep -q "PASS configurations=" ${WORK_DIR}/${OUTPUT}.log
-	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
-	python3 ../RTL/cluster/tb/py/verify_manifest.py ${WORK_DIR}/split_cases.csv
-else ifeq ($(TB),requant)
-check:
-	grep -q "PASS requant_unit" ${WORK_DIR}/${OUTPUT}.log
-	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
-else ifeq ($(TB),gemm)
-check:
-	grep -q "PASS cluster_gemm M=32 K=128 N=16" ${WORK_DIR}/${OUTPUT}.log
-	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
-else ifeq ($(TB),gemm_as)
-check:
-	grep -q "PASS gemm_os2_as4 M=32 K=512 N=16" ${WORK_DIR}/${OUTPUT}.log
-	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
-else
-check:
-	grep -q "PASS clock_gating=" ${WORK_DIR}/${OUTPUT}.log
-	! grep -qiE "fatal|error-" ${WORK_DIR}/${OUTPUT}.log
+.PHONY: help list prepare com sim check run regression gemm-regression debug wave vcd clean sram requant-vectors gemm-vectors gemm-as-vectors gemm-channel-vectors gemm-as-channel-vectors
+help:
+	@echo 'make run CASE=gemm_ws32_channel  # prepare, compile, simulate, check'
+	@echo 'make list                      # all case descriptions'
+	@echo 'make regression                # includes expected rejections'
+	@echo 'make gemm-regression           # 11 positive GEMM variants'
+	@echo 'See README.md for variables, file lists and FSDB naming.'
+list:
+	$(PYTHON) cases.py --list
+prepare:
+	mkdir -p $(RUN_DIR)/data
+ifneq ($(strip $(CASE)),)
+	$(PYTHON) cases.py --prepare $(CASE) --directory $(RUN_DIR)
 endif
-
+com: prepare
+	vcs $(VCS_FLAGS) $(LIB_LIST) -top $(TOP) -f $(V_FILE) $(ALL_DEFINE) $(CASE_PARAMETERS) $(PARAMETERS) -Mdir=$(RUN_DIR)/csrc -o $(abspath $(RUN_DIR))/$(OUTPUT) -l $(RUN_DIR)/compile.log
+sim: prepare
+	@echo '[RUN] $(CASE_TAG): $(CASE_DESCRIPTION)'
+	@cd $(RUN_DIR) && ./$(OUTPUT) -l sim.log +DATA_DIR=$(abspath $(RUN_DIR))/data $(CASE_ARGS) $(PVALUE) +FSDB_FILE=$(FSDB_FILE); status=$$?; echo $$status > sim.exit; exit 0
+# Keep stages sequential even when invoked with make -j.
+run: com
+	$(MAKE) sim CASE=$(CASE) TB=$(TB)
+	$(MAKE) check CASE=$(CASE) TB=$(TB)
+check:
+ifneq ($(strip $(CASE)),)
+	$(PYTHON) cases.py --check $(CASE) --directory $(RUN_DIR)
+else
+	@test "$$(cat $(RUN_DIR)/sim.exit)" = 0
+	@grep -q PASS $(RUN_DIR)/sim.log
+	@! grep -qiE 'fatal|Error-' $(RUN_DIR)/sim.log
+endif
+regression:
+	@set -e; for c in $(VALID_CASES); do $(MAKE) run CASE=$$c; done
+gemm-regression:
+	@set -e; for c in $(filter gemm_%,$(VALID_CASES)); do $(MAKE) run CASE=$$c; done
+sram:
+	$(MAKE) run CASE=sram_rw
+wave:
+	cd $(RUN_DIR) && verdi -ssf $(FSDB_FILE) &
+debug:
+	cd $(RUN_DIR) && verdi -dbdir $(OUTPUT).daidir &
+vcd:
+	cd $(RUN_DIR) && ./$(OUTPUT) $(CASE_ARGS) $(PVALUE) +DATA_DIR=$(abspath $(RUN_DIR))/data +FSDB_FILE=$(FSDB_FILE) -ucli -do 'dump -add $(TOP) -depth 10 -file $(OUTPUT)_$(CASE_TAG).vcd; run; quit' -l vcd.log
+requant-vectors:
+	$(MAKE) prepare CASE=requant_unit
+gemm-vectors:
+	$(MAKE) prepare CASE=gemm_ws32_tensor
+gemm-as-vectors:
+	$(MAKE) prepare CASE=gemm_as4_tensor
+gemm-channel-vectors:
+	$(MAKE) prepare CASE=gemm_ws32_channel
+gemm-as-channel-vectors:
+	$(MAKE) prepare CASE=gemm_as4_channel
 clean:
-	rm -rf ${WORK_DIR} *.log *.vpd *.vcd *.fsdb *.key simv* csrc *.daidir DVEfiles
+	rm -rf -- ./work

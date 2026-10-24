@@ -1,8 +1,10 @@
 # Cluster testbench：tmp、bit fusion、Psum acc 与 ICG
 
-参考 adapter 连接八个真实 SingleMacro RTL，保留 raw signed32，新增 per-tensor 组合 Requant 与32×8-bit输出寄存器，量化valid比raw晚一拍。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。公式、配置和测试见 [Requant说明](../../../docs/Cluster_Requant.md)。
+参考 adapter 连接八个真实 SingleMacro RTL，保留 raw signed32，四通道组合 Requant 支持共享或逐OC scale，合并后的zp始终逐OC，量化valid比raw晚一拍。启用量化仅允许一个归约组、最多4OC；参数按oc_mask固定顺序，无有效位压缩。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。公式、配置和测试见 [Requant说明](../../../docs/Cluster_Requant.md)。
 
-每个 merge 节点采用其固定最左侧 Macro 的 OC mask，组内 mask 可以不同。t5、t2 均取 M4，t0 取 M0；不回退到首个使能 Macro。被屏蔽子树不贡献数据，转发门控、终点 mask 与批次输出预留采用相同规则。全部 OC 被屏蔽的批次在内部发射完成后结束，不产生输出脉冲。本地 `--gate-unit --oc-merge` 可运行 208 例归约单元测试及 288 例独立 mask 专项测试。
+tb_Cluster默认ENABLE_REQUANT=0，用于raw-only多组树验证；Python量化专项自动覆盖为1。VCS运行量化集成专项时，需在编译加入PARAMETERS=-pvalue+tb_Cluster.ENABLE_REQUANT=1，再运行+REQUANT_TEST或+REQUANT_CHANNEL_TEST。两个GEMM TB默认启用量化，均支持+PER_CHANNEL_SCALE，必须配套相应Python --per-channel数据。
+
+每个 merge 节点采用其固定最左侧 Macro 的 OC mask，组内 mask 可以不同。t5、t2 均取 M4，t0 取 M0；不回退到首个使能 Macro。被屏蔽子树不贡献数据，转发门控、终点 mask 与批次输出预留采用相同规则。全部 OC 被屏蔽的批次在内部发射完成后结束，不产生输出脉冲。`make run CASE=reduce_tree` 和 `make run CASE=oc_merge` 可运行 208 例归约单元测试及 288 例独立 mask 专项测试。
 
 mask 来源完整映射：`t3←M0, t4←M2, t5←M4, t6←M6, t1←M0, t2←M4, t0←M0`。父节点继承左子树的 mask；例如 t2 通过 t5 继承 M4，即使 M5、M6、M7 的 mask 不同也不改变来源。已编译的 VCS Cluster 仿真可用 `make sim PVALUE=+OC_MERGE_TEST` 运行专项测试，日志应包含 `PASS oc_merge_leftmost cases=288`。
 
@@ -16,7 +18,7 @@ Context是同一channel内独立保存、独立输出的计算任务，Psum[ctx]
 
 常规读写接口通过 `{cim_macro_group,cim_bank_sel}` 选择一个 Macro，由 cim_row_addr 选择四个 OC 共用的 128 B 行。cim_wmask 每位为 1 屏蔽对应 OC 的 32 B，为 0 允许写入；读忽略该掩码。TB preload 保留为独立验证辅助接口。接口时序、互斥约束和测试覆盖见 [常规权重 SRAM 规格](../../../docs/Cluster_Weight_SRAM_Interface.md)。
 
-从仓库根目录执行 `python RTL/cluster/tb/py/run_sram_regression.py --full`；VCS 使用 `make sram` 或 `+SRAM_RW_TEST`。SRAM 专项在打开标准 CSV 前运行，不覆盖原计算回归的数据文件。
+仿真使用 [VCS case 入口](../../../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 每个 Cluster、SRAM、归约树及 SingleMacro case 开始都会输出 `[CASE_START] time=... ns suite=... description=...`，包含当前仿真时间和场景/参数；CMD_SEND、CMD_ACCEPT 继续独立记录命令驱动和接受时间。
 
@@ -28,15 +30,16 @@ Context是同一channel内独立保存、独立输出的计算任务，Psum[ctx]
 
 ## 目录与入口
 
-Git仓库提供[VCS入口](../../../vcs-rtl/Makefile)，在vcs-rtl目录运行make com、make sim、make check。ModelSim专用py/run_regression.py仅保留在本地，不纳入Git；下文该脚本的命令用于记录本地验证方法。共用SV/TB与数据检查Python仍纳入Git。
+仿真使用 [VCS case 入口](../../../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 ```text
 tb/
   tb_Cluster.sv             Cluster 仿真顶层
   tb_ClusterReduceTree.sv   归约树单元测试
   tb_ClusterRequant.sv      无时钟Requant算术单元测试
-  tb_Cluster_GEMM_OS1_WS32.sv        单Cluster两批N8，W8A16 M32/K128/N16 WS32矩阵
+  tb_Cluster_GEMM_OS1_WS32.sv        单Cluster四批N4，W8A16 M32/K128/N16 WS32矩阵
   tb_Cluster_GEMM_OS2_AS4.sv 单Cluster八Macro全归约，W8A16 M32/K512/N16
+  tb_Cluster_GEMM_Edges.sv  W4/W2高位置组、N尾部、舍入饱和端到端矩阵
   latency_audit.sv          时延观察器
   include/                 驱动、golden、scoreboard、case 和 suite
   py/         split/逐拍生成器、时延检查器
@@ -46,7 +49,7 @@ tb/
   README.md
 ```
 
-在本目录执行 `python py/run_regression.py --gate-unit --mixed-context --full-act --act-buffer --latency-audit --log regression_act_capacity_default.log`。脚本也可从仓库根目录或其他目录调用；入口把源码和检查脚本复制到仓库外的 cluster_tb_work/local_sim/<日志名>，work、CSV、日志和波形均在副本内生成；--sim-dir 可指定仓库外目录。该副本不提交 Git，仓库 data/log 仅保存经核对的结果。
+仿真使用 [VCS case 入口](../../../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 ## 流水与存储
 
@@ -90,20 +93,17 @@ psum_data_o 输出 raw signed32（1024 bit，32 channel）；out_valid_o 每 OC 
 
 完整 case 分类、六种数据 pattern、各精度 split 数量和参数作用范围见 [仓库首页的 tb_Cluster 测试 case](../../../README.md#tb_cluster-测试-case)。
 
-```text
-python py/run_regression.py --gate-unit --mixed-context --full-act --act-buffer --latency-audit --log regression_act_capacity_default.log
-python py/run_regression.py --en a5 --oc 84218421 --depth 3 --full-act --mixed-context --latency-audit --log regression_act_frame_sparse_depth3.log
-```
+VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../../../vcs-rtl/README.md)。
 
-默认1368个Cluster case：1200穷举数据case、84标准时序case、28 Command空拍/多Context交错case、56三Tile/三Context极值case。另有208个reduce-tree门控单元case。EN=FF时每符号合法split数为1,1,16,16,16,25,25，每组有效K严格小于256。完整ACT加载后改变外部ACT，逐digit检查内部计算使用act_buffer。--full-act另加12个W8A16全4096-bit、八Macro root归约K256定向case。
+默认1368个Cluster case：1200穷举数据case、84标准时序case、28 Command空拍/多Context交错case、56三Tile/三Context极值case。另有208个reduce-tree门控单元case。EN=FF时每符号合法split数为1,1,16,16,16,25,25，每组有效K严格小于256。完整ACT加载后改变外部ACT，逐digit检查内部计算使用act_buffer。CASE=full_act另加12个W8A16全4096-bit、八Macro root归约K256定向case。
 
-检查独立整数点积、每channel到达周期、WS唯一tmp状态、AS（含os=1融合）的逐phase Psum历史、旁路 case 的 Psum保持、未用加法器输入隔离、真实ICG时钟、关闭DFF保持、高地址深度整批关闭和按序发布。`--latency-audit` 启用 `latency_audit.sv`，采集 [latency_audit.csv](data/latency_audit.csv) 的140个标准Context输出；`py/audit_latency.py` 按六种配置公式核对，生成 [latency_audit_validation.log](log/latency_audit_validation.log)。Python检查器只依赖标准库，无需本地Word文档。
+检查独立整数点积、每channel到达周期、WS唯一tmp状态、AS（含os=1融合）的逐phase Psum历史、旁路 case 的 Psum保持、未用加法器输入隔离、真实ICG时钟、关闭DFF保持、高地址深度整批关闭和按序发布。`时延观察器` 启用 `latency_audit.sv`，采集 [latency_audit.csv](data/latency_audit.csv) 的140个标准Context输出；`py/audit_latency.py` 按六种配置公式核对，生成 [latency_audit_validation.log](log/latency_audit_validation.log)。Python检查器只依赖标准库，无需本地Word文档。
 
-要求 ModelSim 的 vlib/vlog/vsim 在 PATH。Python 入口分别读取 ../rtl/ 中的功能源码和 当前目录中的验证源码，并自动定位 `../../macro/rtl`；也可用 `--macro-rtl PATH` 指定。`filelist.f` 可从本目录手动编译，仿真时选择具体顶层。`+DATA_DIR=路径` 控制 SV 的 CSV 输出位置，Python 入口自动传入本地副本的绝对 data 路径；直接运行 TB 时默认当前工作目录。
+仿真使用 [VCS case 入口](../../../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 OS_TILES 控制穷举 suite，范围1..14。UINT W8A16 的 ACT 限制到0..32768/os_cnt-1，使最终结果保持 signed32。验证入口对应的日志为 `log/regression_act_capacity_default.log`、`log/regression_act_capacity_default_reduce_gate.log`、`log/regression_act_frame_sparse_depth3.log` 和 `log/latency_audit_validation.log`。
 
-混合 Context 定向 suite 通过 --mixed-context 启用，额外24例覆盖 W4A4/A8/A16、两种符号、os=1/2、WS/AS双 Context，以及 pair/quad 同拍发布不同 Context。内部 Context 标签按 lane 保存。FSDB 由 CLUSTER_FSDB 宏控制，VCS Makefile 开启；ModelSim 默认不开启。--depth 设置 OUTPUT_BUFFER_DEPTH，--psum-depth 为同一参数的命令行别名。
+FSDB 由 `CLUSTER_FSDB` 编译宏控制，VCS Makefile 默认开启。`OUTPUT_BUFFER_DEPTH` 控制每 OC 的 Psum Context 深度；输出采用 valid-only 接口，不支持下游反压。
 
 Cluster 数据 DFF 分布见[仓库首页](../../../README.md#cluster-数据-dff-位置)：ACT4096、归约中间级464、唯一tmp1024、Psum1024×OUTPUT_BUFFER_DEPTH、raw输出保持1024 bit、INT8输出保持256 bit；不含控制寄存器及SingleMacro内部。
 
@@ -111,7 +111,7 @@ Cluster 数据 DFF 分布见[仓库首页](../../../README.md#cluster-数据-dff
 
 WS每Tile有效计算为P×ws_cnt拍，P=A位宽/4；ws_cnt仍是完整ACT/Context数，Psum深度不乘phase。单bank支持同包输入与发射重叠，无空拍时每Tile占(P+1)×ws_cnt个时钟沿。
 
-容量结论：完整ACT为256×A位宽bit，最大4096；WS逐Context换入，AS跨Context保持同一份ACT，OS逐Tile换入。因此容量不乘ws/as/os。必须遵守首命令ready及后续ACT连续输入，单bank不支持接收下一包与内部发射重叠。--act-buffer提供280个全Plane容量case，覆盖七精度、两种符号、os1/2、1/2/16 Context及命令空拍。
+容量结论：完整ACT为256×A位宽bit，最大4096；WS逐Context换入，AS跨Context保持同一份ACT，OS逐Tile换入。因此容量不乘ws/as/os。必须遵守首命令ready及后续ACT连续输入，单bank不支持接收下一包与内部发射重叠。CASE=act_buffer提供280个全Plane容量case，覆盖七精度、两种符号、os1/2、1/2/16 Context及命令空拍。
 
 raw_data每OC 32 bit（共1024 bit），额外requant_data_o每OC 8 bit（共256 bit输出寄存器）。raw在Ck发布，量化在C(k+1)发布；无valid时各lane独立保持，reset清零。Requant内部没有数据流水寄存器。
 
@@ -137,20 +137,15 @@ OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice �
 
 正向共 224 例：OS1 WS64、OS1 AS64、OS2 WS8、OS2 AS8 各 56 例，覆盖七精度、UINT/INT、随机/交替极值及有无 Command 空拍。OS1 AS64 检查所有 64 个 Context 的结果，且 Psum 整批保持关闭。另有 14 个 OS2 AS64 容量负向例（七精度×两种符号），以及地址深度 32、标签容量 32 时请求 AS64 的各两例，要求命中各自准确诊断。
 
-```text
-python RTL/cluster/tb/py/run_sram_regression.py --full
-python RTL/cluster/tb/py/run_sram_regression.py --context-stress
-```
+VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../../../vcs-rtl/README.md)。
 
 默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。追加 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
 ## 同包输入与发射重叠专项
 
 `+INPUT_OVERLAP_TEST` 运行168例：七精度×两种符号×OS1/2×单Context/WS2/AS2×有无地址空拍。检查A8/A16加载期间发射、AS地址接收与发射同拍、地址延迟时暂停及恢复、首发射为C1、数值与逐lane输出时延。输入仍先寄存，当前包发完后才接收下一包。
 
-```text
-python RTL/cluster/tb/py/run_sram_regression.py --input-overlap
-```
+VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../../../vcs-rtl/README.md)。
 
-`--full` 自动包含该专项。精确规则、周期公式及示例见 [Cluster 输入重叠说明](../../../docs/Cluster_Input_Overlap.md)。
+`make regression` 自动包含该专项。精确规则、周期公式及示例见 [Cluster 输入重叠说明](../../../docs/Cluster_Input_Overlap.md)。
 
 仅 OS1 的 AS 逐 Context 完成 bit fusion；OS>1 AS 保留原调度。所有 AS 模式均使用地址暂存表，详见 [OS1 AS 融合与权重地址暂存](../../../docs/Cluster_AS_OS1_Fusion.md)。

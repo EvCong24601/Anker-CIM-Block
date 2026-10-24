@@ -1,7 +1,10 @@
 `timescale 1ns/1ps
-// Stateless per-tensor-scale INT8 Requant with per-lane INT32 zero points.
+// Four physical Requant channels. Gather the selected group's OC c, then
+// scatter results to the original sparse lane positions. The owner guarantees
+// at most one active reduction group; masks never compact OC indices.
 // No clock, pipeline or data registers. LANES must be in 1..32.
-// Legal configuration: mode=0, signed shift in -31..31. The owner validates
+// Channel c always selects entry c, even when another OC is masked off.
+// Legal configuration: signed shift in -31..31. The owner validates
 // configuration when loading it; unsupported configurations produce X data.
 module ClusterRequant #(
   parameter int LANES = 32
@@ -14,20 +17,21 @@ module ClusterRequant #(
 );
   function automatic logic signed [7:0] quantize(
     input logic signed [31:0] psum,
-    input cluster_pkg::requant_cfg_t cfg,
+    input logic signed [31:0] multiplier,
+    input logic signed [9:0] shift,
     input logic signed [31:0] zp
   );
     logic signed [63:0] product;
     logic [64:0] magnitude, rounded_magnitude;
     logic signed [95:0] scaled, shifted_zp;
     int shift_amount;
-    product = psum * cfg.requant_multiplier;
-    shift_amount = int'($signed(cfg.requant_shift));
+    product = psum * multiplier;
+    shift_amount = int'(shift);
     magnitude = '0;
     rounded_magnitude = '0;
     scaled = {{32{product[63]}}, product};
     shifted_zp = {{64{zp[31]}}, zp};
-    if (cfg.requant_mode !== 1'b0 || shift_amount < -31 || shift_amount > 31)
+    if (shift_amount < -31 || shift_amount > 31)
       return 'x;
     if (shift_amount >= 0) begin
       // Extend BEFORE shifting, preserving a full INT32*INT32 product.
@@ -47,8 +51,22 @@ module ClusterRequant #(
   endfunction
 
   assign valid_o = valid_i;
-  for (genvar lane=0; lane<LANES; lane++) begin: g_lane
-    assign data_o[8*lane+:8] = quantize($signed(psum_i[32*lane+:32]),cfg_i,
-                                      $signed(cfg_i.requant_zp[32*lane+:32]));
+  wire [7:0] channel_data[0:3];
+  for (genvar c=0;c<4;c++) begin: g_channel
+    logic [31:0] selected_psum;
+    bit found;
+    wire [1:0] entry_id = cfg_i.requant_mode ? 2'(c) : 2'd0;
+    always_comb begin
+      selected_psum='0;found=0;
+      for(int l=c;l<LANES;l+=4) begin
+        if(l==c) selected_psum=psum_i[32*l+:32];
+        if(valid_i[l] && !found) begin selected_psum=psum_i[32*l+:32];found=1;end
+      end
+    end
+    assign channel_data[c] = quantize($signed(selected_psum),
+                                      $signed(cfg_i.requant_multiplier[32*entry_id+:32]),
+                                      $signed(cfg_i.requant_shift[10*entry_id+:10]),
+                                      $signed(cfg_i.requant_zp[32*c+:32]));
   end
+  for(genvar lane=0;lane<LANES;lane++) assign data_o[8*lane+:8]=channel_data[lane%4];
 endmodule

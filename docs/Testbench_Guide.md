@@ -40,9 +40,9 @@ SRAM 初始化状态的逐 OC 跟踪位于 RTL 的仿真检查分支，受 SINGL
 
 Requant功能实现位于 `RTL/cluster/rtl/ClusterRequant.sv`，无时钟纯组合；`cluster_dut_adapter.sv`负责batch配置锁存和INT8输出寄存器。量化valid严格比raw晚一拍。`tb_ClusterRequant.sv`使用Python任意精度整数向量，`cluster_requant_cases.svh`负责集成golden、配置锁存、延迟、保持、复位和跨batch边界检查。详细参数与测试范围见 [Requant说明](Cluster_Requant.md)。
 
-`tb_Cluster_GEMM_OS1_WS32.sv`仅实例化一个Cluster，分两批N8计算完整32×128乘128×16。`cluster_gemm_driver.svh`负责向量读取、打包核对、两行SRAM预加载和WS32驱动；`cluster_gemm_scoreboard.svh`检查地址/发射/权重Hold/输出矩阵及延迟；`cluster_gemm_regression.svh`负责两批调度、输出拼接和覆盖检查。`gemm_vectors.py`先从原始实数矩阵生成golden及校准参数，再输出物理激励；SV不共享Python的矩阵打包算法。详见 [GEMM说明](Cluster_GEMM_WS32.md)。
+`tb_Cluster_GEMM_OS1_WS32.sv`仅实例化一个Cluster，分四批N4计算完整32×128乘128×16。`cluster_gemm_driver.svh`负责向量读取、打包核对、四行SRAM预加载和WS32驱动；`cluster_gemm_scoreboard.svh`检查地址/发射/权重Hold/输出矩阵及延迟；`cluster_gemm_regression.svh`负责四批调度、输出拼接和覆盖检查。`gemm_vectors.py`先从原始实数矩阵生成golden及校准参数，再输出物理激励；SV不共享Python的矩阵打包算法。详见 [GEMM说明](Cluster_GEMM_WS32.md)。
 
-`tb_Cluster_GEMM_OS2_AS4.sv`是独立的M32/K512/N16矩阵TB，`cluster_gemm_as_driver/scoreboard/regression.svh`分别负责8个权重地址和Command/ACT、4096次Psum历史及逐Context输出、32行batch调度与矩阵收集。`gemm_os2_as4_vectors.py`生成golden，`--gemm-as-only`运行正向及2个配置负向场景；`--full`包含两组GEMM。输入offset已合入逐通道zp，AS Context首K Tile的Command加载各组zp。详见 [OS2 AS4说明](Cluster_GEMM_OS2_AS4.md)。
+`tb_Cluster_GEMM_OS2_AS4.sv`是独立的M32/K512/N16矩阵TB，`cluster_gemm_as_driver/scoreboard/regression.svh`分别负责8个权重地址和Command/ACT、4096次Psum历史及逐Context输出、32行batch调度与矩阵收集。`gemm_os2_as4_vectors.py`生成golden，AS4的五个VCS case运行两个weight版本及3个配置负向场景；`make regression`包含全部GEMM。输入offset已合入逐通道zp，AS Context首K Tile的Command加载各组zp。详见 [OS2 AS4说明](Cluster_GEMM_OS2_AS4.md)。
 
 计算新配置通常只需在 `cluster_suites.svh` 的对应 suite 调用 `run_case`。需要新的输入驱动方式时修改 driver；需要新判定规则时修改 scoreboard，并保留独立预期。常规读写场景放在 `cluster_sram_cases.svh`；单 Macro 非法输入放在 `macro_negative_cases.svh`，同时为 Python 回归入口补充精确诊断匹配。
 
@@ -57,15 +57,13 @@ Requant功能实现位于 `RTL/cluster/rtl/ClusterRequant.sv`，无时钟纯组�
 - VCS 的两个文件列表分别增加 Cluster tb 或 Macro tb 的 include 目录，从 vcs-rtl 目录运行。
 - Python 入口复制 `.svh` 的目录结构并记录源码 SHA256，随后从副本编译，避免漏拷 include 或读到另一份旧源码。
 
-从仓库根目录执行：
+从 vcs-rtl 目录执行：
 
-```text
-python RTL/cluster/tb/py/run_sram_regression.py --full
-```
+VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../vcs-rtl/README.md)。
 
-默认执行常规 SRAM、2 类冲突、SingleMacro 门控开/关和 15 类协议负向检查。`--full` 追加默认 Cluster 1368 例、归约树 208 例、OC merge 288 例、ACT 容量 280 例、完整 ACT 12 例和混合 Context 24 例、大 Context 正向 224 例、容量负向 18 例和包内输入重叠 168 例。各专项 CSV 分目录存放，默认计算 suite 的 CSV 得以保留。
+`make regression`包含常规 SRAM、2 类冲突、SingleMacro 门控开/关、15 类协议负向检查，以及默认 Cluster 1368 例、归约树 208 例、OC merge 288 例、ACT 容量 280 例、完整 ACT 12 例和混合 Context 24 例、大 Context 正向 224 例、容量负向 18 例和包内输入重叠 168 例。各专项 CSV 分目录存放，默认计算 suite 的 CSV 得以保留。
 
-`--full`同时运行Requant独立9,611个向量、168个集成case、输出寄存前reset、最早跨batch参数切换，以及4个精确配置负向诊断。所有原有计算suite均增加Requant数值与1T延迟检查，保留raw golden及原有时序检查。负向配置只在batch首命令检查，batch内外部配置变化不应重载参数。
+`make regression`包含Requant独立9,611个算术向量及512个四通道向量、168个per-tensor集成case、1536个per-channel集成case、reset、跨batch参数切换和7个精确配置负向诊断。raw-only suite保持ENABLE_REQUANT=0；量化专项开启为1并检查数值和1T延迟。AS参数在首K Tile加载、后续Tile核对一致。
 
 VCS 仍使用 `make com`、`make sim`；`make sram` 运行 SRAM 专项，`make com sim TB=macro` 运行单 Macro。也可通过 `PVALUE=+OC_MERGE_TEST` 等 plusarg 选择专项。
 
@@ -91,16 +89,19 @@ OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice �
 
 正向共 224 例：OS1 WS64、OS1 AS64、OS2 WS8、OS2 AS8 各 56 例，覆盖七精度、UINT/INT、随机/交替极值及有无 Command 空拍。OS1 AS64 检查所有 64 个 Context 的结果，且 Psum 整批保持关闭。另有 14 个 OS2 AS64 容量负向例（七精度×两种符号），以及地址深度 32、标签容量 32 时请求 AS64 的各两例，要求命中各自准确诊断。
 
-```text
-python RTL/cluster/tb/py/run_sram_regression.py --full
-python RTL/cluster/tb/py/run_sram_regression.py --context-stress
-```
+VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../vcs-rtl/README.md)。
 
 默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。追加 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
 ## 同包输入与发射重叠
 
-规则与公式见 [Cluster 输入重叠说明](Cluster_Input_Overlap.md)。`cluster_scoreboards.svh` 逐沿检查当前Plane及地址就绪条件；`run_case` 强制覆盖多slice采样/发射重叠、连续AS地址/发射重叠、有空拍时等待地址，以及首命令后一拍发射。`+INPUT_OVERLAP_TEST` 专项168例由 `--full` 自动执行，也可用 `--input-overlap` 单独追加运行。Python `buffer_schedule.py` 和 README 生成器共用更新后的无空拍公式。
+规则与公式见 [Cluster 输入重叠说明](Cluster_Input_Overlap.md)。`cluster_scoreboards.svh` 逐沿检查当前Plane及地址就绪条件；`run_case` 强制覆盖多slice采样/发射重叠、连续AS地址/发射重叠、有空拍时等待地址，以及首命令后一拍发射。`+INPUT_OVERLAP_TEST` 专项168例由 `make regression` 自动执行，也可用 `CASE=input_overlap` 单独追加运行。Python `buffer_schedule.py` 和 README 生成器共用更新后的无空拍公式。
 
 ## 8-bit count 边界
 
-os_cnt/ws_cnt/as_cnt 均为8 bit，合法字段值为1～255，0非法；packed descriptor总宽107 bit。实际WS/AS仍受容量限制。`+OS_COUNT_LIMIT_TEST`覆盖12个OS255非零累加case：W2A4/A8、UINT/INT、单Context/WS2/AS2；使用固定极值权重以允许8-bit行地址回绕后重访相同内容。`+ZERO_COUNT=0/1/2`分别拒绝OS/WS/AS为0。`--full`自动包含这些检查，当前共50组suite、38个预期拒绝。
+os_cnt/ws_cnt/as_cnt 均为8 bit，合法字段值为1～255，0非法；packed descriptor总宽107 bit。实际WS/AS仍受容量限制。`+OS_COUNT_LIMIT_TEST`覆盖12个OS255非零累加case：W2A4/A8、UINT/INT、单Context/WS2/AS2；使用固定极值权重以允许8-bit行地址回绕后重访相同内容。`+ZERO_COUNT=0/1/2`分别拒绝OS/WS/AS为0。`make regression`自动包含这些检查，回归数量以log/four_channel_validation.log为准。
+
+## 四通道 Requant 与 weight per-channel
+
+新增端到端场景使用tb_Cluster_GEMM_Edges.sv，分离driver、scoreboard和regression三个include。make gemm-regression运行七组，覆盖W4A16 Macro4～7、W2A8 Macro6～7、N6带OC空洞的尾部，以及实际矩阵产生的舍入/饱和边界。详见[GEMM边界场景](Cluster_GEMM_Edges.md)，make regression自动包含。
+
+详见[Requant说明](Cluster_Requant.md)。tb_Cluster的raw-only suite默认ENABLE_REQUANT=0，量化专项通过参数覆盖为1，检查单归约组和最多4OC。两个GEMM TB均保留per-tensor weight并新增+PER_CHANNEL_SCALE版本；Python对每列W分别量化并生成独立参数/golden。所有版本的合并zp仍为per-channel，仅四项，按固定OC索引选择。

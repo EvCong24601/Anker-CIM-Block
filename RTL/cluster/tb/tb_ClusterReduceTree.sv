@@ -144,4 +144,15 @@ module tb_ClusterReduceTree;
     $finish;
   end
   initial begin #100000; $fatal(1,"Reduce test timeout"); end
+
+  // VCS supplies a case-specific path; direct runs retain a descriptive default.
+`ifdef CLUSTER_FSDB
+  initial begin : case_fsdb_dump
+    string fsdb_file;
+    if(!$value$plusargs("FSDB_FILE=%s",fsdb_file)) fsdb_file="tb_ClusterReduceTree_default.fsdb";
+    $display("[WAVE] file=%s",fsdb_file);
+    $fsdbDumpfile(fsdb_file);
+    $fsdbDumpvars(0, tb_ClusterReduceTree, "+all");
+  end
+`endif
 endmodule

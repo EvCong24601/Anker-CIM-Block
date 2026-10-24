@@ -31,18 +31,18 @@ always @(posedge clock) begin:gemm_scoreboard
   end
   #1;
   if(!reset && monitoring) for(int c=0;c<CLUSTERS;c++) begin
-    if((out_valid_o[c]&32'hffffff00)!=0 || (requant_valid_o[c]&32'hffffff00)!=0)
+    if((out_valid_o[c]&32'hfffffff0)!=0 || (requant_valid_o[c]&32'hfffffff0)!=0)
       $fatal(1,"GEMM: output on inactive group lane cluster=%0d",c);
     if(requant_valid_o[c]!==previous_raw_valid[c])
       $fatal(1,"GEMM: quant valid must follow raw by one cycle cluster=%0d",c);
     for(int lane=0;lane<32;lane++) if(!requant_valid_o[c][lane] &&
       requant_data_o[c][8*lane+:8]!==previous_quant[c][8*lane+:8])
       $fatal(1,"GEMM: INT8 output register changed without valid");
-    for(int lane=0;lane<8;lane++) begin
-      n=8*active_tile+lane;
+    for(int lane=0;lane<4;lane++) begin
+      n=4*active_tile+lane;
       if(out_valid_o[c][lane]) begin
         row=raw_rows[active_tile][lane];
-        if(row>=M || cycle!=first_accept[active_tile]+5*row+8)
+        if(row>=M || cycle!=first_accept[active_tile]+5*row+9)
           $fatal(1,"GEMM: raw row/order/latency mismatch cluster=%0d lane=%0d row=%0d",c,lane,row);
         if(psum_data_o[c][32*lane+:32]!==raw_golden[row*N+n])
           $fatal(1,"GEMM: raw matrix mismatch m=%0d n=%0d got=%0d expected=%0d",row,n,
@@ -53,7 +53,7 @@ always @(posedge clock) begin:gemm_scoreboard
       end
       if(requant_valid_o[c][lane]) begin
         row=quant_rows[active_tile][lane];
-        if(row>=M || cycle!=first_accept[active_tile]+5*row+9)
+        if(row>=M || cycle!=first_accept[active_tile]+5*row+10)
           $fatal(1,"GEMM: INT8 row/order/latency mismatch cluster=%0d lane=%0d row=%0d",c,lane,row);
         if(requant_data_o[c][8*lane+:8]!==quant_golden[row*N+n])
           $fatal(1,"GEMM: INT8 matrix mismatch m=%0d n=%0d got=%0d expected=%0d",row,n,

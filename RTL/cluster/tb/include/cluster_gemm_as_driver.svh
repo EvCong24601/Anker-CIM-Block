@@ -12,6 +12,10 @@ task automatic load_as_gemm_vectors();
   $readmemh({data_dir,"/centered_golden.hex"},centered_golden);
   $readmemh({data_dir,"/quant_golden.hex"},quant_golden);
   $readmemh({data_dir,"/requant_zp.hex"},zp);
+  if($test$plusargs("PER_CHANNEL_SCALE")) begin
+    $readmemh({data_dir,"/requant_multiplier.hex"},channel_multiplier);
+    $readmemh({data_dir,"/requant_shift.hex"},channel_shift);
+  end
   $readmemh({data_dir,"/weight_rows.hex"},weight_rows);
   $readmemh({data_dir,"/act_planes.hex"},act_planes);
   $readmemh({data_dir,"/psum_history_golden.hex"},history_golden);
@@ -56,6 +60,15 @@ endtask
 task automatic select_as_zp(input int tile,cx);
   requant_cfg_i='0;
   requant_cfg_i.requant_multiplier=32'(multiplier);requant_cfg_i.requant_shift=10'(shift);
+  if($test$plusargs("PER_CHANNEL_SCALE")) begin
+    requant_cfg_i.conv_mode=1;requant_cfg_i.requant_mode=1;
+    for(int oc=0;oc<4;oc++) begin
+      requant_cfg_i.requant_multiplier[32*oc+:32]=channel_multiplier[4*cx+oc];
+      requant_cfg_i.requant_shift[10*oc+:10]=channel_shift[4*cx+oc];
+    end
+    if($test$plusargs("NEGATIVE_SCALE_RELOAD") && tile==1 && cx==1)
+      requant_cfg_i.requant_multiplier[32]=~requant_cfg_i.requant_multiplier[32];
+  end
   for(int oc=0;oc<4;oc++) begin
     requant_cfg_i.requant_zp[32*oc+:32]=zp[4*cx+oc];
   end

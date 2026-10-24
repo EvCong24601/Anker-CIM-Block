@@ -5,9 +5,10 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
-from requant_vectors import write_vectors
+from requant_vectors import write_vectors,write_channel_vectors
 from gemm_vectors import generate as generate_gemm, verify_outputs as verify_gemm
 from gemm_os2_as4_vectors import generate as generate_as_gemm
+from gemm_edges_vectors import generate as generate_edge_gemm, verify_outputs as verify_edge_gemm
 
 
 def summarize_simulation(name, log, expected, returncode, negative=False):
@@ -38,8 +39,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sim-dir', type=Path)
     parser.add_argument('--full', action='store_true', help='also run all Cluster suites and large-Context capacity checks')
-    parser.add_argument('--gemm-only',action='store_true',help='run only the single-Cluster two-N-tile W8A16 M32/K128/N16 WS GEMM')
+    parser.add_argument('--gemm-only',action='store_true',help='run only the single-Cluster four-N4-tile W8A16 M32/K128/N16 WS GEMM')
     parser.add_argument('--gemm-as-only',action='store_true',help='run only W8A16 M32/K512/N16 OS2/AS4 and its Context-config negative checks')
+    parser.add_argument('--gemm-edges-only',action='store_true',help='run W4/W2 high-group, N-tail and rounding/clipping end-to-end matrices')
     parser.add_argument('--context-stress', action='store_true',
                         help='also check OS1 WS/AS64 and OS2 WS/AS8 with Psum depth 16')
     parser.add_argument('--input-overlap', action='store_true',
@@ -58,7 +60,7 @@ def main():
         'MacroMul2x4.sv', 'MacroSliceFusion.sv', 'SingleMacro.sv')]
     sources += [cluster_rtl / name for name in ('cluster_pkg.sv', 'ClusterRequant.sv', 'ClusterReduceTree.sv',
                 'cluster_dut_adapter.sv')]
-    sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv', 'tb_ClusterRequant.sv','tb_Cluster_GEMM_OS1_WS32.sv','tb_Cluster_GEMM_OS2_AS4.sv')]
+    sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv', 'tb_ClusterRequant.sv','tb_Cluster_GEMM_OS1_WS32.sv','tb_Cluster_GEMM_OS2_AS4.sv','tb_Cluster_GEMM_Edges.sv')]
     sources += [macro / 'tb/tb_SingleMacro.sv']
     manifest = []
     for src in sources:
@@ -86,6 +88,8 @@ def main():
     summary = []
 
     def simulate(name, top, options, expected, negative=False):
+        if top=='tb_Cluster' and name.startswith('requant_'):
+            options=['-gENABLE_REQUANT=1',*options]
         # Expected protocol failures intentionally stop before the TB success marker.
         result = subprocess.run(['vsim', '-c', '-onfinish', 'stop', f'work.{top}', *options,
                                  '-l', name+'.log', '-do',
@@ -100,6 +104,21 @@ def main():
         summary.append(status)
         print(summary[-1], flush=True)
 
+    if args.full or args.gemm_edges_only:
+        for case in ('w4_high','w2_high','n_tail','boundaries'):
+            for per_channel in ((True,) if case=='boundaries' else (False,True)):
+                name=f'gemm_edge_{case}_'+('channel' if per_channel else 'tensor')
+                data=dest/name
+                meta=generate_edge_gemm(data,case,per_channel)
+                print(f'Edge GEMM: {name} M={meta["M"]} K={meta["K"]} N={meta["N"]} coverage={meta["coverage"]}',flush=True)
+                simulate(name,'tb_Cluster_GEMM_Edges',['+GEMM_DATA_DIR='+data.as_posix(),'+EDGE_CASE_NAME='+name],
+                         'PASS gemm_edges')
+                verify_edge_gemm(data)
+        if args.gemm_edges_only:
+            summary.append('PASS regression: suites=7 expected_rejections=0')
+            (dest/'validation.log').write_text('\n'.join(summary)+'\n',encoding='utf-8')
+            print(summary[-1],flush=True)
+            return
     if args.full or args.gemm_as_only:
         data=dest/'gemm_as_data'
         meta=generate_as_gemm(data)
@@ -115,8 +134,18 @@ def main():
             generate_as_gemm(data)
             simulate(name,'tb_Cluster_GEMM_OS2_AS4',options+['+GEMM_DATA_DIR='+data.as_posix()],
                      'CLUSTER_REQUANT_CONFIG: '+message,True)
+        data=dest/'gemm_as_channel_data'
+        generate_as_gemm(data,per_channel=True)
+        simulate('gemm_as_channel','tb_Cluster_GEMM_OS2_AS4',
+                 ['+PER_CHANNEL_SCALE','+GEMM_DATA_DIR='+data.as_posix()],
+                 'PASS gemm_os2_as4 M=32 K=512 N=16')
+        verify_gemm(data)
+        data=dest/'as_context_scale_reload';generate_as_gemm(data,per_channel=True)
+        simulate('as_context_scale_reload','tb_Cluster_GEMM_OS2_AS4',
+                 ['+PER_CHANNEL_SCALE','+NEGATIVE_SCALE_RELOAD','+GEMM_DATA_DIR='+data.as_posix()],
+                 'CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles',True)
         if args.gemm_as_only:
-            summary.append('PASS regression: suites=3 expected_rejections=2')
+            summary.append('PASS regression: suites=5 expected_rejections=3')
             (dest/'validation.log').write_text('\n'.join(summary)+'\n',encoding='utf-8')
             print(summary[-1],flush=True)
             return
@@ -127,8 +156,13 @@ def main():
         simulate('cluster_gemm','tb_Cluster_GEMM_OS1_WS32',['+GEMM_DATA_DIR='+data.as_posix()],
                  'PASS cluster_gemm M=32 K=128 N=16')
         verify_gemm(data)
+        data=dest/'gemm_channel_data';generate_gemm(data,per_channel=True)
+        simulate('gemm_ws_channel','tb_Cluster_GEMM_OS1_WS32',
+                 ['+PER_CHANNEL_SCALE','+GEMM_DATA_DIR='+data.as_posix()],
+                 'PASS cluster_gemm M=32 K=128 N=16')
+        verify_gemm(data)
         if args.gemm_only:
-            summary.append('PASS regression: suites=1 expected_rejections=0')
+            summary.append('PASS regression: suites=2 expected_rejections=0')
             (dest/'validation.log').write_text('\n'.join(summary)+'\n',encoding='utf-8')
             print(summary[-1],flush=True)
             return
@@ -154,14 +188,19 @@ def main():
         simulate('macro_negative_'+case, 'tb_SingleMacro', ['+NEGATIVE='+case], 'SM_PROTOCOL: '+message, True)
     if args.full:
         vector_count=write_vectors(dest/'requant_vectors.txt')
+        write_channel_vectors(dest/'requant_channel_vectors.txt')
         simulate('requant_unit', 'tb_ClusterRequant',
-                 ['+REQUANT_VECTORS='+(dest/'requant_vectors.txt').as_posix()],
+                 ['+REQUANT_VECTORS='+(dest/'requant_vectors.txt').as_posix(),
+                  '+REQUANT_CHANNEL_VECTORS='+(dest/'requant_channel_vectors.txt').as_posix()],
                  f'PASS requant_unit cases={vector_count}')
         for scenario, message in (
-            ('mode','per-channel scale mode is not supported'),
+            ('mode','per-channel scale requires conv_mode'),
             ('shift_low','shift must be -31..31'),
             ('shift_high','shift must be -31..31'),
             ('unknown','unknown configuration'),
+            ('channel_shift','shift must be -31..31'),
+            ('conv_group','Requant requires one aligned reduction group'),
+            ('zp_group','Requant requires one aligned reduction group'),
         ):
             simulate('requant_negative_'+scenario,'tb_Cluster',
                      ['+REQUANT_NEGATIVE='+scenario], 'CLUSTER_REQUANT_CONFIG: '+message, True)
@@ -169,6 +208,9 @@ def main():
         data.mkdir(exist_ok=True)
         simulate('requant_integration','tb_Cluster',
                  ['+REQUANT_TEST','+DATA_DIR='+data.as_posix()], 'PASS requant_integration cases=168')
+        data=dest/'requant_channel_data';data.mkdir(exist_ok=True)
+        simulate('requant_channel','tb_Cluster',['+REQUANT_CHANNEL_TEST','+DATA_DIR='+data.as_posix()],
+                 'PASS requant_channel cases=1536')
         data=dest/'requant_reset_data'
         data.mkdir(exist_ok=True)
         simulate('requant_reset','tb_Cluster',

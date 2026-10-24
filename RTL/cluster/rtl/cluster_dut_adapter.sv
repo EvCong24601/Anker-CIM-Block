@@ -5,7 +5,7 @@ module cluster_dut_adapter #(
   parameter int MAX_CONTEXTS = WGT_RADDR_BUFFER_DEPTH,
   parameter int OUTPUT_BUFFER_DEPTH = 16,
   parameter int REQUANT_CONTEXT_DEPTH = 1,
-  parameter int REQUANT_CONTEXT_LANES = 32
+  parameter bit ENABLE_REQUANT = 1
 ) (
   input logic clock, reset,
   input cluster_pkg::cluster_ctrl_t cmd_i,
@@ -51,7 +51,9 @@ module cluster_dut_adapter #(
   requant_cfg_t batch_requant_cfg;
   // Optional AS Context banks. Depth=1 preserves the original batch-wide
   // per-lane zp configuration. Only the first K Tile loads enabled banks.
-  logic [32*REQUANT_CONTEXT_LANES-1:0] requant_context_zp[0:REQUANT_CONTEXT_DEPTH-1];
+  logic [127:0] requant_context_zp[0:REQUANT_CONTEXT_DEPTH-1];
+  logic [127:0] requant_context_multiplier[0:REQUANT_CONTEXT_DEPTH-1];
+  logic [39:0] requant_context_shift[0:REQUANT_CONTEXT_DEPTH-1];
   logic [REQUANT_CONTEXT_DEPTH-1:0] requant_context_valid;
   requant_cfg_t selected_requant_cfg;
   wire [2:0] regular_macro_id = {cim_macro_group,cim_bank_sel};
@@ -137,7 +139,7 @@ module cluster_dut_adapter #(
   logic [1023:0] raw_data;
   initial begin
     if(MAX_CONTEXTS<1 || OUTPUT_BUFFER_DEPTH<1 || WGT_RADDR_BUFFER_DEPTH<1 ||
-       REQUANT_CONTEXT_DEPTH<1 || REQUANT_CONTEXT_LANES<1 || REQUANT_CONTEXT_LANES>32)
+       REQUANT_CONTEXT_DEPTH<1)
       $fatal(1,"Context capacity must be >= 1");
   end
   always_comb begin
@@ -183,12 +185,16 @@ module cluster_dut_adapter #(
   always_comb begin
     selected_requant_cfg=batch_requant_cfg;
     if(REQUANT_CONTEXT_DEPTH>1 && batch_command.as_cnt>1)
-      for(int l=0;l<REQUANT_CONTEXT_LANES;l++) if(raw_valid[l] && raw_context[l]<REQUANT_CONTEXT_DEPTH) begin
-        selected_requant_cfg.requant_zp[32*l+:32]=requant_context_zp[raw_context[l]][32*l+:32];
+      for(int l=0;l<32;l++) if(raw_valid[l] && raw_context[l]<REQUANT_CONTEXT_DEPTH) begin
+        selected_requant_cfg.requant_zp[32*(l%4)+:32]=requant_context_zp[raw_context[l]][32*(l%4)+:32];
+        if(batch_requant_cfg.requant_mode) begin
+          selected_requant_cfg.requant_multiplier[32*(l%4)+:32]=requant_context_multiplier[raw_context[l]][32*(l%4)+:32];
+          selected_requant_cfg.requant_shift[10*(l%4)+:10]=requant_context_shift[raw_context[l]][10*(l%4)+:10];
+        end
       end
   end
   ClusterRequant u_requant (
-    .cfg_i(selected_requant_cfg), .psum_i(raw_data), .valid_i(raw_valid),
+    .cfg_i(selected_requant_cfg), .psum_i(raw_data), .valid_i(ENABLE_REQUANT ? raw_valid : 32'b0),
     .data_o(requant_comb_data), .valid_o(requant_comb_valid)
   );
   always_ff @(posedge clock) begin
@@ -199,7 +205,7 @@ module cluster_dut_adapter #(
       requant_valid_o<=requant_comb_valid;
       for(int l=0;l<32;l++) if(requant_comb_valid[l]) begin
         if(REQUANT_CONTEXT_DEPTH>1 && batch_command.as_cnt>1 &&
-           (l>=REQUANT_CONTEXT_LANES || raw_context[l]>=REQUANT_CONTEXT_DEPTH ||
+           (raw_context[l]>=REQUANT_CONTEXT_DEPTH ||
             !requant_context_valid[raw_context[l]]))
           $fatal(1,"CLUSTER_REQUANT_CONFIG: missing AS context zp");
         requant_data_o[8*l+:8]<=requant_comb_data[8*l+:8];
@@ -361,10 +367,12 @@ module cluster_dut_adapter #(
       tmp_valid<='0;
       batch_active<=0; batch_input_done<=0; batch_contexts<=0;
       batch_requant_cfg<='{requant_mode:1'b0,requant_multiplier:32'sd1,
-                          requant_shift:10'sd0,requant_zp:32'sd0};
+                          requant_shift:10'sd0,requant_zp:32'sd0,default:'0};
       requant_context_valid<='0;
       for(int z=0;z<REQUANT_CONTEXT_DEPTH;z++) begin
         requant_context_zp[z]<='0;
+        requant_context_multiplier[z]<='0;
+        requant_context_shift[z]<='0;
       end
       batch_command<='0; psum_depth_open<='0;
       tmp_only_steps=0; as_seed_steps=0; as_fusion_steps=0; as_acc_steps=0;
@@ -386,19 +394,35 @@ module cluster_dut_adapter #(
         if(cmd_i.os_cnt>1 &&
            (cmd_i.ws_cnt>OUTPUT_BUFFER_DEPTH || cmd_i.as_cnt>OUTPUT_BUFFER_DEPTH))
           $fatal(1,"CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
-        if(REQUANT_CONTEXT_DEPTH>1 && cmd_i.as_cnt>REQUANT_CONTEXT_DEPTH)
+        if(ENABLE_REQUANT && REQUANT_CONTEXT_DEPTH>1 && cmd_i.as_cnt>REQUANT_CONTEXT_DEPTH)
           $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded");
-        if(REQUANT_CONTEXT_DEPTH>1 && cmd_i.as_cnt>1) begin
+        if(ENABLE_REQUANT && REQUANT_CONTEXT_DEPTH>1 && cmd_i.as_cnt>1) begin
           zp_ctx=packet_active ? command_count : 0;
-          if($isunknown(requant_cfg_i.requant_zp[0+:32*REQUANT_CONTEXT_LANES]))
+          if(batch_active && (requant_cfg_i.requant_mode!==batch_requant_cfg.requant_mode ||
+                             requant_cfg_i.conv_mode!==batch_requant_cfg.conv_mode))
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context mode changed");
+          if(requant_cfg_i.requant_mode) begin
+            if($isunknown({requant_cfg_i.requant_multiplier,requant_cfg_i.requant_shift}))
+              $fatal(1,"CLUSTER_REQUANT_CONFIG: unknown AS context scale");
+            for(int c=0;c<4;c++)
+              if($signed(requant_cfg_i.requant_shift[10*c+:10])<-31 || $signed(requant_cfg_i.requant_shift[10*c+:10])>31)
+                $fatal(1,"CLUSTER_REQUANT_CONFIG: shift must be -31..31");
+          end
+          if($isunknown(requant_cfg_i.requant_zp))
             $fatal(1,"CLUSTER_REQUANT_CONFIG: unknown AS context zp");
           if(!batch_active || tile==0) begin
             if(!batch_active) requant_context_valid<='0;
-            requant_context_zp[zp_ctx]<=requant_cfg_i.requant_zp[0+:32*REQUANT_CONTEXT_LANES];
+            requant_context_zp[zp_ctx]<=requant_cfg_i.requant_zp;
+            requant_context_multiplier[zp_ctx]<=requant_cfg_i.requant_multiplier;
+            requant_context_shift[zp_ctx]<=requant_cfg_i.requant_shift;
             requant_context_valid[zp_ctx]<=1;
           end else if(!requant_context_valid[zp_ctx] ||
-                      requant_cfg_i.requant_zp[0+:32*REQUANT_CONTEXT_LANES]!==requant_context_zp[zp_ctx])
+                      requant_cfg_i.requant_zp!==requant_context_zp[zp_ctx])
             $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles");
+          else if(requant_cfg_i.requant_mode &&
+                  (requant_cfg_i.requant_multiplier!==requant_context_multiplier[zp_ctx] ||
+                   requant_cfg_i.requant_shift!==requant_context_shift[zp_ctx]))
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles");
         end
         if(!packet_active) begin
           packet_cmd<=cmd_i;packet_active<=1;command_count<=1;
@@ -413,12 +437,15 @@ module cluster_dut_adapter #(
           command_count<=command_count+1;
         end
         if(!batch_active) begin
-          if ($isunknown(requant_cfg_i))
+          if (ENABLE_REQUANT && $isunknown(requant_cfg_i))
             $fatal(1,"CLUSTER_REQUANT_CONFIG: unknown configuration");
-          if (requant_cfg_i.requant_mode)
-            $fatal(1,"CLUSTER_REQUANT_CONFIG: per-channel scale mode is not supported");
-          if ($signed(requant_cfg_i.requant_shift)<-31 || $signed(requant_cfg_i.requant_shift)>31)
-            $fatal(1,"CLUSTER_REQUANT_CONFIG: shift must be -31..31");
+          if(ENABLE_REQUANT && requant_cfg_i.requant_mode && !requant_cfg_i.conv_mode)
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: per-channel scale requires conv_mode");
+          if(ENABLE_REQUANT && !conv_group_legal(cmd_i))
+            $fatal(1,"CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group");
+          for(int c=0;c<4;c++) if(ENABLE_REQUANT && (c==0 || requant_cfg_i.requant_mode))
+            if($signed(requant_cfg_i.requant_shift[10*c+:10])<-31 || $signed(requant_cfg_i.requant_shift[10*c+:10])>31)
+              $fatal(1,"CLUSTER_REQUANT_CONFIG: shift must be -31..31");
           batch_requant_cfg<=requant_cfg_i;
           batch_active<=1; batch_command<=cmd_i;
           batch_contexts<=cmd_i.ws_cnt>1 ? int'(cmd_i.ws_cnt) : int'(cmd_i.as_cnt);
@@ -451,9 +478,6 @@ module cluster_dut_adapter #(
       end
       in_tag.valid<=issue;
       if(issue) begin
-        if(REQUANT_CONTEXT_DEPTH>1 && command.as_cnt>1 &&
-           (issue_mask >> REQUANT_CONTEXT_LANES)!=0)
-          $fatal(1,"CLUSTER_REQUANT_CONFIG: AS context zp lane capacity exceeded");
         if(!act_slice_valid[phase]) $fatal(1,"Internal issue before ACT slice loaded");
         if(phase==phases-1 && (command.as_cnt<=1 || context_idx==contexts-1)) begin
           packet_active<=0;act_complete<=0;command_count<=0;act_slice_valid<='0;

@@ -21,7 +21,7 @@ module tb_Cluster_GEMM_OS2_AS4;
   wire [1023:0] cim_rd_data,psum_data_o;
   wire [255:0] requant_data_o;
   wire [31:0] out_valid_o,requant_valid_o;
-  cluster_dut_adapter #(.REQUANT_CONTEXT_DEPTH(ZP_DEPTH),.REQUANT_CONTEXT_LANES(4)) dut(
+  cluster_dut_adapter #(.REQUANT_CONTEXT_DEPTH(ZP_DEPTH)) dut(
     .clock(clock),.reset(reset),.cmd_i(cmd_i),.requant_cfg_i(requant_cfg_i),
     .cmd_valid_i(cmd_valid_i),.cmd_ready_o(cmd_ready_o),.act_data_i(act_data_i),
     .weight_wen_i(8'b0),.weight_waddr_i(8'b0),.weight_wdata_i(8192'b0),
@@ -33,6 +33,8 @@ module tb_Cluster_GEMM_OS2_AS4;
   logic [15:0] x_q[0:M*K-1];
   logic [7:0] w_q[0:K*N-1],quant_golden[0:M*N-1];
   logic [31:0] raw_golden[0:M*N-1],centered_golden[0:M*N-1],zp[0:N-1];
+  logic [31:0] channel_multiplier[0:N-1];
+  logic [9:0] channel_shift[0:N-1];
   logic [31:0] history_golden[0:M*2*4*4*4-1];
   logic [1023:0] weight_rows[0:63],act_planes[0:M*2*4-1];
   logic [31:0] observed_raw[0:M*N-1];
@@ -48,4 +50,15 @@ module tb_Cluster_GEMM_OS2_AS4;
   `include "include/cluster_gemm_as_driver.svh"
   `include "include/cluster_gemm_as_scoreboard.svh"
   `include "include/cluster_gemm_as_regression.svh"
+
+  // VCS supplies a case-specific path; direct runs retain a descriptive default.
+`ifdef CLUSTER_FSDB
+  initial begin : case_fsdb_dump
+    string fsdb_file;
+    if(!$value$plusargs("FSDB_FILE=%s",fsdb_file)) fsdb_file="tb_Cluster_GEMM_OS2_AS4_default.fsdb";
+    $display("[WAVE] file=%s",fsdb_file);
+    $fsdbDumpfile(fsdb_file);
+    $fsdbDumpvars(0, tb_Cluster_GEMM_OS2_AS4, "+all");
+  end
+`endif
 endmodule

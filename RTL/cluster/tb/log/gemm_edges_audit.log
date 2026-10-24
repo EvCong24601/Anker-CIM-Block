@@ -1,0 +1,17 @@
+PASS full regression RTL/TB SHA256 fingerprints: 39 files
+PASS original raw arithmetic, input and split traces unchanged
+PASS gemm_edge_boundaries_channel: matrix observations and vector fingerprints match
+PASS gemm_edge_n_tail_channel: matrix observations and vector fingerprints match
+PASS gemm_edge_n_tail_tensor: matrix observations and vector fingerprints match
+PASS gemm_edge_w2_high_channel: matrix observations and vector fingerprints match
+PASS gemm_edge_w2_high_tensor: matrix observations and vector fingerprints match
+PASS gemm_edge_w4_high_channel: matrix observations and vector fingerprints match
+PASS gemm_edge_w4_high_tensor: matrix observations and vector fingerprints match
+PASS new suites: 400 raw and 400 INT8 matrix elements; mask holes and all boundary categories covered
+PASS functional/TB/VCS filelists resolve, including the new GEMM top
+PASS Python syntax
+PASS English display/diagnostic format strings: 334
+PASS read-only Word timing crosscheck: 240 raw operation cycles and 42 completion summary cells
+PASS full ModelSim regression: 76 suites and 48 expected rejections
+PASS Python source SHA256 gemm_edges_vectors.py: 4e3d5d2c58ee631a2d4621cae5eaf6e1ab03a68c79558b6368423ca6c7f51360
+PASS Python source SHA256 run_sram_regression.py: 518721a2192fca920e3b46a04f418d0f16e7e119ab5e95c371a91271e239d78a

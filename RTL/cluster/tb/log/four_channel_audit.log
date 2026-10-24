@@ -1,0 +1,17 @@
+PASS 35 final RTL/TB source hashes match the full regression snapshot
+PASS raw compute, external input and split traces unchanged
+PASS gemm_ws32: 512 raw + 512 INT8 exact, vector SHA256 manifest verified
+PASS gemm_ws32_per_channel: 512 raw + 512 INT8 exact, vector SHA256 manifest verified
+PASS gemm_os2_as4: 512 raw + 512 INT8 exact, vector SHA256 manifest verified
+PASS gemm_os2_as4_per_channel: 512 raw + 512 INT8 exact, vector SHA256 manifest verified
+PASS per-channel weight versions use distinct column scales, weights, raw golden and four ordered shift values
+PASS functional/TB/VCS filelist paths resolve
+PASS Python syntax
+PASS English display/diagnostic format strings: 302
+PASS 512 Python four-channel arithmetic cases and 1536 real-Cluster OC-mask/group cases
+PASS original/repository Block spec identical; final 19-page Word render visually verified
+PASS full ModelSim regression: 69 suites, 48 expected rejections
+PASS Python source SHA256 requant_vectors.py: f5b07879e950be8823fbbc179d5ac11f3ff74e1ff4341ef27e850a11440c9ab7
+PASS Python source SHA256 gemm_vectors.py: e177266835b7fad416b97f658b104202530500566d67fe458c1a8e6ebbd70ec7
+PASS Python source SHA256 gemm_os2_as4_vectors.py: 7dd16dbb8cd547c591766162e084e1586ed1b476a106a63d573e7fd599b0cc47
+PASS Python source SHA256 run_sram_regression.py: 06edcb1f0d3887fdee8d52fa6700c555fd9b2fcd9a9f34175ccd40bfa11da79f

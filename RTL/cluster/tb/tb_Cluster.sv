@@ -9,6 +9,7 @@ module tb_Cluster;
   parameter int OUTPUT_BUFFER_DEPTH=16; // Context entries per channel
   parameter int WGT_RADDR_BUFFER_DEPTH=64; // Eight-bit AS addresses only
   parameter int MAX_CONTEXTS=64; // Completion/tag capacity; independent of Psum
+  parameter bit ENABLE_REQUANT=0; // Raw-only tree suites; quant suites override 1
   parameter int TIMEOUT_CYCLES=4000;
   parameter logic [31:0] SEED=32'h19e2a407;
   logic clock=0;
@@ -16,7 +17,7 @@ module tb_Cluster;
   logic reset=1;
   cluster_ctrl_t cmd_i='0;
   requant_cfg_t requant_cfg_i='{requant_mode:1'b0,requant_multiplier:32'sd1,
-                              requant_shift:10'sd0,requant_zp:32'sd0};
+                              requant_shift:10'sd0,requant_zp:32'sd0,default:'0};
   requant_cfg_t expected_requant_cfg;
   wire [255:0] requant_data_o;
   wire [31:0] requant_valid_o;
@@ -37,7 +38,8 @@ module tb_Cluster;
   wire [1023:0] psum_data_o;
   cluster_dut_adapter #(.WGT_RADDR_BUFFER_DEPTH(WGT_RADDR_BUFFER_DEPTH),
                         .MAX_CONTEXTS(MAX_CONTEXTS),
-                        .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH)) dut(.*);
+                        .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
+                        .ENABLE_REQUANT(ENABLE_REQUANT)) dut(.*);
   // 计算参考模型、输出预期及 case/握手计数。
   logic [31:0] rng=SEED;
   int unsigned activation[0:255][0:MAX_CONTEXTS-1][0:255];
@@ -80,4 +82,15 @@ module tb_Cluster;
   `include "include/cluster_sram_cases.svh"
   `include "include/cluster_suites.svh"
   `include "include/cluster_regression.svh"
+
+  // VCS supplies a case-specific path; direct runs retain a descriptive default.
+`ifdef CLUSTER_FSDB
+  initial begin : case_fsdb_dump
+    string fsdb_file;
+    if(!$value$plusargs("FSDB_FILE=%s",fsdb_file)) fsdb_file="tb_Cluster_default.fsdb";
+    $display("[WAVE] file=%s",fsdb_file);
+    $fsdbDumpfile(fsdb_file);
+    $fsdbDumpvars(0, tb_Cluster, "+all");
+  end
+`endif
 endmodule

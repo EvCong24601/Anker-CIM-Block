@@ -50,9 +50,28 @@ def write_vectors(path):
     return len(cases)
 
 
+def write_channel_vectors(path):
+    """Distinct scales in OC order; sparse masks must never compact indices."""
+    rng=random.Random(0x4F434D)
+    rows=[]
+    for index in range(512):
+        mode=index%2
+        valid=(index//2)%16
+        p=[rng.randrange(-32768,32768) for _ in range(4)]
+        mul=[rng.randrange(-64,65) for _ in range(4)]
+        shift=[rng.randrange(-17,2) for _ in range(4)]
+        zp=[rng.randrange(-127,128) for _ in range(4)]
+        wanted=[golden(p[c],mul[c if mode else 0],shift[c if mode else 0],zp[c]) for c in range(4)]
+        rows.append(' '.join(map(str,[mode,valid,*p,*mul,*shift,*zp,*wanted])))
+    Path(path).write_text('\n'.join(rows)+'\n',encoding='ascii')
+    return len(rows)
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
     args = parser.parse_args()
     print(f'PASS generated Requant vectors: {write_vectors(args.output)}')
+    channel_path=args.output.with_name('requant_channel_vectors.txt')
+    print(f'PASS generated four-channel vectors: {write_channel_vectors(channel_path)}')
