@@ -4,7 +4,7 @@
 
 - [输入时序、调度与容量](Cluster_Input_Overlap.md)：同包接收/发射重叠、WS/AS顺序、OS1 bit fusion、地址表与Psum容量、逐拍公式。
 - [SRAM接口](Cluster_Weight_SRAM_Interface.md)：Macro/行寻址、32 B写mask、读写时序、互斥、Hold及访问检查。
-- [Requant](Cluster_Requant.md)：四通道参数映射、per-tensor/per-channel scale、合并zp、AS独立scale/zp参数表、INT8输出寄存及1T valid。
+- [Requant](Cluster_Requant.md)：四通道参数映射、per-tensor/per-channel scale、合并zp、AS独立scale/zp参数表、INT8输出寄存及1T valid、Psum中间截断与溢出处理TBD。
 - [GEMM用例](Cluster_GEMM.md)：全部11个正向、5个AS参数负向case，矩阵、权重布局、时序、参数、golden和TB分工。
 - [Testbench指南](Testbench_Guide.md)：源码结构、内部观察信号、golden/scoreboard、采样和日志职责。
 

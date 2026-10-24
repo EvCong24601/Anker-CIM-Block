@@ -36,8 +36,8 @@ module cluster_top #(
   logic [4095:0] act_buffer;  // four 1024-bit bit-slice planes, A0..A3
   logic [1023:0] plane;
   cluster_ctrl_t packet_cmd;
-  logic [7:0] context_address[0:WGT_RADDR_BUFFER_DEPTH-1];
-  logic [7:0] current_weight_address; // A4 AS bypass; no deep address entry clocks
+  logic [7:0] context_address[0:WGT_RADDR_BUFFER_DEPTH - 1];
+  logic [7:0] current_weight_address;  // A4 AS bypass; no deep address entry clocks
   logic packet_active, act_loading, act_complete;
   logic [3:0] act_slice_valid;
   int external_phase, command_count;
@@ -55,10 +55,10 @@ module cluster_top #(
   requant_cfg_t batch_requant_cfg;
   // Fixed Context slots: AS never recycles an entry within a batch.
   // A4 bypasses only the weight-address table; all AS modes retain Q params.
-  logic [127:0] requant_context_zp[0:REQUANT_CONTEXT_DEPTH-1];
-  logic [127:0] requant_context_multiplier[0:REQUANT_CONTEXT_DEPTH-1];
-  logic [39:0] requant_context_shift[0:REQUANT_CONTEXT_DEPTH-1];
-  logic [REQUANT_CONTEXT_DEPTH-1:0] requant_context_valid;
+  logic [127:0] requant_context_zp[0:REQUANT_CONTEXT_DEPTH - 1];
+  logic [127:0] requant_context_multiplier[0:REQUANT_CONTEXT_DEPTH - 1];
+  logic [39:0] requant_context_shift[0:REQUANT_CONTEXT_DEPTH - 1];
+  logic [REQUANT_CONTEXT_DEPTH - 1:0] requant_context_valid;
   requant_cfg_t selected_requant_cfg;
   wire deep_command = cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4;
   wire deep_batch = batch_command.cim_as_cnt > 1 && abits(int'(batch_command.cim_precision)) > 4;
@@ -75,20 +75,55 @@ module cluster_top #(
   wire [31:0] accepted_context = packet_active ? command_count : 0;
   wire [31:0] write_context_slot = accepted_context;
   wire write_requant_params = cmd_accept && ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && (!batch_active || tile == 0);
-  MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_entry0_icg(.clock(clock), .enable(storage_active), .gated_clock(entry0_clock));
-  MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_deep_weight_icg(.clock(clock), .enable(deep_weight_active), .gated_clock(deep_weight_clock));
-  MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_deep_requant_icg(.clock(clock), .enable(deep_requant_active), .gated_clock(deep_requant_clock));
-  MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_channel_scale_icg(.clock(clock), .enable(channel_scale_active), .gated_clock(channel_scale_clock));
-  MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_batch_cfg_icg(.clock(clock), .enable(batch_cfg_load), .gated_clock(batch_cfg_clock));
-  MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_batch_channel_icg(.clock(clock), .enable(batch_cfg_load && requant_cfg_i.requant_mode), .gated_clock(batch_channel_clock));
+  MacroClockGate #(
+    .ENABLE_GATING(USE_CLOCK_GATING)
+  ) u_entry0_icg (
+    .clock(clock),
+    .enable(storage_active),
+    .gated_clock(entry0_clock)
+  );
+  MacroClockGate #(
+    .ENABLE_GATING(USE_CLOCK_GATING)
+  ) u_deep_weight_icg (
+    .clock(clock),
+    .enable(deep_weight_active),
+    .gated_clock(deep_weight_clock)
+  );
+  MacroClockGate #(
+    .ENABLE_GATING(USE_CLOCK_GATING)
+  ) u_deep_requant_icg (
+    .clock(clock),
+    .enable(deep_requant_active),
+    .gated_clock(deep_requant_clock)
+  );
+  MacroClockGate #(
+    .ENABLE_GATING(USE_CLOCK_GATING)
+  ) u_channel_scale_icg (
+    .clock(clock),
+    .enable(channel_scale_active),
+    .gated_clock(channel_scale_clock)
+  );
+  MacroClockGate #(
+    .ENABLE_GATING(USE_CLOCK_GATING)
+  ) u_batch_cfg_icg (
+    .clock(clock),
+    .enable(batch_cfg_load),
+    .gated_clock(batch_cfg_clock)
+  );
+  MacroClockGate #(
+    .ENABLE_GATING(USE_CLOCK_GATING)
+  ) u_batch_channel_icg (
+    .clock(clock),
+    .enable(batch_cfg_load && requant_cfg_i.requant_mode),
+    .gated_clock(batch_channel_clock)
+  );
 
   // WS/single uses packet_cmd directly. A4 AS uses one bypass register.
   always @(posedge entry0_clock or posedge reset)
     if (reset) current_weight_address <= '0;
     else if (storage_active) current_weight_address <= cmd_i.cim_weight_raddr;
   always @(posedge deep_weight_clock or posedge reset) begin
-    if (reset)
-      for (int d = 0; d < WGT_RADDR_BUFFER_DEPTH; d++) context_address[d] <= '0;
+    if (reset) for (int d = 0; d < WGT_RADDR_BUFFER_DEPTH; d++) context_address[d] <= '0;
     else if (cmd_accept && deep_command && write_context_slot < WGT_RADDR_BUFFER_DEPTH)
       context_address[write_context_slot] <= cmd_i.cim_weight_raddr;
   end
@@ -203,17 +238,17 @@ module cluster_top #(
   // before the final-result overflow check; there is no intermediate overflow
   // flag or saturation. Every stored intermediate must fit signed32, not only
   // the final mathematical sum. See docs/Cluster_Requant.md (Psum limits).
-  logic signed [31:0] psum[0:OUTPUT_BUFFER_DEPTH-1][0:31];
-  logic [OUTPUT_BUFFER_DEPTH-1:0] psum_depth_open;
+  logic signed [31:0] psum[0:OUTPUT_BUFFER_DEPTH - 1][0:31];
+  logic [OUTPUT_BUFFER_DEPTH - 1:0] psum_depth_open;
   int batch_contexts;
   cluster_ctrl_t batch_command;
   // Explicit advance ICG enables: registered at tmp capture, consumed by
   // the arithmetic-state DFFs on the next edge. High address depths are
   // disabled for the WHOLE batch, independently of per-cycle write requests.
   logic [31:0] tmp_input_cg_en;
-  logic [31:0] psum_cg_en[0:OUTPUT_BUFFER_DEPTH-1];
+  logic [31:0] psum_cg_en[0:OUTPUT_BUFFER_DEPTH - 1];
   wire [31:0] tmp_input_clock;
-  wire [31:0] psum_clock[0:OUTPUT_BUFFER_DEPTH-1];
+  wire [31:0] psum_clock[0:OUTPUT_BUFFER_DEPTH - 1];
   logic [31:0] capture_valid;
   tag_t capture_tag[0:31];
   longint signed capture_data[0:31];
@@ -231,8 +266,8 @@ module cluster_top #(
   // per lane and Context. The downstream is assumed to be always ready (no
   // backpressure). result_ready/result_mask only track lane reservation and
   // completion for the integrity checks and the batch-end decision.
-  logic [31:0] result_ready[0:MAX_CONTEXTS-1];
-  logic [31:0] result_mask[0:MAX_CONTEXTS-1];
+  logic [31:0] result_ready[0:MAX_CONTEXTS - 1];
+  logic [31:0] result_mask[0:MAX_CONTEXTS - 1];
   // Internal observation only; no new external signal.
   // Raw observations remain available for the independent compute scoreboard.
   logic [31:0] raw_valid;
@@ -258,20 +293,22 @@ module cluster_top #(
     for (int m = 0; m < 8; m++) begin
       active[m] = command.cim_macro_en_mask[m] && (|command.cim_macro_oc_mask[4*m+:4]);
       for (int c = 0; c < 4; c++)
-      if (command.cim_macro_en_mask[m] && merge_contributes(command.cim_reduce_split_mask, command.cim_macro_oc_mask, m, c))
+      if (command.cim_macro_en_mask[m] && merge_contributes(
+          command.cim_reduce_split_mask, command.cim_macro_oc_mask, m, c
+        ))
         issue_mask[4*group_of(command.cim_reduce_split_mask, m)+c] = 1;
     end
     final_issue = phase == phases - 1 && tile == int'(command.cim_os_cnt) - 1;
     // Consume only registered inputs: a Plane/address accepted on this edge
     // becomes eligible on the next edge. Later Planes and AS descriptors may
     // still be loading; keep the existing phase/Context order when stalled.
-    issue=packet_active && act_slice_valid[phase] && !batch_input_done &&
-          (packet_cmd.cim_as_cnt<=1 || context_idx<command_count);
+    issue = packet_active && act_slice_valid[phase] && !batch_input_done &&
+            (packet_cmd.cim_as_cnt <= 1 || context_idx < command_count);
     ren = active & {8{issue}};
     for (int m = 0; m < 8; m++) station[m] = !hold_valid[m] || hold_addr[m] != command.cim_weight_raddr;
   end
-  assign cmd_ready_o=!reset && !sram_cs_en && !batch_input_done &&
-    (!packet_active || (packet_cmd.cim_as_cnt>1 && command_count<int'(packet_cmd.cim_as_cnt)));
+  assign cmd_ready_o = !reset && !sram_cs_en && !batch_input_done &&
+                       (!packet_active || (packet_cmd.cim_as_cnt > 1 && command_count < int'(packet_cmd.cim_as_cnt)));
   // Internal registered raw_data/raw_valid feed Requant. Testbenches may
   // observe them hierarchically for arithmetic and latency checking only.
   // Registered raw Psum -> combinational Requant -> INT8 output registers.
@@ -288,7 +325,7 @@ module cluster_top #(
           selected_requant_cfg.requant_multiplier[31:0] = requant_context_multiplier[raw_context[l]][31:0];
           selected_requant_cfg.requant_shift[9:0] = requant_context_shift[raw_context[l]][9:0];
         end else begin
-          selected_requant_cfg.requant_multiplier[32*(l%4)+:32] = requant_context_multiplier[raw_context[l]][32*(l%4)+:32];
+          selected_requant_cfg.requant_multiplier[32 * (l % 4) +: 32] = requant_context_multiplier[raw_context[l]][32 * (l % 4) +: 32];
           selected_requant_cfg.requant_shift[10*(l%4)+:10] = requant_context_shift[raw_context[l]][10*(l%4)+:10];
         end
       end
@@ -306,8 +343,20 @@ module cluster_top #(
     else requant_valid_o <= requant_comb_valid;
   for (genvar l = 0; l < 32; l++) begin : g_output_lane
     wire raw_clock, quant_clock;
-    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_raw_icg(.clock(clock), .enable(!reset && result_done[l]), .gated_clock(raw_clock));
-    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_quant_icg(.clock(clock), .enable(!reset && requant_comb_valid[l]), .gated_clock(quant_clock));
+    MacroClockGate #(
+      .ENABLE_GATING(USE_CLOCK_GATING)
+    ) u_raw_icg (
+      .clock(clock),
+      .enable(!reset && result_done[l]),
+      .gated_clock(raw_clock)
+    );
+    MacroClockGate #(
+      .ENABLE_GATING(USE_CLOCK_GATING)
+    ) u_quant_icg (
+      .clock(clock),
+      .enable(!reset && requant_comb_valid[l]),
+      .gated_clock(quant_clock)
+    );
     always @(posedge raw_clock or posedge reset) begin
       if (reset) begin
         raw_data[32*l+:32] <= '0;
@@ -329,18 +378,19 @@ module cluster_top #(
   end
   for (genvar m = 0; m < 8; m++) begin : g_macro
     logic [511:0] idata;
-    wire [3:0] result_mask;
+    wire  [  3:0] result_mask;
     for (genvar c = 0; c < 4; c++) begin : g_result_demand
       // Input-boundary demand is registered inside Macro before its output edge.
-      assign result_mask[c] = merge_contributes(command.cim_reduce_split_mask,
-                                               command.cim_macro_oc_mask, m, c);
+      assign result_mask[c] = merge_contributes(command.cim_reduce_split_mask, command.cim_macro_oc_mask, m, c);
     end
     always_comb begin
       idata = '0;
       if (wbits(int'(command.cim_precision)) != 0)
         for (int j = 0; j < 128; j++)
         if (j < 256 / wbits(int'(command.cim_precision)))
-          idata[4*j+:4] = plane[4*(int'(command.cim_act_slot_sel[3*m+:3])*(256/wbits(int'(command.cim_precision)))+j)+:4];
+          idata[4*j+:4] = plane[4*(int'(command.cim_act_slot_sel[3*m+:3])*(256/wbits(
+            int'(command.cim_precision)
+          ))+j)+:4];
     end
     SingleMacro #(
       .USE_CLOCK_GATING(USE_CLOCK_GATING)
@@ -369,7 +419,9 @@ module cluster_top #(
       .cim_odata_phase(macro_phase[2*m+:2])
     );
   end
-  ClusterReduceTree #(.USE_CLOCK_GATING(USE_CLOCK_GATING)) u_reduce (
+  ClusterReduceTree #(
+    .USE_CLOCK_GATING(USE_CLOCK_GATING)
+  ) u_reduce (
     .clock(clock),
     .reset(reset),
     .early_valid_i(in_tag.valid),
@@ -440,7 +492,9 @@ module cluster_top #(
     end
   end
   for (genvar l = 0; l < 32; l++) begin : g_tmp_input
-    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_icg (
+    MacroClockGate #(
+      .ENABLE_GATING(USE_CLOCK_GATING)
+    ) u_icg (
       .clock(clock),
       .enable(tmp_input_cg_en[l]),
       .gated_clock(tmp_input_clock[l])
@@ -451,7 +505,9 @@ module cluster_top #(
   end
   for (genvar d = 0; d < OUTPUT_BUFFER_DEPTH; d++) begin : g_psum_depth
     for (genvar l = 0; l < 32; l++) begin : g_lane
-      MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_icg (
+      MacroClockGate #(
+        .ENABLE_GATING(USE_CLOCK_GATING)
+      ) u_icg (
         .clock(clock),
         .enable(psum_depth_open[d] && psum_cg_en[d][l]),
         .gated_clock(psum_clock[d][l])
@@ -475,7 +531,7 @@ module cluster_top #(
       fusion_b[l] = 0;
       acc_a[l] = 0;
       acc_b[l] = 0;
-      if(capture_valid[l] && capture_tag[l].cmd.cim_as_cnt<=1 && capture_tag[l].ph>0) begin
+      if (capture_valid[l] && capture_tag[l].cmd.cim_as_cnt <= 1 && capture_tag[l].ph > 0) begin
         fusion_enable[l] = 1;
         fusion_a[l] = tmp_result[l];
         fusion_b[l] = capture_data[l] <<< (4 * capture_tag[l].ph);
@@ -486,14 +542,15 @@ module cluster_top #(
         fusion_b[l] = tmp_result[l] <<< (4 * tmp_tag[l].ph);
       end
       fusion_result[l] = fusion_a[l] + fusion_b[l];
-      tmp_store_data[l]=(capture_valid[l] && capture_tag[l].cmd.cim_as_cnt<=1 &&
-                         capture_tag[l].ph>0) ? fusion_result[l] : capture_data[l];
+      tmp_store_data[l] = (capture_valid[l] && capture_tag[l].cmd.cim_as_cnt <= 1 &&
+        capture_tag[l].ph > 0) ? fusion_result[l] : capture_data[l];
       if (tmp_valid[l]) begin
         if (tmp_tag[l].cmd.cim_as_cnt > 1) begin
           psum_write[l] = tmp_tag[l].cmd.cim_os_cnt > 1 || abits(int'(tmp_tag[l].cmd.cim_precision)) > 4;
           acc_enable[l] = tmp_tag[l].ph == 0 && tmp_tag[l].kt > 0;
         end else begin
-          psum_write[l] = tmp_tag[l].cmd.cim_os_cnt > 1 && tmp_tag[l].ph == abits(int'(tmp_tag[l].cmd.cim_precision)) / 4 - 1;
+          psum_write[l] = tmp_tag[l].cmd.cim_os_cnt > 1 &&
+            tmp_tag[l].ph == abits(int'(tmp_tag[l].cmd.cim_precision)) / 4 - 1;
           acc_enable[l] = psum_write[l] && tmp_tag[l].kt > 0;
         end
         if (acc_enable[l]) begin
@@ -502,8 +559,8 @@ module cluster_top #(
         end
       end
       acc_result[l] = acc_a[l] + acc_b[l];
-      arithmetic_result[l]=acc_enable[l] ? acc_result[l] :
-        (tmp_valid[l] && tmp_tag[l].cmd.cim_as_cnt>1 && tmp_tag[l].ph>0) ?
+      arithmetic_result[l] = acc_enable[l] ? acc_result[l] :
+        (tmp_valid[l] && tmp_tag[l].cmd.cim_as_cnt > 1 && tmp_tag[l].ph > 0) ?
         fusion_result[l] : tmp_result[l];
       result_done[l] = tmp_valid[l] && tmp_tag[l].ph == abits(int'(tmp_tag[l].cmd.cim_precision)) / 4 - 1 &&
         tmp_tag[l].kt == int'(tmp_tag[l].cmd.cim_os_cnt) - 1;
@@ -536,7 +593,7 @@ module cluster_top #(
       batch_input_done <= 0;
       batch_contexts <= 0;
       requant_context_valid <= '0;
-      batch_command   <= '0;
+      batch_command <= '0;
       psum_depth_open <= '0;
       tmp_only_steps = 0;
       as_seed_steps = 0;
@@ -561,7 +618,8 @@ module cluster_top #(
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: context metadata exceeded");
         if (cmd_i.cim_as_cnt > OUTPUT_BUFFER_DEPTH)
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth");
-        if (deep_command && cmd_i.cim_as_cnt > WGT_RADDR_BUFFER_DEPTH) $fatal(1, "CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded");
+        if (deep_command && cmd_i.cim_as_cnt > WGT_RADDR_BUFFER_DEPTH)
+          $fatal(1, "CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded");
         if (cmd_i.cim_os_cnt > 1 && (cmd_i.cim_ws_cnt > OUTPUT_BUFFER_DEPTH || cmd_i.cim_as_cnt > OUTPUT_BUFFER_DEPTH))
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
         if (ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && cmd_i.cim_as_cnt > REQUANT_CONTEXT_DEPTH)
@@ -622,8 +680,8 @@ module cluster_top #(
                 requant_cfg_i.requant_shift[10*c+:10]
               ) > 31)
               $fatal(1, "CLUSTER_REQUANT_CONFIG: shift must be -31..31");
-          batch_active <= 1;
-          batch_command <= cmd_i;
+          batch_active   <= 1;
+          batch_command  <= cmd_i;
           batch_contexts <= cmd_i.cim_ws_cnt > 1 ? int'(cmd_i.cim_ws_cnt) : int'(cmd_i.cim_as_cnt);
           // Clear per-lane completion tracking for the whole batch; the
           // per-Context reservation masks are (re)written at final_issue.
@@ -632,15 +690,17 @@ module cluster_top #(
             result_mask[c]  = '0;
           end
           for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++)
-          psum_depth_open[d] <= (cmd_i.cim_os_cnt > 1 || (cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4)) && d < int'(cmd_i.cim_ws_cnt > 1 ? cmd_i.cim_ws_cnt : cmd_i.cim_as_cnt);
-        end else if(cmd_i.cim_os_cnt!=batch_command.cim_os_cnt ||
-                    cmd_i.cim_ws_cnt!=batch_command.cim_ws_cnt || cmd_i.cim_as_cnt!=batch_command.cim_as_cnt ||
-                    cmd_i.cim_precision!=batch_command.cim_precision ||
-                    cmd_i.cim_signed_en!=batch_command.cim_signed_en ||
-                    cmd_i.cim_reduce_split_mask!=batch_command.cim_reduce_split_mask ||
-                    cmd_i.cim_macro_en_mask!=batch_command.cim_macro_en_mask ||
-                    cmd_i.cim_macro_oc_mask!=batch_command.cim_macro_oc_mask ||
-                    cmd_i.cim_act_slot_sel!=batch_command.cim_act_slot_sel)
+          psum_depth_open[d] <= (cmd_i.cim_os_cnt > 1 || (cmd_i.cim_as_cnt > 1 && abits(
+            int'(cmd_i.cim_precision)
+          ) > 4)) && d < int'(cmd_i.cim_ws_cnt > 1 ? cmd_i.cim_ws_cnt : cmd_i.cim_as_cnt);
+        end else if (cmd_i.cim_os_cnt != batch_command.cim_os_cnt ||
+          cmd_i.cim_ws_cnt != batch_command.cim_ws_cnt || cmd_i.cim_as_cnt != batch_command.cim_as_cnt ||
+          cmd_i.cim_precision != batch_command.cim_precision ||
+          cmd_i.cim_signed_en != batch_command.cim_signed_en ||
+          cmd_i.cim_reduce_split_mask != batch_command.cim_reduce_split_mask ||
+          cmd_i.cim_macro_en_mask != batch_command.cim_macro_en_mask ||
+          cmd_i.cim_macro_oc_mask != batch_command.cim_macro_oc_mask ||
+          cmd_i.cim_act_slot_sel != batch_command.cim_act_slot_sel)
           $fatal(1, "Batch descriptor fields changed before completion");
       end
       if (act_loading) begin
@@ -671,11 +731,15 @@ module cluster_top #(
             command.cim_reduce_split_mask
           ) || command.cim_os_cnt < 1 || command.cim_ws_cnt < 1 || command.cim_as_cnt < 1 ||
             (command.cim_ws_cnt > 1 && command.cim_as_cnt > 1) || contexts > MAX_CONTEXTS ||
-            (command.cim_as_cnt>1 && abits(int'(command.cim_precision))>4 && command.cim_as_cnt>WGT_RADDR_BUFFER_DEPTH) || (command.cim_os_cnt > 1 && contexts > OUTPUT_BUFFER_DEPTH))
+            (command.cim_as_cnt > 1 && abits(
+            int'(command.cim_precision)
+          ) > 4 && command.cim_as_cnt > WGT_RADDR_BUFFER_DEPTH) ||
+            (command.cim_os_cnt > 1 && contexts > OUTPUT_BUFFER_DEPTH))
           $fatal(1, "Invalid descriptor / context capacity");
         for (int m = 0; m < 8; m++)
         if (command.cim_macro_en_mask[m]) begin
-          if (int'(command.cim_act_slot_sel[3*m+:3]) >= wbits(int'(command.cim_precision))) $fatal(1, "ACT slot outside plane");
+          if (int'(command.cim_act_slot_sel[3*m+:3]) >= wbits(int'(command.cim_precision)))
+            $fatal(1, "ACT slot outside plane");
           for (int n = 0; n < m; n++)
           if (command.cim_macro_en_mask[n] && group_of(
               command.cim_reduce_split_mask, n
@@ -719,8 +783,8 @@ module cluster_top #(
         for (int m = 0; m < 8; m++) begin
           if (macro_valid[m] !== (macro_tag.cmd.cim_macro_en_mask[m] && (|macro_tag.cmd.cim_macro_oc_mask[4*m+:4])))
             $fatal(1, "Macro valid not aligned with 1T result");
-          if(macro_valid[m] && (macro_phase[2*m+:2]!==2'(macro_tag.ph) ||
-              macro_mask[4*m+:4]!==macro_tag.cmd.cim_macro_oc_mask[4*m+:4]))
+          if(macro_valid[m] && (macro_phase[2 * m +: 2]!==2'(macro_tag.ph) ||
+              macro_mask[4 * m +: 4]!==macro_tag.cmd.cim_macro_oc_mask[4 * m +: 4]))
             $fatal(1, "Macro metadata mismatch");
         end
       end
@@ -729,8 +793,7 @@ module cluster_top #(
       // Consume the PREVIOUS tmp DFF contents. NBA state writes preserve
       // consecutive-phase feedback and prevent zero-time procedural cascades.
       for (int l = 0; l < 32; l++)
-      if(capture_valid[l] && capture_tag[l].ph>0 &&
-        capture_tag[l].cmd.cim_as_cnt<=1) begin
+      if (capture_valid[l] && capture_tag[l].ph > 0 && capture_tag[l].cmd.cim_as_cnt <= 1) begin
         ws_fusion_steps++;
       end
       for (int l = 0; l < 32; l++)

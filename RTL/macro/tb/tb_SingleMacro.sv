@@ -21,7 +21,7 @@ module tb_SingleMacro;
   wire cim_odata_valid;
   wire [3:0] cim_odata_oc_mask;
   wire [1:0] cim_odata_phase;
-  wire [3:0] cim_result_mask = 4'hf; // Standalone: every enabled OC has a consumer.
+  wire [3:0] cim_result_mask = 4'hf;  // Standalone: every enabled OC has a consumer.
   SingleMacro #(.USE_CLOCK_GATING(CLOCK_GATING)) dut (.*);
 
   // Exhaustive primitive test is independent of the macro datapath.

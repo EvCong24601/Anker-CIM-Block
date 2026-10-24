@@ -10,10 +10,10 @@ module ClusterRequant #(
   parameter int LANES = 32
 ) (
   input cluster_pkg::requant_cfg_t cfg_i,
-  input logic [32*LANES-1:0] psum_i,
-  input logic [LANES-1:0] valid_i,
-  output wire [8*LANES-1:0] data_o,
-  output wire [LANES-1:0] valid_o
+  input logic [32 * LANES - 1:0] psum_i,
+  input logic [LANES - 1:0] valid_i,
+  output wire [8 * LANES - 1:0] data_o,
+  output wire [LANES - 1:0] valid_o
 );
   function automatic logic signed [7:0] quantize(input logic signed [31:0] psum, input logic signed [31:0] multiplier,
                                                  input logic signed [9:0] shift, input logic signed [31:0] zp);
@@ -65,10 +65,11 @@ module ClusterRequant #(
     // raw Psum and changing per-tensor scale must not toggle a masked OC.
     // Shared scale remains available to other active OCs.
     wire [31:0] selected_multiplier = found ? cfg_i.requant_multiplier[32*entry_id+:32] : 32'b0;
-    wire [9:0] selected_shift = found ? cfg_i.requant_shift[10*entry_id+:10] : 10'b0;
+    wire [ 9:0] selected_shift = found ? cfg_i.requant_shift[10*entry_id+:10] : 10'b0;
     wire [31:0] selected_zp = found ? cfg_i.requant_zp[32*c+:32] : 32'b0;
-    assign channel_data[c] = quantize($signed(selected_psum), $signed(selected_multiplier),
-                                    $signed(selected_shift), $signed(selected_zp));
+    assign channel_data[c] = quantize(
+      $signed(selected_psum), $signed(selected_multiplier), $signed(selected_shift), $signed(selected_zp)
+    );
   end
   for (genvar lane = 0; lane < LANES; lane++) assign data_o[8*lane+:8] = valid_i[lane] ? channel_data[lane%4] : 8'b0;
 endmodule

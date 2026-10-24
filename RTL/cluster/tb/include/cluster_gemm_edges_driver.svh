@@ -31,8 +31,8 @@ task automatic load_edge_vectors();
     act_zp
   );
   $fclose(fd);
-  if(status!=17 || m_count<1 || m_count>16 || k_count<1 || k_count>256 || n_count<1 || n_count>8 ||
-     n_tiles!=(n_count+3)/4 || wb!=wbits(
+  if (status != 17 || m_count < 1 || m_count > 16 || k_count < 1 || k_count > 256 || n_count < 1 || n_count > 8 ||
+    n_tiles != (n_count + 3) / 4 || wb != wbits(
       precision
     ) || ab != abits(
       precision
@@ -72,7 +72,7 @@ task automatic load_edge_vectors();
         n = n_map[tile][c];
         wanted_weight = 0;
         if (n >= 0 && k0 + j < k_count) wanted_weight = w_q[(k0+j)*n_count+n];
-        if(((weight_rows[8*tile+macro]>>(256*c+wb*j))&1024'((1<<wb)-1))!==1024'(wanted_weight&8'((1<<wb)-1)))
+        if (((weight_rows[8 * tile + macro] >> (256 * c + wb * j)) & 1024'((1 << wb) - 1)) !== 1024'(wanted_weight & 8'((1 << wb) - 1)))
           $fatal(1, "Edge GEMM: weight packing mismatch tile=%0d macro=%0d OC=%0d", tile, macro, c);
       end
     end

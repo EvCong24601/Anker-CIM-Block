@@ -39,16 +39,16 @@ module SingleMacro #(
   logic         signed_en_in;  // Signed interpretation of weight digits.
   logic         activation_signed_in;  // Signed interpretation of this ACT digit.
   logic [  3:0] mask_in;  // Enabled OCs for this request.
-  logic [  3:0] result_mask_in; // Registered one edge before result capture.
+  logic [  3:0] result_mask_in;  // Registered one edge before result capture.
   logic [  1:0] phase_in;  // ACT digit phase returned with the result.
 
   wire          issue = !reset && cim_ren && (|cim_oc_mask);
   wire          write_active = sram_wen && !(&sram_wmask);
-  wire          macro_clock, memory_clock, hold_clock;
+  wire macro_clock, memory_clock, hold_clock;
   wire memory_active = !reset && (write_active || sram_ren || (issue && cim_station));
   wire hold_active = !reset && (write_active || (in_valid && station_in));
   // Include output valid to preserve the final valid-clearing edge n+2.
-  wire          clock_active = !reset && (issue || in_valid || cim_odata_valid);
+  wire clock_active = !reset && (issue || in_valid || cim_odata_valid);
   generate
     if (USE_CLOCK_GATING) begin : g_icg
       MacroClockGate u_clock_gate (
@@ -56,12 +56,20 @@ module SingleMacro #(
         .enable(clock_active),
         .gated_clock(macro_clock)
       );
-      MacroClockGate u_memory_gate(.clock(clock), .enable(memory_active), .gated_clock(memory_clock));
-      MacroClockGate u_hold_gate(.clock(clock), .enable(hold_active), .gated_clock(hold_clock));
+      MacroClockGate u_memory_gate (
+        .clock(clock),
+        .enable(memory_active),
+        .gated_clock(memory_clock)
+      );
+      MacroClockGate u_hold_gate (
+        .clock(clock),
+        .enable(hold_active),
+        .gated_clock(hold_clock)
+      );
     end else begin : g_no_icg
-      assign macro_clock = clock;
+      assign macro_clock  = clock;
       assign memory_clock = clock;
-      assign hold_clock = clock;
+      assign hold_clock   = clock;
     end
   endgenerate
 
@@ -121,7 +129,9 @@ module SingleMacro #(
       wire result_enable = !reset && in_valid && mask_in[c] && result_mask_in[c];
       if (USE_CLOCK_GATING) begin : g_result_icg
         MacroClockGate u_clock_gate (
-          .clock(clock), .enable(result_enable), .gated_clock(result_clock)
+          .clock(clock),
+          .enable(result_enable),
+          .gated_clock(result_clock)
         );
       end else begin : g_result_no_icg
         assign result_clock = clock;
@@ -138,9 +148,9 @@ module SingleMacro #(
           wire enabled_oc = in_valid && mask_in[c];
           wire [1:0] weight_bits = enabled_oc ? compute_weight[256*c+8*s+2*t+:2] : 2'b0;
           wire [3:0] activation_bits = !enabled_oc ? 4'b0
-                        : (weight_mode_in == W_MODE_2) ? activation_in[4*(4*s+t) +: 4]
-                        : (weight_mode_in == W_MODE_4) ? activation_in[4*(2*s+t/2) +: 4]
-                        : activation_in[4*s +: 4];
+                        : (weight_mode_in == W_MODE_2) ? activation_in[4 * (4 * s + t) +: 4]
+                        : (weight_mode_in == W_MODE_4) ? activation_in[4 * (2 * s + t / 2) +: 4]
+                        : activation_in[4 * s +: 4];
           wire weight_signed = signed_en_in &&
                         ((weight_mode_in == W_MODE_2) ||
                          ((weight_mode_in == W_MODE_4) && ((t % 2) == 1)) ||

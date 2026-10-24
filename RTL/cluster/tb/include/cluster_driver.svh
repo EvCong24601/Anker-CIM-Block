@@ -10,8 +10,9 @@ task automatic display_command(input string event_name, input cluster_ctrl_t d);
     event_name, $realtime, cycle, cases_run, standard_case, input_commands, input_commands / case_r,
     input_commands % case_r, (d.cim_as_cnt > 1 && input_commands % case_r != 0) ? "ADDRESS" : "ACT",
     d.cim_as_cnt > 1 ? "AS" : d.cim_ws_cnt > 1 ? "WS" : "SINGLE", d.cim_precision, wbits(int'(d.cim_precision)), abits(
-    int'(d.cim_precision)), d.cim_signed_en, case_pattern, case_bubbles, d.cim_os_cnt, d.cim_ws_cnt, d.cim_as_cnt, d.cim_reduce_split_mask,
-    d.cim_macro_en_mask, d.cim_macro_oc_mask, d.cim_weight_raddr, d.cim_act_slot_sel, OUTPUT_BUFFER_DEPTH, SEED);
+    int'(d.cim_precision)), d.cim_signed_en, case_pattern, case_bubbles, d.cim_os_cnt, d.cim_ws_cnt, d.cim_as_cnt,
+    d.cim_reduce_split_mask, d.cim_macro_en_mask, d.cim_macro_oc_mask, d.cim_weight_raddr, d.cim_act_slot_sel,
+    OUTPUT_BUFFER_DEPTH, SEED);
 endtask
 
 task automatic send_compute(input cluster_ctrl_t d, input logic [1023:0] data, input int gap);
@@ -79,8 +80,7 @@ endtask
 // Load one Macro row through the public WLC port and independently read it back.
 // Initialization runs outside the monitored compute interval; one call writes
 // one 128 B row, with all four active-high mask bits cleared.
-task automatic load_weight_row(input int macro_id, input logic [7:0] address,
-                               input logic [1023:0] data);
+task automatic load_weight_row(input int macro_id, input logic [7:0] address, input logic [1023:0] data);
   @(negedge clock);
   sram_cs_en = 1;
   sram_wr_en = 1;
@@ -91,17 +91,18 @@ task automatic load_weight_row(input int macro_id, input logic [7:0] address,
   sram_wrdata = data;
   @(posedge clock);
   #0.002;
-  if(cmd_ready_o !== 0) $fatal(1,"Weight load: Command ready during SRAM write");
+  if (cmd_ready_o !== 0) $fatal(1, "Weight load: Command ready during SRAM write");
   @(negedge clock);
   sram_wr_en = 0;
   @(posedge clock);
   #1;
-  if(!sram_rd_valid || sram_rd_data !== data)
-    $fatal(1,"Weight load readback mismatch macro=%0d row=%0d",macro_id,address);
+  if (!sram_rd_valid || sram_rd_data !== data)
+    $fatal(1, "Weight load readback mismatch macro=%0d row=%0d", macro_id, address);
   @(negedge clock);
   sram_cs_en = 0;
   #0.002;
-  if(!sram_rd_valid || sram_rd_data !== data) $fatal(1,"Weight load: response changed before next edge");
-  @(posedge clock);#0.002;
-  if(sram_rd_valid || sram_rd_data !== 0) $fatal(1,"Weight load: response did not drain");
+  if (!sram_rd_valid || sram_rd_data !== data) $fatal(1, "Weight load: response changed before next edge");
+  @(posedge clock);
+  #0.002;
+  if (sram_rd_valid || sram_rd_data !== 0) $fatal(1, "Weight load: response did not drain");
 endtask

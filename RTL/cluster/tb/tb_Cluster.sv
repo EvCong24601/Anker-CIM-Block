@@ -10,7 +10,7 @@ module tb_Cluster;
   parameter int WGT_RADDR_BUFFER_DEPTH = 16;  // Eight-bit AS addresses only
   parameter int MAX_CONTEXTS = 64;  // Completion/tag capacity; independent of Psum
   parameter int REQUANT_CONTEXT_DEPTH = OUTPUT_BUFFER_DEPTH;  // Deep AS parameter capacity
-  parameter bit CHECK_GATE_EQUIVALENCE = 0; // Optional ungated mirror under identical inputs
+  parameter bit CHECK_GATE_EQUIVALENCE = 0;  // Optional ungated mirror under identical inputs
   parameter bit ENABLE_REQUANT = 0;  // Raw-only tree suites; quant suites override 1
   parameter int TIMEOUT_CYCLES = 4000;
   parameter logic [31:0] SEED = 32'h19e2a407;
@@ -56,8 +56,8 @@ module tb_Cluster;
   assign out_valid_o = dut.raw_valid;
   // 计算参考模型、输出预期及 case/握手计数。
   logic [31:0] rng = SEED;
-  int unsigned activation[0:255][0:MAX_CONTEXTS-1][0:255];
-  longint signed expected[0:MAX_CONTEXTS-1][0:31];
+  int unsigned activation[0:255][0:MAX_CONTEXTS - 1][0:255];
+  longint signed expected[0:MAX_CONTEXTS - 1][0:31];
   logic [31:0] expected_mask;
   int golden_group[0:7];
   int cases_run = 0, configurations = 0, canonical_count = 0, manifest;
@@ -69,8 +69,8 @@ module tb_Cluster;
   bit case_bubbles;
   int first_external = -1, input_commands = 0, act_planes_received = 0;
   int external_trace;
-  int lane_due[0:MAX_CONTEXTS-1][0:31];
-  bit raw_seen[0:MAX_CONTEXTS-1][0:31];
+  int lane_due[0:MAX_CONTEXTS - 1][0:31];
+  bit raw_seen[0:MAX_CONTEXTS - 1][0:31];
   bit monitoring = 0, exact_ii = 0;
   int reuse_cycles = 0;
   bit held_cmd = 0, held_act_for_cmd = 0;

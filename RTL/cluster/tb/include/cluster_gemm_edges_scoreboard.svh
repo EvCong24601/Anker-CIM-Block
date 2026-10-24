@@ -17,9 +17,9 @@ always @(posedge clock) begin : edge_scoreboard
     if (dut.issue) begin
       row   = issues / phases;
       phase = issues % phases;
-      if(cycle!=first_accept+(phases+1)*row+1+phase || dut.context_idx!=row || dut.phase!=phase ||
-         dut.plane!==act_planes[row*phases+phase] || dut.ren!==8'(en) ||
-         dut.command.cim_weight_raddr!==8'(base_address+active_tile))
+      if (cycle != first_accept + (phases + 1) * row + 1 + phase || dut.context_idx != row || dut.phase != phase ||
+        dut.plane !== act_planes[row * phases + phase] || dut.ren !== 8'(en) ||
+        dut.command.cim_weight_raddr !== 8'(base_address + active_tile))
         $fatal(1, "Edge GEMM: internal ACT/Context/phase/weight route mismatch");
       for (int macro = first_macro; macro < first_macro + macro_count; macro++) begin
         if (dut.station[macro] !== (issues == 0)) $fatal(1, "Edge GEMM: WS weight hold refresh mismatch");
@@ -43,8 +43,8 @@ always @(posedge clock) begin : edge_scoreboard
       if (out_valid_o[lane_base+c]) begin
         row   = raw_next[c];
         index = row * n_count + n;
-        if(n<0 || row>=m_count || cycle!=first_accept+row*(phases+1)+first_raw ||
-           psum_data_o[32*(lane_base+c)+:32]!==raw_golden[index])
+        if (n < 0 || row >= m_count || cycle != first_accept + row * (phases + 1) + first_raw ||
+          psum_data_o[32 * (lane_base + c) +: 32] !== raw_golden[index])
           $fatal(1, "Edge GEMM: raw matrix/timing mismatch row=%0d n=%0d OC=%0d", row, n, c);
         observed_raw[index] = psum_data_o[32*(lane_base+c)+:32];
         raw_next[c]++;
@@ -55,8 +55,8 @@ always @(posedge clock) begin : edge_scoreboard
       if (requant_valid_o[lane_base+c]) begin
         row   = quant_next[c];
         index = row * n_count + n;
-        if(n<0 || row>=m_count || cycle!=first_accept+row*(phases+1)+first_raw+1 ||
-           requant_data_o[8*(lane_base+c)+:8]!==quant_golden[index])
+        if (n < 0 || row >= m_count || cycle != first_accept + row * (phases + 1) + first_raw + 1 ||
+          requant_data_o[8 * (lane_base + c) +: 8] !== quant_golden[index])
           $fatal(1, "Edge GEMM: INT8 matrix/OC-parameter/timing mismatch row=%0d n=%0d OC=%0d", row, n, c);
         observed_quant[index] = requant_data_o[8*(lane_base+c)+:8];
         quant_next[c]++;

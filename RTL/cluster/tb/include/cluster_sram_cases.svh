@@ -43,14 +43,17 @@ task automatic sram_read_check(int m, int a, logic [3:0] mask = 0);
   sram_wmask = mask;
   @(posedge clock);
   #1;
-  if (!sram_rd_valid || sram_rd_data !== sram_reference[m][a]) $fatal(1, "SRAM read mismatch macro=%0d row=%0d mask=%h", m, a, mask);
+  if (!sram_rd_valid || sram_rd_data !== sram_reference[m][a])
+    $fatal(1, "SRAM read mismatch macro=%0d row=%0d mask=%h", m, a, mask);
   if (cmd_ready_o !== 0) $fatal(1, "Command ready during regular SRAM access");
   sram_read_checks++;
   @(negedge clock);
   sram_cs_en = 0;
   #0.002;
-  if (!sram_rd_valid || sram_rd_data !== sram_reference[m][a]) $fatal(1, "Read response changed when request CS dropped");
-  @(posedge clock);#0.002;
+  if (!sram_rd_valid || sram_rd_data !== sram_reference[m][a])
+    $fatal(1, "Read response changed when request CS dropped");
+  @(posedge clock);
+  #0.002;
   if (sram_rd_valid || sram_rd_data !== 0) $fatal(1, "Read valid did not drain on idle edge");
 endtask
 task automatic sram_compute_check(bit patched);
@@ -144,7 +147,8 @@ task automatic run_sram_cases;
   reset = 0;
   for (int m = 0; m < 8; m++) for (int row = 0; row < 256; row++) sram_read_check(m, row);
   // Per-Macro writes and public readback share the same addressed storage.
-  $display("[CASE_START] time=%0.3f ns suite=sram_row_load description=regular-write-and-readback-all-macros", $realtime);
+  $display("[CASE_START] time=%0.3f ns suite=sram_row_load description=regular-write-and-readback-all-macros",
+           $realtime);
   for (int m = 0; m < 8; m++) sram_write(m, 8, sram_pattern(m, 8, 231), 4'h0);
   for (int m = 0; m < 8; m++) sram_read_check(m, 8);
   for (int m = 0; m < 8; m++) sram_write(m, 7, {128{8'h11}}, 4'h0);

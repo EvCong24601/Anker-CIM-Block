@@ -89,9 +89,9 @@ function automatic requant_cfg_t context_test_cfg(input int mode, cx);
   cfg.conv_mode = 1'(mode);
   cfg.requant_mode = 1'(mode);
   for (int c = 0; c < 4; c++) begin
-    cfg.requant_multiplier[32*c+:32] = mode ? 32'(1 + 4*cx + c) : 32'(1 + 2*cx);
-    cfg.requant_shift[10*c+:10] = mode ? 10'(-5-cx) : 10'(-4-cx);
-    cfg.requant_zp[32*c+:32] = 32'(1 + 10*cx + c);
+    cfg.requant_multiplier[32*c+:32] = mode ? 32'(1 + 4 * cx + c) : 32'(1 + 2 * cx);
+    cfg.requant_shift[10*c+:10] = mode ? 10'(-5 - cx) : 10'(-4 - cx);
+    cfg.requant_zp[32*c+:32] = 32'(1 + 10 * cx + c);
   end
   return cfg;
 endfunction
@@ -106,50 +106,67 @@ task automatic run_requant_context_suite();
   end
   for (int mode = 0; mode < 2; mode++)
     for (int os = 1; os <= 2; os++) begin
-      $display("[CASE_START] time=%0.3f ns suite=requant_context description=independent-AS2-scale-and-zp/serial-batches mode=%0d os=%0d", $realtime, mode, os);
+      $display(
+        "[CASE_START] time=%0.3f ns suite=requant_context description=independent-AS2-scale-and-zp/serial-batches mode=%0d os=%0d",
+        $realtime, mode, os);
       cmd_i = '0;
-      cmd_i.cim_os_cnt = 8'(os); cmd_i.cim_ws_cnt = 1; cmd_i.cim_as_cnt = 2;
-      cmd_i.cim_macro_en_mask = 3; cmd_i.cim_macro_oc_mask = 32'hff;
-      cmd_i.cim_reduce_split_mask = 7; cmd_i.cim_act_slot_sel = 24'h8;
+      cmd_i.cim_os_cnt = 8'(os);
+      cmd_i.cim_ws_cnt = 1;
+      cmd_i.cim_as_cnt = 2;
+      cmd_i.cim_macro_en_mask = 3;
+      cmd_i.cim_macro_oc_mask = 32'hff;
+      cmd_i.cim_reduce_split_mask = 7;
+      cmd_i.cim_act_slot_sel = 24'h8;
       act_data_i = {256{4'h1}};
       received = 0;
       fork
         begin
-      for (int tile = 0; tile < os; tile++)
-        for (int context_id = 0; context_id < 2; context_id++) begin
-          @(negedge clock);
-          cmd_i.cim_weight_raddr = 8'('h20 + context_id);
-          requant_cfg_i = context_test_cfg(mode, context_id);
-          cmd_valid_i = 1;
-          do @(posedge clock); while (!cmd_ready_o);
-          @(negedge clock); cmd_valid_i = 0;
-        end
-        end
-        begin
-      for (int timeout = 0; timeout < 40; timeout++) begin
-        @(negedge clock);
-        if (requant_valid_o != 0) begin
-          if (requant_valid_o !== 32'hf || received >= 8)
-            $fatal(1, "AS parameter test: unexpected lane mask or duplicate result");
-          cx = received / 4;
-          for (int c = 0; c < 4; c++) begin
-            mult = mode ? 1 + 4*cx + c : 1 + 2*cx;
-            shift_bits = mode ? 5 + cx : 4 + cx;
-            // Two Macros, each with 128 unit weights and unit ACT values.
-            wanted = ((256 * os * mult) >> shift_bits) + 1 + 10*cx + c;
-            if ($signed(requant_data_o[8*c+:8]) != wanted)
-              $fatal(1, "AS parameter mapping mismatch mode=%0d os=%0d ctx=%0d OC=%0d got=%0d expected=%0d", mode, os, cx, c, $signed(requant_data_o[8*c+:8]), wanted);
-            received++;
+          for (int tile = 0; tile < os; tile++)
+          for (int context_id = 0; context_id < 2; context_id++) begin
+            @(negedge clock);
+            cmd_i.cim_weight_raddr = 8'('h20 + context_id);
+            requant_cfg_i = context_test_cfg(mode, context_id);
+            cmd_valid_i = 1;
+            do @(posedge clock); while (!cmd_ready_o);
+            @(negedge clock);
+            cmd_valid_i = 0;
           end
         end
-        if (received == 8 && !dut.batch_active && requant_valid_o == 0) break;
-        if (timeout == 39) $fatal(1, "AS parameter test output timeout");
-      end
+        begin
+          for (int timeout = 0; timeout < 40; timeout++) begin
+            @(negedge clock);
+            if (requant_valid_o != 0) begin
+              if (requant_valid_o !== 32'hf || received >= 8)
+                $fatal(1, "AS parameter test: unexpected lane mask or duplicate result");
+              cx = received / 4;
+              for (int c = 0; c < 4; c++) begin
+                mult = mode ? 1 + 4 * cx + c : 1 + 2 * cx;
+                shift_bits = mode ? 5 + cx : 4 + cx;
+                // Two Macros, each with 128 unit weights and unit ACT values.
+                wanted = ((256 * os * mult) >> shift_bits) + 1 + 10 * cx + c;
+                if ($signed(requant_data_o[8*c+:8]) != wanted)
+                  $fatal(
+                    1,
+                    "AS parameter mapping mismatch mode=%0d os=%0d ctx=%0d OC=%0d got=%0d expected=%0d",
+                    mode,
+                    os,
+                    cx,
+                    c,
+                    $signed(
+                      requant_data_o[8*c+:8]
+                    ),
+                    wanted
+                  );
+                received++;
+              end
+            end
+            if (received == 8 && !dut.batch_active && requant_valid_o == 0) break;
+            if (timeout == 39) $fatal(1, "AS parameter test output timeout");
+          end
         end
       join
       repeat (5) @(negedge clock);
-      if (requant_valid_o != 0 || dut.batch_active)
-        $fatal(1, "AS parameter test: batch did not drain");
+      if (requant_valid_o != 0 || dut.batch_active) $fatal(1, "AS parameter test: batch did not drain");
     end
   $display("PASS requant_context cases=4 quant_checks=32 independent_scale_zp=1 serial_batches=1");
 endtask

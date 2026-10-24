@@ -35,7 +35,7 @@ initial begin : as_gemm_regression
       if (t == 29) $fatal(1, "AS GEMM: row output timeout");
     end
     repeat (2) @(negedge clock);
-    if(row_commands!=8 || row_issues!=32 || row_raw!=16 || row_quant!=16 || out_valid_o!=0 || requant_valid_o!=0)
+    if (row_commands != 8 || row_issues != 32 || row_raw != 16 || row_quant != 16 || out_valid_o != 0 || requant_valid_o != 0)
       $fatal(1, "AS GEMM: row counts or drain mismatch");
     for (int l = 0; l < 4; l++)
     if (raw_next[l] != 4 || quant_next[l] != 4) $fatal(1, "AS GEMM: missing Context output");

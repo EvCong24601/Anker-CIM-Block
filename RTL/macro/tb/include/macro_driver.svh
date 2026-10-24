@@ -10,7 +10,7 @@ endtask
 // Drive only at falling edges; sample registered outputs after NBA.
 task automatic idle_cycle();
   @(negedge clock);
-  cim_ren = 0;
+  cim_ren  = 0;
   sram_wen = 0;
 endtask
 task automatic drain();
@@ -19,8 +19,8 @@ endtask
 task automatic write_row(input logic [7:0] address, input logic [1023:0] data, input logic [3:0] write_mask = 4'b0000);
   display_case($sformatf("%s/write-row address=%0d mask=%h", case_description, address, write_mask));
   @(negedge clock);
-  cim_ren   = 0;
-  sram_wen   = 1;
+  cim_ren = 0;
+  sram_wen = 1;
   sram_waddr = address;
   sram_wdata = data;
   sram_wmask = write_mask;
@@ -57,7 +57,7 @@ endtask
 task automatic async_reset();
   display_case("asynchronous-reset/cancel-inflight/retain-SRAM");
   @(negedge clock);
-  cim_ren = 0;
+  cim_ren  = 0;
   sram_wen = 0;
   #2 reset = 1;
   #1;

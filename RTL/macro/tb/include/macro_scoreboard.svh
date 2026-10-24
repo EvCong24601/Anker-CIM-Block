@@ -66,8 +66,8 @@ always @(posedge clock or posedge reset) begin : scoreboard
       );
     if (expected_valid[EXPECTED_LATENCY]) begin
       result_count++;
-      for(int c=0;c<4;c++)
-        if(expected_mask[EXPECTED_LATENCY][c]) last_data[18*c+:18] = expected_data[EXPECTED_LATENCY][18*c+:18];
+      for (int c = 0; c < 4; c++)
+      if (expected_mask[EXPECTED_LATENCY][c]) last_data[18*c+:18] = expected_data[EXPECTED_LATENCY][18*c+:18];
       last_mask  = expected_mask[EXPECTED_LATENCY];
       last_phase = expected_phase[EXPECTED_LATENCY];
     end

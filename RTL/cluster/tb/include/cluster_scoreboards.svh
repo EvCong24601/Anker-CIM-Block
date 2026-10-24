@@ -21,14 +21,14 @@ always @(posedge clock) begin : act_buffer_scoreboard
     if (monitoring) begin
       // Readiness is checked independently of the DUT's issue expression.
       // A later AS address can arrive while an earlier Context is issued.
-      if(dut.packet_active && !dut.batch_input_done &&
-           dut.act_slice_valid[dut.phase] &&
-           (case_as<=1 || dut.context_idx<dut.command_count) && !dut.issue)
+      if (dut.packet_active && !dut.batch_input_done &&
+        dut.act_slice_valid[dut.phase] &&
+        (case_as <= 1 || dut.context_idx < dut.command_count) && !dut.issue)
         $fatal(1, "Ready Plane/Context was unnecessarily stalled");
       if (dut.issue && dut.act_loading) act_issue_overlap++;
       if (dut.issue && cmd_valid_i && cmd_ready_o) address_issue_overlap++;
-      if(dut.packet_active && dut.act_slice_valid[dut.phase] &&
-           case_as>1 && dut.context_idx>=dut.command_count) begin
+      if (dut.packet_active && dut.act_slice_valid[dut.phase] &&
+        case_as > 1 && dut.context_idx >= dut.command_count) begin
         address_wait_cycles++;
         if (dut.act_complete) late_address_wait++;
       end
@@ -42,9 +42,9 @@ end
 
 // B. 时钟/保持：先预测本沿写使能，再检查实际门控时钟与未更新数据。
 always @(posedge clock) begin : buffer_clock_scoreboard
-  longint signed old_p[0:OUTPUT_BUFFER_DEPTH-1][0:31];
+  longint signed old_p[0:OUTPUT_BUFFER_DEPTH - 1][0:31];
   longint signed old_tmp[0:31], want_tmp[0:31];
-  bit want_p[0:OUTPUT_BUFFER_DEPTH-1][0:31];
+  bit want_p[0:OUTPUT_BUFFER_DEPTH - 1][0:31];
   logic [31:0] want_input;
   int c, ph, ab, writes;
   bit writes_psum;
@@ -53,7 +53,7 @@ always @(posedge clock) begin : buffer_clock_scoreboard
     for (int l = 0; l < 32; l++) begin
       old_tmp[l]  = dut.tmp_result[l];
       want_tmp[l] = dut.capture_data[l];
-      if(dut.capture_valid[l] && dut.capture_tag[l].cmd.cim_as_cnt<=1 && dut.capture_tag[l].ph>0)
+      if (dut.capture_valid[l] && dut.capture_tag[l].cmd.cim_as_cnt <= 1 && dut.capture_tag[l].ph > 0)
         want_tmp[l] = old_tmp[l] + (dut.capture_data[l] <<< (4 * dut.capture_tag[l].ph));
     end
     for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++)
@@ -66,9 +66,9 @@ always @(posedge clock) begin : buffer_clock_scoreboard
       c = dut.tmp_tag[l].ctx;
       ph = dut.tmp_tag[l].ph;
       ab = abits(int'(dut.tmp_tag[l].cmd.cim_precision));
-      writes_psum=(dut.tmp_tag[l].cmd.cim_as_cnt>1) ?
-          (dut.tmp_tag[l].cmd.cim_os_cnt>1 || ab>4) :
-          (dut.tmp_tag[l].cmd.cim_os_cnt>1 && ph==ab/4-1);
+      writes_psum = (dut.tmp_tag[l].cmd.cim_as_cnt > 1) ?
+        (dut.tmp_tag[l].cmd.cim_os_cnt > 1 || ab > 4) :
+        (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == ab / 4 - 1);
       // A bypass Context can have an ID beyond the physical Psum array.
       if (writes_psum) begin
         if (c >= OUTPUT_BUFFER_DEPTH) $fatal(1, "TB: Psum Context exceeds depth");
@@ -105,7 +105,7 @@ end
 // C. 算术历史：按 Context 独立累计 phase，不允许不同 Context 串数据。
 // Independent arithmetic history; debug snapshots are TB-only, not DUT state.
 always @(posedge clock) begin : arithmetic_scoreboard
-  longint signed running_sum[0:MAX_CONTEXTS-1][0:31];
+  longint signed running_sum[0:MAX_CONTEXTS - 1][0:31];
   longint signed raw_slice[0:31], saved_fa[0:31], saved_fb[0:31];
   longint signed want[0:31], fa, fb, aa, bb;
   int cx[0:31], ph, kt, c, fc;
@@ -249,7 +249,7 @@ always @(posedge clock) begin : scoreboard
       if (issue_count == 0) first_issue = cycle;
       if (exact_ii) begin
         if (case_as > 1) begin
-          if(cycle-first_external != t*(1+case_r*case_p)+1+(p*case_r+c))
+          if (cycle - first_external != t * (1 + case_r * case_p) + 1 + (p * case_r + c))
             $fatal(1, "AS external-load/internal-issue timing mismatch");
         end else if (cycle - first_external != (t * case_r + c) * (case_p + 1) + 1 + p)
           $fatal(1, "WS external-load/internal-issue timing mismatch");

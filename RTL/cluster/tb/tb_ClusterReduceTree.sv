@@ -16,7 +16,7 @@ module tb_ClusterReduceTree;
   ClusterReduceTree dut (.*);
   int index = 0, ids[0:2], events = 0, expected_events = 0;
   bit valids[0:2];
-  int consumer_suppressed[0:1] = '{0,0};
+  int consumer_suppressed[0:1] = '{0, 0};
   int owners[0:7], depths[0:7], widths[0:7];
   int case_width[0:207][0:7];
   logic [7:0] case_en[0:207];
@@ -37,8 +37,8 @@ module tb_ClusterReduceTree;
   // Consumer path is independent of the RTL merge_contributes helper.
   function automatic bit reference_needed(input int id, first, size, c);
     if (!reference_live(id, first, size, c)) return 0;
-    for (int parent_size = size*2; parent_size <= case_width[id][first]; parent_size *= 2)
-      if (!case_oc[id][4*((first/parent_size)*parent_size)+c]) return 0;
+    for (int parent_size = size * 2; parent_size <= case_width[id][first]; parent_size *= 2)
+    if (!case_oc[id][4*((first/parent_size)*parent_size)+c]) return 0;
     return 1;
   endfunction
   function automatic longint signed reference_sum(input int id, first, size, c);
@@ -116,8 +116,8 @@ module tb_ClusterReduceTree;
           for (int c = 0; c < 4; c++) expected_gate[c] = reference_needed(id, first, size, c);
         if (valids[stage] && case_width[id][first] > size)
           for (int c = 0; c < 4; c++)
-            if(reference_live(id,first,size,c) && !reference_needed(id,first,size,c))
-              consumer_suppressed[n<3 ? 1 : 0]++;
+          if (reference_live(id, first, size, c) && !reference_needed(id, first, size, c))
+            consumer_suppressed[n < 3 ? 1 : 0]++;
         if (dut.cg_channel_req[n] !== expected_gate)
           $fatal(1, "Incorrect forwarding gate at terminal/nonterminal node t%0d", n);
       end
@@ -195,10 +195,10 @@ module tb_ClusterReduceTree;
     end
     for (int d = 0; d < 3; d++)
     if (dut.downstream_hold_checks[d] == 0) $fatal(1, "Missing downstream adder hold check");
-    for(int level=0;level<2;level++)
-      if(consumer_suppressed[level]==0) $fatal(1,"Missing parent-suppressed child clock coverage level=%0d",level);
-    $display("PASS child_consumer_gating pair_suppressed=%0d quad_suppressed=%0d",
-             consumer_suppressed[0],consumer_suppressed[1]);
+    for (int level = 0; level < 2; level++)
+    if (consumer_suppressed[level] == 0) $fatal(1, "Missing parent-suppressed child clock coverage level=%0d", level);
+    $display("PASS child_consumer_gating pair_suppressed=%0d quad_suppressed=%0d", consumer_suppressed[0],
+             consumer_suppressed[1]);
     $display("PASS reduce_clock_gating cases=%0d terminal_tap_events=%0d", case_count, events);
     $finish;
   end

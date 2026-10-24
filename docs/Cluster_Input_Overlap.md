@@ -68,3 +68,7 @@ ICG 为低电平锁存功能模型，工艺实现需映射时钟门控单元并�
 运行方法见 [VCS入口](../vcs-rtl/README.md)。根README的42组逐拍表由独立Python调度模型生成，并与仿真trace核对。
 
 计算OC mask关闭对应Macro结果、归约转发、tmp/Psum及raw/INT8数据寄存器时钟；对应组合算术操作数隔离。门控按已对齐事务标签生效。公共ACT入口、SRAM整行访问和完整行Hold为其他有效OC保留工作能力。
+
+## Psum 数值边界
+
+Psum深度限制Context数量，signed32位宽限制每次写入的数值，两者不能互相替代。WS/单Context的tmp融合、AS的逐Context历史及OS累加均需逐次满足signed32范围。当前写入会截断，最终raw检查不覆盖先前回绕；拒绝、饱和、扩位和错误状态策略为TBD，详见[Requant中的Psum限制](Cluster_Requant.md)。调度和raw/INT8延迟不因该待定项而改变。

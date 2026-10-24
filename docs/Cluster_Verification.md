@@ -53,3 +53,11 @@
 证据：`RTL/cluster/tb/log/child_consumer_validation.log`、`child_consumer_sources.sha256`、`child_consumer_unit.log`和`child_consumer_gate_equivalence.log`对应子节点消费需求门控版本；`child_consumer_audit.log`保存时序、文件列表和编译审计。源码哈希对应本轮受测RTL/TB。
 
 覆盖为上述定向、枚举及随机数据场景，不表示穷举所有合法count和所有数据。VCS运行、工艺SRAM替换、门级时钟检查、综合与STA不由RTL功能仿真替代。跨Macro的SRAM/CIM并发访问尚未开放。
+
+## Psum 溢出处理 TBD
+
+- [ ] 每次tmp/Psum写入的溢出检测及拒绝、饱和或扩位策略尚未确定，也未实现对应硬件错误状态或输出valid策略。
+
+完整功能回归覆盖满足数值边界的输入，不表示已验证超范围Psum的正确性。现有最终raw范围检查不能替代逐次写入检测；具体可复现回绕及调用方约束见[数值范围与TBD](Cluster_Requant.md)。
+
+当前格式源码的完整回归记录为`RTL/cluster/tb/log/reformatted_validation.log`，44个SV/SVH受测文件哈希为`reformatted_sources.sha256`；与功能回归基线8c70724逐token一致。两份Word规格与本清单共同区分已验证的正常输入和仍为TBD的中间溢出策略。

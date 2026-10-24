@@ -50,7 +50,15 @@ initial begin : regression
     #1;
     $fatal(1, "TB: missing Requant configuration rejection");
   end
-  if ($bits(cluster_ctrl_t) != 107 || $bits(cmd_i.cim_os_cnt) != 8 || $bits(cmd_i.cim_ws_cnt) != 8 || $bits(cmd_i.cim_as_cnt) != 8)
+  if ($bits(
+      cluster_ctrl_t
+    ) != 107 || $bits(
+      cmd_i.cim_os_cnt
+    ) != 8 || $bits(
+      cmd_i.cim_ws_cnt
+    ) != 8 || $bits(
+      cmd_i.cim_as_cnt
+    ) != 8)
     $fatal(1, "TB: descriptor must contain three eight-bit counts and total 107 bits");
   if ($value$plusargs("ZERO_COUNT=%d", zero_count)) begin
     repeat (4) @(negedge clock);
@@ -88,18 +96,22 @@ initial begin : regression
     cmd_i.cim_os_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;
     cmd_i.cim_ws_cnt = 1;
     cmd_i.cim_as_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 16 : 64;
-    capacity_count=int'(cmd_i.cim_as_cnt); capacity_os=int'(cmd_i.cim_os_cnt);
-    if ($value$plusargs("CAPACITY_COUNT=%d",capacity_count)) begin end
-    if ($value$plusargs("CAPACITY_OS=%d",capacity_os)) begin end
-    cmd_i.cim_as_cnt=8'(capacity_count); cmd_i.cim_os_cnt=8'(capacity_os);
+    capacity_count = int'(cmd_i.cim_as_cnt);
+    capacity_os = int'(cmd_i.cim_os_cnt);
+    if ($value$plusargs("CAPACITY_COUNT=%d", capacity_count)) begin
+    end
+    if ($value$plusargs("CAPACITY_OS=%d", capacity_os)) begin
+    end
+    cmd_i.cim_as_cnt = 8'(capacity_count);
+    cmd_i.cim_os_cnt = 8'(capacity_os);
     cmd_i.cim_precision = 3'(capacity_precision);
     cmd_i.cim_signed_en = 1'(capacity_sign);
     cmd_i.cim_macro_en_mask = 8'hff;
     cmd_i.cim_macro_oc_mask = 32'hffffffff;
     $display(
       "[CASE_START] time=%0.3f ns suite=context_capacity description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=%0d psum_depth=%0d max_contexts=%0d weight_address_depth=%0d",
-      $realtime, wbits(capacity_precision), abits(capacity_precision), capacity_sign,
-      capacity_os, capacity_count, OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS, WGT_RADDR_BUFFER_DEPTH);
+      $realtime, wbits(capacity_precision), abits(capacity_precision), capacity_sign, capacity_os, capacity_count,
+      OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS, WGT_RADDR_BUFFER_DEPTH);
     cmd_valid_i = 1;
     @(posedge clock);
     #1;
@@ -116,33 +128,37 @@ initial begin : regression
     reset = 0;
     repeat (2) @(negedge clock);
     if ($test$plusargs("SRAM_CONFLICT_WRITE_COMPUTE")) begin
-      $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-write-during-active-compute", $realtime);
+      $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-write-during-active-compute",
+               $realtime);
       load_weight_row(0, 8'd0, '0);
       @(negedge clock);
       cmd_i = '0;
-      cmd_i.cim_os_cnt = 1; cmd_i.cim_ws_cnt = 1; cmd_i.cim_as_cnt = 1;
+      cmd_i.cim_os_cnt = 1;
+      cmd_i.cim_ws_cnt = 1;
+      cmd_i.cim_as_cnt = 1;
       cmd_i.cim_macro_en_mask = 1;
       cmd_i.cim_macro_oc_mask = 1;
       cmd_i.cim_reduce_split_mask = 7'h7f;
       cmd_valid_i = 1;
       @(posedge clock);
-      if(!cmd_ready_o) $fatal(1,"SRAM conflict: compute command not accepted");
+      if (!cmd_ready_o) $fatal(1, "SRAM conflict: compute command not accepted");
       @(negedge clock);
       cmd_valid_i = 0;
       // Target idle Macro1 while Macro0 computes: only the Cluster-wide
       // exclusion rule should reject this access, avoiding a competing
       // local SingleMacro simultaneous-read/write diagnostic.
       sram_bank_sel = 1;
-      sram_cs_en = 1; sram_wr_en = 1;
+      sram_cs_en = 1;
+      sram_wr_en = 1;
       @(posedge clock);
       #1;
-      $fatal(1,"Missing SRAM write/active-compute conflict rejection");
+      $fatal(1, "Missing SRAM write/active-compute conflict rejection");
     end
     if ($test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
       $display(
         "[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-access-overlapping-compute-command",
         $realtime);
-      sram_cs_en   = 1;
+      sram_cs_en  = 1;
       cmd_valid_i = 1;
       @(posedge clock);
       #1;
@@ -240,9 +256,9 @@ initial begin : regression
     $display("CG node=t%0d active_edges=%0d gated_OC_checks=%0d", n, dut.u_reduce.active_edges[n],
              dut.u_reduce.gated_checks[n]);
   end
-  if(dut.tmp_only_steps==0 || dut.as_seed_steps==0 || dut.as_fusion_steps==0 ||
-       dut.as_acc_steps==0 || dut.ws_fusion_steps==0 || dut.ws_acc_steps==0 ||
-       dut.ws_tile_commits==0 || dut.a4_acc_steps==0)
+  if (dut.tmp_only_steps == 0 || dut.as_seed_steps == 0 || dut.as_fusion_steps == 0 ||
+    dut.as_acc_steps == 0 || dut.ws_fusion_steps == 0 || dut.ws_acc_steps == 0 ||
+    dut.ws_tile_commits == 0 || dut.a4_acc_steps == 0)
     $fatal(1, "Missing tmp/fusion/acc routing coverage");
   $display(
     "TMP_ROUTES os1=%0d AS_seed=%0d AS_fusion=%0d AS_acc=%0d WS_fusion=%0d WS_acc=%0d WS_tile_commit=%0d A4_acc=%0d",

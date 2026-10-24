@@ -56,13 +56,17 @@ requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×I
 
 最后raw后的下一沿可同时捕获旧INT8和接受新batch配置，旧结果使用沿前旧参数。输出valid、保持和复位规则不变。配置未知、shift越界、分组违规、Context容量不足或跨Tile参数不一致时，仿真必须命中准确诊断。
 
-## Psum 数值范围与溢出限制
+## Psum 数值范围与溢出处理 TBD
 
-tmp 和 Psum 均为 signed32 存储。组合运算使用更宽中间值，但写入32bit寄存器时会截断；目前没有中间溢出标志、饱和或自动扩位。最终结果发布时的范围检查只检查当拍运算，无法发现此前已经回绕的历史。
+当前实现：tmp_result与Psum[ctx]均为signed32存储；fusion、acc等组合中间值使用signed64（longint signed），但写入32bit寄存器时截断为低32bit。当前没有逐次写入的溢出标志、饱和、自动扩位或硬件错误状态。
 
-可复现场景：W8A16、有符号、每个K Tile覆盖256项、OS5，全部ACT=32767、weight=127。真实累加值为5326603520，超过signed32；中间Psum截断后，最终raw为1031636224，仍落在signed32范围，最终检查不会报错。multiplier=1、shift=−26、zp=0时输出15；若用宽位累加后再量化，数学参考为79。当前signed32接口不保证这个超范围场景的结果。
+检查范围：仅在result_done发布最终raw时，仿真检查当拍arithmetic_result是否在signed32范围内；UINT还检查非负。此前tmp/Psum若已截断回绕，后续值可能重新落入范围，因此最终检查不等于端到端溢出检测；valid只表示事务发布，不保证此前没有溢出。
 
-调用方须保证每次写入tmp/Psum的中间值都在−2147483648～2147483647内，不能只检查最终数学和。Requant末端INT8 clip不能补偿此前的Psum回绕；溢出的拒绝、饱和或扩位策略尚未定义。
+可复现边界：W8A16、INT、每Tile K256、OS5，ACT全为32767、weight全为127。数学累加5326603520；中间signed32回绕后raw可为1031636224，最终范围检查不报错。multiplier=1、shift=-26、zp=0时INT8为15，宽位累加后量化参考为79。此例描述当前限制，不属于合法范围内的数值正确性保证。
+
+TBD：逐次写入的检测位置、溢出后的拒绝或终止、饱和或扩位策略，以及错误状态与输出valid处理均未确定、未实现。后续决策须同时覆盖WS/单Context的tmp bit fusion、AS的逐Context Psum fusion和OS跨Tile累加；扩大Context深度不能解决数值位宽溢出。
+
+当前集成约束：调用方必须保证每次tmp/Psum写入值均在-2147483648～2147483647内，UINT还须非负，不能只保证最终数学和不溢出。Requant末端INT8 clip无法修复先前回绕。cim_os_cnt的8bit/255编码上限与安全累加次数是两类约束。
 
 ## 测试与运行
 

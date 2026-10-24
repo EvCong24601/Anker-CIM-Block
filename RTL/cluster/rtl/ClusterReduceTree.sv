@@ -71,8 +71,9 @@ module ClusterReduceTree #(
     // leaves t3..t6 closed while its combinational result goes to the buffer.
     continue_up = n < 3 ? !ctrl.split[0] : !ctrl.split[1+(n-3)/2];
     if (ctrl.valid && !ctrl.split[n] && continue_up)
-      for (int c = 0; c < 4; c++) result[c] = subtree_live(ctrl, start_of(n), size_of(n), c) &&
-          merge_contributes(ctrl.split, ctrl.oc, start_of(n), c);
+      for (int c = 0; c < 4; c++)
+      result[c] = subtree_live(ctrl, start_of(n), size_of(n), c) &&
+        merge_contributes(ctrl.split, ctrl.oc, start_of(n), c);
     return result;
   endfunction
   function automatic int span(input logic [6:0] split, input int first);
@@ -103,8 +104,8 @@ module ClusterReduceTree #(
   end
   for (genvar n = 0; n < 7; n++) begin : g_logic
     localparam int W = n == 0 ? 21 : n < 3 ? 20 : 19;
-    wire signed [W-2:0] lhs[0:3], rhs[0:3];
-    wire signed [W-1:0] sum[0:3];
+    wire signed [W - 2:0] lhs[0:3], rhs[0:3];
+    wire signed [W - 1:0] sum[0:3];
     for (genvar c = 0; c < 4; c++) begin : g_oc
       assign lhs[c] = left_data[n][c];
       assign rhs[c] = right_data[n][c];
@@ -139,12 +140,16 @@ module ClusterReduceTree #(
   end
   for (genvar n = 1; n < 7; n++) begin : g_forward
     localparam int W = n < 3 ? 20 : 19;
-    logic signed [W-1:0] result_q[0:3];
+    logic signed [W - 1:0] result_q[0:3];
     wire [3:0] oc_clock;
     assign reduce_clock[n] = |oc_clock;
     for (genvar c = 0; c < 4; c++) begin : g_oc_clock
-      MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_clock_gate (
-        .clock(clock), .enable(cg_channel_req[n][c]), .gated_clock(oc_clock[c])
+      MacroClockGate #(
+        .ENABLE_GATING(USE_CLOCK_GATING)
+      ) u_clock_gate (
+        .clock(clock),
+        .enable(cg_channel_req[n][c]),
+        .gated_clock(oc_clock[c])
       );
       assign forward_q[n][c] = result_q[c];
       always_ff @(posedge oc_clock[c] or posedge reset)
@@ -158,7 +163,7 @@ module ClusterReduceTree #(
     end
     always @(posedge clock) begin : check_gating
       logic [3:0] sampled_req;
-      logic signed [W-1:0] saved[0:3];
+      logic signed [W - 1:0] saved[0:3];
       sampled_req = cg_channel_req[n];
       for (int c = 0; c < 4; c++) saved[c] = result_q[c];
       if (!reset) begin
@@ -228,8 +233,8 @@ module ClusterReduceTree #(
     if (!reset) begin
       for (int stage = 0; stage < 3; stage++) begin
         if (tap_valid_o[stage]) terminal_writes[stage]++;
-        changed_inputs[stage]=stage==0 ? cg_channel_req[1]|cg_channel_req[2] :
-                             cg_channel_req[3+2*(stage-1)]|cg_channel_req[4+2*(stage-1)];
+        changed_inputs[stage] = stage == 0 ? cg_channel_req[1] | cg_channel_req[2] :
+          cg_channel_req[3 + 2 * (stage - 1)] | cg_channel_req[4 + 2 * (stage - 1)];
         for (int c = 0; c < 4; c++) saved_sum[stage][c] = node_adder[stage][c];
       end
       #1;

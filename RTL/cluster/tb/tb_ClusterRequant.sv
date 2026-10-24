@@ -13,30 +13,30 @@ module tb_ClusterRequant;
     if(!(valid_i & (32'h11111111 << 0)) &&
        (dut.g_channel[0].selected_psum !== 0 || dut.g_channel[0].selected_multiplier !== 0 ||
         dut.g_channel[0].selected_shift !== 0 || dut.g_channel[0].selected_zp !== 0))
-      $fatal(1,"Requant masked channel 0 consumed Psum/parameter output");
+      $fatal(1, "Requant masked channel 0 consumed Psum/parameter output");
     if(!(valid_i & (32'h11111111 << 1)) &&
        (dut.g_channel[1].selected_psum !== 0 || dut.g_channel[1].selected_multiplier !== 0 ||
         dut.g_channel[1].selected_shift !== 0 || dut.g_channel[1].selected_zp !== 0))
-      $fatal(1,"Requant masked channel 1 consumed Psum/parameter output");
+      $fatal(1, "Requant masked channel 1 consumed Psum/parameter output");
     if(!(valid_i & (32'h11111111 << 2)) &&
        (dut.g_channel[2].selected_psum !== 0 || dut.g_channel[2].selected_multiplier !== 0 ||
         dut.g_channel[2].selected_shift !== 0 || dut.g_channel[2].selected_zp !== 0))
-      $fatal(1,"Requant masked channel 2 consumed Psum/parameter output");
+      $fatal(1, "Requant masked channel 2 consumed Psum/parameter output");
     if(!(valid_i & (32'h11111111 << 3)) &&
        (dut.g_channel[3].selected_psum !== 0 || dut.g_channel[3].selected_multiplier !== 0 ||
         dut.g_channel[3].selected_shift !== 0 || dut.g_channel[3].selected_zp !== 0))
-      $fatal(1,"Requant masked channel 3 consumed Psum/parameter output");
+      $fatal(1, "Requant masked channel 3 consumed Psum/parameter output");
   endtask
   initial begin
     string path, description;
     int fd, status, p, m, s, z, wanted, cases, checks, numeric_checks;
     logic [31:0] vector_mask;
     int mode, mask, cp[4], cm[4], cs[4], cz[4], cq[4], channel_cases;
-    cases   = 0;
-    numeric_checks=0;
-    checks  = 0;
-    cfg_i   = '0;
-    psum_i  = '0;
+    cases = 0;
+    numeric_checks = 0;
+    checks = 0;
+    cfg_i = '0;
+    psum_i = '0;
     valid_i = '0;
     if (!$value$plusargs("REQUANT_VECTORS=%s", path))
       $fatal(1, "TB: require +REQUANT_VECTORS=PATH (generate with requant_vectors.py)");
@@ -66,13 +66,14 @@ module tb_ClusterRequant;
       endcase
       // Exercise every numeric vector with four active channels first,
       // then check masking/isolation without losing arithmetic coverage.
-      vector_mask=valid_i;valid_i=32'hf;
+      vector_mask = valid_i;
+      valid_i = 32'hf;
       #0.001;
-      for(int c=0;c<4;c++) begin
-        if(data_o[8*c+:8] !== 8'(wanted)) $fatal(1,"Active numeric vector mismatch");
+      for (int c = 0; c < 4; c++) begin
+        if (data_o[8*c+:8] !== 8'(wanted)) $fatal(1, "Active numeric vector mismatch");
         numeric_checks++;
       end
-      valid_i=vector_mask;
+      valid_i = vector_mask;
       #0.001;
       check_isolated_channels();
       if (valid_o !== valid_i) $fatal(1, "Requant unit valid is not combinational");
@@ -140,24 +141,28 @@ module tb_ClusterRequant;
         cfg_i.requant_zp[32*(l%4)+:32] = 32'(cz[l%4]);
         valid_i[l] = (l / 4 == channel_cases % 8) && 1'(mask >> (l % 4));
       end
-      vector_mask=valid_i;valid_i=32'hf << (4*(channel_cases%8));
+      vector_mask = valid_i;
+      valid_i = 32'hf << (4 * (channel_cases % 8));
       #0.001;
-      for(int l=0;l<32;l++) if(valid_i[l]) begin
-        if(data_o[8*l+:8] !== 8'(cq[l%4])) $fatal(1,"Active per-channel numeric vector mismatch");
+      for (int l = 0; l < 32; l++)
+      if (valid_i[l]) begin
+        if (data_o[8*l+:8] !== 8'(cq[l%4])) $fatal(1, "Active per-channel numeric vector mismatch");
         numeric_checks++;
       end
-      valid_i=vector_mask;
+      valid_i = vector_mask;
       #0.001;
       check_isolated_channels();
       if (valid_o !== valid_i) $fatal(1, "Four-channel valid mapping changed");
       for (int l = 0; l < 32; l++)
-      if (data_o[8*l+:8] !== (valid_i[l] ? 8'(cq[l%4]) : 8'b0)) $fatal(1, "Four-channel OC parameter order mismatch lane=%0d", l);
+      if (data_o[8*l+:8] !== (valid_i[l] ? 8'(cq[l%4]) : 8'b0))
+        $fatal(1, "Four-channel OC parameter order mismatch lane=%0d", l);
       channel_cases++;
     end
     $fclose(fd);
     if (channel_cases != 512) $fatal(1, "Missing four-channel unit coverage");
     $display("PASS requant_channel_unit cases=%0d lane_checks=%0d masks=16", channel_cases, 32 * channel_cases);
-    $display("PASS requant_unit cases=%0d lane_checks=%0d latency=0 no_clock=1 operand_isolation=1 numeric_checks=%0d", cases, checks, numeric_checks);
+    $display("PASS requant_unit cases=%0d lane_checks=%0d latency=0 no_clock=1 operand_isolation=1 numeric_checks=%0d",
+             cases, checks, numeric_checks);
     $finish;
   end
 

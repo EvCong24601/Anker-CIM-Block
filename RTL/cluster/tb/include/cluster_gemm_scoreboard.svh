@@ -23,8 +23,8 @@ always @(posedge clock) begin : gemm_scoreboard
     if (issue[c]) begin
       row = issues[active_tile] / 4;
       ph  = issues[active_tile] % 4;
-      if(issue_context[c]!=row || issue_phase[c]!=ph || issue_address[c]!==WEIGHT_ADDR+8'(active_tile) ||
-         issue_plane[c]!==act_planes[4*row+ph] || cycle!=first_accept[active_tile]+5*row+1+ph)
+      if (issue_context[c] != row || issue_phase[c] != ph || issue_address[c] !== WEIGHT_ADDR + 8'(active_tile) ||
+        issue_plane[c] !== act_planes[4 * row + ph] || cycle != first_accept[active_tile] + 5 * row + 1 + ph)
         $fatal(1, "GEMM: internal issue schedule/data mismatch cluster=%0d row=%0d slice=%0d", c, row, ph);
       for (int macro = 0; macro < 8; macro++)
       if (ren[c][macro]) begin
