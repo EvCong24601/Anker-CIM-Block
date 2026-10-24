@@ -88,7 +88,7 @@ task automatic sram_compute_check(bit patched);
 endtask
 task automatic run_sram_cases;
   // 场景顺序：全地址 -> 全掩码/隔离 -> 片选关闭 -> 连续写 -> 复位保留
-  //           -> preload 共享存储 -> 写后计算/Hold 失效与全屏蔽保持。
+  //           -> 逐 Macro 写入/读回 -> 写后计算/Hold 失效与全屏蔽保持。
   int a;
   logic [7:0] saved_hold;
   // Every physical address and Macro has a distinct complete row.
@@ -140,17 +140,9 @@ task automatic run_sram_cases;
   repeat (3) @(negedge clock);
   reset = 0;
   for (int m = 0; m < 8; m++) for (int row = 0; row < 256; row++) sram_read_check(m, row);
-  // Raw read and TB preload share the same underlying memory.
-  $display("[CASE_START] time=%0.3f ns suite=sram_preload description=preload-visible-through-regular-read", $realtime);
-  @(negedge clock);
-  weight_wen_i   = 8'hff;
-  weight_waddr_i = 8'd8;
-  for (int m = 0; m < 8; m++) begin
-    weight_wdata_i[1024*m+:1024] = sram_pattern(m, 8, 231);
-    sram_reference[m][8] = weight_wdata_i[1024*m+:1024];
-  end
-  @(negedge clock);
-  weight_wen_i = 0;
+  // Per-Macro writes and public readback share the same addressed storage.
+  $display("[CASE_START] time=%0.3f ns suite=sram_row_load description=regular-write-and-readback-all-macros", $realtime);
+  for (int m = 0; m < 8; m++) sram_write(m, 8, sram_pattern(m, 8, 231), 4'h0);
   for (int m = 0; m < 8; m++) sram_read_check(m, 8);
   for (int m = 0; m < 8; m++) sram_write(m, 7, {128{8'h11}}, 4'h0);
   sram_compute_check(0);

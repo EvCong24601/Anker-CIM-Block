@@ -8,7 +8,7 @@
 ../rtl/cluster_pkg.sv
 ../rtl/ClusterRequant.sv
 ../rtl/ClusterReduceTree.sv
-../rtl/cluster_dut_adapter.sv
+../rtl/cluster_top.sv
 tb_Cluster.sv
 tb_ClusterReduceTree.sv
 tb_ClusterRequant.sv

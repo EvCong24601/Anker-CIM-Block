@@ -1,6 +1,6 @@
 # Cluster testbench：tmp、bit fusion、Psum acc 与 ICG
 
-参考 adapter 连接八个真实 SingleMacro RTL，保留 raw signed32，四通道组合 Requant 支持共享或逐OC scale，合并后的zp始终逐OC，量化valid比raw晚一拍。启用量化仅允许一个归约组、最多4OC；参数按oc_mask固定顺序，无有效位压缩。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。公式、配置和测试见 [Requant说明](../../../docs/Cluster_Requant.md)。
+参考顶层 连接八个真实 SingleMacro RTL，保留 raw signed32，四通道组合 Requant 支持共享或逐OC scale，合并后的zp始终逐OC，量化valid比raw晚一拍。启用量化仅允许一个归约组、最多4OC；参数按oc_mask固定顺序，无有效位压缩。尚未综合、映射工艺库 ICG、运行 STA 或门级功耗验证。公式、配置和测试见 [Requant说明](../../../docs/Cluster_Requant.md)。
 
 tb_Cluster默认ENABLE_REQUANT=0，用于raw-only多组树验证；Python量化专项自动覆盖为1。VCS运行量化集成专项时，需在编译加入PARAMETERS=-pvalue+tb_Cluster.ENABLE_REQUANT=1，再运行+REQUANT_TEST或+REQUANT_CHANNEL_TEST。两个GEMM TB默认启用量化，均支持+PER_CHANNEL_SCALE，必须配套相应Python --per-channel数据。
 
@@ -16,15 +16,19 @@ Context是同一channel内独立保存、独立输出的计算任务，Psum[ctx]
 
 ## 常规 SRAM 与 case 开始日志
 
-常规读写接口通过 `{cim_macro_group,cim_bank_sel}` 选择一个 Macro，由 cim_row_addr 选择四个 OC 共用的 128 B 行。cim_wmask 每位为 1 屏蔽对应 OC 的 32 B，为 0 允许写入；读忽略该掩码。TB preload 保留为独立验证辅助接口。接口时序、互斥约束和测试覆盖见 [常规权重 SRAM 规格](../../../docs/Cluster_Weight_SRAM_Interface.md)。
+常规读写接口通过 `{cim_macro_group,cim_bank_sel}` 选择一个 Macro，由 cim_row_addr 选择四个 OC 共用的 128 B 行。cim_wmask 每位为 1 屏蔽对应 OC 的 32 B，为 0 允许写入；读忽略该掩码。所有 TB 权重加载和读回均使用该常规接口。接口时序、互斥约束和测试覆盖见 [常规权重 SRAM 规格](../../../docs/Cluster_Weight_SRAM_Interface.md)。
 
 仿真使用 [VCS case 入口](../../../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
 每个 Cluster、SRAM、归约树及 SingleMacro case 开始都会输出 `[CASE_START] time=... ns suite=... description=...`，包含当前仿真时间和场景/参数；CMD_SEND、CMD_ACCEPT 继续独立记录命令驱动和接受时间。
 
+## GEMM 用例
+
+GEMM 由 WS32、AS4 和高位置组/边界三个 TB 执行，包含 11 个正向 case 和 3 个 AS 参数负向 case。矩阵尺寸、权重地址、量化配置、输出周期和运行命令见 [GEMM 用例总览](../../../docs/Cluster_GEMM.md)。
+
 ## TB 文件拆分
 
-顶层 tb_Cluster.sv 只保留连接与共享状态；include/ 按职责拆分，新增 cluster_requant_cases.svh 负责量化golden、参数profile、1T延迟/输出保持检查和专项case。先从 cluster_suites.svh 找原有场景；Requant专项从对应include阅读。文件职责、采样顺序与新增 case 方法见 [Testbench 阅读指南](../../../docs/Testbench_Guide.md)。.svh 不单独编译，文件清单和 Python 副本入口已配置 include 路径。
+顶层 tb_Cluster.sv 只保留连接与共享状态；include/ 按职责拆分，cluster_requant_cases.svh 负责量化golden、参数profile、1T延迟/输出保持检查和专项case。基础场景位于 cluster_suites.svh；Requant专项从对应include阅读。文件职责、采样顺序与 case 组织方式见 [Testbench 阅读指南](../../../docs/Testbench_Guide.md)。.svh 不单独编译，文件清单和 Python 副本入口已配置 include 路径。
 
 功能源码在 [../rtl/](../rtl/)，文件职责与整体结构见 [Cluster 目录说明](../README.md)。
 
@@ -53,7 +57,7 @@ tb/
 
 ## 流水与存储
 
-调试日志默认逐条打印外部 i_cmd：`[CMD_SEND]` 为 TB 拉高 `cmd_valid_i` 的时刻，`[CMD_ACCEPT]` 为 `cmd_valid_i && cmd_ready_o` 的接受沿；时间戳明确使用 ns。每行包含 case、standard_case、命令序号、Tile/Context、ACT/ADDRESS 类型、WS/AS/SINGLE 模式、完整 descriptor 配置及 pattern、bubbles、Psum depth、seed。case、cmd、tile、context 均从 0 开始；case 与 scoreboard 报错编号一致，standard_case 保留原有六种标准时序编号（其他 case 为 0）。等待 ready 时不会重复打印 SEND，可对照同一 case/cmd 的两行定位停顿；AS 后续地址命令也会打印。
+调试日志默认逐条打印外部 i_cmd：`[CMD_SEND]` 为 TB 拉高 `cmd_valid_i` 的时刻，`[CMD_ACCEPT]` 为 `cmd_valid_i && cmd_ready_o` 的接受沿；时间戳明确使用 ns。每行包含 case、standard_case、命令序号、Tile/Context、ACT/ADDRESS 类型、WS/AS/SINGLE 模式、完整 descriptor 配置及 pattern、bubbles、Psum depth、seed。case、cmd、tile、context 均从 0 开始；case 与 scoreboard 报错编号一致，standard_case 使用六种标准时序编号（其他 case 为 0）。等待 ready 时不会重复打印 SEND，可对照同一 case/cmd 的两行定位停顿；AS 后续地址命令也会打印。
 
 每个OC仅一个32-bit tmp数据寄存器，以及深度 OUTPUT_BUFFER_DEPTH（默认16）的32-bit Psum Context buffer。每 OC 共用一套 fusion 和一套 acc；同一 OC 每拍仅选择一个 Context entry，其他深度保持。
 
@@ -87,7 +91,7 @@ python py/buffer_schedule.py --trace data/buffer_operations.csv
 
 descriptor为107bit，包含共享8-bit weight_cim_raddr与32-bit macro_oc_mask。每Tile/Context提交一次Command；首个Context命令同拍提供A0，其他Slice连续接收；AS其余Context各提交地址命令。内部所有phase由已保存descriptor和act_buffer驱动。同地址有效Hold用cim_station=0，首读/换地址/写入后刷新。标准映射：W2 slots=[0,1,0,1,0,1,0,1]/split07/EN55；W4 slots=[0,1,2,3,0,1,2,3]/split01/EN33；W8 slots=[0,1,2,3,4,5,6,7]/split00/EN0F。每组K128，ACT高512bit补零。WS地址T0=20/T1=30，AS的T0 Ctx0/1=20/21、T1=30/31，均为8-bit十六进制。
 
-psum_data_o 输出 raw signed32（1024 bit，32 channel）；out_valid_o 每 OC 一位，写回即置位一拍；不同 Context 独立，不包含 requant。
+TB别名psum_data_o/out_valid_o分别观察内部raw_data[1023:0]/raw_valid[31:0]，不属于cluster_top端口；正式输出使用requant_data_o/requant_valid_o。
 
 ## 验证
 
@@ -131,7 +135,7 @@ PASS regression: suites=37 expected_rejections=27
 
 专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16。`WGT_RADDR_BUFFER_DEPTH=64` 定义供所有 AS 模式共用的 64 项权重行地址表，每项仅 8 bit，共 512 bit（64 B）；`MAX_CONTEXTS=64` 定义标签/完成状态容量，二者与 Psum 深度独立。
 
-仅 OS1 AS 改为 Context→Slice：先在每 OC 唯一 tmp 中融合一个 Context 的全部 slice，再切换 Context。因此 OS1 AS64 的 A4/A8/A16 全部合法，不读写 Psum。OS>1 AS 保留 Slice→Context 顺序：同一 slice 遍历所有 Context，再进入下一 slice，融合历史及跨 Tile 累加仍保存在 Psum。OS2 AS8 合法，OS2 AS64 仍超过 Psum 深度 16。
+OS1 AS 采用 Context→Slice：先在每 OC 唯一 tmp 中融合一个 Context 的全部 slice，再切换 Context。因此 OS1 AS64 的 A4/A8/A16 全部合法，不读写 Psum。OS>1 AS 采用 Slice→Context 顺序：同一 slice 遍历所有 Context，再进入下一 slice，融合历史及跨 Tile 累加仍保存在 Psum。OS2 AS8 合法，OS2 AS64 仍超过 Psum 深度 16。
 
 OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice 间保持地址，再切换下一个地址；OS>1 每轮 slice 都重访各 Context 地址。表中保存行号，不保存权重数据，权重仍预先装载在 Macro SRAM；不需要为八个 Macro 各复制一份表，因为计算端使用共享 8-bit 行地址。
 
@@ -139,7 +143,7 @@ OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice �
 
 VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../../../vcs-rtl/README.md)。
 
-默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。追加 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
+默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。组合使用 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
 ## 同包输入与发射重叠专项
 
 `+INPUT_OVERLAP_TEST` 运行168例：七精度×两种符号×OS1/2×单Context/WS2/AS2×有无地址空拍。检查A8/A16加载期间发射、AS地址接收与发射同拍、地址延迟时暂停及恢复、首发射为C1、数值与逐lane输出时延。输入仍先寄存，当前包发完后才接收下一包。
@@ -148,4 +152,4 @@ VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../../../vcs-rtl
 
 `make regression` 自动包含该专项。精确规则、周期公式及示例见 [Cluster 输入重叠说明](../../../docs/Cluster_Input_Overlap.md)。
 
-仅 OS1 的 AS 逐 Context 完成 bit fusion；OS>1 AS 保留原调度。所有 AS 模式均使用地址暂存表，详见 [OS1 AS 融合与权重地址暂存](../../../docs/Cluster_AS_OS1_Fusion.md)。
+仅 OS1 的 AS 逐 Context 完成 bit fusion；OS>1 AS 保留原调度。所有 AS 模式均使用地址暂存表，详见 [OS1 AS 融合与权重地址暂存](../../../docs/Cluster_Input_Overlap.md)。

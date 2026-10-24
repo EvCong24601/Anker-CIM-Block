@@ -6,7 +6,7 @@
 
 **本版核心要求：读权重与全部 Macro 本地计算共一拍。** 请求在上升沿 n 采样，四路 Phase Sum 在 n+1 上升沿后的寄存器更新完成后可见，Phase II=1。仅设置入口和出口两个计算寄存边界；512-bit ACT 只保留一组入口寄存器，由四个 OC 共用。SRAM/Hold 选择、子乘法、Weight Fusion 和五层本地归约在两边界之间组合完成。
 
-规则来源分为：**用户指定**、**V0.2 用户确认**、**原 Block SPEC**、**沿用旧 Macro**、**V0.1 继承规则**。本版明确替换 V0.1 的八拍计算时序，其他接口、数值和复用约定沿用 V0.1。下文“本轮设计决定”表示 V0.1 中经用户授权补齐、在本版继续继承的规则，不表示其来自旧 Macro。
+本规格定义当前 Macro 的接口、数值解释、计算时序、权重 Hold 和集成约束。
 
 
 ## 1 边界与规模
@@ -55,7 +55,7 @@ in_valid 为入口请求寄存器的有效状态，out_valid 为出口寄存器�
 
 ## 3 端口定义
 
-端口名尽量沿用旧 Macro 的命名。新增端口及语义由本轮定义。所有计算控制都绑定当前成功发射的事务，不在后续周期直接使用外部当前值解释先前数据。
+本节定义 Macro 端口及其语义。所有计算控制都绑定当前成功发射的事务，不在后续周期直接使用外部当前值解释先前数据。
 
 | 端口 | 方向 | 位宽 | 规定 | 来源 |
 |---|---|---:|---|---|
@@ -72,7 +72,7 @@ in_valid 为入口请求寄存器的有效状态，out_valid 为出口寄存器�
 | cim_wen | 输入 | 1 | 行写请求，由 cim_wmask 按 OC 屏蔽，无 ready 或完成回执 | 常规 SRAM 扩展 |
 | cim_waddr | 输入 | 8 | 写入的本地权重行地址 | 深度推导 |
 | cim_wdata | 输入 | 1024 | 四路 OC 的整行原始权重，见第 5 节 | 128 B 数据布局 |
-| cim_wmask | 输入 | 4 | bit c=1 屏蔽 OC c 的 32 B，0 允许写入；TB preload 固定 0000 | 常规 SRAM 扩展 |
+| cim_wmask | 输入 | 4 | bit c=1 屏蔽 OC c 的 32 B，0 允许写入；全行写入时使用 0000 | 常规 SRAM 扩展 |
 | sram_ren | 输入 | 1 | 常规原始权重读使能，与计算/写入互斥 | 常规 SRAM 扩展 |
 | sram_raddr | 输入 | 8 | 常规读的共享行号 | 常规 SRAM 扩展 |
 | sram_rdata | 输出 | 1024 | 常规读的完整原始权重行；参考模型禁读时为零 | 常规 SRAM 扩展 |
@@ -218,19 +218,19 @@ out_valid[n] = in_valid[n-1] = issue[n-1]   // 未发生取消事务的 reset
 
 ### 7.1 下游接收
 
-Cluster 不设输出反压：每个 OC 的 raw 结果在写回时立即发布（out_valid_o 每 OC 一位、写回置位一拍），无需装配等待、信用预留或结果缓冲排队。若未来下游引入反压，须由 Cluster 停止新发射并继续接收已接受的 Macro 结果；不得把 ready 接到 Macro 时钟使能上，也不得仅停止 cim_ren 后就忽略下一拍的结果。Macro 不新增可停顿队列。
+Cluster不设输出反压：内部每OC raw写回时置位raw_valid，经组合Requant在下一沿锁存INT8并发布requant_valid_o。raw仅供内部计算和TB观察，正式结果由Requant端口输出。若未来下游引入反压，须由 Cluster 停止新发射并继续接收已接受的 Macro 结果；不得把 ready 接到 Macro 时钟使能上，也不得仅停止 cim_ren 后就忽略下一拍的结果。Macro 不含可停顿队列。
 
 ### 7.2 外部标签
 
-Context、K Tile、group/tree 配置等由 Cluster 在 issue 时采样，并与 Macro 的一拍结果可见时序对齐。若 Cluster 本身另有入口/出口寄存级，那些寄存级的延迟另行核算，不能继续使用 V0.1 的八拍 Macro 标签延迟。Macro 只回传 phase 和 OC mask，不新增 Context ID 位宽参数。
+Context、K Tile、group/tree 配置等由 Cluster 在 issue 时采样，并与 Macro 的一拍结果可见时序对齐。若 Cluster 本身另有入口/出口寄存级，那些寄存级的延迟另行核算，标签按当前一拍 Macro 结果时序对齐。Macro 只回传 phase 和 OC mask，不含 Context ID 位宽参数。
 
 Cluster 标签 valid 必须使用相同的 issue 条件，含 mask=0 的气泡；不能只按当前 cim_ren 或当前映射解释结果。不同 Macro 的 idle 位不参加归约有效性等待。
 
 ## 8 Weight Hold
 
-**沿用旧 cim_station 极性：** 1 表示本次读取当前地址并刷新 Hold；0 表示关闭本次阵列读取，使用保持的权重。
+**cim_station 极性：** 1 表示本次读取当前地址并刷新 Hold；0 表示关闭本次阵列读取，使用保持的权重。
 
-**V0.1 继承规则：** Hold 保存完整的 1024-bit 原始权重行，另保存 8-bit 行地址和 hold_valid。Hold 与 activation、precision、OC mask 无关，不保存被 activation 门控后的值，也不删除无效 OC 的权重。
+**Hold 状态：** Hold 保存完整的 1024-bit 原始权重行，另保存 8-bit 行地址和 hold_valid。Hold 与 activation、precision、OC mask 无关，不保存被 activation 门控后的值，也不删除无效 OC 的权重。
 
 **V0.2 对齐规则：** station=1 请求在 n 发射后，在 n 到 n+1 区间使用本次 SRAM 读出直接计算；在 n+1 捕获该请求的结果，并建立该行的有效 Hold。Hold 不作为当前请求的一整拍权重对齐寄存级，当前运算不能等待 n+1 更新后的 Hold 才开始。
 
@@ -259,7 +259,7 @@ n+1 的结果/Hold 捕获使用边沿前稳定的 A 的地址、ACT 和控制；
 
 ## 9 行写入与常规读写互斥
 
-每次提供完整 1024-bit 行数据，新增 cim_wmask 按四个 32 B OC 区域屏蔽：1 保持、0 写入，0000 全写，1111 全保持。cim_wen/cim_waddr/cim_wdata 无 ready 或完成回执。常规读使用 sram_ren/sram_raddr/sram_rdata，与 CIM 计算共享存储读路径；参考模型为使能组合读，禁读或复位时读输出为零。物理 SRAM 的读回延迟待集成冻结，当前实现不承诺并发双端口能力。
+每次提供完整 1024-bit 行数据，cim_wmask 按四个 32 B OC 区域屏蔽：1 保持、0 写入，0000 全写，1111 全保持。cim_wen/cim_waddr/cim_wdata 无 ready 或完成回执。常规读使用 sram_ren/sram_raddr/sram_rdata，与 CIM 计算共享存储读路径；参考模型为使能组合读，禁读或复位时读输出为零。物理 SRAM 的读回延迟待集成冻结，当前实现不承诺并发双端口能力。
 
 **本轮设计决定：** 基线按 SRAM 单访问资源设计，权重加载和计算分阶段；不要求物理 SRAM 支持双端口或同地址 read-during-write。
 
@@ -304,7 +304,7 @@ n+1 的结果/Hold 捕获使用边沿前稳定的 A 的地址、ACT 和控制；
 ### 10.1 寄存器边界
 
 - ACT 仅保存一组 512-bit 入口值，四个 OC 共用；不增加每 OC 的独立 ACT 副本。
-- 不保留 V0.1 的第二组 ACT 对齐寄存器、独立当前计算 weight_r1、product_r2、slice_r3 或 sum_r4…sum_r7。
+- 计算寄存边界为 R_in 和 R_out；SRAM/Hold 选择、乘法、Slice Fusion 和本地归约位于两者之间。
 - Weight Hold、SRAM 单元和物理读出锁存属于存储/复用状态，不等同于额外计算流水级；不能借这些状态增加输出 Latency。
 - 入口控制可以寄存原始字段或等价的 precision/符号解码。组合计算只使用本次入口快照，不能使用实时外部控制重新解释已有请求。
 - 输出数据、mask 和 phase 在入口 valid=1 的完成边沿更新；否则保持最近一次结果，出口 valid 仍按第 7 节更新。
@@ -327,7 +327,7 @@ n+1 的 NBA 更新完成后结果可见，下游上升沿寄存器在 n+2 采样
 | A8 | p0：n；p1：n+1 | p0：n+1；p1：n+2 |
 | A16 | p0…p3：n…n+3 | p0…p3：n+1…n+4 |
 
-上述为 Macro 局部 Phase 结果，不是 Cluster 完整 Fusion/Psum/Requant 的完成时间。AS 等调度可以交叠 Context，或在 Phase 间插气泡；每次已发射 Phase 的 Macro Latency 仍固定一拍，完整 Context 的经过周期不再固定为 1/2/4。
+上述为 Macro 局部 Phase 结果，不是 Cluster 完整 Fusion/Psum/Requant 的完成时间。AS 等调度可以交叠 Context，或在 Phase 间插气泡；每次已发射 Phase 的 Macro Latency 仍固定一拍，完整 Context 的经过周期取决于调度和 Phase 间隔。
 
 ### 10.4 SRAM 和时序预算
 
@@ -363,50 +363,38 @@ SRAM 适配层必须保证：地址在 n 后由入口寄存器给出，本次读
 9. 最后请求 n 后 n+1 禁止写入、n+2 允许写入；连续写及写后 w+1 首读。
 10. 空闲门控下的异步复位，以及最后结果 n+1 之后 n+2 边沿正常清除出口 valid。
 
-V0.1 八拍 RTL 及其功能回归为历史基线，保存在 Git 标签 `singlemacro-v0.1`。当前 V0.2 已独立运行真实 RTL 仿真，采用直接解码完整 W2/W4/W8 整数的点积 golden，以及不引用 DUT 延迟参数、独立固定为一拍的 scoreboard。
+当前测试台为 `RTL/macro/tb/tb_SingleMacro.sv`，使用完整 W2/W4/W8 整数点积 golden，以及独立固定为一拍的 scoreboard。
 
-2026-10-14，使用 Icarus Verilog 13.0 完成门控开/关各两个 seed 的四组正向回归：共接受 9,052 笔请求，校验 9,048 笔结果，4 笔尚未完成的请求按预期被异步复位取消。每组还完成 2×4 子乘法器的 256 种输入/符号组合穷举。覆盖七种精度的 INT/UINT、全部合法 Phase 和 16 种 OC mask、一拍结果可见与连续发射、气泡数据/标签保持、相邻刷新与复用、零 mask/停止发射时先前请求继续完成、整行连续写、n+2 最早合法写、写后 w+1 首读，以及空闲门控下的异步复位。
+VCS 的 `macro_gate0`、`macro_gate1` 分别验证门控关闭和开启状态。15 个 `macro_negative_*` case 检查 precision/phase、无效 Hold、未初始化 OC 的刷新与复用、地址不匹配、未知输入、同拍读写、流水排空前写入，以及写入/复位后的非法复用。case 目录和运行方法见 [VCS 使用说明](../../vcs-rtl/README.md)。
 
-13 类负向协议检查在门控开启配置下通过，包括非法 precision/phase、无效 Hold、未初始化行、Hold 地址不匹配及同边沿先行刷新覆盖旧 Hold 后的地址误用、X/Z 输入、同拍读写、计算未完成即写入、写后/复位后非法复用。完整工程的验证快照为 `SingleMacro/verification/v0.2_results.json`，测试台为 `SingleMacro/tb/tb_SingleMacro.sv`，回归入口为 `SingleMacro/scripts/run_tests.py`；最小交付包不包含测试工程及运行产物。
+`SYNTHESIS` 分支编译/展开通过，仅证明该源代码分支可编译和展开，不代表完成逻辑综合。当前使用通用 SRAM 与功能 ICG 模型，未进行工艺 IP 适配、门级仿真、STA 或形式验证，未生成代码/功能覆盖率报告。Cluster 结果发布、外部 Context 标签对齐和 A8/A16 最终 Fusion 仍须在 Cluster 集成中验证；Macro 回归检查停止新发射后已接受请求继续输出的行为。
 
-`SYNTHESIS` 分支编译/展开通过，仅证明该源代码分支可编译和展开，不代表完成逻辑综合。当前使用通用 SRAM 与功能 ICG 模型，未进行工艺 IP 适配、门级仿真、STA 或形式验证，未生成代码/功能覆盖率报告。Cluster 结果发布、外部 Context 标签对齐和 A8/A16 最终 Fusion 仍须在 Cluster 集成中验证；本次 Macro 回归检查了停止新发射后已接受请求继续输出的行为。
+## 12 设计约定
 
-## 12 决定来源与理由
-
-| 决定 | 来源 | 理由或与旧设计的区别 |
-|---|---|---|
-| 上升沿、高有效异步 reset | 用户指定沿用旧 Macro | 旧 InputReg/OutReg 的实际实现 |
-| SRAM 不复位 | 沿用旧存储 | 权重加载由外部保证；新增 Hold-valid 需复位 |
-| 本地计算 OC mask 与写掩码各 4 bit | 当前接口 | cim_oc_mask=1 参与计算；独立 cim_wmask=1 屏蔽 32 B 写入 |
-| 无计算/写 ready、无输出 ready | 沿用旧接口 | 保持请求/固定流水接口，Cluster 输出无下游反压，结果直接接收 |
-| 包含读权重的一拍计算、R_in→R_out | V0.2 用户确认 | n 采样、n+1 输出，取消乘积和归约层间寄存 |
-| 一组 512-bit ACT 入口寄存 | V0.2 用户确认 | 四个 OC 共用，取消第二组 ACT 对齐及独立 weight_r1 |
-| Slot 在 Cluster 选择、输入固定 512 bit | 本轮设计决定 | 适配 W2 最大 digit 向量，避免每 Macro 重复整个 Plane 的 Slot 选择 |
-| 显式 phase 输入与回传 | 本轮设计决定 | Macro 无 Phase 状态，支持 AS 交叠，Cluster 正确 Fusion |
-| Context/tree 标签留在 Cluster | V0.1 继承规则与 V0.2 对齐 | 无 Context 存储，Macro 标签延迟改为一拍 |
-| 原始权重 Hold、保存地址与 valid | V0.1 继承规则与 V0.2 对齐 | 原始行不受 ACT/mask 污染；完成边沿建立 Hold，支持相邻复用 |
-| 任意写使 Hold 无效 | 本轮设计决定 | 简化一致性处理，加载与计算分阶段，重新读出成本明确 |
-| 完成后整行写、读写互斥 | V0.1 继承规则与 V0.2 排空 | 不假定双端口能力；最后请求 n 后最早 n+2 写 |
-| 门控保留最后输出 valid 清除边沿 | V0.2 时序约束 | 输出 n+1 可见后，n+2 必须能够清除 valid |
-| OC/K/ACT/结果低位优先 packing | 本轮设计决定 | 软件写入、测试向量和 RTL 使用统一逻辑布局 |
-| mask=0 不发射、屏蔽 OC 输出 0 | 本轮设计决定 | 不产生 Idle 等待，避免无效贡献进入归约 |
-| A16 的 OS/WS Context 内顺序、AS Phase-major | 原 A8 调度的本轮扩展 | 保留 ACT 复用行为，Macro 本身不约束 Context 相邻性 |
+- reset 为高有效异步复位，SRAM 内容保持，Hold-valid 清零。
+- cim_oc_mask 控制计算 OC，cim_wmask 控制每个 32 B 通道的写入，两者语义独立。
+- 计算路径为 R_in→组合运算→R_out；ACT 入口为四个 OC 共用的一组 512-bit 寄存器。
+- Macro 使用显式 phase 输入，回传 phase 和 OC mask；Context 与 tree 标签由 Cluster 管理。
+- Hold 保存原始权重行、地址和 valid，在结果完成边沿建立，支持相邻请求复用。
+- 计算、常规读和写入分阶段使用同一存储；最后计算请求 n 后最早 n+2 写入。
+- 数据采用 OC/K/ACT/结果低位优先 packing。计算 mask 为0时不发射，屏蔽 OC 的结果为0。
+- 门控必须覆盖有效结果输出及后续 valid 清除；Macro 不包含下游反压接口。
 
 ## 13 集成与物理实现边界
 
 本规格已为单 Macro 的正常逻辑行为给出可实现基线。仍由相应模块规格负责的事项包括：Cluster 结果缓冲深度及信用实现、A16 Fusion 存储、Psum 溢出策略、Requant 参数和 LSM 输出协议。
 
-Cluster 归约树及其后级可以具有自身流水，但这些延迟不改变 Macro 的一拍接口契约。当前 `SingleMacro/rtl` 已按本版实现 R_in→R_out 一拍数据通路；最小交付副本位于 `submit_singlemacro/rtl`。历史 V0.1 八拍实现保存在 Git 标签 `singlemacro-v0.1`，不能作为本版集成时序的依据。
+Cluster 归约树及其后级可以具有自身流水，但这些延迟不改变 Macro 的一拍接口契约。功能实现位于 `RTL/macro/rtl/`，接口采用 R_in→R_out 一拍数据通路。
 
 尤其 UINT W8A16、K=256 的全组结果为 4,278,124,800，Cluster Fusion 必须先使用足够宽度形成结果，再执行 signed32 Psum 范围检查；不能因 Macro 的 Phase Sum 仅为 signed18 而忽略最终范围。
 
-SRAM Dual-Rail、Retention、供电/隔离/测试控制和 MAC 是否采用 MTCMOS 属于物理 IP 与电源集成接口。本逻辑 Macro 端口不新增未定义的电源控制信号；旧设计的时钟门控方式不等同于已证明支持新工艺的电源域切换。实际 memory/power wrapper 必须另有物理契约并接受签核。
+SRAM Dual-Rail、Retention、供电/隔离/测试控制和 MAC 是否采用 MTCMOS 属于物理 IP 与电源集成接口。本逻辑 Macro 端口不含未定义的电源控制信号。时钟门控行为与物理电源域切换分别验证。实际 memory/power wrapper 必须另有物理契约并接受签核。
 
 ## 14 RTL 接口声明基线
 
 以下声明用于统一端口，不包含 RTL 功能实现：
 
-本版计算端口和 precision 编码沿用 V0.1；常规 SRAM 扩展新增写掩码和原始读口，外部实例须显式连接；接口的结果延迟、标签对齐和写入排空时刻按 V0.2 解释。
+计算端口和 precision 编码见本节；常规 SRAM 接口包含写掩码和原始读口，外部实例须显式连接；接口的结果延迟、标签对齐和写入排空时刻按 V0.2 解释。
 
 ```systemverilog
 module SingleMacro (
@@ -435,21 +423,3 @@ module SingleMacro (
 ```
 
 每个 18-bit 输出切片单独按补码解释；不能把整个 72-bit 向量解释为一个 signed72 数。
-
-## 15 V0.1 到 V0.2 的变更摘要
-
-| 项目 | V0.1 | V0.2 |
-|---|---|---|
-| Macro Phase Latency | 8 拍 | 1 拍，包含 SRAM 读取 |
-| Phase II | 1 拍 | 1 拍 |
-| 计算寄存边界 | R0…R8 | R_in、R_out |
-| ACT 数据寄存 | 入口与对齐两组 | 一组入口，四个 OC 共用 |
-| 当前计算权重对齐 | 独立 weight_r1 | SRAM/Hold 直接驱动组合计算 |
-| 子乘积/Slice/归约中间和 | 分级寄存 | 全部组合 |
-| 输出数据宽度 | 四路 signed18 | 四路 signed18 |
-| Weight Hold | 原始行保持 | 原始行保持，结果完成边沿提交，支持下一笔相邻复用 |
-| 最早写入 | 最后请求 n 后 n+9 | 最后请求 n 后 n+2 |
-| Cluster Macro 标签延迟 | 8 拍 | 1 拍 |
-| 验证状态 | 已有八拍 RTL 功能回归 | 一拍 RTL 已实现；四组功能回归及 13 类负向检查通过；物理实现与 STA 待完成 |
-
-W2/W4/W8 的 ACT 路由、符号解释、Weight 位权和数据 packing，以及 A4/A8/A16 的 1/2/4 次 Phase 计算、方案 A Fusion 边界、计算 OC mask 和整行数据宽度均沿用 V0.1，写入另受新增 cim_wmask 控制。

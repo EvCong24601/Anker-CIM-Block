@@ -58,12 +58,16 @@ make run CASE=gemm_edge_w4_high_channel FSDB_FILE=w4_hi_pc.fsdb
 
 启用 Requant 的主 Cluster 专项自动设置 `ENABLE_REQUANT=1`；raw-only 主回归保持0。AS4默认 `ZP_DEPTH=4`，容量负向设为2。Context压力保留 Psum 深度16、地址表64与元数据64；OS1/AS64先逐Context融合旁路Psum，OS2/AS8仍使用Psum。逐通道 scale/zp 固定对应 OC c；N尾部不压缩通道参数。
 
+## GEMM 场景
+
+11 个正向 GEMM 和 3 个 AS 参数负向 case 的矩阵规模、地址布局、量化模式与检查目标见 [GEMM 用例总览](../docs/Cluster_GEMM.md)。
+
 ## Case 说明
 
 - `cluster_default`：Raw arithmetic and standard timing。
 - `sram_rw`：Regular SRAM read write and OC masks。
-- `sram_preload_conflict`：Reject regular SRAM overlap with preload；预期拒绝，匹配 `CLUSTER_SRAM_PROTOCOL: regular access overlaps preload`。
-- `sram_compute_conflict`：Reject regular SRAM overlap with compute；预期拒绝，匹配 `CLUSTER_SRAM_PROTOCOL: regular access overlaps compute`。
+- `sram_write_compute_conflict`：计算 Command 已接受、batch 活动期间发起常规写；预期拒绝，匹配 `CLUSTER_SRAM_PROTOCOL: regular access overlaps compute`。
+- `sram_compute_conflict`：常规读与计算 Command 同拍请求；预期拒绝，匹配 `CLUSTER_SRAM_PROTOCOL: regular access overlaps compute`。
 - `macro_gate0`：SingleMacro clock gating 0。
 - `macro_gate1`：SingleMacro clock gating 1。
 - `macro_negative_precision`：Reject precision；预期拒绝，匹配 `SM_PROTOCOL: illegal precision/phase`。

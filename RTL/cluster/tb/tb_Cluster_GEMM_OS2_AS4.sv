@@ -21,7 +21,7 @@ module tb_Cluster_GEMM_OS2_AS4;
   wire [1023:0] cim_rd_data, psum_data_o;
   wire [255:0] requant_data_o;
   wire [31:0] out_valid_o, requant_valid_o;
-  cluster_dut_adapter #(
+  cluster_top #(
     .REQUANT_CONTEXT_DEPTH(ZP_DEPTH)
   ) dut (
     .clock(clock),
@@ -31,9 +31,6 @@ module tb_Cluster_GEMM_OS2_AS4;
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),
     .act_data_i(act_data_i),
-    .weight_wen_i(8'b0),
-    .weight_waddr_i(8'b0),
-    .weight_wdata_i(8192'b0),
     .cim_cs_en(cim_cs_en),
     .cim_wr_en(cim_wr_en),
     .cim_macro_group(cim_macro_group),
@@ -42,11 +39,13 @@ module tb_Cluster_GEMM_OS2_AS4;
     .cim_wmask(cim_wmask),
     .cim_wrdata(cim_wrdata),
     .cim_rd_data(cim_rd_data),
-    .psum_data_o(psum_data_o),
-    .out_valid_o(out_valid_o),
     .requant_data_o(requant_data_o),
     .requant_valid_o(requant_valid_o)
   );
+  // TB-only raw observation; these aliases are not cluster_top ports.
+  assign psum_data_o = dut.raw_data;
+  assign out_valid_o = dut.raw_valid;
+
   logic [15:0] x_q[0:M*K-1];
   logic [7:0] w_q[0:K*N-1], quant_golden[0:M*N-1];
   logic [31:0] raw_golden[0:M*N-1], centered_golden[0:M*N-1], zp[0:N-1];

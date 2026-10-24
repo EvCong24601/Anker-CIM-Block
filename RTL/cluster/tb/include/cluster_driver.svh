@@ -75,3 +75,30 @@ task automatic send_act_frame(input cluster_ctrl_t descriptor, input logic [4095
     end
   join
 endtask
+
+// Load one Macro row through the public WLC port and independently read it back.
+// Initialization runs outside the monitored compute interval; one call writes
+// one 128 B row, with all four active-high mask bits cleared.
+task automatic load_weight_row(input int macro_id, input logic [7:0] address,
+                               input logic [1023:0] data);
+  @(negedge clock);
+  cim_cs_en = 1;
+  cim_wr_en = 1;
+  cim_macro_group = 1'(macro_id / 4);
+  cim_bank_sel = 2'(macro_id % 4);
+  cim_row_addr = address;
+  cim_wmask = 0;
+  cim_wrdata = data;
+  @(posedge clock);
+  #0.002;
+  if(cmd_ready_o !== 0) $fatal(1,"Weight load: Command ready during SRAM write");
+  @(negedge clock);
+  cim_wr_en = 0;
+  #1;
+  if(cim_rd_data !== data)
+    $fatal(1,"Weight load readback mismatch macro=%0d row=%0d",macro_id,address);
+  @(negedge clock);
+  cim_cs_en = 0;
+  #0.002;
+  if(cim_rd_data !== 0) $fatal(1,"Weight load: inactive read data must be zero");
+endtask

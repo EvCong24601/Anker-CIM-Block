@@ -31,9 +31,7 @@ module tb_Cluster;
   wire cmd_ready_o;
   wire [31:0] out_valid_o;
   logic [1023:0] act_data_i = '0;
-  logic [7:0] weight_wen_i = 0, weight_waddr_i = 0;
-  logic [8191:0] weight_wdata_i = 0;
-  // WLC 常规 SRAM 端口；与上方 TB preload 接口分别驱动。
+  // WLC 常规 SRAM 端口：所有测试均通过该口写入和读回权重。
   logic cim_cs_en = 0, cim_wr_en = 0, cim_macro_group = 0;
   logic [1:0] cim_bank_sel = 0;
   logic [7:0] cim_row_addr = 0;
@@ -41,7 +39,7 @@ module tb_Cluster;
   logic [1023:0] cim_wrdata = 0;
   wire [1023:0] cim_rd_data;
   wire [1023:0] psum_data_o;
-  cluster_dut_adapter #(
+  cluster_top #(
     .WGT_RADDR_BUFFER_DEPTH(WGT_RADDR_BUFFER_DEPTH),
     .MAX_CONTEXTS(MAX_CONTEXTS),
     .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
@@ -49,6 +47,9 @@ module tb_Cluster;
   ) dut (
     .*
   );
+  // TB-only raw observation; cluster_top exports Requant results only.
+  assign psum_data_o = dut.raw_data;
+  assign out_valid_o = dut.raw_valid;
   // 计算参考模型、输出预期及 case/握手计数。
   logic [31:0] rng = SEED;
   int unsigned activation[0:255][0:MAX_CONTEXTS-1][0:255];

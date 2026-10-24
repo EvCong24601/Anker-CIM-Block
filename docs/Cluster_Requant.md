@@ -1,10 +1,12 @@
 # 四通道 Requant
 
-Cluster保留raw signed32输出。Requant使用四个组合算术通道；参数c固定对应归约结果的OC c，与原有oc_mask中OC0、OC1、OC2、OC3的位序一一对应。屏蔽OC1不会把参数1挪给OC2。
+Cluster内部保存raw signed32，正式结果由Requant端口输出。Requant使用四个组合算术通道；参数c固定对应归约结果的OC c，与 oc_mask 中OC0、OC1、OC2、OC3的位序一一对应。屏蔽OC1不会把参数1挪给OC2。
+
+正式端口为 `cluster_top.requant_data_o[255:0]` 和 `requant_valid_o[31:0]`。`psum_data_o/out_valid_o`不是RTL端口；它们仅是TB层次观察内部 `raw_data/raw_valid` 时使用的别名。
 
 ## 数据通路和限制
 
-raw Psum输出寄存器 → 四通道组合Requant → INT8输出寄存器。量化valid严格比对应raw valid晚一拍，没有内部算术流水、FIFO或反压。仅全部slice和OS Tile完成后的最终raw量化一次；不改变tmp/Psum历史。无valid的lane保持，复位清零并取消待输出结果。
+内部raw Psum寄存器 → 四通道组合Requant → INT8输出寄存器。量化valid严格比对应raw valid晚一拍，没有内部算术流水、FIFO或反压。仅全部slice和OS Tile完成后的最终raw量化一次；不改变tmp/Psum历史。无valid的lane保持，复位清零并取消待输出结果。
 
 启用Requant时，无论per-tensor还是per-channel scale，均只允许一个对齐的Macro归约组、最多4个OC：
 
@@ -16,11 +18,11 @@ reduce_split_mask必须使所选组完整归约；不属于该组的Macro不参�
 
 物理lane位置继续采用现有归约树定义。四个算术通道从有效组收集OC0～3，结果散射回原lane位置；输出端口仍为32×8bit数据和32bit valid，但每拍最多4个lane有效，不将高组的结果强行搬到低4lane。
 
-参考实现参数ENABLE_REQUANT默认1，启用上述检查。设置0用于raw-only归约树验证，保留raw行为，INT8 valid保持0。tb_Cluster默认0；Python量化专项覆盖为1。这是编译参数，不是新增运行期pin。
+参考实现参数ENABLE_REQUANT默认1，启用上述检查。设置0用于raw-only归约树验证，保留raw行为，INT8 valid保持0。tb_Cluster默认0；Python量化专项覆盖为1。该开关由编译参数配置。
 
 ## 参数与固定OC顺序
 
-requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×INT10 shift + 4×INT32 zp。107-bit compute descriptor不变。
+requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×INT10 shift + 4×INT32 zp。compute descriptor 为107 bit。
 
 - requant_multiplier[32*c+:32]：OC c的signed INT32乘数，四项共128bit。
 - requant_shift[10*c+:10]：OC c的signed INT10移位，四项共40bit；当前有效配置为−31～31。

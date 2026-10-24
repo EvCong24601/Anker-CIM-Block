@@ -87,12 +87,9 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
         if (!sign_en && wb == 8 && ab == 16) activation[kt][cx][k] %= (32768 / os);
       end
   // 3. 预加载真实 SRAM，同时按整数 w*a 累加 golden；不读取 DUT 输出。
-  // Preload every tile/context row before issuing any computation.
+  // Write/read every tile/context row through the regular WLC port before compute.
   for (int kt = 0; kt < os; kt++) begin
     for (int wc = 0; wc < (as_count > 1 ? case_r : 1); wc++) begin
-      @(negedge clock);
-      weight_waddr_i = 8'('h20 + 16 * kt + wc);
-      weight_wen_i   = 8'hff;
       for (int m = 0; m < 8; m++) begin
         row = '0;
         for (int ocid = 0; ocid < 4; ocid++)
@@ -111,10 +108,8 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
             end
           end
         end
-        weight_wdata_i[1024*m+:1024] = row;
+        load_weight_row(m, 8'('h20 + 16 * kt + wc), row);
       end
-      @(negedge clock);
-      weight_wen_i = 0;
     end
   end
   for (int cx = 0; cx < case_r; cx++)

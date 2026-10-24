@@ -1,0 +1,5 @@
+PASS cluster_top: Requant-only public result ports; raw aliases in TB only
+PASS 76 suites / 48 expected rejections
+PASS 290 CSV/HEX files identical to regular-SRAM-only baseline
+PASS current source SHA256, Markdown links, removed-interface scan and raw timing appendix
+PASS docs consolidation: 51792 -> 31103 bytes, 5 topics plus index

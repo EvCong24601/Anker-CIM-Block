@@ -30,12 +30,12 @@ iverilog -g2012 -DSYNTHESIS -s SingleMacro -o singlemacro.vvp -f rtl/filelist.f
 - `USE_CLOCK_GATING` 默认 1，使用功能 ICG 模型；置 0 使用普通时钟和寄存器使能。
 - `MacroWeightSRAM` 是上升沿按 32 B OC 掩码写、使能组合读的通用存储描述；物理 SRAM 替换须保证读访问和全部运算共用一拍。`MacroClockGate` 在 ASIC 流程中需适配工艺 ICG。
 
-仿真时定义 `SINGLE_MACRO_ASSERTIONS` 可启用协议检查；定义 `SYNTHESIS` 排除仿真检查器。本次接口扩展已通过门控开/关功能回归（共 4,540 笔结果）及 15 类协议负向检查；尚未进行逻辑综合、门级仿真或 STA。
+仿真时定义 `SINGLE_MACRO_ASSERTIONS` 可启用协议检查；定义 `SYNTHESIS` 排除仿真检查器。接口已通过门控开/关功能回归（共 4,540 笔结果）及 15 类协议负向检查；尚未进行逻辑综合、门级仿真或 STA。
 
 
 ## 常规 SRAM 访问扩展
 
-SingleMacro 新增 cim_wmask[3:0]、sram_ren、sram_raddr[7:0] 和 sram_rdata[1023:0]；外部实例必须连接这些端口。cim_wmask[c]=1 保持 OC c 的 32 B，=0 写入；旧 preload 连接 0000。sram_ren 使用现有 SRAM 读路径，不新增并发读端口，禁止与计算或写入重叠。有效写入清 Hold-valid，全屏蔽写入和常规读不清 Hold；上层物理 SRAM 时序仍待冻结。详见 [Cluster 常规权重 SRAM 规格](../../docs/Cluster_Weight_SRAM_Interface.md)。
+SingleMacro 提供 cim_wmask[3:0]、sram_ren、sram_raddr[7:0] 和 sram_rdata[1023:0]；外部实例必须连接这些端口。cim_wmask[c]=1 保持 OC c 的 32 B，=0 写入；全行写入使用 0000。sram_ren 使用现有 SRAM 读路径，不含并发读端口，禁止与计算或写入重叠。有效写入清 Hold-valid，全屏蔽写入和常规读不清 Hold；上层物理 SRAM 时序仍待冻结。详见 [Cluster 常规权重 SRAM 规格](../../docs/Cluster_Weight_SRAM_Interface.md)。
 
 每个 primitive、写行、计算 phase、复位及负向 case 开始打印 CASE_START、仿真时间 ns 和描述；随机计算包含精度、符号、phase、mask、行号和刷新/复用参数。
 

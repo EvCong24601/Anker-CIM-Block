@@ -104,21 +104,35 @@ initial begin : regression
   if ($test$plusargs(
       "SRAM_RW_TEST"
     ) || $test$plusargs(
-      "SRAM_CONFLICT_PRELOAD"
+      "SRAM_CONFLICT_WRITE_COMPUTE"
     ) || $test$plusargs(
       "SRAM_CONFLICT_COMPUTE"
     )) begin
     repeat (4) @(negedge clock);
     reset = 0;
     repeat (2) @(negedge clock);
-    if ($test$plusargs("SRAM_CONFLICT_PRELOAD")) begin
-      $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-access-overlapping-preload",
-               $realtime);
-      cim_cs_en = 1;
-      weight_wen_i = 1;
+    if ($test$plusargs("SRAM_CONFLICT_WRITE_COMPUTE")) begin
+      $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-write-during-active-compute", $realtime);
+      load_weight_row(0, 8'd0, '0);
+      @(negedge clock);
+      cmd_i = '0;
+      cmd_i.os_cnt = 1; cmd_i.ws_cnt = 1; cmd_i.as_cnt = 1;
+      cmd_i.macro_en_mask = 1;
+      cmd_i.macro_oc_mask = 1;
+      cmd_i.reduce_split_mask = 7'h7f;
+      cmd_valid_i = 1;
+      @(posedge clock);
+      if(!cmd_ready_o) $fatal(1,"SRAM conflict: compute command not accepted");
+      @(negedge clock);
+      cmd_valid_i = 0;
+      // Target idle Macro1 while Macro0 computes: only the Cluster-wide
+      // exclusion rule should reject this access, avoiding a competing
+      // local SingleMacro simultaneous-read/write diagnostic.
+      cim_bank_sel = 1;
+      cim_cs_en = 1; cim_wr_en = 1;
       @(posedge clock);
       #1;
-      $fatal(1, "Missing SRAM/preload conflict rejection");
+      $fatal(1,"Missing SRAM write/active-compute conflict rejection");
     end
     if ($test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
       $display(
@@ -134,7 +148,7 @@ initial begin : regression
     $finish;
   end
   if (OS_TILES < 1 || OS_TILES > 14 || PATTERNS < 1 || PATTERNS > 6 || SEED == 0)
-    $fatal(1, "Require OS_TILES 1..14 (distinct preload rows), PATTERNS 1..6, nonzero seed");
+    $fatal(1, "Require OS_TILES 1..14 (distinct weight rows), PATTERNS 1..6, nonzero seed");
   for (int mask = 0; mask < 128; mask++) if (canonical(7'(mask))) canonical_count++;
   if (canonical_count != 26) $fatal(1, "Expected 26 canonical trees");
   data_dir = ".";

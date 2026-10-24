@@ -18,7 +18,7 @@ module tb_Cluster_GEMM_Edges;
   wire [1023:0] cim_rd_data, psum_data_o;
   wire [255:0] requant_data_o;
   wire [31:0] out_valid_o, requant_valid_o;
-  cluster_dut_adapter dut (
+  cluster_top dut (
     .clock(clock),
     .reset(reset),
     .cmd_i(cmd_i),
@@ -26,9 +26,6 @@ module tb_Cluster_GEMM_Edges;
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),
     .act_data_i(act_data_i),
-    .weight_wen_i(8'b0),
-    .weight_waddr_i(8'b0),
-    .weight_wdata_i(8192'b0),
     .cim_cs_en(cim_cs_en),
     .cim_wr_en(cim_wr_en),
     .cim_macro_group(cim_macro_group),
@@ -37,11 +34,13 @@ module tb_Cluster_GEMM_Edges;
     .cim_wmask(cim_wmask),
     .cim_wrdata(cim_wrdata),
     .cim_rd_data(cim_rd_data),
-    .psum_data_o(psum_data_o),
-    .out_valid_o(out_valid_o),
     .requant_data_o(requant_data_o),
     .requant_valid_o(requant_valid_o)
   );
+  // TB-only raw observation; these aliases are not cluster_top ports.
+  assign psum_data_o = dut.raw_data;
+  assign out_valid_o = dut.raw_valid;
+
   int m_count, k_count, n_count, wb, ab, precision, first_macro, macro_count, split, en, slots, base_address;
   int lane_base, first_raw, n_tiles, per_channel, act_zp, phases;
   int n_map[0:1][0:3];

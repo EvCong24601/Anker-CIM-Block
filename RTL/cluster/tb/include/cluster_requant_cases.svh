@@ -84,15 +84,12 @@ endtask
 // Load the next batch configuration on the exact edge that captures the old
 // batch's last INT8 output. The old result must use the old configuration.
 task automatic run_requant_boundary_suite();
+  logic [1023:0] weight_row;
   $display("[CASE_START] time=%0.3f ns suite=requant_boundary description=new-config-on-previous-quant-capture-edge",
            $realtime);
-  @(negedge clock);
-  weight_wen_i   = 8'h01;
-  weight_waddr_i = 8'h20;
-  weight_wdata_i = '0;
-  for (int k = 0; k < 128; k++) weight_wdata_i[2*k+:2] = 2'd1;
-  @(negedge clock);
-  weight_wen_i = 0;
+  weight_row = '0;
+  for (int k = 0; k < 128; k++) weight_row[2*k+:2] = 2'd1;
+  load_weight_row(0, 8'h20, weight_row);
   cmd_i = '0;
   cmd_i.os_cnt = 1;
   cmd_i.ws_cnt = 1;
@@ -275,7 +272,8 @@ task automatic run_requant_reset_suite();
       reset = 1;
       monitoring = 0;
       cmd_valid_i = 0;
-      weight_wen_i = 0;
+      cim_cs_en = 0;
+      cim_wr_en = 0;
       disable interrupted_case;
     end
   join

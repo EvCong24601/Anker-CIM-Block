@@ -10,4 +10,4 @@
 ../RTL/cluster/rtl/cluster_pkg.sv
 ../RTL/cluster/rtl/ClusterRequant.sv
 ../RTL/cluster/rtl/ClusterReduceTree.sv
-../RTL/cluster/rtl/cluster_dut_adapter.sv
+../RTL/cluster/rtl/cluster_top.sv

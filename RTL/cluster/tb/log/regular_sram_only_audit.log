@@ -1,0 +1,3 @@
+PASS regular SRAM only interface: 76 suites / 48 expected rejections
+PASS 254 GEMM CSV/HEX files identical to pre-migration results
+PASS source SHA256, removed-port scan, Markdown scan and raw timing appendix

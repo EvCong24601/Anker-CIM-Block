@@ -1,16 +1,16 @@
 # CIM Cluster 输入与计算说明
 
-本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立输出 raw signed32；启用 Requant 时限制一个归约组、最多4OC，经四通道组合算术后下一拍锁存 INT8 及 valid，scale 支持 per-tensor/per-channel，合并后的 zp 始终 per-channel。详见 [Requant 说明](docs/Cluster_Requant.md)。
+本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立形成内部 raw signed32；启用 Requant 时限制一个归约组、最多4OC，经四通道组合算术后下一拍锁存 INT8 及 valid，scale 支持 per-tensor/per-channel，合并后的 zp 始终 per-channel。详见 [Requant 说明](docs/Cluster_Requant.md)。
+
+[GEMM 用例总览](docs/Cluster_GEMM.md)：三个 TB、11 个正向矩阵 case 和 3 个 AS 参数负向 case 的配置、检查范围及 VCS 运行入口。
+
+[文档索引](docs/README.md)：时序与容量、SRAM、Requant、GEMM及TB职责。
 
 ## 逐拍输入时序文档
 
 [当前 Block 规格](docs/CIM_Block_Spec.docx)：包含逐通道 zp、组合 Requant、INT8 输出寄存器和两组完整 GEMM case。
 
-[当前逐拍输入时序 v2.8](docs/CIM_Cluster_逐拍输入时序_v2.8.docx)：同步四通道Requant接口、AS参数加载与容量、量化输出晚1T及新增端到端GEMM；原raw周期表保留。
-
-[GEMM高位置组与边界验证](docs/Cluster_GEMM_Edges.md)：新增W4/W2高位置组、N尾部和舍入/饱和矩阵，七组端到端测试由 VCS 的七个 `gemm_edge_*` case 运行。
-
-[历史逐拍输入时序 Word 文档](docs/CIM_Cluster_逐拍输入时序_v2.7.docx)：同包重叠后的周期以本 README 和 [重叠说明](docs/Cluster_Input_Overlap.md) 为准。历史文档包含 Cluster 输入 pin、七种精度的 ACT slice、WS/AS/OS 配置、权重地址、逐拍操作和输入到输出时延。
+[当前逐拍输入时序 v2.8](docs/CIM_Cluster_逐拍输入时序_v2.8.docx)：说明四通道 Requant 接口、AS 参数加载与容量、raw/INT8 逐拍时序和端到端 GEMM。
 
 ## 目录与运行
 
@@ -61,7 +61,7 @@ Descriptor 是 cmd_i 携带的配置和权重地址。外部接受是 cmd_valid_
 
 WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计算拍数为 **P×ws_cnt**，P=A位宽/4。A16、ws_cnt=2是2个Context、8次计算，Psum深度按2个Context设置。单bank含ACT接收时，无空拍时本Tile占(P+1)×ws_cnt个时钟沿；计算拍数不等于这段总时间。
 
-计算符号：R=max(ws_cnt,as_cnt)是Context数，R_slice是原始归约结果；S是ACT包起始周期，D是内部路径时延，DEPTH=OUTPUT_BUFFER_DEPTH是Psum深度。W/A是权重/ACT位宽，K是归约组点积项数，K_row=256/W。DFF是边沿触发寄存器，latch是电平锁存器，MUX为选择器；bank是一组独立存储，entry是一项Context状态；SRAM存权重，Hold复用已读行，preload为计算前写权重；STA是静态时序分析，II是连续计算接受间隔。RTL为寄存器传输级描述，TB为测试平台，golden为独立预期结果，adapter是Cluster仿真参考实现，longint用于64-bit参考计算；packet为一份ACT及对应地址命令组成的包，EN/OC_MASK/split_mask分别简称三个descriptor mask字段。
+计算符号：R=max(ws_cnt,as_cnt)是Context数，R_slice是原始归约结果；S是ACT包起始周期，D是内部路径时延，DEPTH=OUTPUT_BUFFER_DEPTH是Psum深度。W/A是权重/ACT位宽，K是归约组点积项数，K_row=256/W。DFF是边沿触发寄存器，latch是电平锁存器，MUX为选择器；bank是一组独立存储，entry是一项Context状态；SRAM存权重，Hold复用已读行；STA是静态时序分析，II是连续计算接受间隔。RTL为寄存器传输级描述，TB为测试平台，golden为独立预期结果，cluster_top是Cluster功能参考顶层，longint用于64-bit参考计算；packet为一份ACT及对应地址命令组成的包，EN/OC_MASK/split_mask分别简称三个descriptor mask字段。
 
 ## 同包输入与发射重叠
 
@@ -69,7 +69,7 @@ WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计
 
 ## OS1 AS 先融合与权重地址表
 
-仅 OS1 AS 采用 Context→Slice；OS>1 AS 保留 Slice→Context。两种 AS 均复用 64×8-bit 权重地址表。详见 [AS 融合与地址暂存说明](docs/Cluster_AS_OS1_Fusion.md)。
+仅 OS1 AS 采用 Context→Slice；OS>1 AS 保留 Slice→Context。两种 AS 均复用 64×8-bit 权重地址表。详见 [AS 融合与地址暂存说明](docs/Cluster_Input_Overlap.md)。
 
 三个 count 均为8 bit，取值1～255；WS/AS另受容量限制。0非法，256不可编码。descriptor总宽107 bit。
 
@@ -88,11 +88,11 @@ WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计
 | cim_row_addr | 输入，8 bit | 所选 Macro 的四个 OC 共用行地址 |
 | cim_wmask | 输入，4 bit | 每位对应一个 32 B OC：1 屏蔽并保持，0 写入；读忽略 |
 | cim_wrdata / cim_rd_data | 输入 / 输出，各 1024 bit | 单个 Macro 的完整 128 B 权重行 |
-| weight_wen_i | 输入，8 bit | 仅 TB preload：选择写入的 Macro |
-| weight_waddr_i | 输入，8 bit | 仅 TB preload：共享写行号 |
-| weight_wdata_i | 输入，8192 bit | 仅 TB preload：八个 Macro 各一条 1024-bit 权重行 |
-| psum_data_o | 输出，1024 bit | 32 个 channel 的 raw signed32 结果 |
-| out_valid_o | 输出，32 bit | 每个 OC 一位的单拍发布脉冲：该 OC 的 raw 结果写回时置位一拍，下游无反压 |
+| requant_cfg_i | 输入，298 bit | conv_mode、scale模式、四项INT32 multiplier/INT10 shift/INT32 zp |
+| requant_data_o | 输出，256 bit | 寄存后的32个物理lane×INT8，按归约组位置发布，最多4个lane有效 |
+| requant_valid_o | 输出，32 bit | 对应lane的单拍量化valid，比内部raw valid晚1T，无下游反压 |
+
+raw_data/raw_valid为内部状态，RTL中的psum_data_o/out_valid_o端口声明已注释，仅供说明TB观察用途。TB通过层次引用建立同名别名；产品接口不连接raw Psum。
 
 ACT 没有独立握手信号。`cmd_fire=cmd_valid_i&&cmd_ready_o` 仅表示外部 descriptor 被接受。
 
@@ -102,17 +102,17 @@ ACT 没有独立握手信号。`cmd_fire=cmd_valid_i&&cmd_ready_o` 仅表示外�
 - 当前 Plane 和对应 Context 地址已收到，即可在下一拍内部发射；不等待同包后续 Plane 或地址。内部 phase 从 act_buffer[1024×phase+:1024] 读取，再按 slot 分给 Macro。
 - 单个4096-bit ACT buffer；当前包完成内部发射后，下一拍可接受下一包。内部发射期间不加载下一完整 ACT。
 
-A16、WS、ws=2：C0 为 Ctx0 的 i_cmd+A0，C1/A1、C2/A2、C3/A3；C4..C7 内部分发 Ctx0；C8 接受 Ctx1 的 i_cmd+A0，C9..C11 接收后续 Slice，C12..C15 内部分发 Ctx1。
+A16、WS、ws=2：C0接受Ctx0 Command+A0，C1～C3接收A1～A3，C1～C4发射Ctx0；C5接受Ctx1 Command+A0，C6～C8接收A1～A3，C6～C9发射Ctx1。
 
-A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、C3/A3；C4..C11 按 A0/Ctx0、A0/Ctx1、A1/Ctx0、A1/Ctx1、A2/Ctx0、A2/Ctx1、A3/Ctx0、A3/Ctx1 发射。例中地址20/21由外部分别提供，硬件不自动递增。
+A16、AS、as=2：C0/C1接受Ctx0/Ctx1地址，C0～C3接收A0～A3。OS1在C1～C4发射Ctx0所有slice，C5～C8发射Ctx1；OS>1在C1～C8按Slice→Context交替发射。地址20/21由外部提供，硬件不自动递增。
 
-功能代码位于 RTL/cluster/rtl，验证代码位于 RTL/cluster/tb；完整目录说明见 [Cluster 目录说明](RTL/cluster/README.md)。TB 按职责拆分，文件索引、采样时序和新增 case 的位置见 [Testbench 阅读指南](docs/Testbench_Guide.md)。
+功能代码位于 RTL/cluster/rtl，验证代码位于 RTL/cluster/tb；完整目录说明见 [Cluster 目录说明](RTL/cluster/README.md)。TB 按职责拆分，文件索引、采样时序和各 case 的职责见 [Testbench 阅读指南](docs/Testbench_Guide.md)。
 
 ## Cluster 常规 SRAM 读写
 
 `macro_id={cim_macro_group,cim_bank_sel}`，加 8-bit cim_row_addr 定位一个 Macro 的 128 B 行，四个 OC 各占 32 B。wmask=0000 全写、1111 全屏蔽，0010 只屏蔽 OC1；cim_cs_en=0 不写，读操作忽略 wmask。有效写入仅使所选 Macro 的权重 Hold 失效，写后计算必须刷新；全屏蔽写与原始读不使 Hold 失效。
 
-常规读写与计算/preload 分阶段；当前参考模型采用上升沿掩码写和使能组合读，非读期间返回零。物理 IP 的读回时序仍待冻结。接口、寻址、模型时序和完整测试入口见 [常规权重 SRAM 规格](docs/Cluster_Weight_SRAM_Interface.md)。
+权重常规读写与计算分阶段；当前参考模型采用上升沿掩码写和使能组合读，非读期间返回零。物理 IP 的读回时序仍待冻结。接口、寻址、模型时序和完整测试入口见 [常规权重 SRAM 规格](docs/Cluster_Weight_SRAM_Interface.md)。
 
 仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
@@ -122,12 +122,12 @@ A16、AS、as=2：C0 为 Ctx0 的 i_cmd+A0，C1 为 Ctx1 的 i_cmd+A1，C2/A2、
 
 - WS/单Context：一次只存一个Context的完整ACT，发完P个phase后释放，再接收下一份，容量不乘ws_cnt。
 - AS：一次只存一个Tile的完整ACT，保持到全部Context的全部phase发完，容量不乘as_cnt；各Context地址另存8×WGT_RADDR_BUFFER_DEPTH-bit地址表。
-- OS：Tile按顺序接收，旧ACT消费后的计算结果已进入Macro/后级流水和tmp/Psum，容量不乘os_cnt。
+- OS：Tile按顺序接收，前一 ACT 包消费后的计算结果已进入Macro/后级流水和tmp/Psum，容量不乘os_cnt。
 - slot读取必须落在256个digit内，相同slot表示相同ACT数据；EN、OC mask和split不会额外增加ACT份数。W8A16八Macro全归约K256占满4096 bit。
 
 以上适用于1≤max(ws,as)≤MAX_CONTEXTS；当 仅 os>1 需要 Psum 时，还要求 max(ws,as)≤OUTPUT_BUFFER_DEPTH，ws/as不同时大于1，首Command遵守cmd_ready_o，接受后ACT尾部Plane固定连续到达。单bank在内部发射期间不能接收下一完整ACT；容量足够，但不支持输入下一包与当前包内部发射重叠。AS仅在轮到尚未收到地址的Context时暂停发射，保持phase/Context不变，等待不会增加容量。
 
-`CASE=act_buffer` 额外运行280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、当前Plane/地址有效才发射、后续输入与当前发射重叠、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
+`CASE=act_buffer` 验证280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、当前Plane/地址有效才发射、后续输入与当前发射重叠、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
 
 ## Descriptor
 
@@ -194,7 +194,7 @@ mask 逐级生效：被子节点屏蔽的 OC 不向父节点贡献数据；父�
 
 `CASE=reduce_tree` 的 208 例独立递归参考测试覆盖 26 种树、不同 EN 和不一致的 OC mask；本地 `CASE=oc_merge` 另运行 288 例，覆盖 pair/quad/root/混合终点、最左侧 Macro 关闭、全屏蔽批次以及 WS/AS/OS 连续复用。
 
-VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运行该专项测试，成功标志为 `PASS oc_merge_leftmost cases=288`。该专项使用独立预期结果检查输出数值和有效性，不沿用旧的组内 mask OR 规则。
+VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运行该专项测试，成功标志为 `PASS oc_merge_leftmost cases=288`。该专项按固定最左侧 Macro 的 mask 检查输出数值和有效性。
 
 归约终点从向父级转发 DFF 前取数。pair 终止时关闭相应 t3..t6；quad 终止时关闭相应 t1/t2；仅继续归约时打开转发 DFF。根结果进入通用 tmp，无额外 root-only 输出级。
 
@@ -221,13 +221,13 @@ OS1 AS 同 Context 的相邻 slice 连续发射；OS>1 AS 的相邻 slice 间隔
 
 ## 8-bit count 边界验证
 
-三个count均为8 bit，0非法、256不可编码；OS最多255个K Tile，仍需满足signed32数值范围。WS/AS的实际上限由容量决定。`make regression`追加12个OS255非零累加case和3个零count拒绝case；专项可用`+OS_COUNT_LIMIT_TEST`或`+ZERO_COUNT=0/1/2`选择。当前完整回归为50组suite、38个预期拒绝。
+三个count均为8 bit，0非法、256不可编码；OS最多255个K Tile，仍需满足signed32数值范围。WS/AS的实际上限由容量决定。`make regression`包含12个OS255非零累加case和3个零count拒绝case；专项可用`+OS_COUNT_LIMIT_TEST`或`+ZERO_COUNT=0/1/2`选择。完整回归包含76个suite，其中48个为预期拒绝。
 
 ## 大 Context 与 Psum 容量专项
 
 专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16。`WGT_RADDR_BUFFER_DEPTH=64` 定义供所有 AS 模式共用的 64 项权重行地址表，每项仅 8 bit，共 512 bit（64 B）；`MAX_CONTEXTS=64` 定义标签/完成状态容量，二者与 Psum 深度独立。
 
-仅 OS1 AS 改为 Context→Slice：先在每 OC 唯一 tmp 中融合一个 Context 的全部 slice，再切换 Context。因此 OS1 AS64 的 A4/A8/A16 全部合法，不读写 Psum。OS>1 AS 保留 Slice→Context 顺序：同一 slice 遍历所有 Context，再进入下一 slice，融合历史及跨 Tile 累加仍保存在 Psum。OS2 AS8 合法，OS2 AS64 仍超过 Psum 深度 16。
+OS1 AS 采用 Context→Slice：先在每 OC 唯一 tmp 中融合一个 Context 的全部 slice，再切换 Context。因此 OS1 AS64 的 A4/A8/A16 全部合法，不读写 Psum。OS>1 AS 采用 Slice→Context 顺序：同一 slice 遍历所有 Context，再进入下一 slice，融合历史及跨 Tile 累加仍保存在 Psum。OS2 AS8 合法，OS2 AS64 仍超过 Psum 深度 16。
 
 OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice 间保持地址，再切换下一个地址；OS>1 每轮 slice 都重访各 Context 地址。表中保存行号，不保存权重数据，权重仍预先装载在 Macro SRAM；不需要为八个 Macro 各复制一份表，因为计算端使用共享 8-bit 行地址。
 
@@ -235,7 +235,7 @@ OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice �
 
 VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](vcs-rtl/README.md)。
 
-默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。追加 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
+默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。组合使用 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
 
 ## Buffer 深度与 ICG
 
@@ -266,7 +266,7 @@ WS/单 Context、OS1 AS 顺序为 Tile→Context→phase；OS>1 AS 为 Tile→ph
 
 默认回归为1368个 Cluster case，另有208个归约门控、24个混合Context、12个完整ACT与280个ACT容量定向case；检查140个 Context 输出周期和480个标准运算事件。EN=FF 时每符号在七种 precision 下的合法 split 数为1、1、16、16、16、25、25，要求每组有效 K<256。
 
-验证包含 Command 停顿、完整 ACT 加载后外部 ACT 变化时的 buffer 复用、ICG 时钟、关闭 DFF 保持和高地址深度关闭。新增 Requant 独立整数向量、集成、配置边界和复位测试，所有计算case同时检查量化输出。实现为仿真参考 adapter，未进行综合/STA/门级功耗验证。
+验证包含 Command 停顿、完整 ACT 加载后外部 ACT 变化时的 buffer 复用、ICG 时钟、关闭 DFF 保持和高地址深度关闭。Requant 专项检查独立整数向量、集成、配置边界和复位行为；raw-only case 检查原始计算结果，量化 case 同时检查 INT8 输出。实现为仿真参考顶层，未进行综合/STA/门级功耗验证。
 
 ## Cluster 数据 DFF 位置
 
@@ -287,7 +287,7 @@ raw_data保留32-bit/OC，逐OC发布并保持到下次发布。requant_data_o�
 
 归约树 root 没有独立转发 DFF；fusion 与 acc 是组合块，二者之间使用唯一 tmp，没有额外 tmp 历史数组或 acc 中间 buffer。raw_data 是现有输出保持寄存器，与 tmp/Psum 分开计数。
 
-AS 地址表 context_address 为8×WGT_RADDR_BUFFER_DEPTH bit，默认64×8=512 bit，供所有 AS 模式共用，计入控制。另有 ACT Slice 有效位与接收计数。其余控制包括 valid、phase/Context/Tile 标签、Command 流水、批次状态、权重 Hold 地址/有效位及 ICG 请求等控制寄存器。Psum写请求为32×DEPTH bit、深度掩码为DEPTH bit、tmp请求为32 bit；reduce tree 的有效节点总使能为6 bit、逐OC请求为24 bit，另有两级48-bit控制流水。参考 adapter 的 int/完整 descriptor 标签和验证计数不作为优化后的控制面积估算。MacroClockGate 内部的 enable_latched 是 latch，不计为 DFF；未使用组合信号也不计存储。
+AS 地址表 context_address 为8×WGT_RADDR_BUFFER_DEPTH bit，默认64×8=512 bit，供所有 AS 模式共用，计入控制。另有 ACT Slice 有效位与接收计数。其余控制包括 valid、phase/Context/Tile 标签、Command 流水、批次状态、权重 Hold 地址/有效位及 ICG 请求等控制寄存器。Psum写请求为32×DEPTH bit、深度掩码为DEPTH bit、tmp请求为32 bit；reduce tree 的有效节点总使能为6 bit、逐OC请求为24 bit，另有两级48-bit控制流水。参考顶层 的 int/完整 descriptor 标签和验证计数不作为优化后的控制面积估算。MacroClockGate 内部的 enable_latched 是 latch，不计为 DFF；未使用组合信号也不计存储。
 
 ## tb_Cluster 测试 case
 
@@ -320,7 +320,7 @@ AS 地址表 context_address 为8×WGT_RADDR_BUFFER_DEPTH bit，默认64×8=512 
 | suite | 名称 | case 数 | (os,ws,as) | Context 数 | pattern | 压力注入 |
 |---:|---|---:|---|---|---|---|
 | 1 | split 穷举 | 1200 | (OS_TILES,1,1)=(1,1,1) | 1 | 0..5 | pattern 0 的 case 插入 Command 空拍 |
-| 2 | 六种标准配置 | 84 | A1..A6 | 1..2 | 0 | 无额外空拍，先接收后发射 |
+| 2 | 六种标准配置 | 84 | A1..A6 | 1..2 | 0 | 无 Command 空拍，同包接收与发射可重叠 |
 | 3 | Command 空拍与多 Context 交错 | 28 | WS (2,r,1)、AS (2,1,r) | 6 | 0 | 空拍 |
 | 4 | 三 Tile 极值与历史保持 | 56 | WS (3,r,1)、AS (3,1,r) | 3 | 4、5 | 空拍 |
 
@@ -414,11 +414,11 @@ VCS 使用 `make run CASE=cluster_default`；附加场景与参数见 [VCS case 
 
 ### 完整 ACT 与混合 Context
 
-`CASE=full_act` 额外运行12个 W8A16 定向case：两种符号×os=1/2×单Context/WS2/AS2。EN=FF、split=00、slots=[0,1,2,3,4,5,6,7]，使用完整256个ACT digit、四个1024-bit Plane和八个Macro root归约（K=256），检查全部4096-bit ACT存储及分发。此定向suite独立于默认K<256穷举。
+`CASE=full_act` 验证12个 W8A16 定向case：两种符号×os=1/2×单Context/WS2/AS2。EN=FF、split=00、slots=[0,1,2,3,4,5,6,7]，使用完整256个ACT digit、四个1024-bit Plane和八个Macro root归约（K=256），检查全部4096-bit ACT存储及分发。此定向suite独立于默认K<256穷举。
 
 ### 混合 Context
 
-`CASE=mixed_context` 在默认 suite 前额外运行24个定向 case：W4A4/A8/A16×两种符号×os=1/2×WS/AS双 Context。split=03、EN=55、slots=24'h040000、OC全开，同一树中同时存在 pair 与 quad 终点，检查不同 Context 的 channel 同拍发布。内部 raw_context 按 lane 保存，仅用于验证；没有新增对外 Context pin。默认1368个 case 的编号和计数保持独立。
+`CASE=mixed_context` 验证24个定向 case：W4A4/A8/A16×两种符号×os=1/2×WS/AS双 Context。split=03、EN=55、slots=24'h040000、OC全开，同一树中同时存在 pair 与 quad 终点，检查不同 Context 的 channel 同拍发布。内部 raw_context 按 lane 保存，仅用于验证；外部接口不含 Context pin。默认1368个 case 的编号和计数保持独立。
 
 仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 

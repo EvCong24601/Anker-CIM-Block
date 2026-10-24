@@ -59,7 +59,7 @@ def main():
         'single_macro_pkg.sv', 'MacroClockGate.sv', 'MacroWeightSRAM.sv',
         'MacroMul2x4.sv', 'MacroSliceFusion.sv', 'SingleMacro.sv')]
     sources += [cluster_rtl / name for name in ('cluster_pkg.sv', 'ClusterRequant.sv', 'ClusterReduceTree.sv',
-                'cluster_dut_adapter.sv')]
+                'cluster_top.sv')]
     sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv', 'tb_ClusterRequant.sv','tb_Cluster_GEMM_OS1_WS32.sv','tb_Cluster_GEMM_OS2_AS4.sv','tb_Cluster_GEMM_Edges.sv')]
     sources += [macro / 'tb/tb_SingleMacro.sv']
     manifest = []
@@ -167,8 +167,8 @@ def main():
             print(summary[-1],flush=True)
             return
     simulate('sram_rw', 'tb_Cluster', ['+SRAM_RW_TEST'], 'PASS sram_rw')
-    simulate('sram_preload_conflict', 'tb_Cluster', ['+SRAM_CONFLICT_PRELOAD'],
-             'CLUSTER_SRAM_PROTOCOL: regular access overlaps preload', True)
+    simulate('sram_write_compute_conflict', 'tb_Cluster', ['+SRAM_CONFLICT_WRITE_COMPUTE'],
+             'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', True)
     simulate('sram_compute_conflict', 'tb_Cluster', ['+SRAM_CONFLICT_COMPUTE'],
              'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', True)
     for gate in (0, 1):

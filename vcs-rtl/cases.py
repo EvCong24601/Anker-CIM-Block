@@ -18,10 +18,10 @@ def add(name, tb, description, marker, args='', params='', generator='', channel
 
 add('cluster_default', 'cluster', 'Raw arithmetic and standard timing', 'PASS configurations=')
 add('sram_rw', 'cluster', 'Regular SRAM read write and OC masks', 'PASS sram_rw', '+SRAM_RW_TEST')
-for kind in ('preload', 'compute'):
-    add('sram_'+kind+'_conflict', 'cluster', 'Reject regular SRAM overlap with '+kind,
-        'CLUSTER_SRAM_PROTOCOL: regular access overlaps '+kind,
-        '+SRAM_CONFLICT_'+kind.upper(), negative=True)
+add('sram_write_compute_conflict', 'cluster', 'Reject regular SRAM write during active compute',
+    'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', '+SRAM_CONFLICT_WRITE_COMPUTE', negative=True)
+add('sram_compute_conflict', 'cluster', 'Reject regular SRAM read with compute Command',
+    'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', '+SRAM_CONFLICT_COMPUTE', negative=True)
 for gate in (0, 1):
     add('macro_gate'+str(gate), 'macro', 'SingleMacro clock gating '+str(gate), 'PASS clock_gating=',
         params=f'CLOCK_GATING={gate}')

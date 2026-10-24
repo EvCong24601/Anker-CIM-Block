@@ -26,13 +26,13 @@ group=0 选择 Macro0…3，group=1 选择 Macro4…7；bank_sel 不表示 Macro
 
 ## 当前参考模型时序
 
-`MacroWeightSRAM` 使用上升沿按 OC 写入、使能组合读。参考 adapter 在片选读期间组合返回整行，未片选、写入期间及 reset 时 cim_rd_data 为零；支持相邻上升沿连续写，以及读地址连续切换。这是当前仿真模型的明确行为，物理 SRAM 的采样、读返回延迟及背靠背访问协议仍待集成冻结，不据此宣称物理 IP 为零拍读。
+`MacroWeightSRAM` 使用上升沿按 OC 写入、使能组合读。参考顶层 在片选读期间组合返回整行，未片选、写入期间及 reset 时 cim_rd_data 为零；支持相邻上升沿连续写，以及读地址连续切换。这是当前仿真模型的明确行为，物理 SRAM 的采样、读返回延迟及背靠背访问协议仍待集成冻结，不据此宣称物理 IP 为零拍读。
 
-常规访问与 CIM 计算、TB preload 分阶段使用同一 SRAM，无并发双端口能力。片选期间 cmd_ready_o 为零；若常规访问与有效 Command、活动计算批次或 preload 重叠，仿真报告 CLUSTER_SRAM_PROTOCOL 错误，禁止将其当作静默仲裁。
+常规访问与 CIM 计算分阶段使用同一 SRAM，无并发双端口能力。片选期间 cmd_ready_o 为零；若常规访问与有效 Command、活动计算批次重叠，仿真报告 CLUSTER_SRAM_PROTOCOL 错误，禁止将其当作静默仲裁。
 
 有效写入使所选 Macro 的 Cluster Hold 跟踪和 SingleMacro Hold 同时失效，下次计算刷新该行。全屏蔽写入、未片选写入及常规读不改变 Hold 有效状态。reset 清控制与 Hold，不清 SRAM。CIM 计算继续使用广播的 weight_cim_raddr，不经 cim_rd_data 返回原始权重。
 
-weight_wen_i/weight_waddr_i/weight_wdata_i 保留为 TB preload 验证辅助接口，数据宽度为八个独立 128 B 行，共 8192 bit；其写掩码内部固定为 0000。它们与 128 B WLC 总线访问同一份存储。
+Cluster 权重存储仅通过常规 WLC 接口访问：每次选择一个 Macro 的一行，写入/读回均为 128 B。TB 逐 Macro 写入并读回校验后，再开始计算。
 
 ## 回归和日志
 
@@ -44,7 +44,7 @@ VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../vcs-rtl/READM
 
 VCS 从 vcs-rtl 目录执行 `make sram`；或在已完成编译后执行 `make sim PVALUE=+SRAM_RW_TEST`。专项成功标志为 `PASS sram_rw`。该专项不生成或覆盖默认计算 suite 的 split/operation CSV，不适用默认 make check。
 
-用例覆盖全部 8×256 行、全部 16 种写掩码、0/1/127/255 边界及内部地址、其他 Macro/邻行/屏蔽 OC 保持、CS=0、读忽略掩码、连续写、复位保留、preload 与常规口共享存储，以及三次真实 W4A4 计算检查写后 Hold 刷新。
+用例覆盖全部 8×256 行、全部 16 种写掩码、0/1/127/255 边界及内部地址、其他 Macro/邻行/屏蔽 OC 保持、CS=0、读忽略掩码、连续写、复位保留、逐 Macro 写入并经常规口读回，以及三次真实 W4A4 计算检查写后 Hold 刷新。
 
 所有测试在 case 开始打印 `[CASE_START] time=... ns suite=... description=...`，时间为仿真时间。Cluster case 还包含 precision、sign、counts、split、EN、OC mask、slot、pattern、空拍和 seed；SRAM case 包含 Macro、行号、mask 和片选；SingleMacro 包含场景、精度、phase、刷新/复用等信息；归约树包含树配置和掩码。CMD_SEND/CMD_ACCEPT 日志继续保留。
 

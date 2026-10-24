@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 // Simulation reference Cluster, with raw Psum and combinational INT8 Requant.
-module cluster_dut_adapter #(
+module cluster_top #(
   parameter int WGT_RADDR_BUFFER_DEPTH = 64,
   parameter int MAX_CONTEXTS = WGT_RADDR_BUFFER_DEPTH,
   parameter int OUTPUT_BUFFER_DEPTH = 16,
@@ -14,9 +14,6 @@ module cluster_dut_adapter #(
   input logic cmd_valid_i,
   output wire cmd_ready_o,
   input logic [1023:0] act_data_i,
-  input logic [7:0] weight_wen_i,
-  input logic [7:0] weight_waddr_i,
-  input logic [8191:0] weight_wdata_i,
   input logic cim_cs_en,
   input logic cim_wr_en,
   input logic cim_macro_group,
@@ -25,8 +22,10 @@ module cluster_dut_adapter #(
   input logic [3:0] cim_wmask,
   input logic [1023:0] cim_wrdata,
   output wire [1023:0] cim_rd_data,
-  output logic [1023:0] psum_data_o,
-  output logic [31:0] out_valid_o,
+  // TB observation only: these are NOT public RTL output ports.
+  // output logic [1023:0] psum_data_o,
+  // output logic [31:0] out_valid_o,
+  // Final registered INT8 data and per-lane valid; no output backpressure.
   output logic [255:0] requant_data_o,
   output logic [31:0] requant_valid_o
 );
@@ -62,9 +61,7 @@ module cluster_dut_adapter #(
   wire regular_access = !reset && cim_cs_en;
   wire regular_read = regular_access && !cim_wr_en;
   wire regular_write = regular_access && cim_wr_en && !(&cim_wmask);
-  wire [7:0] memory_wen = reset ? 8'b0 : regular_access
-                         ? (regular_write ? (8'b1 << regular_macro_id) : 8'b0)
-                         : weight_wen_i;
+  wire [7:0] memory_wen = regular_write ? (8'b1 << regular_macro_id) : 8'b0;
   wire [8191:0] regular_read_data;
   // Reference timing: asynchronous read, zero outside a selected read.
   // Product SRAM read latency remains an integration choice.
@@ -73,8 +70,6 @@ module cluster_dut_adapter #(
     if (!reset) begin
       if (cim_cs_en && (batch_active || packet_active || cmd_valid_i || (|macro_valid)))
         $fatal(1, "CLUSTER_SRAM_PROTOCOL: regular access overlaps compute");
-      if (cim_cs_en && (|weight_wen_i)) $fatal(1, "CLUSTER_SRAM_PROTOCOL: regular access overlaps preload");
-      if ((|weight_wen_i) && batch_active) $fatal(1, "CLUSTER_SRAM_PROTOCOL: preload overlaps compute");
       if (cim_cs_en && ((^{cim_wr_en, cim_macro_group, cim_bank_sel, cim_row_addr}) === 1'bx))
         $fatal(1, "CLUSTER_SRAM_PROTOCOL: unknown regular address/control");
       if (cim_cs_en && cim_wr_en && ((^{cim_wmask, cim_wrdata}) === 1'bx))
@@ -175,13 +170,8 @@ module cluster_dut_adapter #(
   end
   assign cmd_ready_o=!reset && !cim_cs_en && !batch_input_done &&
     (!packet_active || (packet_cmd.as_cnt>1 && command_count<int'(packet_cmd.as_cnt)));
-  // Registered publish: each pulsing out_valid_o bit marks a fresh lane
-  // result on psum_data_o for one cycle; that lane's value holds until its
-  // next publication.
-  always_comb begin
-    out_valid_o = raw_valid;
-    psum_data_o = raw_data;
-  end
+  // Internal registered raw_data/raw_valid feed Requant. Testbenches may
+  // observe them hierarchically for arithmetic and latency checking only.
   // Registered raw Psum -> combinational Requant -> INT8 output registers.
   // NBA semantics capture the PREVIOUS raw publication and configuration.
   // A new batch may load its configuration on that same capture edge.
@@ -243,9 +233,9 @@ module cluster_dut_adapter #(
       .cim_signed_en(command.signed_en),
       .cim_phase(2'(phase)),
       .cim_wen(memory_wen[m]),
-      .cim_waddr(regular_access ? cim_row_addr : weight_waddr_i),
-      .cim_wdata(regular_access ? cim_wrdata : weight_wdata_i[1024*m+:1024]),
-      .cim_wmask(regular_access ? cim_wmask : 4'b0000),
+      .cim_waddr(cim_row_addr),
+      .cim_wdata(cim_wrdata),
+      .cim_wmask(cim_wmask),
       .sram_ren(regular_read && regular_macro_id == m),
       .sram_raddr(cim_row_addr),
       .sram_rdata(regular_read_data[1024*m+:1024]),
@@ -659,7 +649,7 @@ module cluster_dut_adapter #(
           ctx = tmp_tag[l].ctx;
           if (!result_mask[ctx][l] || result_ready[ctx][l]) $fatal(1, "Unreserved/duplicate final lane write");
           result_ready[ctx][l] = 1;
-          // Publish this lane immediately: its out_valid_o bit pulses for
+          // Publish this internal raw lane: its raw_valid bit pulses for
           // one cycle, the lane value holds until the lane publishes again.
           raw_valid[l] <= 1;
           raw_data[32*l+:32] <= 32'(arithmetic_result[l]);
