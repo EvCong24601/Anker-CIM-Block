@@ -3,4 +3,7 @@
 
 /vcs-rtl/work/
 
+# Local tooling: Verible formatter, backups and compile logs.
+/.tools/
+
 **/__pycache__/
