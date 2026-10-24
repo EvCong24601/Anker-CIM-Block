@@ -131,7 +131,7 @@ task automatic run_os_count_limit_suite();
 endtask
 
 // 大 Context 专项：Psum 保持 16 深度，仅标签/地址容量配置为 64。
-// WS 与 AS 分开运行；OS1 AS64 的全部精度在 tmp 内先完成融合。
+// WS 与 AS 分开运行；OS1 AS16 按 Slice/Context 调度。
 task automatic run_context_stress_suite();
   logic [23:0] slots;
   logic [ 7:0] en;
@@ -140,8 +140,8 @@ task automatic run_context_stress_suite();
   int mode_count[0:3];
   if (MAX_CONTEXTS < 64 || OUTPUT_BUFFER_DEPTH != 16)
     $fatal(1, "TB: context stress requires MAX_CONTEXTS>=64 and OUTPUT_BUFFER_DEPTH=16");
-  if (WGT_RADDR_BUFFER_DEPTH != 64 || $bits(dut.context_address) != 64 * 8)
-    $fatal(1, "TB: weight address buffer must contain exactly 64 eight-bit entries");
+  if (WGT_RADDR_BUFFER_DEPTH != 16 || $bits(dut.context_address) != 16 * 8)
+    $fatal(1, "TB: weight address buffer must contain exactly 16 eight-bit entries");
   for (int mode = 0; mode < 4; mode++) mode_count[mode] = 0;
   for (int p = 0; p < 7; p++) begin
     case (wbits(
@@ -167,7 +167,7 @@ task automatic run_context_stress_suite();
     for (int mode = 0; mode < 4; mode++) begin
       tiles = mode < 2 ? 1 : 2;
       ws = (mode == 0) ? 64 : (mode == 2) ? 8 : 1;
-      as_count = (mode == 1) ? 64 : (mode == 3) ? 8 : 1;
+      as_count = (mode == 1) ? 16 : (mode == 3) ? 8 : 1;
       for (int pattern = 0; pattern <= 4; pattern += 4)
       for (int gaps = 0; gaps < 2; gaps++) begin
         run_case(p, 1'(sign_mode), split, en, 32'hffffffff, slots, pattern, tiles, ws, as_count, 1'(gaps));
@@ -178,7 +178,7 @@ task automatic run_context_stress_suite();
   if (cases_run != 224 || mode_count[0] != 56 || mode_count[1] != 56 || mode_count[2] != 56 || mode_count[3] != 56)
     $fatal(1, "TB: missing large-Context scenario coverage");
   $display(
-    "PASS context_stress cases=%0d OS1_WS64=%0d OS1_AS64=%0d OS2_WS8=%0d OS2_AS8=%0d psum_depth=%0d max_contexts=%0d weight_address_depth=%0d weight_address_bits=%0d",
+    "PASS context_stress cases=%0d OS1_WS64=%0d OS1_AS16=%0d OS2_WS8=%0d OS2_AS8=%0d psum_depth=%0d max_contexts=%0d weight_address_depth=%0d weight_address_bits=%0d",
     cases_run, mode_count[0], mode_count[1], mode_count[2], mode_count[3], OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS,
     WGT_RADDR_BUFFER_DEPTH, $bits(dut.context_address));
 endtask

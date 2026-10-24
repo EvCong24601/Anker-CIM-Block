@@ -88,25 +88,26 @@ task automatic load_edge_weights();
   for (int tile = 0; tile < n_tiles; tile++)
     for (int macro = first_macro; macro < first_macro + macro_count; macro++) begin
       @(negedge clock);
-      cim_cs_en = 1;
-      cim_wr_en = 1;
-      cim_row_addr = 8'(base_address + tile);
-      cim_macro_group = 1'(macro / 4);
-      cim_bank_sel = 2'(macro % 4);
-      cim_wrdata = weight_rows[8*tile+macro];
+      sram_cs_en = 1;
+      sram_wr_en = 1;
+      sram_row_addr = 8'(base_address + tile);
+      sram_macro_group = 1'(macro / 4);
+      sram_bank_sel = 2'(macro % 4);
+      sram_wrdata = weight_rows[8*tile+macro];
     end
   @(negedge clock);
-  cim_wr_en = 0;
+  sram_wr_en = 0;
   for (int tile = 0; tile < n_tiles; tile++)
     for (int macro = first_macro; macro < first_macro + macro_count; macro++) begin
-      cim_row_addr = 8'(base_address + tile);
-      cim_macro_group = 1'(macro / 4);
-      cim_bank_sel = 2'(macro % 4);
+      sram_row_addr = 8'(base_address + tile);
+      sram_macro_group = 1'(macro / 4);
+      sram_bank_sel = 2'(macro % 4);
+      @(posedge clock);
       #1;
-      if (cim_rd_data !== weight_rows[8*tile+macro]) $fatal(1, "Edge GEMM: SRAM readback mismatch");
+      if (!sram_rd_valid || sram_rd_data !== weight_rows[8*tile+macro]) $fatal(1, "Edge GEMM: SRAM readback mismatch");
       @(negedge clock);
     end
-  cim_cs_en = 0;
+  sram_cs_en = 0;
 endtask
 
 task automatic send_edge_tile(input int tile);
@@ -135,16 +136,16 @@ task automatic send_edge_tile(input int tile);
     end
   end
   cmd_i = '0;
-  cmd_i.os_cnt = 1;
-  cmd_i.ws_cnt = 8'(m_count);
-  cmd_i.as_cnt = 1;
-  cmd_i.precision = 3'(precision);
-  cmd_i.signed_en = 1;
-  cmd_i.macro_en_mask = 8'(en);
-  cmd_i.reduce_split_mask = 7'(split);
-  cmd_i.macro_oc_mask = {8{oc}};
-  cmd_i.weight_cim_raddr = 8'(base_address + tile);
-  cmd_i.act_slot_sel = 24'(slots);
+  cmd_i.cim_os_cnt = 1;
+  cmd_i.cim_ws_cnt = 8'(m_count);
+  cmd_i.cim_as_cnt = 1;
+  cmd_i.cim_precision = 3'(precision);
+  cmd_i.cim_signed_en = 1;
+  cmd_i.cim_macro_en_mask = 8'(en);
+  cmd_i.cim_reduce_split_mask = 7'(split);
+  cmd_i.cim_macro_oc_mask = {8{oc}};
+  cmd_i.cim_weight_raddr = 8'(base_address + tile);
+  cmd_i.cim_act_slot_sel = 24'(slots);
   for (int m = 0; m < m_count; m++) begin
     for (int ph = 0; ph < phases; ph++) begin
       @(negedge clock);
@@ -152,7 +153,7 @@ task automatic send_edge_tile(input int tile);
       act_data_i  = act_planes[m*phases+ph];
       $display(
         "[ACT_SEND] time=%0.3f ns description=edge-GEMM-row-and-slice tile=%0d row=%0d slice=%0d command=%0d address=0x%02h",
-        $realtime, tile, m, ph, cmd_valid_i, cmd_i.weight_cim_raddr);
+        $realtime, tile, m, ph, cmd_valid_i, cmd_i.cim_weight_raddr);
       @(posedge clock);
       if (ph == 0 && !cmd_ready_o) $fatal(1, "Edge GEMM: Command not accepted on schedule");
       #1;

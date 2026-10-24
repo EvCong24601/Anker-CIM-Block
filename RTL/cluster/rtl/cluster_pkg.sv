@@ -14,16 +14,16 @@ package cluster_pkg;
   typedef struct packed {
     // All counts are >=1. ws>1 selects WS, as>1 selects AS;
     // ws=as=1 is a single Context, with no cross-Context reuse.
-    // WS reuses one Tile's weight for (ACT_bits/4)*ws_cnt internal
-    // compute issues; ws_cnt still counts complete ACTs / Contexts.
-    logic [7:0] os_cnt, ws_cnt, as_cnt;  // 1..255; WS/AS also obey capacity limits
-    logic [6:0] reduce_split_mask;
-    logic [7:0] macro_en_mask;
-    logic [31:0] macro_oc_mask;
-    logic [7:0] weight_cim_raddr;  // ONE address, broadcast to all eight macros
-    logic [23:0] act_slot_sel;
-    logic [2:0] precision;
-    logic signed_en;
+    // WS reuses one Tile's weight for (ACT_bits/4)*cim_ws_cnt internal
+    // compute issues; cim_ws_cnt still counts complete ACTs / Contexts.
+    logic [7:0] cim_os_cnt, cim_ws_cnt, cim_as_cnt;  // 1..255; WS/AS also obey capacity limits
+    logic [6:0] cim_reduce_split_mask;
+    logic [7:0] cim_macro_en_mask;
+    logic [31:0] cim_macro_oc_mask;
+    logic [7:0] cim_weight_raddr;  // ONE address, broadcast to all eight macros
+    logic [23:0] cim_act_slot_sel;
+    logic [2:0] cim_precision;
+    logic cim_signed_en;
   } cluster_ctrl_t;
 
   function automatic int wbits(input int p);
@@ -65,19 +65,20 @@ package cluster_pkg;
   // Convolution enables exactly one aligned 8/4/2-Macro reduction group.
   function automatic bit conv_group_legal(input cluster_ctrl_t cmd);
     int count, first;
-    count = wbits(int'(cmd.precision));
+    count = wbits(int'(cmd.cim_precision));
     first = -1;
-    if (count == 0 || !canonical(cmd.reduce_split_mask)) return 0;
-    for (int m = 0; m < 8; m++) if (cmd.macro_en_mask[m] && first < 0) first = m;
-    if (first < 0 || first % count != 0 || cmd.macro_en_mask != 8'(((1 << count) - 1) << first)) return 0;
+    if (count == 0 || !canonical(cmd.cim_reduce_split_mask)) return 0;
+    for (int m = 0; m < 8; m++) if (cmd.cim_macro_en_mask[m] && first < 0) first = m;
+    if (first < 0 || first % count != 0 || cmd.cim_macro_en_mask != 8'(((1 << count) - 1) << first)) return 0;
     for (int m = 0; m < 8; m++) begin
-      if (cmd.macro_en_mask[m] && first_leaf(cmd.reduce_split_mask, m) != first) return 0;
-      if (!cmd.macro_en_mask[m] && first_leaf(cmd.reduce_split_mask, m) == first) return 0;
+      if (cmd.cim_macro_en_mask[m] && first_leaf(cmd.cim_reduce_split_mask, m) != first) return 0;
+      if (!cmd.cim_macro_en_mask[m] && first_leaf(cmd.cim_reduce_split_mask, m) == first) return 0;
     end
     return 1;
   endfunction
   // Effective leaf contribution after all merge masks up to its endpoint.
-  // Local Macro issue remains controlled by its own OC mask.
+  // Local Macro issue remains controlled by its own OC mask; this demand
+    // also gates Macro result and child forwarding registers.
   function automatic bit merge_contributes(input logic [6:0] split, input logic [31:0] oc, input int m, c);
     if (!oc[4*m+c]) return 0;
     if (!split[3+m/2] && !oc[4*((m/2)*2)+c]) return 0;

@@ -101,6 +101,8 @@ def main():
             status = summarize_simulation(name, log, expected, result.returncode, negative)
         except ValueError as exc:
             raise RuntimeError(f'FAIL {name}: {exc}; see {dest / (name+".log")}') from exc
+        if name.startswith('gate_equiv_') and 'PASS cluster_gate_equivalence cycles=' not in log:
+            raise RuntimeError('missing complete Cluster gate comparison: '+name)
         summary.append(status)
         print(summary[-1], flush=True)
 
@@ -128,6 +130,7 @@ def main():
         verify_gemm(data)
         for name,options,message in (
             ('as_context_capacity',['-gZP_DEPTH=2'],'AS context zp depth exceeded'),
+            ('as_context_capacity_default',['-gZP_DEPTH=1'],'AS context zp depth exceeded'),
             ('as_context_zp_reload',['+NEGATIVE_ZP_RELOAD'],'AS context zp changed across K Tiles'),
         ):
             data=dest/name
@@ -144,8 +147,12 @@ def main():
         simulate('as_context_scale_reload','tb_Cluster_GEMM_OS2_AS4',
                  ['+PER_CHANNEL_SCALE','+NEGATIVE_SCALE_RELOAD','+GEMM_DATA_DIR='+data.as_posix()],
                  'CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles',True)
+        data=dest/'as_context_tensor_scale_reload';generate_as_gemm(data)
+        simulate('as_context_tensor_scale_reload','tb_Cluster_GEMM_OS2_AS4',
+                 ['+NEGATIVE_SCALE_RELOAD','+GEMM_DATA_DIR='+data.as_posix()],
+                 'CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles',True)
         if args.gemm_as_only:
-            summary.append('PASS regression: suites=5 expected_rejections=3')
+            summary.append('PASS regression: suites=7 expected_rejections=5')
             (dest/'validation.log').write_text('\n'.join(summary)+'\n',encoding='utf-8')
             print(summary[-1],flush=True)
             return
@@ -166,6 +173,7 @@ def main():
             (dest/'validation.log').write_text('\n'.join(summary)+'\n',encoding='utf-8')
             print(summary[-1],flush=True)
             return
+    simulate('sram_response','tb_Cluster',['+SRAM_RESPONSE_TEST'],'PASS sram_response reads=32')
     simulate('sram_rw', 'tb_Cluster', ['+SRAM_RW_TEST'], 'PASS sram_rw')
     simulate('sram_write_compute_conflict', 'tb_Cluster', ['+SRAM_CONFLICT_WRITE_COMPUTE'],
              'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', True)
@@ -194,6 +202,7 @@ def main():
                   '+REQUANT_CHANNEL_VECTORS='+(dest/'requant_channel_vectors.txt').as_posix()],
                  f'PASS requant_unit cases={vector_count}')
         for scenario, message in (
+            ('as17_capacity','AS count exceeds output depth'),
             ('mode','per-channel scale requires conv_mode'),
             ('shift_low','shift must be -31..31'),
             ('shift_high','shift must be -31..31'),
@@ -203,7 +212,7 @@ def main():
             ('zp_group','Requant requires one aligned reduction group'),
         ):
             simulate('requant_negative_'+scenario,'tb_Cluster',
-                     ['+REQUANT_NEGATIVE='+scenario], 'CLUSTER_REQUANT_CONFIG: '+message, True)
+                     ['+REQUANT_NEGATIVE='+scenario], ('CLUSTER_CONTEXT_CAPACITY: ' if scenario=='as17_capacity' else 'CLUSTER_REQUANT_CONFIG: ')+message, True)
         data=dest/'requant_integration_data'
         data.mkdir(exist_ok=True)
         simulate('requant_integration','tb_Cluster',
@@ -211,6 +220,17 @@ def main():
         data=dest/'requant_channel_data';data.mkdir(exist_ok=True)
         simulate('requant_channel','tb_Cluster',['+REQUANT_CHANNEL_TEST','+DATA_DIR='+data.as_posix()],
                  'PASS requant_channel cases=1536')
+        data=dest/'requant_buffers_data';data.mkdir(exist_ok=True)
+        simulate('requant_buffers','tb_Cluster',
+                 ['+CONTEXT_BUFFER_TEST','+DATA_DIR='+data.as_posix()],
+                 'PASS context_buffers cases=77')
+        data=dest/'requant_a4_address_bypass_data';data.mkdir(exist_ok=True)
+        simulate('requant_a4_address_bypass','tb_Cluster',
+                 ['-gWGT_RADDR_BUFFER_DEPTH=1','+CONTEXT_BUFFER_TEST','+A4_ONLY','+DATA_DIR='+data.as_posix()],
+                 'PASS context_buffers cases=22')
+        data=dest/'requant_context_data';data.mkdir(exist_ok=True)
+        simulate('requant_context','tb_Cluster',['+REQUANT_CONTEXT_TEST','+DATA_DIR='+data.as_posix()],
+                 'PASS requant_context cases=4')
         data=dest/'requant_reset_data'
         data.mkdir(exist_ok=True)
         simulate('requant_reset','tb_Cluster',
@@ -257,12 +277,25 @@ def main():
                 simulate(f'context_capacity_p{precision}_s{sign}', 'tb_Cluster',
                          capacity_config + ['+CONTEXT_CAPACITY_TEST',
                                             f'+CAPACITY_PRECISION={precision}', f'+CAPACITY_SIGN={sign}'],
-                         'CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded', True)
+                         'CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth', True)
+        for precision in range(7):
+            for sign in (0,1):
+                for os in (1,2):
+                    simulate(f'as17_p{precision}_s{sign}_os{os}','tb_Cluster',
+                             ['+CONTEXT_CAPACITY_TEST','+CAPACITY_COUNT=17',f'+CAPACITY_OS={os}',
+                              f'+CAPACITY_PRECISION={precision}',f'+CAPACITY_SIGN={sign}'],
+                             'CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth',True)
+        for precision in range(7):
+            for sign in (0,1):
+                simulate(f'as64_p{precision}_s{sign}_os1','tb_Cluster',
+                         ['+CONTEXT_CAPACITY_TEST','+CAPACITY_COUNT=64','+CAPACITY_OS=1',
+                          f'+CAPACITY_PRECISION={precision}',f'+CAPACITY_SIGN={sign}'],
+                         'CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth',True)
         # The address array and completion metadata are independent resources.
         for resource, override, flag, message in (
-            ('address', '-gWGT_RADDR_BUFFER_DEPTH=32', '+ADDRESS_CAPACITY_TEST',
+            ('address', '-gWGT_RADDR_BUFFER_DEPTH=8', '+ADDRESS_CAPACITY_TEST',
              'weight address depth exceeded'),
-            ('metadata', '-gMAX_CONTEXTS=32', '+METADATA_CAPACITY_TEST',
+            ('metadata', '-gMAX_CONTEXTS=8', '+METADATA_CAPACITY_TEST',
              'context metadata exceeded'),
         ):
             for sign in (0, 1):
@@ -270,6 +303,14 @@ def main():
                          [override, '+CONTEXT_CAPACITY_TEST', flag,
                           '+CAPACITY_PRECISION=6', f'+CAPACITY_SIGN={sign}'],
                          'CLUSTER_CONTEXT_CAPACITY: '+message, True)
+    if args.full:
+        for label,flag,quant,marker in [('default', '', False, 'PASS configurations='), ('requant_buffers', 'CONTEXT_BUFFER_TEST', True, 'PASS context_buffers cases=77'), ('requant_channel', 'REQUANT_CHANNEL_TEST', True, 'PASS requant_channel cases=1536'), ('context_stress', 'CONTEXT_STRESS_TEST', False, 'PASS context_stress cases=224'), ('input_overlap', 'INPUT_OVERLAP_TEST', False, 'PASS input_overlap cases=168'), ('sram', 'SRAM_RW_TEST', False, 'PASS sram_rw'), ('requant_reset', 'REQUANT_RESET_TEST', True, 'PASS requant_reset'), ('requant_boundary', 'REQUANT_BOUNDARY_TEST', True, 'PASS requant_boundary')]:
+            name='gate_equiv_'+label;data=dest/(name+'_data');data.mkdir(exist_ok=True)
+            options=['-gCHECK_GATE_EQUIVALENCE=1',f'-gENABLE_REQUANT={int(quant)}','+DATA_DIR='+data.as_posix()]
+            if flag:options.append('+'+flag)
+            simulate(name,'tb_Cluster',options,marker)
+    if args.full:
+        simulate('gate_equiv_sram_response','tb_Cluster',['-gCHECK_GATE_EQUIVALENCE=1','+SRAM_RESPONSE_TEST'],'PASS sram_response reads=32')
     suite_count = len(summary)
     expected_rejections = sum(': caught expected ' in line for line in summary)
     summary.append(f'PASS regression: suites={suite_count} expected_rejections={expected_rejections}')

@@ -53,28 +53,29 @@ task automatic load_as_weights();
   for (int address = 0; address < 8; address++)
     for (int macro = 0; macro < 8; macro++) begin
       @(negedge clock);
-      cim_cs_en = 1;
-      cim_wr_en = 1;
-      cim_row_addr = BASE_ADDR + 8'(address);
-      cim_macro_group = 1'(macro / 4);
-      cim_bank_sel = 2'(macro % 4);
-      cim_wrdata = weight_rows[address*8+macro];
+      sram_cs_en = 1;
+      sram_wr_en = 1;
+      sram_row_addr = BASE_ADDR + 8'(address);
+      sram_macro_group = 1'(macro / 4);
+      sram_bank_sel = 2'(macro % 4);
+      sram_wrdata = weight_rows[address*8+macro];
       $display(
         "[WEIGHT_WRITE] time=%0.3f ns description=OS2-AS4-weight-layout k_tile=%0d ctx=%0d macro=%0d address=0x%02h",
-        $realtime, address / 4, address % 4, macro, cim_row_addr);
+        $realtime, address / 4, address % 4, macro, sram_row_addr);
     end
   @(negedge clock);
-  cim_wr_en = 0;
+  sram_wr_en = 0;
   for (int address = 0; address < 8; address++)
     for (int macro = 0; macro < 8; macro++) begin
-      cim_row_addr = BASE_ADDR + 8'(address);
-      cim_macro_group = 1'(macro / 4);
-      cim_bank_sel = 2'(macro % 4);
+      sram_row_addr = BASE_ADDR + 8'(address);
+      sram_macro_group = 1'(macro / 4);
+      sram_bank_sel = 2'(macro % 4);
+      @(posedge clock);
       #1;
-      if (cim_rd_data !== weight_rows[address*8+macro]) $fatal(1, "AS GEMM: SRAM readback mismatch");
+      if (!sram_rd_valid || sram_rd_data !== weight_rows[address*8+macro]) $fatal(1, "AS GEMM: SRAM readback mismatch");
       @(negedge clock);
     end
-  cim_cs_en = 0;
+  sram_cs_en = 0;
 endtask
 
 task automatic select_as_zp(input int tile, cx);
@@ -88,9 +89,9 @@ task automatic select_as_zp(input int tile, cx);
       requant_cfg_i.requant_multiplier[32*oc+:32] = channel_multiplier[4*cx+oc];
       requant_cfg_i.requant_shift[10*oc+:10] = channel_shift[4*cx+oc];
     end
-    if ($test$plusargs("NEGATIVE_SCALE_RELOAD") && tile == 1 && cx == 1)
-      requant_cfg_i.requant_multiplier[32] = ~requant_cfg_i.requant_multiplier[32];
   end
+  if ($test$plusargs("NEGATIVE_SCALE_RELOAD") && tile == 1 && cx == 1)
+    requant_cfg_i.requant_multiplier[0] = ~requant_cfg_i.requant_multiplier[0];
   for (int oc = 0; oc < 4; oc++) begin
     requant_cfg_i.requant_zp[32*oc+:32] = zp[4*cx+oc];
   end
@@ -100,15 +101,15 @@ endtask
 
 task automatic send_as_row(input int m);
   cmd_i = '0;
-  cmd_i.os_cnt = 2;
-  cmd_i.as_cnt = 4;
-  cmd_i.ws_cnt = 1;
-  cmd_i.precision = 6;
-  cmd_i.signed_en = 1;
-  cmd_i.reduce_split_mask = 0;
-  cmd_i.macro_en_mask = 8'hff;
-  cmd_i.macro_oc_mask = 32'hffffffff;
-  cmd_i.act_slot_sel = 24'hfac688;
+  cmd_i.cim_os_cnt = 2;
+  cmd_i.cim_as_cnt = 4;
+  cmd_i.cim_ws_cnt = 1;
+  cmd_i.cim_precision = 6;
+  cmd_i.cim_signed_en = 1;
+  cmd_i.cim_reduce_split_mask = 0;
+  cmd_i.cim_macro_en_mask = 8'hff;
+  cmd_i.cim_macro_oc_mask = 32'hffffffff;
+  cmd_i.cim_act_slot_sel = 24'hfac688;
   for (int tile = 0; tile < 2; tile++) begin
     // 17 external edges per K Tile: four Commands+Planes, then thirteen
     // idle input cycles while the saved ACT is replayed across Contexts.
@@ -116,12 +117,12 @@ task automatic send_as_row(input int m);
       @(negedge clock);
       if (t < 4) begin
         cmd_valid_i = 1;
-        cmd_i.weight_cim_raddr = BASE_ADDR + 8'(4 * tile + t);
+        cmd_i.cim_weight_raddr = BASE_ADDR + 8'(4 * tile + t);
         select_as_zp(tile, t);
         act_data_i = act_planes[(m*2+tile)*4+t];
         $display(
           "[CMD_SEND] time=%0.3f ns description=AS-address-and-ACT-overlap m=%0d k_tile=%0d ctx=%0d slice=%0d address=0x%02h",
-          $realtime, m, tile, t, t, cmd_i.weight_cim_raddr);
+          $realtime, m, tile, t, t, cmd_i.cim_weight_raddr);
       end else begin
         cmd_valid_i = 0;
         act_data_i  = '1;

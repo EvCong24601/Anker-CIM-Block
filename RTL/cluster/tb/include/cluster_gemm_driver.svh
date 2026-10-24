@@ -62,29 +62,30 @@ task automatic load_gemm_weights();
   for (int tile = 0; tile < N_TILES; tile++)
     for (int macro = 0; macro < 8; macro++) begin
       @(negedge clock);
-      cim_row_addr = WEIGHT_ADDR + 8'(tile);
-      cim_cs_en = 1;
-      cim_wr_en = 1;
-      cim_macro_group = 1'(macro / 4);
-      cim_bank_sel = 2'(macro % 4);
-      cim_wrdata[0] = weight_rows[8*tile+macro];
+      sram_row_addr = WEIGHT_ADDR + 8'(tile);
+      sram_cs_en = 1;
+      sram_wr_en = 1;
+      sram_macro_group = 1'(macro / 4);
+      sram_bank_sel = 2'(macro % 4);
+      sram_wrdata[0] = weight_rows[8*tile+macro];
       $display(
         "[WEIGHT_WRITE] time=%0.3f ns description=load-single-cluster-N-tile tile=%0d macro=%0d address=0x%02h k=%0d..%0d",
-        $realtime, tile, macro, cim_row_addr, 32 * macro, 32 * macro + 31);
+        $realtime, tile, macro, sram_row_addr, 32 * macro, 32 * macro + 31);
     end
   @(negedge clock);
-  cim_wr_en = 0;
+  sram_wr_en = 0;
   for (int tile = 0; tile < N_TILES; tile++)
     for (int macro = 0; macro < 8; macro++) begin
-      cim_row_addr = WEIGHT_ADDR + 8'(tile);
-      cim_macro_group = 1'(macro / 4);
-      cim_bank_sel = 2'(macro % 4);
+      sram_row_addr = WEIGHT_ADDR + 8'(tile);
+      sram_macro_group = 1'(macro / 4);
+      sram_bank_sel = 2'(macro % 4);
+      @(posedge clock);
       #1;
-      if (cim_rd_data[0] !== weight_rows[8*tile+macro])
+      if (!sram_rd_valid[0] || sram_rd_data[0] !== weight_rows[8*tile+macro])
         $fatal(1, "GEMM: weight readback mismatch tile=%0d macro=%0d", tile, macro);
       @(negedge clock);
     end
-  cim_cs_en = 0;
+  sram_cs_en = 0;
 endtask
 
 task automatic send_gemm_rows(input int tile);
@@ -103,23 +104,23 @@ task automatic send_gemm_rows(input int tile);
     requant_cfg_i[0].requant_zp[32*lane+:32] = zp[4*tile+lane];
   end
   cmd_i = '0;
-  cmd_i.os_cnt = 1;
-  cmd_i.ws_cnt = 32;
-  cmd_i.as_cnt = 1;
-  cmd_i.precision = 6;
-  cmd_i.signed_en = 1;
-  cmd_i.reduce_split_mask = 7'h00;
-  cmd_i.macro_en_mask = 8'hff;
-  cmd_i.macro_oc_mask = 32'hffffffff;
-  cmd_i.weight_cim_raddr = WEIGHT_ADDR + 8'(tile);
-  cmd_i.act_slot_sel = 24'hfac688;
+  cmd_i.cim_os_cnt = 1;
+  cmd_i.cim_ws_cnt = 32;
+  cmd_i.cim_as_cnt = 1;
+  cmd_i.cim_precision = 6;
+  cmd_i.cim_signed_en = 1;
+  cmd_i.cim_reduce_split_mask = 7'h00;
+  cmd_i.cim_macro_en_mask = 8'hff;
+  cmd_i.cim_macro_oc_mask = 32'hffffffff;
+  cmd_i.cim_weight_raddr = WEIGHT_ADDR + 8'(tile);
+  cmd_i.cim_act_slot_sel = 24'hfac688;
   for (int m = 0; m < M; m++) begin
     @(negedge clock);
     cmd_valid_i = 1;
     act_data_i  = act_planes[4*m];
     $display(
       "[CMD_SEND] time=%0.3f ns description=WS-GEMM-row tile=%0d row=%0d address=0x%02h os=1 ws=32 as=1 split=0x00 slots=0xfac688",
-      $realtime, tile, m, cmd_i.weight_cim_raddr);
+      $realtime, tile, m, cmd_i.cim_weight_raddr);
     @(posedge clock);
     if (cmd_ready_o !== 1'b1) $fatal(1, "GEMM: Command was not accepted by the single Cluster");
     #1;

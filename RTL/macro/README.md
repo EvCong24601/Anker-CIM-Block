@@ -35,10 +35,12 @@ iverilog -g2012 -DSYNTHESIS -s SingleMacro -o singlemacro.vvp -f rtl/filelist.f
 
 ## 常规 SRAM 访问扩展
 
-SingleMacro 提供 cim_wmask[3:0]、sram_ren、sram_raddr[7:0] 和 sram_rdata[1023:0]；外部实例必须连接这些端口。cim_wmask[c]=1 保持 OC c 的 32 B，=0 写入；全行写入使用 0000。sram_ren 使用现有 SRAM 读路径，不含并发读端口，禁止与计算或写入重叠。有效写入清 Hold-valid，全屏蔽写入和常规读不清 Hold；上层物理 SRAM 时序仍待冻结。详见 [Cluster 常规权重 SRAM 规格](../../docs/Cluster_Weight_SRAM_Interface.md)。
+SingleMacro 提供 sram_wmask[3:0]、sram_ren、sram_raddr[7:0] 和 sram_rdata[1023:0]；外部实例必须连接这些端口。sram_wmask[c]=1 保持 OC c 的 32 B，=0 写入；全行写入使用 0000。sram_ren 使用现有 SRAM 读路径，不含并发读端口，禁止与计算或写入重叠。有效写入清 Hold-valid，全屏蔽写入和常规读不清 Hold；上层物理 SRAM 时序仍待冻结。详见 [Cluster 常规权重 SRAM 规格](../../docs/Cluster_Weight_SRAM_Interface.md)。
 
 每个 primitive、写行、计算 phase、复位及负向 case 开始打印 CASE_START、仿真时间 ns 和描述；随机计算包含精度、符号、phase、mask、行号和刷新/复用参数。
 
 ## TB 文件拆分
 
 顶层 tb/tb_SingleMacro.sv 只保留实例和共享状态；tb/include/ 分为 reference、driver、scoreboard、negative_cases、regression 五个文件。场景顺序在 macro_regression.svh，非法输入集中在 macro_negative_cases.svh。详见 [Testbench 阅读指南](../../docs/Testbench_Guide.md)。从 macro 目录编译 tb/filelist.f；.svh 仅 include，不单独加入编译列表。
+
+Cluster通过`cim_result_mask[3:0]`提供每OC的上层消费需求。该信号在输入沿寄存，控制下一沿的结果时钟；被祖先mask屏蔽的OC结果保持原值。本地issue、valid/phase/OC元数据和Hold行为保持原定义，未请求OC的数据不可消费。单Macro实例将此输入接4'hf。

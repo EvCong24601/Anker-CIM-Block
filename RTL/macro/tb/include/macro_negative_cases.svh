@@ -31,7 +31,7 @@ task automatic run_negative(input string test_name);
     send_phase(0, 0, 0, 15, 0, 0, '0);
   end else if (test_name == "unknown_write") begin
     write_row(0, '0);
-    cim_wdata[1000] = 1'bx;
+    sram_wdata[1000] = 1'bx;
   end else if (test_name == "unknown_activation") begin
     send_phase(0, 0, 0, 15, 0, 1, '0);
     cim_idata[300] = 1'bx;
@@ -40,7 +40,7 @@ task automatic run_negative(input string test_name);
     cim_signed_en = 1'bz;
   end else if (test_name == "read_write") begin
     send_phase(0, 0, 0, 15, 0, 1, '0);
-    cim_wen = 1;
+    sram_wen = 1;
   end else if (test_name == "write_busy") begin
     send_phase(0, 0, 0, 15, 0, 1, '0);
     write_row(0, '0);

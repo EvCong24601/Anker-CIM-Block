@@ -11,7 +11,7 @@ endtask
 task automatic idle_cycle();
   @(negedge clock);
   cim_ren = 0;
-  cim_wen = 0;
+  sram_wen = 0;
 endtask
 task automatic drain();
   repeat (3) idle_cycle();
@@ -20,10 +20,10 @@ task automatic write_row(input logic [7:0] address, input logic [1023:0] data, i
   display_case($sformatf("%s/write-row address=%0d mask=%h", case_description, address, write_mask));
   @(negedge clock);
   cim_ren   = 0;
-  cim_wen   = 1;
-  cim_waddr = address;
-  cim_wdata = data;
-  cim_wmask = write_mask;
+  sram_wen   = 1;
+  sram_waddr = address;
+  sram_wdata = data;
+  sram_wmask = write_mask;
 endtask
 task automatic send_phase(input logic [2:0] precision, input logic [1:0] phase, input logic signed_en,
                           input logic [3:0] mask, input logic [7:0] address, input logic station,
@@ -45,7 +45,7 @@ task automatic send_phase(input logic [2:0] precision, input logic [1:0] phase, 
                ));
   @(negedge clock);
   cim_ren = 1;
-  cim_wen = 0;
+  sram_wen = 0;
   cim_precision = precision;
   cim_phase = phase;
   cim_signed_en = signed_en;
@@ -58,7 +58,7 @@ task automatic async_reset();
   display_case("asynchronous-reset/cancel-inflight/retain-SRAM");
   @(negedge clock);
   cim_ren = 0;
-  cim_wen = 0;
+  sram_wen = 0;
   #2 reset = 1;
   #1;
   if (cim_odata_valid !== 0 || cim_odata !== 0 || cim_odata_oc_mask !== 0 || cim_odata_phase !== 0)

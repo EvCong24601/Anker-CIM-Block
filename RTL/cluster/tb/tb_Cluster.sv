@@ -7,8 +7,10 @@ module tb_Cluster;
   parameter int OS_TILES = 1;
   parameter int PATTERNS = 6;
   parameter int OUTPUT_BUFFER_DEPTH = 16;  // Context entries per channel
-  parameter int WGT_RADDR_BUFFER_DEPTH = 64;  // Eight-bit AS addresses only
+  parameter int WGT_RADDR_BUFFER_DEPTH = 16;  // Eight-bit AS addresses only
   parameter int MAX_CONTEXTS = 64;  // Completion/tag capacity; independent of Psum
+  parameter int REQUANT_CONTEXT_DEPTH = OUTPUT_BUFFER_DEPTH;  // Deep AS parameter capacity
+  parameter bit CHECK_GATE_EQUIVALENCE = 0; // Optional ungated mirror under identical inputs
   parameter bit ENABLE_REQUANT = 0;  // Raw-only tree suites; quant suites override 1
   parameter int TIMEOUT_CYCLES = 4000;
   parameter logic [31:0] SEED = 32'h19e2a407;
@@ -32,17 +34,19 @@ module tb_Cluster;
   wire [31:0] out_valid_o;
   logic [1023:0] act_data_i = '0;
   // WLC 常规 SRAM 端口：所有测试均通过该口写入和读回权重。
-  logic cim_cs_en = 0, cim_wr_en = 0, cim_macro_group = 0;
-  logic [1:0] cim_bank_sel = 0;
-  logic [7:0] cim_row_addr = 0;
-  logic [3:0] cim_wmask = 0;
-  logic [1023:0] cim_wrdata = 0;
-  wire [1023:0] cim_rd_data;
+  logic sram_cs_en = 0, sram_wr_en = 0, sram_macro_group = 0;
+  logic [1:0] sram_bank_sel = 0;
+  logic [7:0] sram_row_addr = 0;
+  logic [3:0] sram_wmask = 0;
+  logic [1023:0] sram_wrdata = 0;
+  wire [1023:0] sram_rd_data;
+  wire sram_rd_valid;
   wire [1023:0] psum_data_o;
   cluster_top #(
     .WGT_RADDR_BUFFER_DEPTH(WGT_RADDR_BUFFER_DEPTH),
     .MAX_CONTEXTS(MAX_CONTEXTS),
     .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
+    .REQUANT_CONTEXT_DEPTH(REQUANT_CONTEXT_DEPTH),
     .ENABLE_REQUANT(ENABLE_REQUANT)
   ) dut (
     .*
@@ -87,9 +91,13 @@ module tb_Cluster;
   `include "include/cluster_reference.svh"
   `include "include/cluster_driver.svh"
   `include "include/cluster_requant_cases.svh"
+  `include "include/cluster_context_buffer_cases.svh"
+  `include "include/cluster_gate_checks.svh"
+  `include "include/cluster_gate_equivalence.svh"
   `include "include/cluster_scoreboards.svh"
   `include "include/cluster_compute_cases.svh"
   `include "include/cluster_sram_cases.svh"
+  `include "include/cluster_sram_response_cases.svh"
   `include "include/cluster_suites.svh"
   `include "include/cluster_regression.svh"
 

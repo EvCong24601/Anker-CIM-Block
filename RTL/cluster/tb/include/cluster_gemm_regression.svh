@@ -19,7 +19,7 @@ initial begin : gemm_regression
   trace_fd = $fopen({data_dir, "/gemm_observed_events.csv"}, "w");
   if (!trace_fd) $fatal(1, "GEMM: cannot open output event trace");
   $fdisplay(trace_fd, "cycle,relative_cycle,event,n_tile,m,cluster,lane,n,value");
-  cim_wrdata[0] = '0;
+  sram_wrdata[0] = '0;
   for (int tile = 0; tile < N_TILES; tile++) begin
     issues[tile] = 0;
     first_accept[tile] = -1;

@@ -12,13 +12,15 @@ module SingleMacro #(
   input  logic [   7:0] cim_raddr,
   input  logic          cim_station,
   input  logic [   3:0] cim_oc_mask,
+  // Consumer demand after all merge masks; standalone users tie to 4'hf.
+  input  logic [   3:0] cim_result_mask,
   input  logic [   2:0] cim_precision,
   input  logic          cim_signed_en,
   input  logic [   1:0] cim_phase,
-  input  logic          cim_wen,
-  input  logic [   7:0] cim_waddr,
-  input  logic [1023:0] cim_wdata,
-  input  logic [   3:0] cim_wmask,
+  input  logic          sram_wen,
+  input  logic [   7:0] sram_waddr,
+  input  logic [1023:0] sram_wdata,
+  input  logic [   3:0] sram_wmask,
   input  logic          sram_ren,
   input  logic [   7:0] sram_raddr,
   output wire  [1023:0] sram_rdata,
@@ -37,13 +39,16 @@ module SingleMacro #(
   logic         signed_en_in;  // Signed interpretation of weight digits.
   logic         activation_signed_in;  // Signed interpretation of this ACT digit.
   logic [  3:0] mask_in;  // Enabled OCs for this request.
+  logic [  3:0] result_mask_in; // Registered one edge before result capture.
   logic [  1:0] phase_in;  // ACT digit phase returned with the result.
 
   wire          issue = !reset && cim_ren && (|cim_oc_mask);
-  wire          write_active = cim_wen && !(&cim_wmask);
-  wire          macro_clock;
+  wire          write_active = sram_wen && !(&sram_wmask);
+  wire          macro_clock, memory_clock, hold_clock;
+  wire memory_active = !reset && (write_active || sram_ren || (issue && cim_station));
+  wire hold_active = !reset && (write_active || (in_valid && station_in));
   // Include output valid to preserve the final valid-clearing edge n+2.
-  wire          clock_active = !reset && (issue || write_active || in_valid || cim_odata_valid);
+  wire          clock_active = !reset && (issue || in_valid || cim_odata_valid);
   generate
     if (USE_CLOCK_GATING) begin : g_icg
       MacroClockGate u_clock_gate (
@@ -51,8 +56,12 @@ module SingleMacro #(
         .enable(clock_active),
         .gated_clock(macro_clock)
       );
+      MacroClockGate u_memory_gate(.clock(clock), .enable(memory_active), .gated_clock(memory_clock));
+      MacroClockGate u_hold_gate(.clock(clock), .enable(hold_active), .gated_clock(hold_clock));
     end else begin : g_no_icg
       assign macro_clock = clock;
+      assign memory_clock = clock;
+      assign hold_clock = clock;
     end
   endgenerate
 
@@ -60,29 +69,34 @@ module SingleMacro #(
   logic [7:0] held_address;
   logic hold_valid;
   wire [1023:0] sram_read_data;
-  wire sram_read_enable = !reset && in_valid && station_in;
+  wire sram_read_enable = !reset && issue && cim_station;
   // Refresh uses the current SRAM data directly, never an extra weight stage.
   wire [1023:0] compute_weight = !in_valid ? 1024'b0 : station_in ? sram_read_data : held_weight;
   MacroWeightSRAM u_weight_sram (
-    .clock(macro_clock),
+    .clock(memory_clock),
     .write_enable(!reset && write_active),
-    .write_address(cim_waddr),
-    .write_data(cim_wdata),
-    .write_mask(cim_wmask),
+    .write_address(sram_waddr),
+    .write_data(sram_wdata),
+    .write_mask(sram_wmask),
     .read_enable(sram_read_enable || (!reset && sram_ren)),
-    .read_address(sram_ren ? sram_raddr : read_address_in),
+    .read_address(sram_ren ? sram_raddr : cim_raddr),
     .read_data(sram_read_data)
   );
-  // Regular read and CIM refresh share the existing SRAM read path.
-  assign sram_rdata = !reset && sram_ren ? sram_read_data : 1024'b0;
+  // Align local read qualification with the sampled request, not the next
+  // request's live sram_ren. Payload remains in the synchronous SRAM output.
+  logic sram_response_valid;
+  always_ff @(posedge clock or posedge reset)
+    if (reset) sram_response_valid <= 0;
+    else sram_response_valid <= sram_ren;
+  assign sram_rdata = sram_response_valid ? sram_read_data : 1024'b0;
 
   // Persistent storage/reuse state, not a current-request pipeline stage.
   // Hold payload need not reset: only a valid, correctly addressed Hold may
   // be used. At n+1 a refresh commits while the next reuse enters R_in.
-  always_ff @(posedge macro_clock) begin
+  always_ff @(posedge hold_clock) begin
     if (!reset && in_valid && station_in) held_weight <= sram_read_data;
   end
-  always_ff @(posedge macro_clock or posedge reset) begin
+  always_ff @(posedge hold_clock or posedge reset) begin
     if (reset) begin
       held_address <= '0;
       hold_valid   <= 1'b0;
@@ -103,6 +117,22 @@ module SingleMacro #(
   wire signed [17:0] sum_l5[0:3];
   generate
     for (genvar c = 0; c < 4; c++) begin : g_oc
+      wire result_clock;
+      wire result_enable = !reset && in_valid && mask_in[c] && result_mask_in[c];
+      if (USE_CLOCK_GATING) begin : g_result_icg
+        MacroClockGate u_clock_gate (
+          .clock(clock), .enable(result_enable), .gated_clock(result_clock)
+        );
+      end else begin : g_result_no_icg
+        assign result_clock = clock;
+      end
+      // Masked OC payload holds. Valid/mask identify which values belong to
+      // this request; shared ACT, SRAM and full-row Hold serve active OCs.
+      // Parent-blocked OC results also hold; local valid/phase/Hold semantics
+      // remain unchanged, so no extra pipeline stage or refresh is introduced.
+      always_ff @(posedge result_clock or posedge reset)
+        if (reset) cim_odata[18*c+:18] <= '0;
+        else if (result_enable) cim_odata[18*c+:18] <= sum_l5[c];
       for (genvar s = 0; s < 32; s++) begin : g_slice
         for (genvar t = 0; t < 4; t++) begin : g_submul
           wire enabled_oc = in_valid && mask_in[c];
@@ -177,9 +207,9 @@ module SingleMacro #(
       signed_en_in <= 1'b0;
       activation_signed_in <= 1'b0;
       mask_in <= '0;
+      result_mask_in <= '0;
       phase_in <= '0;
       cim_odata_valid <= 1'b0;
-      cim_odata <= '0;
       cim_odata_oc_mask <= '0;
       cim_odata_phase <= '0;
     end else begin
@@ -193,10 +223,10 @@ module SingleMacro #(
         signed_en_in <= cim_signed_en;
         activation_signed_in <= digit_is_signed(cim_precision, cim_phase, cim_signed_en);
         mask_in <= cim_oc_mask;
+        result_mask_in <= cim_result_mask;
         phase_in <= cim_phase;
       end
       if (in_valid) begin
-        for (int c = 0; c < 4; c++) cim_odata[18*c+:18] <= mask_in[c] ? sum_l5[c] : 18'sd0;
         cim_odata_oc_mask <= mask_in;
         cim_odata_phase   <= phase_in;
       end
@@ -210,15 +240,15 @@ module SingleMacro #(
   initial for (int a = 0; a < 256; a++) initialized_ocs[a] = '0;
   always @(posedge clock) begin
     if (!reset) begin
-      if (sram_ren && (cim_ren || in_valid || cim_wen)) $fatal(1, "SM_PROTOCOL: regular read overlaps compute/write");
-      if (cim_wen) begin
+      if (sram_ren && (cim_ren || in_valid || sram_wen)) $fatal(1, "SM_PROTOCOL: regular read overlaps compute/write");
+      if (sram_wen) begin
         if (cim_ren) $fatal(1, "SM_PROTOCOL: simultaneous read/write");
         // Output valid alone is completed work: n+2 writes are legal.
         if (in_valid) $fatal(1, "SM_PROTOCOL: write before pipeline drain");
         // Reduction catches X/Z without simulator-specific handling of
         // $isunknown on a wide, temporary concatenation.
-        if ((^{cim_waddr, cim_wdata, cim_wmask}) === 1'bx) $fatal(1, "SM_PROTOCOL: unknown write input");
-        initialized_ocs[cim_waddr] <= initialized_ocs[cim_waddr] | ~cim_wmask;
+        if ((^{sram_waddr, sram_wdata, sram_wmask}) === 1'bx) $fatal(1, "SM_PROTOCOL: unknown write input");
+        initialized_ocs[sram_waddr] <= initialized_ocs[sram_waddr] | ~sram_wmask;
       end
       if (issue) begin
         if ((^{cim_precision, cim_phase, cim_signed_en, cim_raddr, cim_station, cim_oc_mask, cim_idata}) === 1'bx)

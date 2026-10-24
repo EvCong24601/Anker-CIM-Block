@@ -9,13 +9,14 @@ module tb_Cluster_GEMM_Edges;
   requant_cfg_t requant_cfg_i = '0;
   logic cmd_valid_i = 0;
   wire cmd_ready_o;
+  wire sram_rd_valid;
   logic [1023:0] act_data_i = '0;
-  logic cim_cs_en = 0, cim_wr_en = 0, cim_macro_group = 0;
-  logic [1:0] cim_bank_sel = 0;
-  logic [7:0] cim_row_addr = 0;
-  logic [3:0] cim_wmask = 0;
-  logic [1023:0] cim_wrdata = 0;
-  wire [1023:0] cim_rd_data, psum_data_o;
+  logic sram_cs_en = 0, sram_wr_en = 0, sram_macro_group = 0;
+  logic [1:0] sram_bank_sel = 0;
+  logic [7:0] sram_row_addr = 0;
+  logic [3:0] sram_wmask = 0;
+  logic [1023:0] sram_wrdata = 0;
+  wire [1023:0] sram_rd_data, psum_data_o;
   wire [255:0] requant_data_o;
   wire [31:0] out_valid_o, requant_valid_o;
   cluster_top dut (
@@ -26,14 +27,15 @@ module tb_Cluster_GEMM_Edges;
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),
     .act_data_i(act_data_i),
-    .cim_cs_en(cim_cs_en),
-    .cim_wr_en(cim_wr_en),
-    .cim_macro_group(cim_macro_group),
-    .cim_bank_sel(cim_bank_sel),
-    .cim_row_addr(cim_row_addr),
-    .cim_wmask(cim_wmask),
-    .cim_wrdata(cim_wrdata),
-    .cim_rd_data(cim_rd_data),
+    .sram_cs_en(sram_cs_en),
+    .sram_wr_en(sram_wr_en),
+    .sram_macro_group(sram_macro_group),
+    .sram_bank_sel(sram_bank_sel),
+    .sram_row_addr(sram_row_addr),
+    .sram_wmask(sram_wmask),
+    .sram_wrdata(sram_wrdata),
+    .sram_rd_data(sram_rd_data),
+    .sram_rd_valid(sram_rd_valid),
     .requant_data_o(requant_data_o),
     .requant_valid_o(requant_valid_o)
   );

@@ -4,7 +4,7 @@
 
 initial begin : regression
   string data_dir;
-  int capacity_precision, capacity_sign, zero_count;
+  int capacity_precision, capacity_sign, zero_count, capacity_count, capacity_os;
   string requant_negative;
   if ($bits(requant_cfg_t) != 298) $fatal(1, "TB: Requant config must be 298 bits");
   if ($value$plusargs("REQUANT_NEGATIVE=%s", requant_negative)) begin
@@ -14,12 +14,13 @@ initial begin : regression
     $display("[CASE_START] time=%0.3f ns suite=requant_negative description=reject-invalid-config-%s", $realtime,
              requant_negative);
     cmd_i = '0;
-    cmd_i.os_cnt = 1;
-    cmd_i.ws_cnt = 1;
-    cmd_i.as_cnt = 1;
-    cmd_i.precision = 6;
-    cmd_i.macro_en_mask = 8'hff;
+    cmd_i.cim_os_cnt = 1;
+    cmd_i.cim_ws_cnt = 1;
+    cmd_i.cim_as_cnt = 1;
+    cmd_i.cim_precision = 6;
+    cmd_i.cim_macro_en_mask = 8'hff;
     case (requant_negative)
+      "as17_capacity": cmd_i.cim_as_cnt = 17;
       "mode": requant_cfg_i.requant_mode = 1;
       "shift_low": requant_cfg_i.requant_shift = -32;
       "shift_high": requant_cfg_i.requant_shift = 32;
@@ -28,19 +29,19 @@ initial begin : regression
         requant_cfg_i.conv_mode = 1;
         requant_cfg_i.requant_mode = 1;
         requant_cfg_i.requant_shift[30+:10] = 32;
-        cmd_i.precision = 6;
-        cmd_i.macro_en_mask = 8'hff;
+        cmd_i.cim_precision = 6;
+        cmd_i.cim_macro_en_mask = 8'hff;
       end
       "conv_group": begin
         requant_cfg_i.conv_mode = 1;
-        cmd_i.precision = 4;
-        cmd_i.macro_en_mask = 8'hff;
-        cmd_i.reduce_split_mask = 1;
+        cmd_i.cim_precision = 4;
+        cmd_i.cim_macro_en_mask = 8'hff;
+        cmd_i.cim_reduce_split_mask = 1;
       end
       "zp_group": begin
-        cmd_i.precision = 6;
-        cmd_i.macro_en_mask = 8'hff;
-        cmd_i.reduce_split_mask = 1;
+        cmd_i.cim_precision = 6;
+        cmd_i.cim_macro_en_mask = 8'hff;
+        cmd_i.cim_reduce_split_mask = 1;
       end
       default: $fatal(1, "TB: unknown Requant negative scenario");
     endcase
@@ -49,7 +50,7 @@ initial begin : regression
     #1;
     $fatal(1, "TB: missing Requant configuration rejection");
   end
-  if ($bits(cluster_ctrl_t) != 107 || $bits(cmd_i.os_cnt) != 8 || $bits(cmd_i.ws_cnt) != 8 || $bits(cmd_i.as_cnt) != 8)
+  if ($bits(cluster_ctrl_t) != 107 || $bits(cmd_i.cim_os_cnt) != 8 || $bits(cmd_i.cim_ws_cnt) != 8 || $bits(cmd_i.cim_as_cnt) != 8)
     $fatal(1, "TB: descriptor must contain three eight-bit counts and total 107 bits");
   if ($value$plusargs("ZERO_COUNT=%d", zero_count)) begin
     repeat (4) @(negedge clock);
@@ -58,13 +59,13 @@ initial begin : regression
     $display("[CASE_START] time=%0.3f ns suite=count_range description=reject-zero-count field=%0d", $realtime,
              zero_count);
     cmd_i = '0;
-    cmd_i.os_cnt = 1;
-    cmd_i.ws_cnt = 1;
-    cmd_i.as_cnt = 1;
+    cmd_i.cim_os_cnt = 1;
+    cmd_i.cim_ws_cnt = 1;
+    cmd_i.cim_as_cnt = 1;
     case (zero_count)
-      0: cmd_i.os_cnt = 0;
-      1: cmd_i.ws_cnt = 0;
-      2: cmd_i.as_cnt = 0;
+      0: cmd_i.cim_os_cnt = 0;
+      1: cmd_i.cim_ws_cnt = 0;
+      2: cmd_i.cim_as_cnt = 0;
       default: $fatal(1, "TB: zero-count field must be 0..2");
     endcase
     cmd_valid_i = 1;
@@ -83,19 +84,22 @@ initial begin : regression
     repeat (4) @(negedge clock);
     reset = 0;
     repeat (2) @(negedge clock);
-    $display(
-      "[CASE_START] time=%0.3f ns suite=context_capacity description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=64 psum_depth=%0d max_contexts=%0d weight_address_depth=%0d",
-      $realtime, wbits(capacity_precision), abits(capacity_precision), capacity_sign, $test$plusargs
-      ("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST") ? 1 : 2, OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS,
-      WGT_RADDR_BUFFER_DEPTH);
     cmd_i = '0;
-    cmd_i.os_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;
-    cmd_i.ws_cnt = 1;
-    cmd_i.as_cnt = 64;
-    cmd_i.precision = 3'(capacity_precision);
-    cmd_i.signed_en = 1'(capacity_sign);
-    cmd_i.macro_en_mask = 8'hff;
-    cmd_i.macro_oc_mask = 32'hffffffff;
+    cmd_i.cim_os_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;
+    cmd_i.cim_ws_cnt = 1;
+    cmd_i.cim_as_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 16 : 64;
+    capacity_count=int'(cmd_i.cim_as_cnt); capacity_os=int'(cmd_i.cim_os_cnt);
+    if ($value$plusargs("CAPACITY_COUNT=%d",capacity_count)) begin end
+    if ($value$plusargs("CAPACITY_OS=%d",capacity_os)) begin end
+    cmd_i.cim_as_cnt=8'(capacity_count); cmd_i.cim_os_cnt=8'(capacity_os);
+    cmd_i.cim_precision = 3'(capacity_precision);
+    cmd_i.cim_signed_en = 1'(capacity_sign);
+    cmd_i.cim_macro_en_mask = 8'hff;
+    cmd_i.cim_macro_oc_mask = 32'hffffffff;
+    $display(
+      "[CASE_START] time=%0.3f ns suite=context_capacity description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=%0d psum_depth=%0d max_contexts=%0d weight_address_depth=%0d",
+      $realtime, wbits(capacity_precision), abits(capacity_precision), capacity_sign,
+      capacity_os, capacity_count, OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS, WGT_RADDR_BUFFER_DEPTH);
     cmd_valid_i = 1;
     @(posedge clock);
     #1;
@@ -116,10 +120,10 @@ initial begin : regression
       load_weight_row(0, 8'd0, '0);
       @(negedge clock);
       cmd_i = '0;
-      cmd_i.os_cnt = 1; cmd_i.ws_cnt = 1; cmd_i.as_cnt = 1;
-      cmd_i.macro_en_mask = 1;
-      cmd_i.macro_oc_mask = 1;
-      cmd_i.reduce_split_mask = 7'h7f;
+      cmd_i.cim_os_cnt = 1; cmd_i.cim_ws_cnt = 1; cmd_i.cim_as_cnt = 1;
+      cmd_i.cim_macro_en_mask = 1;
+      cmd_i.cim_macro_oc_mask = 1;
+      cmd_i.cim_reduce_split_mask = 7'h7f;
       cmd_valid_i = 1;
       @(posedge clock);
       if(!cmd_ready_o) $fatal(1,"SRAM conflict: compute command not accepted");
@@ -128,8 +132,8 @@ initial begin : regression
       // Target idle Macro1 while Macro0 computes: only the Cluster-wide
       // exclusion rule should reject this access, avoiding a competing
       // local SingleMacro simultaneous-read/write diagnostic.
-      cim_bank_sel = 1;
-      cim_cs_en = 1; cim_wr_en = 1;
+      sram_bank_sel = 1;
+      sram_cs_en = 1; sram_wr_en = 1;
       @(posedge clock);
       #1;
       $fatal(1,"Missing SRAM write/active-compute conflict rejection");
@@ -138,7 +142,7 @@ initial begin : regression
       $display(
         "[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-access-overlapping-compute-command",
         $realtime);
-      cim_cs_en   = 1;
+      sram_cs_en   = 1;
       cmd_valid_i = 1;
       @(posedge clock);
       #1;
@@ -169,7 +173,19 @@ initial begin : regression
   repeat (4) @(negedge clock);
   reset = 0;
   repeat (2) @(negedge clock);
+  if ($test$plusargs("SRAM_RESPONSE_TEST")) begin
+    run_sram_response_suite();
+    $finish;
+  end
   // 专项 suite 独占一次仿真；默认 suite 另有 CSV、路由和门控覆盖检查。
+  if ($test$plusargs("CONTEXT_BUFFER_TEST")) begin
+    run_context_buffer_suite();
+    $finish;
+  end
+  if ($test$plusargs("REQUANT_CONTEXT_TEST")) begin
+    run_requant_context_suite();
+    $finish;
+  end
   if ($test$plusargs("REQUANT_BOUNDARY_TEST")) begin
     run_requant_boundary_suite();
     $finish;

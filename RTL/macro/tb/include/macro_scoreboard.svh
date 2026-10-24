@@ -34,9 +34,9 @@ always @(posedge clock or posedge reset) begin : scoreboard
       expected_phase[i] = expected_phase[i-1];
     end
     expected_valid[0] = cim_ren && (|cim_oc_mask);
-    if (cim_wen) begin
-      for (int b = 0; b < 128; b++) if (!cim_wmask[b/32]) reference_memory[cim_waddr][8*b+:8] = cim_wdata[8*b+:8];
-      if (!(&cim_wmask)) reference_hold_valid = 0;
+    if (sram_wen) begin
+      for (int b = 0; b < 128; b++) if (!sram_wmask[b/32]) reference_memory[sram_waddr][8*b+:8] = sram_wdata[8*b+:8];
+      if (!(&sram_wmask)) reference_hold_valid = 0;
     end
     if (expected_valid[0]) begin
       accepted_count++;
@@ -66,7 +66,8 @@ always @(posedge clock or posedge reset) begin : scoreboard
       );
     if (expected_valid[EXPECTED_LATENCY]) begin
       result_count++;
-      last_data  = expected_data[EXPECTED_LATENCY];
+      for(int c=0;c<4;c++)
+        if(expected_mask[EXPECTED_LATENCY][c]) last_data[18*c+:18] = expected_data[EXPECTED_LATENCY][18*c+:18];
       last_mask  = expected_mask[EXPECTED_LATENCY];
       last_phase = expected_phase[EXPECTED_LATENCY];
     end

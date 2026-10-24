@@ -13,7 +13,7 @@ always @(posedge clock) begin : as_gemm_scoreboard
       if (first_accept < 0) first_accept = cycle;
       tile = row_commands / 4;
       cx   = row_commands % 4;
-      if (cycle != first_accept + 17 * tile + cx || cmd_i.weight_cim_raddr !== BASE_ADDR + 8'(4 * tile + cx))
+      if (cycle != first_accept + 17 * tile + cx || cmd_i.cim_weight_raddr !== BASE_ADDR + 8'(4 * tile + cx))
         $fatal(1, "AS GEMM: external Command schedule/address mismatch");
       $fdisplay(trace_fd, "%0d,%0d,command,%0d,%0d,%0d,-1,-1,0", cycle, cycle - first_accept, active_m, tile, cx);
       row_commands++;
@@ -24,7 +24,7 @@ always @(posedge clock) begin : as_gemm_scoreboard
       ph   = (row_issues % 16) / 4;
       cx   = row_issues % 4;
       if(cycle!=first_accept+17*tile+1+4*ph+cx || dut.tile!=tile || dut.phase!=ph || dut.context_idx!=cx ||
-         dut.command.weight_cim_raddr!==BASE_ADDR+8'(4*tile+cx) || dut.plane!==act_planes[(active_m*2+tile)*4+ph])
+         dut.command.cim_weight_raddr!==BASE_ADDR+8'(4*tile+cx) || dut.plane!==act_planes[(active_m*2+tile)*4+ph])
         $fatal(1, "AS GEMM: internal issue order/data/address mismatch");
       if (dut.ren !== 8'hff || dut.station !== 8'hff)
         $fatal(1, "AS GEMM: each Context switch must refresh all eight weights");

@@ -37,16 +37,17 @@ for name, message in dict(precision='illegal precision/phase', phase='illegal pr
         'SM_PROTOCOL: '+message, '+NEGATIVE='+name, negative=True)
 add('requant_unit', 'requant', 'Integer quantization arithmetic and four OC mapping',
     'PASS requant_unit', generator='requant')
-for name, message in dict(mode='per-channel scale requires conv_mode', shift_low='shift must be -31..31',
+for name, message in dict(as17_capacity='AS count exceeds output depth', mode='per-channel scale requires conv_mode', shift_low='shift must be -31..31',
         shift_high='shift must be -31..31', unknown='unknown configuration',
         channel_shift='shift must be -31..31', conv_group='Requant requires one aligned reduction group',
         zp_group='Requant requires one aligned reduction group').items():
     add('requant_negative_'+name, 'cluster', 'Reject Requant '+name.replace('_', ' '),
-        'CLUSTER_REQUANT_CONFIG: '+message, '+REQUANT_NEGATIVE='+name,
+        ('CLUSTER_CONTEXT_CAPACITY: ' if name=='as17_capacity' else 'CLUSTER_REQUANT_CONFIG: ')+message, '+REQUANT_NEGATIVE='+name,
         params='ENABLE_REQUANT=1', negative=True)
 for name, flag, marker in (
         ('requant_integration', 'REQUANT_TEST', 'PASS requant_integration cases=168'),
         ('requant_channel', 'REQUANT_CHANNEL_TEST', 'PASS requant_channel cases=1536'),
+        ('requant_context', 'REQUANT_CONTEXT_TEST', 'PASS requant_context cases=4'),
         ('requant_reset', 'REQUANT_RESET_TEST', 'PASS requant_reset'),
         ('requant_boundary', 'REQUANT_BOUNDARY_TEST', 'PASS requant_boundary'),
         ('os_count_limit', 'OS_COUNT_LIMIT_TEST', 'PASS os_count_limit cases=12'),
@@ -58,6 +59,18 @@ for name, flag, marker in (
         ('context_stress', 'CONTEXT_STRESS_TEST', 'PASS context_stress cases=224')):
     add(name, 'cluster', name.replace('_', ' '), marker, '+'+flag,
         params='ENABLE_REQUANT=1' if name.startswith('requant') else '')
+add('requant_buffers', 'cluster', 'Seven precisions AS16/AS8 fixed slots and A4 weight bypass',
+    'PASS context_buffers cases=77', '+CONTEXT_BUFFER_TEST', params='ENABLE_REQUANT=1')
+add('requant_a4_address_bypass','cluster','A4 AS16 with one weight address register',
+    'PASS context_buffers cases=22','+CONTEXT_BUFFER_TEST +A4_ONLY',
+    params='ENABLE_REQUANT=1 WGT_RADDR_BUFFER_DEPTH=1')
+for precision in range(7):
+    for sign in (0,1):
+        for os in (1,2):
+            add(f'as17_p{precision}_s{sign}_os{os}','cluster','Reject AS17 fixed-slot capacity',
+                'CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth',
+                f'+CONTEXT_CAPACITY_TEST +CAPACITY_COUNT=17 +CAPACITY_OS={os} +CAPACITY_PRECISION={precision} +CAPACITY_SIGN={sign}',
+                negative=True)
 add('reduce_tree', 'reduce', 'All reduction trees and clock gating', 'PASS reduce_clock_gating cases=208')
 for field in range(3):
     add('zero_count_'+str(field), 'cluster', 'Reject zero count field '+str(field),
@@ -65,12 +78,12 @@ for field in range(3):
 for precision in range(7):
     for sign in (0, 1):
         add(f'context_capacity_p{precision}_s{sign}', 'cluster', 'Reject AS64 with OS2 and Psum depth16',
-            'CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded',
+            'CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth',
             f'+CONTEXT_CAPACITY_TEST +CAPACITY_PRECISION={precision} +CAPACITY_SIGN={sign}', negative=True)
-for resource, param, message in (('address', 'WGT_RADDR_BUFFER_DEPTH=32', 'weight address depth exceeded'),
-                                  ('metadata', 'MAX_CONTEXTS=32', 'context metadata exceeded')):
+for resource, param, message in (('address', 'WGT_RADDR_BUFFER_DEPTH=8', 'weight address depth exceeded'),
+                                  ('metadata', 'MAX_CONTEXTS=8', 'context metadata exceeded')):
     for sign in (0, 1):
-        add(f'{resource}_capacity_s{sign}', 'cluster', 'Reject AS64 '+resource+' capacity',
+        add(f'{resource}_capacity_s{sign}', 'cluster', 'Reject AS16 '+resource+' capacity',
             'CLUSTER_CONTEXT_CAPACITY: '+message,
             f'+CONTEXT_CAPACITY_TEST +{resource.upper()}_CAPACITY_TEST +CAPACITY_PRECISION=6 +CAPACITY_SIGN={sign}',
             params=param, negative=True)
@@ -81,14 +94,35 @@ for mode in ('tensor', 'channel'):
         'PASS gemm_os2_as4 M=32 K=512 N=16', generator='as4', channel=mode=='channel')
 for name, params, args, message, channel in (
         ('as_context_capacity', 'ZP_DEPTH=2', '', 'AS context zp depth exceeded', False),
+        ('as_context_capacity_default', 'ZP_DEPTH=1', '', 'AS context zp depth exceeded', False),
         ('as_context_zp_reload', '', '+NEGATIVE_ZP_RELOAD', 'AS context zp changed across K Tiles', False),
-        ('as_context_scale_reload', '', '+NEGATIVE_SCALE_RELOAD', 'AS context scale changed across K Tiles', True)):
+        ('as_context_scale_reload', '', '+NEGATIVE_SCALE_RELOAD', 'AS context scale changed across K Tiles', True),
+        ('as_context_tensor_scale_reload', '', '+NEGATIVE_SCALE_RELOAD', 'AS context scale changed across K Tiles', False)):
     add(name, 'gemm_as', 'Reject '+name.replace('_', ' '), 'CLUSTER_REQUANT_CONFIG: '+message,
         args, params, 'as4', channel, True)
 for edge in ('w4_high', 'w2_high', 'n_tail', 'boundaries'):
     for mode in (('channel',) if edge=='boundaries' else ('tensor', 'channel')):
         add('gemm_edge_'+edge+'_'+mode, 'gemm_edges', edge.replace('_', ' ')+' '+mode,
             'PASS gemm_edges', generator=edge, channel=mode=='channel')
+
+
+add('gate_equiv_default','cluster','Gated/ungated Cluster same-edge comparison: default','PASS configurations=','',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=0')
+add('gate_equiv_requant_buffers','cluster','Gated/ungated Cluster same-edge comparison: requant_buffers','PASS context_buffers cases=77','+CONTEXT_BUFFER_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=1')
+add('gate_equiv_requant_channel','cluster','Gated/ungated Cluster same-edge comparison: requant_channel','PASS requant_channel cases=1536','+REQUANT_CHANNEL_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=1')
+add('gate_equiv_context_stress','cluster','Gated/ungated Cluster same-edge comparison: context_stress','PASS context_stress cases=224','+CONTEXT_STRESS_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=0')
+add('gate_equiv_input_overlap','cluster','Gated/ungated Cluster same-edge comparison: input_overlap','PASS input_overlap cases=168','+INPUT_OVERLAP_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=0')
+add('gate_equiv_sram','cluster','Gated/ungated Cluster same-edge comparison: sram','PASS sram_rw','+SRAM_RW_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=0')
+add('gate_equiv_requant_reset','cluster','Gated/ungated Cluster same-edge comparison: requant_reset','PASS requant_reset','+REQUANT_RESET_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=1')
+add('gate_equiv_requant_boundary','cluster','Gated/ungated Cluster same-edge comparison: requant_boundary','PASS requant_boundary','+REQUANT_BOUNDARY_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=1')
+for precision in range(7):
+    for sign in (0,1):
+        add(f'as64_p{precision}_s{sign}_os1','cluster','Reject AS64 with OS1',
+            'CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth',
+            f'+CONTEXT_CAPACITY_TEST +CAPACITY_COUNT=64 +CAPACITY_OS=1 +CAPACITY_PRECISION={precision} +CAPACITY_SIGN={sign}',negative=True)
+
+
+add('sram_response','cluster','Synchronous read valid and sampled Macro response','PASS sram_response reads=32','+SRAM_RESPONSE_TEST')
+add('gate_equiv_sram_response','cluster','Read response gated/ungated comparison','PASS sram_response reads=32','+SRAM_RESPONSE_TEST',params='CHECK_GATE_EQUIVALENCE=1')
 
 
 def write_makefile():
@@ -144,6 +178,8 @@ def check(name, directory):
     elif diagnostics:raise SystemExit('FAIL: unexpected diagnostics: '+'\n'.join(lines[i] for i in diagnostics))
     if not c['negative'] and exit_status!='0':
         raise SystemExit('FAIL: simulator returned nonzero status')
+    if name.startswith('gate_equiv_') and 'PASS cluster_gate_equivalence cycles=' not in log:
+        raise SystemExit('FAIL: missing whole-Cluster gate equivalence marker')
     if not c['negative']:
         if c['generator'] in ('ws32', 'as4'):
             importlib.import_module('gemm_vectors').verify_outputs(directory/'data')

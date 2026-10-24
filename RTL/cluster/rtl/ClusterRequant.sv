@@ -55,26 +55,20 @@ module ClusterRequant #(
       selected_psum = '0;
       found = 0;
       for (int l = c; l < LANES; l += 4) begin
-        if (l == c) selected_psum = psum_i[32*l+:32];
         if (valid_i[l] && !found) begin
           selected_psum = psum_i[32*l+:32];
           found = 1;
         end
       end
     end
-    assign channel_data[c] = quantize(
-      $signed(
-        selected_psum
-      ),
-      $signed(
-        cfg_i.requant_multiplier[32*entry_id+:32]
-      ),
-      $signed(
-        cfg_i.requant_shift[10*entry_id+:10]
-      ),
-      $signed(
-        cfg_i.requant_zp[32*c+:32])
-    );
+    // Isolate BOTH sources at the channel read endpoint. A held nonzero
+    // raw Psum and changing per-tensor scale must not toggle a masked OC.
+    // Shared scale remains available to other active OCs.
+    wire [31:0] selected_multiplier = found ? cfg_i.requant_multiplier[32*entry_id+:32] : 32'b0;
+    wire [9:0] selected_shift = found ? cfg_i.requant_shift[10*entry_id+:10] : 10'b0;
+    wire [31:0] selected_zp = found ? cfg_i.requant_zp[32*c+:32] : 32'b0;
+    assign channel_data[c] = quantize($signed(selected_psum), $signed(selected_multiplier),
+                                    $signed(selected_shift), $signed(selected_zp));
   end
-  for (genvar lane = 0; lane < LANES; lane++) assign data_o[8*lane+:8] = channel_data[lane%4];
+  for (genvar lane = 0; lane < LANES; lane++) assign data_o[8*lane+:8] = valid_i[lane] ? channel_data[lane%4] : 8'b0;
 endmodule

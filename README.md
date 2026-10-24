@@ -1,433 +1,52 @@
 # CIM Cluster 输入与计算说明
 
-本仓库包含八个 SingleMacro 组成的 Cluster 仿真参考实现。外部按 A0→A3 连续输入完整 ACT，首 slice 与 i_cmd 同拍；当前 Slice 与对应 Context 地址已寄存后，内部即可按 WS/AS 顺序分发，与同包后续输入重叠。ACT buffer 为4096 bit。WS 与 OS1 AS 在 tmp 写入前做 fusion；OS>1 AS 保留 tmp 后 fusion 或 acc 的路径。各 Context 独立形成内部 raw signed32；启用 Requant 时限制一个归约组、最多4OC，经四通道组合算术后下一拍锁存 INT8 及 valid，scale 支持 per-tensor/per-channel，合并后的 zp 始终 per-channel。详见 [Requant 说明](docs/Cluster_Requant.md)。
+八个 SingleMacro 组成一个 Cluster。当前包内ACT Plane、AS地址和量化参数接收与内部发射重叠；输入寄存后下一拍即可发射。正式输出为寄存INT8和逐lane valid，raw signed32仅供TB观察。
 
-[GEMM 用例总览](docs/Cluster_GEMM.md)：三个 TB、11 个正向矩阵 case 和 3 个 AS 参数负向 case 的配置、检查范围及 VCS 运行入口。
+## 源码与运行
 
-[文档索引](docs/README.md)：时序与容量、SRAM、Requant、GEMM及TB职责。
+- `RTL/macro/rtl/`：SingleMacro、同步读写SRAM、算术和功能ICG。
+- `RTL/cluster/rtl/`：共享package、调度/存储、归约树和四通道Requant。
+- `RTL/cluster/tb/`：Cluster、归约、量化和三个GEMM顶层；include拆分驱动、参考模型、检查器和case。
+- `vcs-rtl/`：七类顶层的编译列表、Makefile和用例目录；FSDB自动使用case说明后缀。
 
-## 逐拍输入时序文档
+从 `vcs-rtl/` 执行 `make run CASE=cluster_default` 或 `make regression`。完整配置和用例说明见 [VCS入口](vcs-rtl/README.md)。
 
-[当前 Block 规格](docs/CIM_Block_Spec.docx)：包含逐通道 zp、组合 Requant、INT8 输出寄存器和两组完整 GEMM case。
+## 调度与缓存
 
-[当前逐拍输入时序 v2.8](docs/CIM_Cluster_逐拍输入时序_v2.8.docx)：说明四通道 Requant 接口、AS 参数加载与容量、raw/INT8 逐拍时序和端到端 GEMM。
+所有多Context AS采用Tile → Slice → Context，包括OS1；WS/单Context采用Tile → Context → Slice。AS参数与地址不要求整包收齐，当前Context已收到即可计算。ACT bank为4096bit，后续Plane固定连续输入。
 
-## 目录与运行
+默认权重行地址表16×8bit；仅AS A8/A16使用深表，A4使用当前地址寄存器。Requant参数表默认16项，与OUTPUT_BUFFER_DEPTH一致，所有AS精度均使用固定槽位，不回收、不覆盖。所有精度cim_as_cnt≤16。
 
-```text
-docs/                           Block 规格、逐拍时序与功能说明
-RTL/
-  macro/rtl/                    SingleMacro 计算与权重存储
-  macro/tb/                     单 Macro testbench
-  cluster/
-    rtl/                        Cluster 功能实现与共享 package
-    tb/
-      tb_Cluster.sv             Cluster 仿真顶层
-      tb_ClusterReduceTree.sv    归约树单元测试
-      tb_ClusterRequant.sv       无时钟 Requant 算术单元测试
-      tb_Cluster_GEMM_OS1_WS32.sv         单Cluster四批N4的完整WS32 GEMM测试
-      tb_Cluster_GEMM_OS2_AS4.sv  单Cluster八Macro归约的K512/OS2/AS4测试
-      tb_Cluster_GEMM_Edges.sv   W4/W2高位置组、N尾部、舍入饱和矩阵测试
-      latency_audit.sv          时延观察器
-      include/                  驱动、参考模型、检查器、case 与 suite
-      py/                       仿真入口、枚举生成与数据检查
-      data/                     配置、操作和时延 CSV
-      log/                      回归日志和检查结果
-vcs-rtl/                        VCS 编译列表与 Makefile
-```
+非AS关闭地址和量化参数深表，使用当前地址及批次参数。Per-tensor每Context仅使用第0组multiplier/shift并广播，另外三组关钟；ZP始终保留四项逐通道参数。参数c固定对应本地OC c，不按mask压缩。
 
-仓库提供VCS入口，从仓库根目录进入vcs-rtl后执行：
+Psum使用条件：`cim_os_cnt>1 || (cim_as_cnt>1 && act_bits>4)`。WS/单Context在tmp中融合Slice；AS A8/A16在Psum中保存各Context融合历史；OS>1还累加K Tile。OS1 WS64合法，OS1 AS16合法，AS17/AS64拒绝。三个count均为8bit、1～255，WS/AS不能同时大于1。
 
-```text
-cd vcs-rtl
-make com
-make sim
-make check
-```
+## 时钟与结果
 
-仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
+SRAM上升沿采样读写。同步读响应带sram_rd_valid，Macro编号随请求锁存；下一请求不改变当前响应。Macro在输入接受沿读权重，下一沿寄存计算结果，II=1。计算、SRAM访问、Hold更新时钟独立；归约转发按节点/OC门控，raw/INT8数据按对齐有效事件门控，valid保留清零尾沿。Context表采用整批门控。工艺ICG/SRAM映射及STA需由集成实现确认。
 
-## 术语与 Context
+Requant使用一级组合算术及输出寄存器，INT8 valid比raw晚1T，没有输出反压。公式：`clip_INT8(round(raw × multiplier × 2^shift) + zp)`，半整数远离零，shift范围−31～31。merged ZP逐通道，scale支持per-tensor/per-channel。
 
-**Context 是同一输出 channel 内独立保存、独立输出的一项计算任务。** 需要 Psum 时，Context 编号 c 对应 Psum[c] 的深度索引；不同 Context 的结果不相加。OUTPUT_BUFFER_DEPTH 是每个 channel 可保存的 Context 数。
+启用量化时每拍只允许一组、最多四个OC：W8八Macro归约，W4对齐四Macro组，W2对齐两Macro组。raw归约单测可关闭量化。中间tmp/Psum必须符合signed32范围；最终clip不修复历史回绕。
 
-- WS、ws=2：同一 Tile 的权重复用两次，两个不同完整 ACT 分别生成 Ctx0、Ctx1。
-- AS、as=2：同一完整 ACT 配合两个分别提交的权重地址，分别生成 Ctx0、Ctx1。
-- OS、os=2：每个 Context 内累加两个 K Tile；最终 Ctx0、Ctx1 仍分别输出。
+## 文档与测试
 
-OC 是 Macro 内的四个输出之一；归约组 group 与局部 OC 共同组成逻辑 channel，lane=4×group+OC。Tile 是一次 K 分块，os_cnt 为每个 Context 的 Tile 数。Slice A0..A3 是 ACT 每个元素的连续4-bit位段；一个 Plane 将256个元素的同一 Slice 打包为1024 bit。Slot 是 Macro 从一个 Plane 中选择的 K_row 个 digit 位段。
+- [调度、逐拍时序及容量](docs/Cluster_Input_Overlap.md)
+- [常规SRAM接口](docs/Cluster_Weight_SRAM_Interface.md)
+- [Requant参数、门控及数值范围](docs/Cluster_Requant.md)
+- [全部GEMM用例](docs/Cluster_GEMM.md)：11个正向矩阵、5个AS参数负向。
+- [TB结构和检查职责](docs/Testbench_Guide.md)
 
-Descriptor 是 cmd_i 携带的配置和权重地址。外部接受是 cmd_valid_i&&cmd_ready_o；内部发射是 ACT buffer 向 Macro 提交一次计算，二者有各自的周期。Bit fusion 将不同 Slice 的点积移位相加；acc 将同一 Context 的不同 K Tile 相加。tmp 是每 OC 唯一的中间结果寄存器，Psum 是按 Context 寻址的历史。raw 是未经 requant 的 signed32 结果；ICG 是集成时钟门控单元。
+`context_stress`覆盖224个OS1/WS64、OS1/AS16、OS2/WS8、OS2/AS8 case。`requant_buffers`覆盖77个固定Context场景、2912个raw和2912个INT8比对，检查参数接收与发射重叠。A4旁路、AS17/64拒绝、异步复位、mask和门控由独立专项检查。所有case开始打印英文时间戳和描述。
 
-WS中，ws_cnt仍表示完整ACT/Context数；每Tile复用该权重的内部计算拍数为 **P×ws_cnt**，P=A位宽/4。A16、ws_cnt=2是2个Context、8次计算，Psum深度按2个Context设置。单bank含ACT接收时，无空拍时本Tile占(P+1)×ws_cnt个时钟沿；计算拍数不等于这段总时间。
+## 附录 A 标准逐拍表
 
-计算符号：R=max(ws_cnt,as_cnt)是Context数，R_slice是原始归约结果；S是ACT包起始周期，D是内部路径时延，DEPTH=OUTPUT_BUFFER_DEPTH是Psum深度。W/A是权重/ACT位宽，K是归约组点积项数，K_row=256/W。DFF是边沿触发寄存器，latch是电平锁存器，MUX为选择器；bank是一组独立存储，entry是一项Context状态；SRAM存权重，Hold复用已读行；STA是静态时序分析，II是连续计算接受间隔。RTL为寄存器传输级描述，TB为测试平台，golden为独立预期结果，cluster_top是Cluster功能参考顶层，longint用于64-bit参考计算；packet为一份ACT及对应地址命令组成的包，EN/OC_MASK/split_mask分别简称三个descriptor mask字段。
-
-## 同包输入与发射重叠
-
-仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
-
-## OS1 AS 先融合与权重地址表
-
-仅 OS1 AS 采用 Context→Slice；OS>1 AS 保留 Slice→Context。两种 AS 均复用 64×8-bit 权重地址表。详见 [AS 融合与地址暂存说明](docs/Cluster_Input_Overlap.md)。
-
-三个 count 均为8 bit，取值1～255；WS/AS另受容量限制。0非法，256不可编码。descriptor总宽107 bit。
-
-## Cluster 接口
-
-方向以 Cluster 为视角。
-
-| 信号 | 方向与位宽 | 语义 |
-|---|---|---|
-| clock / reset | 输入，各 1 bit | 上升沿时钟，高有效异步复位 |
-| cmd_i | 输入，107 bit | 每个 Tile/Context 的完整 descriptor，含共享权重地址 |
-| cmd_valid_i / cmd_ready_o | 输入 / 输出，各 1 bit | Command 接受握手 |
-| act_data_i | 输入，1024 bit | 一个 Plane，含256个4-bit digit；首个命令接受沿为A0，随后连续采样A1..A(P−1) |
-| cim_cs_en / cim_wr_en | 输入，各 1 bit | 常规片选；wr_en=1 写、0 读 |
-| cim_macro_group / cim_bank_sel | 输入，1 / 2 bit | 拼接为 3-bit macro_id，选择八个 Macro 之一 |
-| cim_row_addr | 输入，8 bit | 所选 Macro 的四个 OC 共用行地址 |
-| cim_wmask | 输入，4 bit | 每位对应一个 32 B OC：1 屏蔽并保持，0 写入；读忽略 |
-| cim_wrdata / cim_rd_data | 输入 / 输出，各 1024 bit | 单个 Macro 的完整 128 B 权重行 |
-| requant_cfg_i | 输入，298 bit | conv_mode、scale模式、四项INT32 multiplier/INT10 shift/INT32 zp |
-| requant_data_o | 输出，256 bit | 寄存后的32个物理lane×INT8，按归约组位置发布，最多4个lane有效 |
-| requant_valid_o | 输出，32 bit | 对应lane的单拍量化valid，比内部raw valid晚1T，无下游反压 |
-
-raw_data/raw_valid为内部状态，RTL中的psum_data_o/out_valid_o端口声明已注释，仅供说明TB观察用途。TB通过层次引用建立同名别名；产品接口不连接raw Psum。
-
-ACT 没有独立握手信号。`cmd_fire=cmd_valid_i&&cmd_ready_o` 仅表示外部 descriptor 被接受。
-
-- WS/单 Context：每个 Tile、每个 Context 发送一次 i_cmd+A0，随后 P−1 拍连续提供剩余 Slice，P=A位宽/4。
-- AS：每个 Tile 仅加载一次完整 ACT；Ctx0 的 i_cmd 与 A0 同拍。Ctx1..Ctx(R−1) 分别通过后续 Command 提供自己的地址，可与 A1..A3 重叠；这些地址命令不重新加载 A0。所有 Context 的公共配置相同。
-- 首命令尚未接受时保持 Command+A0。首命令接受后，剩余 ACT Slice 每拍固定接收，与后续 cmd_valid/cmd_ready 无关。没有 ACT valid/ready pin。
-- 当前 Plane 和对应 Context 地址已收到，即可在下一拍内部发射；不等待同包后续 Plane 或地址。内部 phase 从 act_buffer[1024×phase+:1024] 读取，再按 slot 分给 Macro。
-- 单个4096-bit ACT buffer；当前包完成内部发射后，下一拍可接受下一包。内部发射期间不加载下一完整 ACT。
-
-A16、WS、ws=2：C0接受Ctx0 Command+A0，C1～C3接收A1～A3，C1～C4发射Ctx0；C5接受Ctx1 Command+A0，C6～C8接收A1～A3，C6～C9发射Ctx1。
-
-A16、AS、as=2：C0/C1接受Ctx0/Ctx1地址，C0～C3接收A0～A3。OS1在C1～C4发射Ctx0所有slice，C5～C8发射Ctx1；OS>1在C1～C8按Slice→Context交替发射。地址20/21由外部提供，硬件不自动递增。
-
-功能代码位于 RTL/cluster/rtl，验证代码位于 RTL/cluster/tb；完整目录说明见 [Cluster 目录说明](RTL/cluster/README.md)。TB 按职责拆分，文件索引、采样时序和各 case 的职责见 [Testbench 阅读指南](docs/Testbench_Guide.md)。
-
-## Cluster 常规 SRAM 读写
-
-`macro_id={cim_macro_group,cim_bank_sel}`，加 8-bit cim_row_addr 定位一个 Macro 的 128 B 行，四个 OC 各占 32 B。wmask=0000 全写、1111 全屏蔽，0010 只屏蔽 OC1；cim_cs_en=0 不写，读操作忽略 wmask。有效写入仅使所选 Macro 的权重 Hold 失效，写后计算必须刷新；全屏蔽写与原始读不使 Hold 失效。
-
-权重常规读写与计算分阶段；当前参考模型采用上升沿掩码写和使能组合读，非读期间返回零。物理 IP 的读回时序仍待冻结。接口、寻址、模型时序和完整测试入口见 [常规权重 SRAM 规格](docs/Cluster_Weight_SRAM_Interface.md)。
-
-仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
-
-## ACT buffer 容量与适用条件
-
-单个完整ACT最多256个元素，每元素最多16 bit，需求为256×A位宽，即A4/A8/A16分别为1024/2048/4096 bit。固定4096-bit bank足够覆盖七种精度；每Tile WS实际计算拍数依次为ws_cnt、2×ws_cnt、ws_cnt、2×ws_cnt、4×ws_cnt、2×ws_cnt、4×ws_cnt。
-
-- WS/单Context：一次只存一个Context的完整ACT，发完P个phase后释放，再接收下一份，容量不乘ws_cnt。
-- AS：一次只存一个Tile的完整ACT，保持到全部Context的全部phase发完，容量不乘as_cnt；各Context地址另存8×WGT_RADDR_BUFFER_DEPTH-bit地址表。
-- OS：Tile按顺序接收，前一 ACT 包消费后的计算结果已进入Macro/后级流水和tmp/Psum，容量不乘os_cnt。
-- slot读取必须落在256个digit内，相同slot表示相同ACT数据；EN、OC mask和split不会额外增加ACT份数。W8A16八Macro全归约K256占满4096 bit。
-
-以上适用于1≤max(ws,as)≤MAX_CONTEXTS；当 仅 os>1 需要 Psum 时，还要求 max(ws,as)≤OUTPUT_BUFFER_DEPTH，ws/as不同时大于1，首Command遵守cmd_ready_o，接受后ACT尾部Plane固定连续到达。单bank在内部发射期间不能接收下一完整ACT；容量足够，但不支持输入下一包与当前包内部发射重叠。AS仅在轮到尚未收到地址的Context时暂停发射，保持phase/Context不变，等待不会增加容量。
-
-`CASE=act_buffer` 验证280个容量case：七精度×两种符号×os=1/2×单Context/WS2/AS2/WS16/AS16×有无Command空拍；各Plane覆盖全部256个digit、K256。独立监视整块ACT bank的写入和保持，检查AS地址命令不重装A0、当前Plane/地址有效才发射、后续输入与当前发射重叠、内部消费期间不被下一包覆盖。depth<16时只运行可容纳的单Context/双Context，共168例。
-
-## Descriptor
-
-| 字段 | 位宽 | 定义 |
-|---|---:|---|
-| os_cnt | 8 | 每个 Context 的完整 K Tile 数，最小 1 |
-| ws_cnt | 8 | WS完整ACT/Context数，最小1；每Tile实际计算P×ws_cnt拍 |
-| as_cnt | 8 | AS 复用的 Context 数，最小 1 |
-| reduce_split_mask | 7 | 物理归约树 split 配置，bit0 为根 |
-| macro_en_mask | 8 | bit m 使能 Macro m 的贡献 |
-| macro_oc_mask | 32 | bit 4*m+c 使能 Macro m 的 OC c |
-| weight_cim_raddr | 8 | 八个 Macro 共用的权重读地址，不自动递增 |
-| act_slot_sel | 24 | 每个 Macro 一个 3-bit slot 编号 |
-| precision | 3 | 0..6 的精度编码 |
-| signed_en | 1 | 0=UINT×UINT，1=INT×INT |
-
-`ws>1,as=1` 为 WS；`as>1,ws=1` 为 AS；`ws=as=1` 为单 Context。不支持 ws/as 同时大于 1。一个批次内 precision、符号、counts、split、mask、slot 固定，地址按每条外部 Command 采样并保留到内部发射。
-
-## 精度与 ACT slice
-
-| precision | W / A | K_row=256/W | phase 数 | ACT 顺序 |
-|---:|---|---:|---:|---|
-| 0 | W2A4 | 128 | 1 | A0 |
-| 1 | W2A8 | 128 | 2 | A0、A1 |
-| 2 | W4A4 | 64 | 1 | A0 |
-| 3 | W4A8 | 64 | 2 | A0、A1 |
-| 4 | W4A16 | 64 | 4 | A0、A1、A2、A3 |
-| 5 | W8A8 | 32 | 2 | A0、A1 |
-| 6 | W8A16 | 32 | 4 | A0、A1、A2、A3 |
-
-`A0=ACT[3:0]`，`A1=ACT[7:4]`，`A2=ACT[11:8]`，`A3=ACT[15:12]`。`act_data_i[4*k+:4]` 是第 k 个 digit。INT 仅最高有效 slice 按 signed4 解释，其余为 unsigned4；UINT 全部为 unsigned4。
-
-一个完整 ACT 的数值为 `Σ_p digitA[p]×2^(4p)`。权重由 2-bit digit 重组，INT 的最高有效权重 digit 为 signed2，其余为 unsigned2。
-
-## Macro 与权重存储
-
-每个 Macro 包含 256 条 1024-bit 权重行；每行四个 OC，各占 256 bit。共享读地址选中八个独立 SRAM 的同一行号，各 Macro 的权重内容独立。
-
-SingleMacro 接受一个 ACT digit phase 后，下一拍给出四路 signed18 局部和，II=1。`cim_ren` 控制本拍计算，`cim_oc_mask` 选择 OC；内部 `cim_phase` 随当前 ACT slice 推进。
-
-同地址且 Hold 有效时 `cim_station=0`，复用已保存的权重行；首次读取、换地址或该 Macro 写权重后使用 `cim_station=1` 刷新。预加载和计算按 testbench 分阶段执行。详细 Macro 接口与数值结构见 [SingleMacro 说明](RTL/macro/README.md)。
-
-## Slot 与标准 K128 映射
-
-Macro m 从 Plane 的 `slot[m]×K_row` 起读取 K_row 个 digit。每个归约组中，有效 Macro 的 slot 不重叠。附录每个 Tile 的有效 K 为 128，ACT 使用低 128 个 digit，高 512 bit 补零。
-
-| 权重精度 | slot[0]..slot[7] | split_mask | EN | 物理终点 |
-|---|---|---|---|---|
-| W2 | [0,1,0,1,0,1,0,1] | 7'h07 | 8'h55 | pair |
-| W4 | [0,1,2,3,0,1,2,3] | 7'h01 | 8'h33 | quad |
-| W8 | [0,1,2,3,4,5,6,7] | 7'h00 | 8'h0F | root |
-
-OC mask 为 `32'hFFFF_FFFF`。物理终点由 split 决定，不因某些 Macro 未启用而改变树深。channel=`4*group+OC`，group 按物理组从左到右编号。
-
-## 归约与时延
-
-归约只合并同一输出、同一 Context/Tile/phase 的 Macro 贡献。不同 Context、group 和 OC 不相加。根节点为 bit0，左右 quad 为 bit1/2，四个 pair 为 bit3..6；bit=1 表示拆分，bit=0 表示本节点合并。未访问的后代 split 位为 0，共 26 种规范编码。
-
-每个 Macro 的 OC mask 独立配置。每个 merge 节点固定采用其覆盖范围内最左侧 Macro 的 mask：t3/t4/t5/t6 分别取 M0/M2/M4/M6，t1/t2 分别取 M0/M4，t0 取 M0。即使最左侧 Macro 未使能，也不改选其他 Macro；例如 t5、t2 均取 M4，而不是将组内 mask 做 OR。Macro 本地计算仍使用自身 mask。
-
-设 `left(t_i)` 为该节点覆盖范围内最小的 Macro 编号，则 `oc_mask(t_i)=macro_oc_mask[4*left(t_i)+:4]`。例如 M4 与 M5 的 mask 不同时，t5 沿用 M4；t2 合并 t5、t6 时继续沿用左子树 t5 的 mask，因此仍为 M4。其他组内 Macro 的 mask 不能重新打开 M4 已屏蔽的 OC。
-
-mask 逐级生效：被子节点屏蔽的 OC 不向父节点贡献数据；父节点只合并有效子树，不能读取被门控寄存器的旧数据。节点输出还要求其子树中存在有效且使能的贡献。转发 DFF 的 ICG、终点 tap、输出 lane 预留和批次完成判断遵循同一有效性规则。若所有输出都被屏蔽，该批次在内部输入全部发射后完成，不发布 out_valid_o。
-
-`CASE=reduce_tree` 的 208 例独立递归参考测试覆盖 26 种树、不同 EN 和不一致的 OC mask；本地 `CASE=oc_merge` 另运行 288 例，覆盖 pair/quad/root/混合终点、最左侧 Macro 关闭、全屏蔽批次以及 WS/AS/OS 连续复用。
-
-VCS 编译后可在 `vcs-rtl` 执行 `make sim PVALUE=+OC_MERGE_TEST` 单独运行该专项测试，成功标志为 `PASS oc_merge_leftmost cases=288`。该专项按固定最左侧 Macro 的 mask 检查输出数值和有效性。
-
-归约终点从向父级转发 DFF 前取数。pair 终止时关闭相应 t3..t6；quad 终止时关闭相应 t1/t2；仅继续归约时打开转发 DFF。根结果进入通用 tmp，无额外 root-only 输出级。
-
-| 归约终点 | Macro 发射 | tmp 捕获 / WS、OS1 AS fusion | OS>1 AS fusion、acc、Psum 写回或输出 |
-|---|---|---|---|
-| 叶子 / pair | Cq | C(q+2) | C(q+3) |
-| quad | Cq | C(q+3) | C(q+4) |
-| root | Cq | C(q+4) | C(q+5) |
-
-标准 W2/W4/W8 从末次内部发射到 raw 完成为3T/4T/5T。每个 OC 的结果在自身终点写回时立即独立发布，`out_valid_o[oc]` 置位一拍；混合树浅层 OC 不等深层，无整 Context 装配等待。外部 ACT 收集、地址命令等待及包间接收时间需另计。
-
-## tmp bit fusion 与 Psum acc
-
-每个 channel=4×group+OC 只有一个 tmp 数据寄存器，以及深度为 OUTPUT_BUFFER_DEPTH 的 Psum buffer。每 OC 共用一套 fusion 和一套 acc 组合块，所有 Context 共享；同一 OC 每拍最多更新一个 Context entry。不同 OC 可独立处理各自到达的 Context。
-
-令 R_slice 为当前原始归约 slice，P[c] 为 Context c 的 Psum。WS/单 Context 和 OS1 AS 的 tmp 保存当前 Tile 的融合前缀；OS>1 AS 的 tmp 保存当前原始 R_slice。
-
-- WS/单 Context 与 OS1 AS：A0 在 C(q+D−1) 用 R_slice 覆盖 tmp；A1..A3 在写 tmp 前计算 `tmp+(R_slice<<(4*phase))`。C(q+D) 消费这个 tmp；os=1 的最后 phase 直接输出，Psum 关闭；os>1 的最后 phase 将首 Tile 的 tmp 填充 P[c]，后续 Tile 执行 `P[c]+tmp`。非最后 phase 不写 Psum。
-- OS>1 AS：先在 C(q+D−1) 把 R_slice 写入唯一 tmp，C(q+D) 更新当前 P[c]。首 Tile/A0 填充；后续 Tile/A0 做 `P[c]+tmp`；A1..A3 做 `P[c]+(tmp<<(4*phase))`。该路径保留 Slice→Context 调度，不使用 OS1 的逐 Context 融合方式。
-
-WS 与 OS1 AS 的 fusion 与 acc 分属 tmp 两侧的相邻流水级，同一结果不串联经过这两个加法器。WS 与 OS1 AS 的归约末级逻辑与 fusion 在 tmp 前可能形成串联路径，需要 STA。OS>1 AS 在 tmp 后每拍只选择 fusion 或 acc；未使用组合块的两个输入均隔离为零。WS 处理旧 tmp 的 acc 时，可以同时融合下一条归约数据并写入同一个 tmp，DFF 上升沿使用旧值。
-
-OS1 AS 同 Context 的相邻 slice 连续发射；OS>1 AS 的相邻 slice 间隔为 n 个有效发射周期，n=as_cnt；相邻 Tile 的同一 Slice 间隔为 1+n×P，P=A位宽/4；包含下一包的 ACT/地址收集时间。OC 并行计算，不乘 OC 数。
-
-## 8-bit count 边界验证
-
-三个count均为8 bit，0非法、256不可编码；OS最多255个K Tile，仍需满足signed32数值范围。WS/AS的实际上限由容量决定。`make regression`包含12个OS255非零累加case和3个零count拒绝case；专项可用`+OS_COUNT_LIMIT_TEST`或`+ZERO_COUNT=0/1/2`选择。完整回归包含76个suite，其中48个为预期拒绝。
-
-## 大 Context 与 Psum 容量专项
-
-专项分别运行 OS1/WS64、OS1/AS64、OS2/WS8 和 OS2/AS8，WS/AS 不同时大于 1。Psum 深度固定为 16。`WGT_RADDR_BUFFER_DEPTH=64` 定义供所有 AS 模式共用的 64 项权重行地址表，每项仅 8 bit，共 512 bit（64 B）；`MAX_CONTEXTS=64` 定义标签/完成状态容量，二者与 Psum 深度独立。
-
-OS1 AS 采用 Context→Slice：先在每 OC 唯一 tmp 中融合一个 Context 的全部 slice，再切换 Context。因此 OS1 AS64 的 A4/A8/A16 全部合法，不读写 Psum。OS>1 AS 采用 Slice→Context 顺序：同一 slice 遍历所有 Context，再进入下一 slice，融合历史及跨 Tile 累加仍保存在 Psum。OS2 AS8 合法，OS2 AS64 仍超过 Psum 深度 16。
-
-OS1 和 OS>1 的 AS 都需要地址表：OS1 在同一 Context 的多个 slice 间保持地址，再切换下一个地址；OS>1 每轮 slice 都重访各 Context 地址。表中保存行号，不保存权重数据，权重仍预先装载在 Macro SRAM；不需要为八个 Macro 各复制一份表，因为计算端使用共享 8-bit 行地址。
-
-正向共 224 例：OS1 WS64、OS1 AS64、OS2 WS8、OS2 AS8 各 56 例，覆盖七精度、UINT/INT、随机/交替极值及有无 Command 空拍。OS1 AS64 检查所有 64 个 Context 的结果，且 Psum 整批保持关闭。另有 14 个 OS2 AS64 容量负向例（七精度×两种符号），以及地址深度 32、标签容量 32 时请求 AS64 的各两例，要求命中各自准确诊断。
-
-VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](vcs-rtl/README.md)。
-
-默认地址表与标签容量均为 64，Psum 深度为 16；VCS 可用 `make sim PVALUE=+CONTEXT_STRESS_TEST` 选择正向专项。`+CONTEXT_CAPACITY_TEST` 默认验证 OS2 AS64；`+CAPACITY_PRECISION=0..6` 和 `+CAPACITY_SIGN=0/1` 选择精度与符号。组合使用 `+ADDRESS_CAPACITY_TEST` 或 `+METADATA_CAPACITY_TEST` 验证 OS1 AS64 的独立资源限制，参数相应配置为 32。完整自动判定由 Python 入口执行。
-
-## Buffer 深度与 ICG
-
-OUTPUT_BUFFER_DEPTH 默认16，仅设置每 OC 的 Psum Context entry 数；tmp 每 OC 固定一个。Context 数不超过 MAX_CONTEXTS（默认64）；AS 另受 WGT_RADDR_BUFFER_DEPTH（默认64）限制，只有 os>1 时还受 OUTPUT_BUFFER_DEPTH 限制。RTL 最小深度1，完整六种标准配置需要至少2。输出逐 OC 发布，无输出反压。
-
-首条 Command 接受时锁定深度掩码：仅 os>1 需要 Psum，仅开放低 max(ws,as) 个 entry；高地址 entry 整批关闭。所有 os=1 模式全部关闭 Psum。掩码保持至全部 Context 的有效 channel 发布完成。
-
-`tmp_input_cg_en` 在 tmp 捕获前一拍寄存。`psum_cg_en[d][l]` 在 tmp 捕获时按已对齐的 Context/phase 标签寄存，供下一拍的 Psum 写回：OS>1 AS 每个有效 phase 选当前 Context，WS 仅 os>1 的最后 phase 选当前 Context，OS1 AS 不写 Psum。每 OC 的 Psum 门控请求至多一位有效，其他深度保持。ICG 使用 MacroClockGate 模型，ASIC 需映射工艺库 cell。
-
-复位清除控制、valid、标签和状态，不清除权重 SRAM。最终 RAW 为 signed32；参考计算使用 longint 避免中间截断，最终溢出时报错。
-
-## 六种配置与验证
-
-| 附录 / case | os | ws | as | 调度 |
-|---|---:|---:|---:|---|
-| A1 / 1 | 1 | 1 | 1 | 单 Tile、单 Context |
-| A2 / 2 | 1 | 1 | 2 | 单 Tile、AS 两个 Context |
-| A3 / 3 | 1 | 2 | 1 | 单 Tile、WS 两个 Context |
-| A4 / 4 | 2 | 1 | 1 | 两 Tile、单 Context |
-| A5 / 5 | 2 | 2 | 1 | 两 Tile、WS 两个 Context |
-| A6 / 6 | 2 | 1 | 2 | 两 Tile、AS 两个 Context |
-
-WS/单 Context、OS1 AS 顺序为 Tile→Context→phase；OS>1 AS 为 Tile→phase→Context。C0 为首个外部 i_cmd+A0 的接受沿。令 R=max(ws,as)、P=A位宽/4，D 为内部路径延迟；无外部空拍时：
-
-- WS/单 Context：第 t 个 Tile、第 c 个 Context 的包起点 S=(t×R+c)×(P+1)；ACT Aphase 在 C(S+phase) 接收，内部在 C(S+1+phase) 发射。
-- AS：第 t 个 Tile 包起点 S=t×(1+R×P)；第 c 个地址命令在 C(S+c)，ACT Aphase 在 C(S+phase)，OS1 内部在 C(S+1+c×P+phase) 发射，OS>1 内部在 C(S+1+phase×R+c) 发射。
-- 整批末次内部发射：WS 为 C(os×R×(P+1)−1)，AS 为 C(os×(1+R×P)−1)；最后 raw 再加 D。地址有空拍时，下一次发射取上一发射后一拍、当前Plane接收后一拍、当前地址接收后一拍三者的最晚沿；已完成的发射不顺延。
-
-默认回归为1368个 Cluster case，另有208个归约门控、24个混合Context、12个完整ACT与280个ACT容量定向case；检查140个 Context 输出周期和480个标准运算事件。EN=FF 时每符号在七种 precision 下的合法 split 数为1、1、16、16、16、25、25，要求每组有效 K<256。
-
-验证包含 Command 停顿、完整 ACT 加载后外部 ACT 变化时的 buffer 复用、ICG 时钟、关闭 DFF 保持和高地址深度关闭。Requant 专项检查独立整数向量、集成、配置边界和复位行为；raw-only case 检查原始计算结果，量化 case 同时检查 INT8 输出。实现为仿真参考顶层，未进行综合/STA/门级功耗验证。
-
-## Cluster 数据 DFF 位置
-
-以下按当前SV数据寄存器位宽统计，DEPTH=OUTPUT_BUFFER_DEPTH；tmp/Psum均为32 bit。组合参考计算及TB golden中的longint为64 bit，不计为数据DFF。范围限 Cluster adapter 与 reduce tree，八个 SingleMacro 的内部 ACT/weight/计算寄存器另计。这是静态功能数据存储的 bit 数，不是综合后的最终 cell 数。时钟门控只停止更新，不减少已实例化的 DFF 数量。
-
-| 位置 | 实例或数组 | 数量×位宽 | 数据 DFF bit |
-|---|---|---|---:|
-| 完整 ACT 保存 | act_buffer | 4×1024 | 4096 |
-| pair 转发级 | t3..t6 的 result_q | 4节点×4 OC×19 | 304 |
-| quad 转发级 | t1/t2 的 result_q | 2节点×4 OC×20 | 160 |
-| 唯一 tmp | tmp_result | 32 OC×32 | 1024 |
-| Context Psum | psum[d][l] | DEPTH×32 OC×32 | 1024×DEPTH |
-| Raw 输出保持 | raw_data | 32 OC×32 | 1024 |
-| INT8 输出保持 | requant_data_o | 32 OC×8 | 256 |
-| 合计 | 不含控制/标签/计数器 | 6864+1024×DEPTH | DEPTH=16时23248 |
-
-raw_data保留32-bit/OC，逐OC发布并保持到下次发布。requant_data_o为8-bit/OC，共256bit输出寄存器，valid比raw晚1T；raw直接进入组合Requant。298-bit配置包含conv_mode、requant_mode、四组INT32 multiplier/INT10 shift及四项INT32 zp。合并输入补偿后的zp仍为per-channel，与OC0～3固定对应。启用Requant只允许一个归约组、最多4OC；per-tensor取第0项scale，per-channel各取对应项。AS4保存512bit zp和672bit scale。
-
-归约树 root 没有独立转发 DFF；fusion 与 acc 是组合块，二者之间使用唯一 tmp，没有额外 tmp 历史数组或 acc 中间 buffer。raw_data 是现有输出保持寄存器，与 tmp/Psum 分开计数。
-
-AS 地址表 context_address 为8×WGT_RADDR_BUFFER_DEPTH bit，默认64×8=512 bit，供所有 AS 模式共用，计入控制。另有 ACT Slice 有效位与接收计数。其余控制包括 valid、phase/Context/Tile 标签、Command 流水、批次状态、权重 Hold 地址/有效位及 ICG 请求等控制寄存器。Psum写请求为32×DEPTH bit、深度掩码为DEPTH bit、tmp请求为32 bit；reduce tree 的有效节点总使能为6 bit、逐OC请求为24 bit，另有两级48-bit控制流水。参考顶层 的 int/完整 descriptor 标签和验证计数不作为优化后的控制面积估算。MacroClockGate 内部的 enable_latched 是 latch，不计为 DFF；未使用组合信号也不计存储。
-
-## tb_Cluster 测试 case
-
-测试入口为 [tb_Cluster.sv](RTL/cluster/tb/tb_Cluster.sv)。
-
-**一个 case 的含义：** 调用一次 `run_case`，按固定参数跑完一批完整计算，依次经过四个阶段：
-
-1. **权重预加载：** 按本 case 的 Tile 数和 Context 数，把所有用到的权重行写入对应地址，预加载完成后才开始计算。
-2. **输入发射：** 外部发送 os×r 条 Command；WS发送os×r个完整ACT，AS发送os个完整ACT。每个ACT为P个连续Plane。当前Plane/地址就绪后内部按WS（Tile→Context→phase）或AS（OS1 为 Tile→Context→phase，OS>1 为 Tile→phase→Context）发射os×r×P次计算。
-3. **逐拍监视：** 四个独立监视器（数值、运算历史、时钟门控、完整ACT bank）全程比对 DUT 与独立参考模型。
-4. **结果核对：** 检查每个 OC 脉冲的到达时刻、数值与同 OC 的 Context 顺序，最后确认全部 lane 均已发布且批次关闭。
-
-一个 case 内 precision、符号、split、EN/OC mask、slot、counts、pattern 全部固定；case 之间不复位；权重保持状态可保留，批次配置、Context 计数和状态有效性按批次重新建立。case 行为由 SEED 决定，可精确重现。
-
-### 默认参数
-
-| 参数 | 默认值 | 含义 |
-|---|---|---|
-| EN_MASK | 8'hFF | 八个 Macro 全部使能 |
-| OC_MASK | 32'hFFFF_FFFF | 32 个 OC 全部使能 |
-| OS_TILES | 1 | suite 1 的 Tile 数（1..14） |
-| PATTERNS | 6 | suite 1 使用的数据 pattern 数 |
-| OUTPUT_BUFFER_DEPTH | 16 | 每 channel Context 状态深度 |
-| SEED | 32'h19E2_A407 | pattern 0 的 xorshift 种子 |
-
-七种精度均测试 UINT×UINT 和 INT×INT；不包含混合符号乘法。
-
-### 默认回归的四类 suite（共 1368 case）
-
-| suite | 名称 | case 数 | (os,ws,as) | Context 数 | pattern | 压力注入 |
-|---:|---|---:|---|---|---|---|
-| 1 | split 穷举 | 1200 | (OS_TILES,1,1)=(1,1,1) | 1 | 0..5 | pattern 0 的 case 插入 Command 空拍 |
-| 2 | 六种标准配置 | 84 | A1..A6 | 1..2 | 0 | 无 Command 空拍，同包接收与发射可重叠 |
-| 3 | Command 空拍与多 Context 交错 | 28 | WS (2,r,1)、AS (2,1,r) | 6 | 0 | 空拍 |
-| 4 | 三 Tile 极值与历史保持 | 56 | WS (3,r,1)、AS (3,1,r) | 3 | 4、5 | 空拍 |
-
-合计 `1200+84+28+56=1368`。pattern 编号见下文“六种输入数据 pattern”；各类的展开与检查重点如下。
-
-#### suite 1：split 穷举（1200 case）
-
-**目的：** 用全部 26 种规范归约树覆盖各种 Macro 分组与归约终点组合的数值正确性。
-
-case 按三个维度展开：
-
-1. **配置：** 从 7-bit split_mask 的 128 个值中取 26 种规范树，再按每个归约组 `K=有效 Macro 数×(256/W)<256` 筛出合法 split。使用 `(os,ws,as)=(OS_TILES,1,1)`，默认单 Tile 单 Context；组内有效 Macro 按 Macro 编号分配不重叠 slot，编号从 0 开始。
-2. **符号：** 每个合法 split 运行 UINT×UINT 与 INT×INT 两种符号。EN=FF 时合法 split 数见下表，共 200 个配置。
-3. **数据：** 每个配置运行 6 种数据 pattern，得 `200×6=1200` 个 case。pattern 0 的 case 在每个完整ACT包前插入 (Tile+Context)%3 个空拍；AS 后续地址命令前另插入 Context%3 个空拍。已开始的 ACT A1..A3 连续接收。
-
-| precision | W/A | 每符号合法 split | 两种符号×6 pattern case 数 |
-|---:|---|---:|---:|
-| 0 | W2A4 | 1 | 12 |
-| 1 | W2A8 | 1 | 12 |
-| 2 | W4A4 | 16 | 192 |
-| 3 | W4A8 | 16 | 192 |
-| 4 | W4A16 | 16 | 192 |
-| 5 | W8A8 | 25 | 300 |
-| 6 | W8A16 | 25 | 300 |
-
-每个配置的 precision、符号、split、EN、OC、slot 和各组 K 记录在 [split_cases.csv](RTL/cluster/tb/data/split_cases.csv)，不逐行记录 pattern 与其他三类 suite。`data/buffer_cycle_cases.csv` 的 1200 个组合是这 200 个配置再展开六种 WS/AS/OS 调度后的逻辑时序清单，与本 suite 的 1200 个数据 pattern 仿真 case 含义不同。
-
-#### suite 2：六种标准配置（84 case）
-
-**目的：** 在标准 K128 映射（上文 W2/W4/W8 的 split、EN、slot 表，OC 全开）下检查附录 A 的无停顿逐拍时序。
-
-- 展开：7 种精度×2 种符号×6 种 `(os,ws,as)`，依次为 `(1,1,1)`、`(1,1,2)`、`(1,2,1)`、`(2,1,1)`、`(2,2,1)`、`(2,1,2)`，对应附录 A1..A6；每 Tile K=128，ACT 高 512 bit 补零。
-- 数据：固定随机 pattern 0。
-- 发射：不注入额外 Command 空拍；核对完整 ACT 接收、AS 地址收集、内部发射的实际周期与上文包时序公式。无空拍时包内连续发射，且与同包后续输入重叠；包间仍保留新包首输入的一拍发射间隔。
-- 副产物：本 suite 的每个运算写回拍选一个有效 channel 写入 [buffer_operations.csv](RTL/cluster/tb/data/buffer_operations.csv)，默认回归共 480 条（对应 84 个 case 的运算事件），记录操作类型、tmp、fusion/acc 操作数、结果与完成标志；`时延观察器` 时由独立观察器把 140 个无停顿 Context 输出周期写入 [latency_audit.csv](RTL/cluster/tb/data/latency_audit.csv)（每精度×符号下六配置共 10 个 Context，7×2×10=140）。
-
-#### suite 3：Command 空拍与多 Context 交错（28 case）
-
-**目的：** 让多个 Context 的各 OC 结果同时在途，检查同 OC 按 Context 顺序逐拍发布与结果顺序。
-
-- 展开：7 种精度×2 种符号×WS/AS。Context 数 `r=min(6,16,OUTPUT_BUFFER_DEPTH)`，默认 6；WS 用 `(2,r,1)`，AS 用 `(2,1,r)`。
-- 空拍：完整 ACT 包前插入 (Tile+Context)%3 个空拍；AS 的后续地址命令前插入 Context%3 个空拍。ACT 后续 Slice 固定连续接收。
-- 数据：固定随机 pattern 0。
-
-#### suite 4：三 Tile 极值与历史保持（56 case）
-
-**目的：** 在三 Tile×三 Context 交错与空拍条件下，检查 fusion/acc 历史不被后续写入覆盖，覆盖符号极值位型的组合。
-
-- 展开：7 种精度×2 种符号×WS/AS×pattern 4/5。os=3，Context 数 `r=min(3,OUTPUT_BUFFER_DEPTH)`，默认 3；WS 用 `(3,r,1)`，AS 用 `(3,1,r)`。
-- 数据：pattern 4/5 按元素在 lo/hi 间交替，ACT 和 weight 使用各自带偏移的元素索引，乘积符号由配对关系决定；不能保证同一 case 全部乘积同号。
-- 压力：空拍注入方式与 suite 3 相同。
-
-### 六种输入数据 pattern
-
-pattern 同时决定 ACT 和 weight 的取值，各按自身精度位数采样。令 INT 的 hi=2^(b-1)−1、lo=−2^(b-1)（b 为该侧位宽），UINT 的 hi 为全 1、lo 为 0：
-
-| pattern | ACT | weight | 覆盖目的 |
-|---:|---|---|---|
-| 0 | xorshift 伪随机位模式（SEED） | 同 ACT | 随机覆盖 |
-| 1 | 全 0 | 全 0 | 零输入 |
-| 2 | hi | hi | 单一极值位型（INT 最大正整数、UINT 全 1） |
-| 3 | lo | lo | 另一侧极值位型（INT 最小负整数、UINT 全 0） |
-| 4 | 偶数 lo、奇数 hi | 偶数 lo、奇数 hi | 各自索引上的 lo/hi 交替 |
-| 5 | 偶数 lo、奇数 hi | 偶数 hi、奇数 lo | weight 交换 lo/hi 的交替 |
-
-交替项的 index 是数据生成函数的元素索引，不是输入周期：ACT 的 index=digit 序号 k+7×Context 序号+Tile 序号（AS 复用 Context 复制 Ctx0 的 ACT）；weight 的 index=K_row 内序号 j+7×Macro 序号+3×OC 序号+Tile 序号+11×预加载 Context 序号（WS/单 Context 恒为 0）。
-
-UINT W8A16 的 ACT 另外取模 `32768/os`，使全正极值和不超出 raw signed32；这部分 case 不覆盖完整 UINT16 数值范围。raw golden 超出 signed32 直接报错；最终合法raw经过Requant，单独检查INT8舍入和裁剪。
-
-### 每个 case 检查什么
-
-| 类别 | 内容 |
-|---|---|
-| 数值与有效通道 | 用完整 ACT/weight 整数独立计算点积（longint 无中间截断），逐 channel 比较 out_valid_o 脉冲与发布值；检查 OC mask、同 OC 的 Context 顺序，输出无丢失、重复、乱序 |
-| 发射与输入 | WS 的 Tile→Context→phase、AS 的 OS1 Tile→Context→phase、OS>1 Tile→phase→Context 发射顺序；权重地址 `8'h20+16*Tile`（AS 再加 Context 号）；逐 digit 比对 DUT 实际采样的 ACT Plane；完整ACT加载后改变外部ACT，确认内部发射逐digit使用act_buffer；首Command被阻塞时保持Command+A0，后续Slice连续采样 |
-| 到达时延 | 每个 channel 按自身归约终点在末次内部发射后3T/4T/5T 写回并独立发布 out_valid_o 脉冲，不提前、不迟到；混合树各通道分别到达、分别发布 |
-| 中间运算状态 | 逐 phase 检查 WS/OS1 AS 唯一 tmp 的融合前缀、OS>1 AS 的 Context Psum 历史；所有 os=1 模式全关 Psum；OS>1 AS 同拍 fusion/acc 二选一，WS/OS1 AS fusion 在 tmp 前、acc 在 tmp 后；未用加法器的两个输入隔离为零 |
-| 时钟门控与保持 | 独立预测 唯一 tmp 输入/Psum 的 ICG 使能并比对实际门控时钟；被门控 DFF 数据保持不变；os>1 批次的高地址 Context entry 整批关闭 |
-| 发布与批次边界 | 每个 OC 写回即发布一拍，lane 数据保持到该 OC 下次发布，同 OC 按 Context 顺序；权重复用覆盖计数非零；结束时检查全部 lane 已发布、批次关闭、无多余输出，tmp/fusion/acc 各路由与门控路径覆盖齐全 |
-
-### 验证入口与结果
-
-VCS 使用 `make run CASE=cluster_default`；附加场景与参数见 [VCS case 说明](vcs-rtl/README.md)。
-
-- [split_cases.csv](RTL/cluster/tb/data/split_cases.csv)：suite 1 每个配置一行（precision、符号、split、EN、OC、slot、各组 K），默认 200 行；不逐行记录 pattern 与其他三类 suite。
-- [external_inputs.csv](RTL/cluster/tb/data/external_inputs.csv)：396条标准外部输入事件，分别记录Command接受、地址、ACT采样及1024-bit数据；act_sample仅为日志标记，并非外部pin。
-- [buffer_operations.csv](RTL/cluster/tb/data/buffer_operations.csv)：suite 2 的逐拍运算记录，默认回归 480 条，compute_cycle 字段为相对首个输入的运算写回拍号、精度、Tile/Context/phase、操作类型、tmp、fusion/acc 操作数、结果与完成标志。
-- [latency_audit.csv](RTL/cluster/tb/data/latency_audit.csv)：独立观察器记录的 140 个标准 Context 输出周期；[核对报告](RTL/cluster/tb/log/latency_audit_validation.log) 按六种配置公式逐条核对输入到输出周期。
-
-`CASE=reduce_tree` 另外运行 [tb_ClusterReduceTree.sv](RTL/cluster/tb/tb_ClusterReduceTree.sv)，不计入上述 1368 个 Cluster case。8 种 EN（FF、0F、F0、55、AA、81、01、00）×26 种规范 split=208 个 case，OC 按 case 序号轮换 FFFFFFFF、84218421、12345678；检查三级终点的数据与有效 mask、t1..t6 转发 DFF 的门控与保持、下游加法器被门控时的数据保持。这是独立归约树单测，不应用 Cluster 的 K<256 精度限制。
-
-### 完整 ACT 与混合 Context
-
-`CASE=full_act` 验证12个 W8A16 定向case：两种符号×os=1/2×单Context/WS2/AS2。EN=FF、split=00、slots=[0,1,2,3,4,5,6,7]，使用完整256个ACT digit、四个1024-bit Plane和八个Macro root归约（K=256），检查全部4096-bit ACT存储及分发。此定向suite独立于默认K<256穷举。
-
-### 混合 Context
-
-`CASE=mixed_context` 验证24个定向 case：W4A4/A8/A16×两种符号×os=1/2×WS/AS双 Context。split=03、EN=55、slots=24'h040000、OC全开，同一树中同时存在 pair 与 quad 终点，检查不同 Context 的 channel 同拍发布。内部 raw_context 按 lane 保存，仅用于验证；外部接口不含 Context pin。默认1368个 case 的编号和计数保持独立。
-
-仿真使用 [VCS case 入口](vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
-
-FSDB 由 `CLUSTER_FSDB` 编译宏控制，VCS Makefile 默认开启。`OUTPUT_BUFFER_DEPTH` 控制每 OC 的 Psum Context 深度；输出采用 valid-only 接口，不支持下游反压。
+以下42组为raw调度/算术表，C0为首Command+A0接受沿；标准W2/W4/W8从内部发射到raw的D=3/4/5T。各表中的split/EN用于raw归约测试，不代表全部符合Requant单组限制。合法量化配置的输出比对应raw晚1T。
 
 ### A1 单 Context os=1 ws=1 as=1
 每 Tile K=128；每 Context 总 K=128。
 
-#### precision=0 W2A4
+#### cim_precision=0 W2A4
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -444,7 +63,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C1，raw 完成 C4。
 
-#### precision=1 W2A8
+#### cim_precision=1 W2A8
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -463,7 +82,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C2，raw 完成 C5。
 
-#### precision=2 W4A4
+#### cim_precision=2 W4A4
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -480,7 +99,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C1，raw 完成 C5。
 
-#### precision=3 W4A8
+#### cim_precision=3 W4A8
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -499,7 +118,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C2，raw 完成 C6。
 
-#### precision=4 W4A16
+#### cim_precision=4 W4A16
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -522,7 +141,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C4，raw 完成 C8。
 
-#### precision=5 W8A8
+#### cim_precision=5 W8A8
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -541,7 +160,7 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 Ctx0：末内部发射 C2，raw 完成 C7。
 
-#### precision=6 W8A16
+#### cim_precision=6 W8A16
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -567,7 +186,7 @@ Ctx0：末内部发射 C4，raw 完成 C9。
 ### A2 AS os=1 ws=1 as=2
 每 Tile K=128；每 Context 总 K=128。
 
-#### precision=0 W2A4
+#### cim_precision=0 W2A4
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -581,12 +200,12 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | tmp捕获: R_slice → tmp；输出 |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C5 | tmp捕获: R_slice → tmp；输出 |
+| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | 填充: R_slice → 直接输出 |
+| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C5 | 填充: R_slice → 直接输出 |
 
 Ctx0：末内部发射 C1，raw 完成 C4；Ctx1：末内部发射 C2，raw 完成 C5。
 
-#### precision=1 W2A8
+#### cim_precision=1 W2A8
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -600,14 +219,14 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 | 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0)，Ctx0复用 | C5 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-| C3 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | tmp捕获: R_slice → tmp |
-| C4 | 8'h21（不变） | 读 A1(T0)，Ctx1复用 | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
+| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | 填充: R_slice → P[0] |
+| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C5 | 填充: R_slice → P[1] |
+| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C6 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
+| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C7 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
 
-Ctx0：末内部发射 C2，raw 完成 C5；Ctx1：末内部发射 C4，raw 完成 C7。
+Ctx0：末内部发射 C3，raw 完成 C6；Ctx1：末内部发射 C4，raw 完成 C7。
 
-#### precision=2 W4A4
+#### cim_precision=2 W4A4
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -621,12 +240,12 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | tmp捕获: R_slice → tmp；输出 |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | tmp捕获: R_slice → tmp；输出 |
+| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → 直接输出 |
+| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → 直接输出 |
 
 Ctx0：末内部发射 C1，raw 完成 C5；Ctx1：末内部发射 C2，raw 完成 C6。
 
-#### precision=3 W4A8
+#### cim_precision=3 W4A8
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -640,14 +259,14 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0)，Ctx0复用 | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-| C3 | 8'h21 | 读 A0(T0)，Ctx1复用 | C7 | tmp捕获: R_slice → tmp |
-| C4 | 8'h21（不变） | 读 A1(T0)，Ctx1复用 | C8 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
+| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0] |
+| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1] |
+| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C7 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
+| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C8 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
 
-Ctx0：末内部发射 C2，raw 完成 C6；Ctx1：末内部发射 C4，raw 完成 C8。
+Ctx0：末内部发射 C3，raw 完成 C7；Ctx1：末内部发射 C4，raw 完成 C8。
 
-#### precision=4 W4A16
+#### cim_precision=4 W4A16
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -663,18 +282,18 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 | 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0)，Ctx0复用 | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0)，Ctx0复用 | C7 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0)，Ctx0复用 | C8 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-| C5 | 8'h21 | 读 A0(T0)，Ctx1复用 | C9 | tmp捕获: R_slice → tmp |
-| C6 | 8'h21（不变） | 读 A1(T0)，Ctx1复用 | C10 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C7 | 8'h21（不变） | 读 A2(T0)，Ctx1复用 | C11 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C8 | 8'h21（不变） | 读 A3(T0)，Ctx1复用 | C12 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
+| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0] |
+| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1] |
+| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C7 | fusion: P[0] + (R_slice << 4) → P[0] |
+| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C8 | fusion: P[1] + (R_slice << 4) → P[1] |
+| C5 | 8'h20 | 读 A2(T0)，Ctx0复用 | C9 | fusion: P[0] + (R_slice << 8) → P[0] |
+| C6 | 8'h21 | 读 A2(T0)，Ctx1复用 | C10 | fusion: P[1] + (R_slice << 8) → P[1] |
+| C7 | 8'h20 | 读 A3(T0)，Ctx0复用 | C11 | fusion: P[0] + (R_slice << 12) → P[0]；输出 |
+| C8 | 8'h21 | 读 A3(T0)，Ctx1复用 | C12 | fusion: P[1] + (R_slice << 12) → P[1]；输出 |
 
-Ctx0：末内部发射 C4，raw 完成 C8；Ctx1：末内部发射 C8，raw 完成 C12。
+Ctx0：末内部发射 C7，raw 完成 C11；Ctx1：末内部发射 C8，raw 完成 C12。
 
-#### precision=5 W8A8
+#### cim_precision=5 W8A8
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -688,14 +307,14 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0)，Ctx0复用 | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-| C3 | 8'h21 | 读 A0(T0)，Ctx1复用 | C8 | tmp捕获: R_slice → tmp |
-| C4 | 8'h21（不变） | 读 A1(T0)，Ctx1复用 | C9 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
+| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | 填充: R_slice → P[0] |
+| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C7 | 填充: R_slice → P[1] |
+| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C8 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
+| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C9 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
 
-Ctx0：末内部发射 C2，raw 完成 C7；Ctx1：末内部发射 C4，raw 完成 C9。
+Ctx0：末内部发射 C3，raw 完成 C8；Ctx1：末内部发射 C4，raw 完成 C9。
 
-#### precision=6 W8A16
+#### cim_precision=6 W8A16
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -711,21 +330,21 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 | 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
 |---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0)，Ctx0复用 | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0)，Ctx0复用 | C8 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0)，Ctx0复用 | C9 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-| C5 | 8'h21 | 读 A0(T0)，Ctx1复用 | C10 | tmp捕获: R_slice → tmp |
-| C6 | 8'h21（不变） | 读 A1(T0)，Ctx1复用 | C11 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C7 | 8'h21（不变） | 读 A2(T0)，Ctx1复用 | C12 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C8 | 8'h21（不变） | 读 A3(T0)，Ctx1复用 | C13 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
+| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | 填充: R_slice → P[0] |
+| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C7 | 填充: R_slice → P[1] |
+| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C8 | fusion: P[0] + (R_slice << 4) → P[0] |
+| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C9 | fusion: P[1] + (R_slice << 4) → P[1] |
+| C5 | 8'h20 | 读 A2(T0)，Ctx0复用 | C10 | fusion: P[0] + (R_slice << 8) → P[0] |
+| C6 | 8'h21 | 读 A2(T0)，Ctx1复用 | C11 | fusion: P[1] + (R_slice << 8) → P[1] |
+| C7 | 8'h20 | 读 A3(T0)，Ctx0复用 | C12 | fusion: P[0] + (R_slice << 12) → P[0]；输出 |
+| C8 | 8'h21 | 读 A3(T0)，Ctx1复用 | C13 | fusion: P[1] + (R_slice << 12) → P[1]；输出 |
 
-Ctx0：末内部发射 C4，raw 完成 C9；Ctx1：末内部发射 C8，raw 完成 C13。
+Ctx0：末内部发射 C7，raw 完成 C12；Ctx1：末内部发射 C8，raw 完成 C13。
 
 ### A3 WS os=1 ws=2 as=1
 每 Tile K=128；每 Context 总 K=128。
 
-#### precision=0 W2A4
+#### cim_precision=0 W2A4
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -744,7 +363,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C1，raw 完成 C4；Ctx1：末内部发射 C3，raw 完成 C6。
 
-#### precision=1 W2A8
+#### cim_precision=1 W2A8
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -767,7 +386,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C2，raw 完成 C5；Ctx1：末内部发射 C5，raw 完成 C8。
 
-#### precision=2 W4A4
+#### cim_precision=2 W4A4
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -786,7 +405,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C1，raw 完成 C5；Ctx1：末内部发射 C3，raw 完成 C7。
 
-#### precision=3 W4A8
+#### cim_precision=3 W4A8
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -809,7 +428,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C2，raw 完成 C6；Ctx1：末内部发射 C5，raw 完成 C9。
 
-#### precision=4 W4A16
+#### cim_precision=4 W4A16
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -840,7 +459,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C4，raw 完成 C8；Ctx1：末内部发射 C9，raw 完成 C13。
 
-#### precision=5 W8A8
+#### cim_precision=5 W8A8
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -863,7 +482,7 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 Ctx0：末内部发射 C2，raw 完成 C7；Ctx1：末内部发射 C5，raw 完成 C10。
 
-#### precision=6 W8A16
+#### cim_precision=6 W8A16
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -897,7 +516,7 @@ Ctx0：末内部发射 C4，raw 完成 C9；Ctx1：末内部发射 C9，raw 完�
 ### A4 单 Context os=2 ws=1 as=1
 每 Tile K=128；每 Context 总 K=256。
 
-#### precision=0 W2A4
+#### cim_precision=0 W2A4
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -916,7 +535,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C3，raw 完成 C6。
 
-#### precision=1 W2A8
+#### cim_precision=1 W2A8
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -939,7 +558,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C5，raw 完成 C8。
 
-#### precision=2 W4A4
+#### cim_precision=2 W4A4
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -958,7 +577,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C3，raw 完成 C7。
 
-#### precision=3 W4A8
+#### cim_precision=3 W4A8
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -981,7 +600,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C5，raw 完成 C9。
 
-#### precision=4 W4A16
+#### cim_precision=4 W4A16
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -1012,7 +631,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C9，raw 完成 C13。
 
-#### precision=5 W8A8
+#### cim_precision=5 W8A8
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -1035,7 +654,7 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 Ctx0：末内部发射 C5，raw 完成 C10。
 
-#### precision=6 W8A16
+#### cim_precision=6 W8A16
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -1069,7 +688,7 @@ Ctx0：末内部发射 C9，raw 完成 C14。
 ### A5 WS os=2 ws=2 as=1
 每 Tile K=128；每 Context 总 K=256。
 
-#### precision=0 W2A4
+#### cim_precision=0 W2A4
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -1092,7 +711,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C5，raw 完成 C8；Ctx1：末内部发射 C7，raw 完成 C10。
 
-#### precision=1 W2A8
+#### cim_precision=1 W2A8
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -1123,7 +742,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C8，raw 完成 C11；Ctx1：末内部发射 C11，raw 完成 C14。
 
-#### precision=2 W4A4
+#### cim_precision=2 W4A4
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -1146,7 +765,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C5，raw 完成 C9；Ctx1：末内部发射 C7，raw 完成 C11。
 
-#### precision=3 W4A8
+#### cim_precision=3 W4A8
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -1177,7 +796,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C8，raw 完成 C12；Ctx1：末内部发射 C11，raw 完成 C15。
 
-#### precision=4 W4A16
+#### cim_precision=4 W4A16
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -1224,7 +843,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C14，raw 完成 C18；Ctx1：末内部发射 C19，raw 完成 C23。
 
-#### precision=5 W8A8
+#### cim_precision=5 W8A8
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -1255,7 +874,7 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 Ctx0：末内部发射 C8，raw 完成 C13；Ctx1：末内部发射 C11，raw 完成 C16。
 
-#### precision=6 W8A16
+#### cim_precision=6 W8A16
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -1305,7 +924,7 @@ Ctx0：末内部发射 C14，raw 完成 C19；Ctx1：末内部发射 C19，raw �
 ### A6 AS os=2 ws=1 as=2
 每 Tile K=128；每 Context 总 K=256。
 
-#### precision=0 W2A4
+#### cim_precision=0 W2A4
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -1328,7 +947,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C4，raw 完成 C7；Ctx1：末内部发射 C5，raw 完成 C8。
 
-#### precision=1 W2A8
+#### cim_precision=1 W2A8
 split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 外部输入：
@@ -1355,7 +974,7 @@ split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
 
 Ctx0：末内部发射 C8，raw 完成 C11；Ctx1：末内部发射 C9，raw 完成 C12。
 
-#### precision=2 W4A4
+#### cim_precision=2 W4A4
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -1378,7 +997,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C4，raw 完成 C8；Ctx1：末内部发射 C5，raw 完成 C9。
 
-#### precision=3 W4A8
+#### cim_precision=3 W4A8
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -1405,7 +1024,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C8，raw 完成 C12；Ctx1：末内部发射 C9，raw 完成 C13。
 
-#### precision=4 W4A16
+#### cim_precision=4 W4A16
 split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 外部输入：
@@ -1444,7 +1063,7 @@ split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
 
 Ctx0：末内部发射 C16，raw 完成 C20；Ctx1：末内部发射 C17，raw 完成 C21。
 
-#### precision=5 W8A8
+#### cim_precision=5 W8A8
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -1471,7 +1090,7 @@ split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 Ctx0：末内部发射 C8，raw 完成 C13；Ctx1：末内部发射 C9，raw 完成 C14。
 
-#### precision=6 W8A16
+#### cim_precision=6 W8A16
 split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
 
 外部输入：
@@ -1512,6 +1131,8 @@ Ctx0：末内部发射 C16，raw 完成 C21；Ctx1：末内部发射 C17，raw �
 
 ## 附录 B 规范 split 编码
 
-以下按 bit6..bit0 给出26种规范编码，K 限制还需结合 precision、EN 和 OC：
+以下按 bit6..bit0 给出26种规范编码，K 限制还需结合 cim_precision、EN 和 OC：
 
 `0000000`、`0000001`、`0000011`、`0000101`、`0000111`、`0001011`、`0001111`、`0010011`、`0010111`、`0011011`、`0011111`、`0100101`、`0100111`、`0101111`、`0110111`、`0111111`、`1000101`、`1000111`、`1001111`、`1010111`、`1011111`、`1100101`、`1100111`、`1101111`、`1110111`、`1111111`
+
+完整验证条件与用例映射见[验证清单](docs/Cluster_Verification.md)。

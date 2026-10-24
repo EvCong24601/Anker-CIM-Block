@@ -20,7 +20,7 @@ def sequence(p, counts):
     os, ws, ac = counts
     n = max(ws, ac)
     phases = ABITS[p] // 4
-    if ac > 1 and os > 1:
+    if ac > 1:
         return [(k, c, ph) for k in range(os) for ph in range(phases) for c in range(n)]
     return [(k, c, ph) for k in range(os) for c in range(n) for ph in range(phases)]
 
@@ -32,7 +32,7 @@ def packet_start(p,counts,k,c):
 
 def issue_cycle(p,counts,k,c,ph):
     os,ws,ac=counts;P=ABITS[p]//4;R=max(ws,ac)
-    return packet_start(p,counts,k,c)+1+((ph*R+c if os>1 else c*P+ph) if ac>1 else ph)
+    return packet_start(p,counts,k,c)+1+((ph*R+c) if ac>1 else ph)
 
 
 def external_rows(p,counts):
@@ -51,11 +51,11 @@ def operation(p, counts, k, c, ph):
     os, ws, ac = counts
     last = ph == ABITS[p] // 4 - 1
     fusion = ph > 0
-    acc = k > 0 and (ph == 0 if ac > 1 and os > 1 else last and os > 1)
-    ps_write = (os > 1 or ABITS[p] > 4) if ac > 1 and os > 1 else (os > 1 and last)
+    acc = k > 0 and (ph == 0 if ac > 1 else last and os > 1)
+    ps_write = (os > 1 or ABITS[p] > 4) if ac > 1 else (os > 1 and last)
     done = last and k == os - 1
     ps = f'P[{c}]'
-    if ac > 1 and os > 1:
+    if ac > 1:
         desc = f'fusion: {ps} + (R_slice << {4*ph})' if fusion else f'acc: {ps} + R_slice' if acc else '填充: R_slice'
         dest = ps if ps_write else '直接输出'
     else:
@@ -111,7 +111,7 @@ def validate_trace(path):
         if not ref['acc']: assert aa == ab == 0
         value = aa + ab if ref['acc'] else fa + fb if ref['fusion'] else int(row['tmp'])
         stored = int(row['tmp_stored'])
-        is_as = COUNTS[key[0]-1][2] > 1 and COUNTS[key[0]-1][0] > 1
+        is_as = COUNTS[key[0]-1][2] > 1
         assert stored == (int(row['tmp']) if is_as or not ref['fusion'] else fa+fb)
         assert int(row['fusion_cycle']) == cycle-(0 if is_as else 1)
         assert result == value
@@ -180,8 +180,8 @@ def main():
                                  issue_cycle=q, tmp_capture=q+d-1, compute_cycle=q+d,
                                  tile=k, context=c, phase=ph,
                                  weight_address=f"8'h{0x20+16*k+(c if ac>1 else 0):02x}",
-                                 psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if os>1 else 0:x}',
-                                 fusion_cycle=(q+d-(0 if ac>1 and os>1 else 1)) if ph>0 else '',
+                                 psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if os>1 or (ac>1 and ABITS[p]>4) else 0:x}',
+                                 fusion_cycle=(q+d-(0 if ac>1 else 1)) if ph>0 else '',
                                  icg_enable_cycle=q+d-1,
                                  act_buffer_read=1,
                                  external_cmd_cycle=packet_start(p,counts,k,c)+(c if ac>1 else 0),

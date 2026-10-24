@@ -1,7 +1,9 @@
 `timescale 1ns / 1ps
 // Ellipses = combinational reduction logic; t1..t6 = FORWARDING DFFs.
 // Terminal results are tapped BEFORE these DFFs. No root/output/alignment DFF.
-module ClusterReduceTree (
+module ClusterReduceTree #(
+  parameter bit USE_CLOCK_GATING = 1
+) (
   input logic clock,
   input logic reset,
   input logic early_valid_i,
@@ -27,7 +29,6 @@ module ClusterReduceTree (
   ctrl_t early_ctrl, c0, c1, c2;
   ctrl_t source_ctrl[0:6];
   logic [3:0] cg_channel_req[1:6];
-  logic [6:0] reduce_cg_en;
   wire [6:1] reduce_clock;
   wire signed [20:0] forward_q[1:6][0:3];
   logic signed [20:0] left_data[0:6][0:3], right_data[0:6][0:3];
@@ -64,11 +65,14 @@ module ClusterReduceTree (
     logic [3:0] result;
     bit continue_up;
     result = '0;
+    // Propagate consumer demand through every ancestor up to the endpoint.
+    // A blocked parent keeps its child forwarding outputs held.
     // Gate the RESULT DFF if this subtree terminates here. A terminal pair
     // leaves t3..t6 closed while its combinational result goes to the buffer.
     continue_up = n < 3 ? !ctrl.split[0] : !ctrl.split[1+(n-3)/2];
     if (ctrl.valid && !ctrl.split[n] && continue_up)
-      for (int c = 0; c < 4; c++) result[c] = subtree_live(ctrl, start_of(n), size_of(n), c);
+      for (int c = 0; c < 4; c++) result[c] = subtree_live(ctrl, start_of(n), size_of(n), c) &&
+          merge_contributes(ctrl.split, ctrl.oc, start_of(n), c);
     return result;
   endfunction
   function automatic int span(input logic [6:0] split, input int first);
@@ -124,30 +128,28 @@ module ClusterReduceTree (
     if (reset) begin
       c1 <= '0;
       c2 <= '0;
-      reduce_cg_en <= '0;
       for (int n = 1; n < 7; n++) cg_channel_req[n] <= '0;
     end else begin
       c1 <= c0;
       c2 <= c1;
-      reduce_cg_en[0] <= 0;  // t0 has NO forwarding/output DFF
       for (int n = 1; n < 7; n++) begin
         cg_channel_req[n] <= forward_mask(n < 3 ? c0 : early_ctrl, n);
-        reduce_cg_en[n]   <= |forward_mask(n < 3 ? c0 : early_ctrl, n);
       end
     end
   end
   for (genvar n = 1; n < 7; n++) begin : g_forward
     localparam int W = n < 3 ? 20 : 19;
     logic signed [W-1:0] result_q[0:3];
-    MacroClockGate u_clock_gate (
-      .clock(clock),
-      .enable(reduce_cg_en[n]),
-      .gated_clock(reduce_clock[n])
-    );
-    for (genvar c = 0; c < 4; c++) assign forward_q[n][c] = result_q[c];
-    always_ff @(posedge reduce_clock[n] or posedge reset) begin
-      if (reset) for (int c = 0; c < 4; c++) result_q[c] <= '0;
-      else for (int c = 0; c < 4; c++) if (cg_channel_req[n][c]) result_q[c] <= node_value[n][c];
+    wire [3:0] oc_clock;
+    assign reduce_clock[n] = |oc_clock;
+    for (genvar c = 0; c < 4; c++) begin : g_oc_clock
+      MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_clock_gate (
+        .clock(clock), .enable(cg_channel_req[n][c]), .gated_clock(oc_clock[c])
+      );
+      assign forward_q[n][c] = result_q[c];
+      always_ff @(posedge oc_clock[c] or posedge reset)
+        if (reset) result_q[c] <= '0;
+        else if (cg_channel_req[n][c]) result_q[c] <= node_value[n][c];
     end
     // synthesis translate_off
     initial begin
@@ -164,7 +166,7 @@ module ClusterReduceTree (
           $fatal(1, "Forward node %0d enable not predicted one cycle ahead", n);
         if (|sampled_req) active_edges[n]++;
         #1;
-        if (!reset && reduce_clock[n] !== (|sampled_req)) $fatal(1, "ICG pulse mismatch node %0d", n);
+        if (!reset && oc_clock !== (USE_CLOCK_GATING ? sampled_req : 4'hf)) $fatal(1, "ICG pulse mismatch node %0d", n);
         if (!reset)
           for (int c = 0; c < 4; c++)
           if (!sampled_req[c]) begin

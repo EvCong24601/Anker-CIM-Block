@@ -13,42 +13,45 @@ task automatic sram_write(int m, int a, logic [1023:0] data, logic [3:0] mask, b
     "[CASE_START] time=%0.3f ns suite=sram_write case=%0d description=32B-active-high-mask/write-isolation macro=%0d row=%0d mask=%h cs=%0d",
     $realtime, sram_write_cases, m, a, mask, selected);
   @(negedge clock);
-  cim_cs_en = selected;
-  cim_wr_en = 1;
-  cim_macro_group = 1'(m / 4);
-  cim_bank_sel = 2'(m % 4);
-  cim_row_addr = 8'(a);
-  cim_wrdata = data;
-  cim_wmask = mask;
+  sram_cs_en = selected;
+  sram_wr_en = 1;
+  sram_macro_group = 1'(m / 4);
+  sram_bank_sel = 2'(m % 4);
+  sram_row_addr = 8'(a);
+  sram_wrdata = data;
+  sram_wmask = mask;
   @(posedge clock);
   #0.002;
   for (int b = 0; b < 128; b++) if (selected && !mask[b/32]) sram_reference[m][a][8*b+:8] = data[8*b+:8];
   @(negedge clock);
-  cim_cs_en = 0;
-  cim_wr_en = 0;
+  sram_cs_en = 0;
+  sram_wr_en = 0;
   sram_write_cases++;
 endtask
 task automatic sram_read_check(int m, int a, logic [3:0] mask = 0);
-  // 当前通用模型为组合读，等待组合路径稳定后比较完整 128 B。
+  // 同步读：上升沿采样地址，沿后比较完整 128 B。
   // 不读取 DUT.mem 作为 golden，避免地址译码错误被同源参考掩盖。
   $display(
     "[CASE_START] time=%0.3f ns suite=sram_read case=%0d description=full-row-read/macro-row-isolation/read-ignores-mask macro=%0d row=%0d mask=%h",
     $realtime, sram_read_checks, m, a, mask);
   @(negedge clock);
-  cim_cs_en = 1;
-  cim_wr_en = 0;
-  cim_macro_group = 1'(m / 4);
-  cim_bank_sel = 2'(m % 4);
-  cim_row_addr = 8'(a);
-  cim_wmask = mask;
+  sram_cs_en = 1;
+  sram_wr_en = 0;
+  sram_macro_group = 1'(m / 4);
+  sram_bank_sel = 2'(m % 4);
+  sram_row_addr = 8'(a);
+  sram_wmask = mask;
+  @(posedge clock);
   #1;
-  if (cim_rd_data !== sram_reference[m][a]) $fatal(1, "SRAM read mismatch macro=%0d row=%0d mask=%h", m, a, mask);
+  if (!sram_rd_valid || sram_rd_data !== sram_reference[m][a]) $fatal(1, "SRAM read mismatch macro=%0d row=%0d mask=%h", m, a, mask);
   if (cmd_ready_o !== 0) $fatal(1, "Command ready during regular SRAM access");
   sram_read_checks++;
   @(negedge clock);
-  cim_cs_en = 0;
+  sram_cs_en = 0;
   #0.002;
-  if (cim_rd_data !== 0) $fatal(1, "Unselected regular read must return zero in reference model");
+  if (!sram_rd_valid || sram_rd_data !== sram_reference[m][a]) $fatal(1, "Read response changed when request CS dropped");
+  @(posedge clock);#0.002;
+  if (sram_rd_valid || sram_rd_data !== 0) $fatal(1, "Read valid did not drain on idle edge");
 endtask
 task automatic sram_compute_check(bit patched);
   // 用实际 W4A4 结果核对 Hold：被修改的 Macro5.OC1 为 128，其余为 64。
@@ -57,14 +60,14 @@ task automatic sram_compute_check(bit patched);
            $realtime, patched);
   @(negedge clock);
   cmd_i = '0;
-  cmd_i.os_cnt = 1;
-  cmd_i.ws_cnt = 1;
-  cmd_i.as_cnt = 1;
-  cmd_i.reduce_split_mask = 7'h7f;
-  cmd_i.macro_en_mask = 8'hff;
-  cmd_i.macro_oc_mask = 32'hffffffff;
-  cmd_i.weight_cim_raddr = 8'd7;
-  cmd_i.precision = 3'd2;  // W4A4, 64 weights per OC, UINT
+  cmd_i.cim_os_cnt = 1;
+  cmd_i.cim_ws_cnt = 1;
+  cmd_i.cim_as_cnt = 1;
+  cmd_i.cim_reduce_split_mask = 7'h7f;
+  cmd_i.cim_macro_en_mask = 8'hff;
+  cmd_i.cim_macro_oc_mask = 32'hffffffff;
+  cmd_i.cim_weight_raddr = 8'd7;
+  cmd_i.cim_precision = 3'd2;  // W4A4, 64 weights per OC, UINT
   act_data_i = {256{4'h1}};
   cmd_valid_i = 1;
   do begin
@@ -119,21 +122,21 @@ task automatic run_sram_cases;
       "[CASE_START] time=%0.3f ns suite=sram_back_to_back case=%0d description=consecutive-writes/change-macro-row-mask",
       $realtime, n);
     @(negedge clock);
-    cim_cs_en = 1;
-    cim_wr_en = 1;
-    cim_macro_group = 1'((n % 8) / 4);
-    cim_bank_sel = 2'(n % 4);
-    cim_row_addr = 8'(200 + n / 8);
-    cim_wmask = 4'(n % 16);
-    cim_wrdata = sram_pattern(n % 8, 200 + n / 8, n + 171);
+    sram_cs_en = 1;
+    sram_wr_en = 1;
+    sram_macro_group = 1'((n % 8) / 4);
+    sram_bank_sel = 2'(n % 4);
+    sram_row_addr = 8'(200 + n / 8);
+    sram_wmask = 4'(n % 16);
+    sram_wrdata = sram_pattern(n % 8, 200 + n / 8, n + 171);
     @(posedge clock);
     #0.002;
-    for (int b = 0; b < 128; b++) if (!cim_wmask[b/32]) sram_reference[n%8][200+n/8][8*b+:8] = cim_wrdata[8*b+:8];
+    for (int b = 0; b < 128; b++) if (!sram_wmask[b/32]) sram_reference[n%8][200+n/8][8*b+:8] = sram_wrdata[8*b+:8];
     sram_write_cases++;
   end
   @(negedge clock);
-  cim_cs_en = 0;
-  cim_wr_en = 0;
+  sram_cs_en = 0;
+  sram_wr_en = 0;
   // Reset must preserve all initialized SRAM, including masked neighbors.
   $display("[CASE_START] time=%0.3f ns suite=sram_reset description=reset-retains-all-8x256-rows", $realtime);
   reset = 1;

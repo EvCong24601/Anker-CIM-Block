@@ -1,0 +1,247 @@
+# vsim -c -onfinish stop work.tb_ClusterReduceTree -l reduce_tree.log -do "onbreak {quit -code 1}; onerror {quit -code 1}; run -all; quit -code 0"
+# Start time: 18:24:54 on Oct 24,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  ModelSim SE-64 2020.4 Oct 13 2020
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.cluster_pkg(fast)
+# Loading work.tb_ClusterReduceTree(fast)
+# onbreak {quit -code 1}
+#  Warning: onbreak command for use within macro
+#  onerror {quit -code 1}
+#  Warning: onerror command for use within macro
+#  run -all
+# [CASE_START] time=40.000 ns suite=reduce_tree case=0 description=recursive-golden/terminal-tap/clock-gating split=00 en=ff oc=ffffffff
+# [CASE_START] time=50.000 ns suite=reduce_tree case=1 description=recursive-golden/terminal-tap/clock-gating split=01 en=ff oc=84218421
+# [CASE_START] time=60.000 ns suite=reduce_tree case=2 description=recursive-golden/terminal-tap/clock-gating split=03 en=ff oc=12345678
+# [CASE_START] time=70.000 ns suite=reduce_tree case=3 description=recursive-golden/terminal-tap/clock-gating split=05 en=ff oc=fffffff0
+# [CASE_START] time=80.000 ns suite=reduce_tree case=4 description=recursive-golden/terminal-tap/clock-gating split=07 en=ff oc=00000000
+# [CASE_START] time=90.000 ns suite=reduce_tree case=5 description=recursive-golden/terminal-tap/clock-gating split=0b en=ff oc=ffffffff
+# [CASE_START] time=100.000 ns suite=reduce_tree case=6 description=recursive-golden/terminal-tap/clock-gating split=0f en=ff oc=84218421
+# [CASE_START] time=110.000 ns suite=reduce_tree case=7 description=recursive-golden/terminal-tap/clock-gating split=13 en=ff oc=12345678
+# [CASE_START] time=120.000 ns suite=reduce_tree case=8 description=recursive-golden/terminal-tap/clock-gating split=17 en=ff oc=fffffff0
+# [CASE_START] time=130.000 ns suite=reduce_tree case=9 description=recursive-golden/terminal-tap/clock-gating split=1b en=ff oc=00000000
+# [CASE_START] time=140.000 ns suite=reduce_tree case=10 description=recursive-golden/terminal-tap/clock-gating split=1f en=ff oc=ffffffff
+# [CASE_START] time=150.000 ns suite=reduce_tree case=11 description=recursive-golden/terminal-tap/clock-gating split=25 en=ff oc=84218421
+# [CASE_START] time=160.000 ns suite=reduce_tree case=12 description=recursive-golden/terminal-tap/clock-gating split=27 en=ff oc=12345678
+# [CASE_START] time=170.000 ns suite=reduce_tree case=13 description=recursive-golden/terminal-tap/clock-gating split=2f en=ff oc=fffffff0
+# [CASE_START] time=180.000 ns suite=reduce_tree case=14 description=recursive-golden/terminal-tap/clock-gating split=37 en=ff oc=00000000
+# [CASE_START] time=190.000 ns suite=reduce_tree case=15 description=recursive-golden/terminal-tap/clock-gating split=3f en=ff oc=ffffffff
+# [CASE_START] time=200.000 ns suite=reduce_tree case=16 description=recursive-golden/terminal-tap/clock-gating split=45 en=ff oc=84218421
+# [CASE_START] time=210.000 ns suite=reduce_tree case=17 description=recursive-golden/terminal-tap/clock-gating split=47 en=ff oc=12345678
+# [CASE_START] time=220.000 ns suite=reduce_tree case=18 description=recursive-golden/terminal-tap/clock-gating split=4f en=ff oc=fffffff0
+# [CASE_START] time=230.000 ns suite=reduce_tree case=19 description=recursive-golden/terminal-tap/clock-gating split=57 en=ff oc=00000000
+# [CASE_START] time=240.000 ns suite=reduce_tree case=20 description=recursive-golden/terminal-tap/clock-gating split=5f en=ff oc=ffffffff
+# [CASE_START] time=250.000 ns suite=reduce_tree case=21 description=recursive-golden/terminal-tap/clock-gating split=65 en=ff oc=84218421
+# [CASE_START] time=260.000 ns suite=reduce_tree case=22 description=recursive-golden/terminal-tap/clock-gating split=67 en=ff oc=12345678
+# [CASE_START] time=270.000 ns suite=reduce_tree case=23 description=recursive-golden/terminal-tap/clock-gating split=6f en=ff oc=fffffff0
+# [CASE_START] time=280.000 ns suite=reduce_tree case=24 description=recursive-golden/terminal-tap/clock-gating split=77 en=ff oc=00000000
+# [CASE_START] time=290.000 ns suite=reduce_tree case=25 description=recursive-golden/terminal-tap/clock-gating split=7f en=ff oc=ffffffff
+# [CASE_START] time=330.000 ns suite=reduce_tree case=26 description=recursive-golden/terminal-tap/clock-gating split=00 en=0f oc=84218421
+# [CASE_START] time=340.000 ns suite=reduce_tree case=27 description=recursive-golden/terminal-tap/clock-gating split=01 en=0f oc=12345678
+# [CASE_START] time=350.000 ns suite=reduce_tree case=28 description=recursive-golden/terminal-tap/clock-gating split=03 en=0f oc=fffffff0
+# [CASE_START] time=360.000 ns suite=reduce_tree case=29 description=recursive-golden/terminal-tap/clock-gating split=05 en=0f oc=00000000
+# [CASE_START] time=370.000 ns suite=reduce_tree case=30 description=recursive-golden/terminal-tap/clock-gating split=07 en=0f oc=ffffffff
+# [CASE_START] time=380.000 ns suite=reduce_tree case=31 description=recursive-golden/terminal-tap/clock-gating split=0b en=0f oc=84218421
+# [CASE_START] time=390.000 ns suite=reduce_tree case=32 description=recursive-golden/terminal-tap/clock-gating split=0f en=0f oc=12345678
+# [CASE_START] time=400.000 ns suite=reduce_tree case=33 description=recursive-golden/terminal-tap/clock-gating split=13 en=0f oc=fffffff0
+# [CASE_START] time=410.000 ns suite=reduce_tree case=34 description=recursive-golden/terminal-tap/clock-gating split=17 en=0f oc=00000000
+# [CASE_START] time=420.000 ns suite=reduce_tree case=35 description=recursive-golden/terminal-tap/clock-gating split=1b en=0f oc=ffffffff
+# [CASE_START] time=430.000 ns suite=reduce_tree case=36 description=recursive-golden/terminal-tap/clock-gating split=1f en=0f oc=84218421
+# [CASE_START] time=440.000 ns suite=reduce_tree case=37 description=recursive-golden/terminal-tap/clock-gating split=25 en=0f oc=12345678
+# [CASE_START] time=450.000 ns suite=reduce_tree case=38 description=recursive-golden/terminal-tap/clock-gating split=27 en=0f oc=fffffff0
+# [CASE_START] time=460.000 ns suite=reduce_tree case=39 description=recursive-golden/terminal-tap/clock-gating split=2f en=0f oc=00000000
+# [CASE_START] time=470.000 ns suite=reduce_tree case=40 description=recursive-golden/terminal-tap/clock-gating split=37 en=0f oc=ffffffff
+# [CASE_START] time=480.000 ns suite=reduce_tree case=41 description=recursive-golden/terminal-tap/clock-gating split=3f en=0f oc=84218421
+# [CASE_START] time=490.000 ns suite=reduce_tree case=42 description=recursive-golden/terminal-tap/clock-gating split=45 en=0f oc=12345678
+# [CASE_START] time=500.000 ns suite=reduce_tree case=43 description=recursive-golden/terminal-tap/clock-gating split=47 en=0f oc=fffffff0
+# [CASE_START] time=510.000 ns suite=reduce_tree case=44 description=recursive-golden/terminal-tap/clock-gating split=4f en=0f oc=00000000
+# [CASE_START] time=520.000 ns suite=reduce_tree case=45 description=recursive-golden/terminal-tap/clock-gating split=57 en=0f oc=ffffffff
+# [CASE_START] time=530.000 ns suite=reduce_tree case=46 description=recursive-golden/terminal-tap/clock-gating split=5f en=0f oc=84218421
+# [CASE_START] time=540.000 ns suite=reduce_tree case=47 description=recursive-golden/terminal-tap/clock-gating split=65 en=0f oc=12345678
+# [CASE_START] time=550.000 ns suite=reduce_tree case=48 description=recursive-golden/terminal-tap/clock-gating split=67 en=0f oc=fffffff0
+# [CASE_START] time=560.000 ns suite=reduce_tree case=49 description=recursive-golden/terminal-tap/clock-gating split=6f en=0f oc=00000000
+# [CASE_START] time=570.000 ns suite=reduce_tree case=50 description=recursive-golden/terminal-tap/clock-gating split=77 en=0f oc=ffffffff
+# [CASE_START] time=580.000 ns suite=reduce_tree case=51 description=recursive-golden/terminal-tap/clock-gating split=7f en=0f oc=84218421
+# [CASE_START] time=620.000 ns suite=reduce_tree case=52 description=recursive-golden/terminal-tap/clock-gating split=00 en=f0 oc=12345678
+# [CASE_START] time=630.000 ns suite=reduce_tree case=53 description=recursive-golden/terminal-tap/clock-gating split=01 en=f0 oc=fffffff0
+# [CASE_START] time=640.000 ns suite=reduce_tree case=54 description=recursive-golden/terminal-tap/clock-gating split=03 en=f0 oc=00000000
+# [CASE_START] time=650.000 ns suite=reduce_tree case=55 description=recursive-golden/terminal-tap/clock-gating split=05 en=f0 oc=ffffffff
+# [CASE_START] time=660.000 ns suite=reduce_tree case=56 description=recursive-golden/terminal-tap/clock-gating split=07 en=f0 oc=84218421
+# [CASE_START] time=670.000 ns suite=reduce_tree case=57 description=recursive-golden/terminal-tap/clock-gating split=0b en=f0 oc=12345678
+# [CASE_START] time=680.000 ns suite=reduce_tree case=58 description=recursive-golden/terminal-tap/clock-gating split=0f en=f0 oc=fffffff0
+# [CASE_START] time=690.000 ns suite=reduce_tree case=59 description=recursive-golden/terminal-tap/clock-gating split=13 en=f0 oc=00000000
+# [CASE_START] time=700.000 ns suite=reduce_tree case=60 description=recursive-golden/terminal-tap/clock-gating split=17 en=f0 oc=ffffffff
+# [CASE_START] time=710.000 ns suite=reduce_tree case=61 description=recursive-golden/terminal-tap/clock-gating split=1b en=f0 oc=84218421
+# [CASE_START] time=720.000 ns suite=reduce_tree case=62 description=recursive-golden/terminal-tap/clock-gating split=1f en=f0 oc=12345678
+# [CASE_START] time=730.000 ns suite=reduce_tree case=63 description=recursive-golden/terminal-tap/clock-gating split=25 en=f0 oc=fffffff0
+# [CASE_START] time=740.000 ns suite=reduce_tree case=64 description=recursive-golden/terminal-tap/clock-gating split=27 en=f0 oc=00000000
+# [CASE_START] time=750.000 ns suite=reduce_tree case=65 description=recursive-golden/terminal-tap/clock-gating split=2f en=f0 oc=ffffffff
+# [CASE_START] time=760.000 ns suite=reduce_tree case=66 description=recursive-golden/terminal-tap/clock-gating split=37 en=f0 oc=84218421
+# [CASE_START] time=770.000 ns suite=reduce_tree case=67 description=recursive-golden/terminal-tap/clock-gating split=3f en=f0 oc=12345678
+# [CASE_START] time=780.000 ns suite=reduce_tree case=68 description=recursive-golden/terminal-tap/clock-gating split=45 en=f0 oc=fffffff0
+# [CASE_START] time=790.000 ns suite=reduce_tree case=69 description=recursive-golden/terminal-tap/clock-gating split=47 en=f0 oc=00000000
+# [CASE_START] time=800.000 ns suite=reduce_tree case=70 description=recursive-golden/terminal-tap/clock-gating split=4f en=f0 oc=ffffffff
+# [CASE_START] time=810.000 ns suite=reduce_tree case=71 description=recursive-golden/terminal-tap/clock-gating split=57 en=f0 oc=84218421
+# [CASE_START] time=820.000 ns suite=reduce_tree case=72 description=recursive-golden/terminal-tap/clock-gating split=5f en=f0 oc=12345678
+# [CASE_START] time=830.000 ns suite=reduce_tree case=73 description=recursive-golden/terminal-tap/clock-gating split=65 en=f0 oc=fffffff0
+# [CASE_START] time=840.000 ns suite=reduce_tree case=74 description=recursive-golden/terminal-tap/clock-gating split=67 en=f0 oc=00000000
+# [CASE_START] time=850.000 ns suite=reduce_tree case=75 description=recursive-golden/terminal-tap/clock-gating split=6f en=f0 oc=ffffffff
+# [CASE_START] time=860.000 ns suite=reduce_tree case=76 description=recursive-golden/terminal-tap/clock-gating split=77 en=f0 oc=84218421
+# [CASE_START] time=870.000 ns suite=reduce_tree case=77 description=recursive-golden/terminal-tap/clock-gating split=7f en=f0 oc=12345678
+# [CASE_START] time=910.000 ns suite=reduce_tree case=78 description=recursive-golden/terminal-tap/clock-gating split=00 en=55 oc=fffffff0
+# [CASE_START] time=920.000 ns suite=reduce_tree case=79 description=recursive-golden/terminal-tap/clock-gating split=01 en=55 oc=00000000
+# [CASE_START] time=930.000 ns suite=reduce_tree case=80 description=recursive-golden/terminal-tap/clock-gating split=03 en=55 oc=ffffffff
+# [CASE_START] time=940.000 ns suite=reduce_tree case=81 description=recursive-golden/terminal-tap/clock-gating split=05 en=55 oc=84218421
+# [CASE_START] time=950.000 ns suite=reduce_tree case=82 description=recursive-golden/terminal-tap/clock-gating split=07 en=55 oc=12345678
+# [CASE_START] time=960.000 ns suite=reduce_tree case=83 description=recursive-golden/terminal-tap/clock-gating split=0b en=55 oc=fffffff0
+# [CASE_START] time=970.000 ns suite=reduce_tree case=84 description=recursive-golden/terminal-tap/clock-gating split=0f en=55 oc=00000000
+# [CASE_START] time=980.000 ns suite=reduce_tree case=85 description=recursive-golden/terminal-tap/clock-gating split=13 en=55 oc=ffffffff
+# [CASE_START] time=990.000 ns suite=reduce_tree case=86 description=recursive-golden/terminal-tap/clock-gating split=17 en=55 oc=84218421
+# [CASE_START] time=1000.000 ns suite=reduce_tree case=87 description=recursive-golden/terminal-tap/clock-gating split=1b en=55 oc=12345678
+# [CASE_START] time=1010.000 ns suite=reduce_tree case=88 description=recursive-golden/terminal-tap/clock-gating split=1f en=55 oc=fffffff0
+# [CASE_START] time=1020.000 ns suite=reduce_tree case=89 description=recursive-golden/terminal-tap/clock-gating split=25 en=55 oc=00000000
+# [CASE_START] time=1030.000 ns suite=reduce_tree case=90 description=recursive-golden/terminal-tap/clock-gating split=27 en=55 oc=ffffffff
+# [CASE_START] time=1040.000 ns suite=reduce_tree case=91 description=recursive-golden/terminal-tap/clock-gating split=2f en=55 oc=84218421
+# [CASE_START] time=1050.000 ns suite=reduce_tree case=92 description=recursive-golden/terminal-tap/clock-gating split=37 en=55 oc=12345678
+# [CASE_START] time=1060.000 ns suite=reduce_tree case=93 description=recursive-golden/terminal-tap/clock-gating split=3f en=55 oc=fffffff0
+# [CASE_START] time=1070.000 ns suite=reduce_tree case=94 description=recursive-golden/terminal-tap/clock-gating split=45 en=55 oc=00000000
+# [CASE_START] time=1080.000 ns suite=reduce_tree case=95 description=recursive-golden/terminal-tap/clock-gating split=47 en=55 oc=ffffffff
+# [CASE_START] time=1090.000 ns suite=reduce_tree case=96 description=recursive-golden/terminal-tap/clock-gating split=4f en=55 oc=84218421
+# [CASE_START] time=1100.000 ns suite=reduce_tree case=97 description=recursive-golden/terminal-tap/clock-gating split=57 en=55 oc=12345678
+# [CASE_START] time=1110.000 ns suite=reduce_tree case=98 description=recursive-golden/terminal-tap/clock-gating split=5f en=55 oc=fffffff0
+# [CASE_START] time=1120.000 ns suite=reduce_tree case=99 description=recursive-golden/terminal-tap/clock-gating split=65 en=55 oc=00000000
+# [CASE_START] time=1130.000 ns suite=reduce_tree case=100 description=recursive-golden/terminal-tap/clock-gating split=67 en=55 oc=ffffffff
+# [CASE_START] time=1140.000 ns suite=reduce_tree case=101 description=recursive-golden/terminal-tap/clock-gating split=6f en=55 oc=84218421
+# [CASE_START] time=1150.000 ns suite=reduce_tree case=102 description=recursive-golden/terminal-tap/clock-gating split=77 en=55 oc=12345678
+# [CASE_START] time=1160.000 ns suite=reduce_tree case=103 description=recursive-golden/terminal-tap/clock-gating split=7f en=55 oc=fffffff0
+# [CASE_START] time=1200.000 ns suite=reduce_tree case=104 description=recursive-golden/terminal-tap/clock-gating split=00 en=aa oc=00000000
+# [CASE_START] time=1210.000 ns suite=reduce_tree case=105 description=recursive-golden/terminal-tap/clock-gating split=01 en=aa oc=ffffffff
+# [CASE_START] time=1220.000 ns suite=reduce_tree case=106 description=recursive-golden/terminal-tap/clock-gating split=03 en=aa oc=84218421
+# [CASE_START] time=1230.000 ns suite=reduce_tree case=107 description=recursive-golden/terminal-tap/clock-gating split=05 en=aa oc=12345678
+# [CASE_START] time=1240.000 ns suite=reduce_tree case=108 description=recursive-golden/terminal-tap/clock-gating split=07 en=aa oc=fffffff0
+# [CASE_START] time=1250.000 ns suite=reduce_tree case=109 description=recursive-golden/terminal-tap/clock-gating split=0b en=aa oc=00000000
+# [CASE_START] time=1260.000 ns suite=reduce_tree case=110 description=recursive-golden/terminal-tap/clock-gating split=0f en=aa oc=ffffffff
+# [CASE_START] time=1270.000 ns suite=reduce_tree case=111 description=recursive-golden/terminal-tap/clock-gating split=13 en=aa oc=84218421
+# [CASE_START] time=1280.000 ns suite=reduce_tree case=112 description=recursive-golden/terminal-tap/clock-gating split=17 en=aa oc=12345678
+# [CASE_START] time=1290.000 ns suite=reduce_tree case=113 description=recursive-golden/terminal-tap/clock-gating split=1b en=aa oc=fffffff0
+# [CASE_START] time=1300.000 ns suite=reduce_tree case=114 description=recursive-golden/terminal-tap/clock-gating split=1f en=aa oc=00000000
+# [CASE_START] time=1310.000 ns suite=reduce_tree case=115 description=recursive-golden/terminal-tap/clock-gating split=25 en=aa oc=ffffffff
+# [CASE_START] time=1320.000 ns suite=reduce_tree case=116 description=recursive-golden/terminal-tap/clock-gating split=27 en=aa oc=84218421
+# [CASE_START] time=1330.000 ns suite=reduce_tree case=117 description=recursive-golden/terminal-tap/clock-gating split=2f en=aa oc=12345678
+# [CASE_START] time=1340.000 ns suite=reduce_tree case=118 description=recursive-golden/terminal-tap/clock-gating split=37 en=aa oc=fffffff0
+# [CASE_START] time=1350.000 ns suite=reduce_tree case=119 description=recursive-golden/terminal-tap/clock-gating split=3f en=aa oc=00000000
+# [CASE_START] time=1360.000 ns suite=reduce_tree case=120 description=recursive-golden/terminal-tap/clock-gating split=45 en=aa oc=ffffffff
+# [CASE_START] time=1370.000 ns suite=reduce_tree case=121 description=recursive-golden/terminal-tap/clock-gating split=47 en=aa oc=84218421
+# [CASE_START] time=1380.000 ns suite=reduce_tree case=122 description=recursive-golden/terminal-tap/clock-gating split=4f en=aa oc=12345678
+# [CASE_START] time=1390.000 ns suite=reduce_tree case=123 description=recursive-golden/terminal-tap/clock-gating split=57 en=aa oc=fffffff0
+# [CASE_START] time=1400.000 ns suite=reduce_tree case=124 description=recursive-golden/terminal-tap/clock-gating split=5f en=aa oc=00000000
+# [CASE_START] time=1410.000 ns suite=reduce_tree case=125 description=recursive-golden/terminal-tap/clock-gating split=65 en=aa oc=ffffffff
+# [CASE_START] time=1420.000 ns suite=reduce_tree case=126 description=recursive-golden/terminal-tap/clock-gating split=67 en=aa oc=84218421
+# [CASE_START] time=1430.000 ns suite=reduce_tree case=127 description=recursive-golden/terminal-tap/clock-gating split=6f en=aa oc=12345678
+# [CASE_START] time=1440.000 ns suite=reduce_tree case=128 description=recursive-golden/terminal-tap/clock-gating split=77 en=aa oc=fffffff0
+# [CASE_START] time=1450.000 ns suite=reduce_tree case=129 description=recursive-golden/terminal-tap/clock-gating split=7f en=aa oc=00000000
+# [CASE_START] time=1490.000 ns suite=reduce_tree case=130 description=recursive-golden/terminal-tap/clock-gating split=00 en=81 oc=ffffffff
+# [CASE_START] time=1500.000 ns suite=reduce_tree case=131 description=recursive-golden/terminal-tap/clock-gating split=01 en=81 oc=84218421
+# [CASE_START] time=1510.000 ns suite=reduce_tree case=132 description=recursive-golden/terminal-tap/clock-gating split=03 en=81 oc=12345678
+# [CASE_START] time=1520.000 ns suite=reduce_tree case=133 description=recursive-golden/terminal-tap/clock-gating split=05 en=81 oc=fffffff0
+# [CASE_START] time=1530.000 ns suite=reduce_tree case=134 description=recursive-golden/terminal-tap/clock-gating split=07 en=81 oc=00000000
+# [CASE_START] time=1540.000 ns suite=reduce_tree case=135 description=recursive-golden/terminal-tap/clock-gating split=0b en=81 oc=ffffffff
+# [CASE_START] time=1550.000 ns suite=reduce_tree case=136 description=recursive-golden/terminal-tap/clock-gating split=0f en=81 oc=84218421
+# [CASE_START] time=1560.000 ns suite=reduce_tree case=137 description=recursive-golden/terminal-tap/clock-gating split=13 en=81 oc=12345678
+# [CASE_START] time=1570.000 ns suite=reduce_tree case=138 description=recursive-golden/terminal-tap/clock-gating split=17 en=81 oc=fffffff0
+# [CASE_START] time=1580.000 ns suite=reduce_tree case=139 description=recursive-golden/terminal-tap/clock-gating split=1b en=81 oc=00000000
+# [CASE_START] time=1590.000 ns suite=reduce_tree case=140 description=recursive-golden/terminal-tap/clock-gating split=1f en=81 oc=ffffffff
+# [CASE_START] time=1600.000 ns suite=reduce_tree case=141 description=recursive-golden/terminal-tap/clock-gating split=25 en=81 oc=84218421
+# [CASE_START] time=1610.000 ns suite=reduce_tree case=142 description=recursive-golden/terminal-tap/clock-gating split=27 en=81 oc=12345678
+# [CASE_START] time=1620.000 ns suite=reduce_tree case=143 description=recursive-golden/terminal-tap/clock-gating split=2f en=81 oc=fffffff0
+# [CASE_START] time=1630.000 ns suite=reduce_tree case=144 description=recursive-golden/terminal-tap/clock-gating split=37 en=81 oc=00000000
+# [CASE_START] time=1640.000 ns suite=reduce_tree case=145 description=recursive-golden/terminal-tap/clock-gating split=3f en=81 oc=ffffffff
+# [CASE_START] time=1650.000 ns suite=reduce_tree case=146 description=recursive-golden/terminal-tap/clock-gating split=45 en=81 oc=84218421
+# [CASE_START] time=1660.000 ns suite=reduce_tree case=147 description=recursive-golden/terminal-tap/clock-gating split=47 en=81 oc=12345678
+# [CASE_START] time=1670.000 ns suite=reduce_tree case=148 description=recursive-golden/terminal-tap/clock-gating split=4f en=81 oc=fffffff0
+# [CASE_START] time=1680.000 ns suite=reduce_tree case=149 description=recursive-golden/terminal-tap/clock-gating split=57 en=81 oc=00000000
+# [CASE_START] time=1690.000 ns suite=reduce_tree case=150 description=recursive-golden/terminal-tap/clock-gating split=5f en=81 oc=ffffffff
+# [CASE_START] time=1700.000 ns suite=reduce_tree case=151 description=recursive-golden/terminal-tap/clock-gating split=65 en=81 oc=84218421
+# [CASE_START] time=1710.000 ns suite=reduce_tree case=152 description=recursive-golden/terminal-tap/clock-gating split=67 en=81 oc=12345678
+# [CASE_START] time=1720.000 ns suite=reduce_tree case=153 description=recursive-golden/terminal-tap/clock-gating split=6f en=81 oc=fffffff0
+# [CASE_START] time=1730.000 ns suite=reduce_tree case=154 description=recursive-golden/terminal-tap/clock-gating split=77 en=81 oc=00000000
+# [CASE_START] time=1740.000 ns suite=reduce_tree case=155 description=recursive-golden/terminal-tap/clock-gating split=7f en=81 oc=ffffffff
+# [CASE_START] time=1780.000 ns suite=reduce_tree case=156 description=recursive-golden/terminal-tap/clock-gating split=00 en=01 oc=84218421
+# [CASE_START] time=1790.000 ns suite=reduce_tree case=157 description=recursive-golden/terminal-tap/clock-gating split=01 en=01 oc=12345678
+# [CASE_START] time=1800.000 ns suite=reduce_tree case=158 description=recursive-golden/terminal-tap/clock-gating split=03 en=01 oc=fffffff0
+# [CASE_START] time=1810.000 ns suite=reduce_tree case=159 description=recursive-golden/terminal-tap/clock-gating split=05 en=01 oc=00000000
+# [CASE_START] time=1820.000 ns suite=reduce_tree case=160 description=recursive-golden/terminal-tap/clock-gating split=07 en=01 oc=ffffffff
+# [CASE_START] time=1830.000 ns suite=reduce_tree case=161 description=recursive-golden/terminal-tap/clock-gating split=0b en=01 oc=84218421
+# [CASE_START] time=1840.000 ns suite=reduce_tree case=162 description=recursive-golden/terminal-tap/clock-gating split=0f en=01 oc=12345678
+# [CASE_START] time=1850.000 ns suite=reduce_tree case=163 description=recursive-golden/terminal-tap/clock-gating split=13 en=01 oc=fffffff0
+# [CASE_START] time=1860.000 ns suite=reduce_tree case=164 description=recursive-golden/terminal-tap/clock-gating split=17 en=01 oc=00000000
+# [CASE_START] time=1870.000 ns suite=reduce_tree case=165 description=recursive-golden/terminal-tap/clock-gating split=1b en=01 oc=ffffffff
+# [CASE_START] time=1880.000 ns suite=reduce_tree case=166 description=recursive-golden/terminal-tap/clock-gating split=1f en=01 oc=84218421
+# [CASE_START] time=1890.000 ns suite=reduce_tree case=167 description=recursive-golden/terminal-tap/clock-gating split=25 en=01 oc=12345678
+# [CASE_START] time=1900.000 ns suite=reduce_tree case=168 description=recursive-golden/terminal-tap/clock-gating split=27 en=01 oc=fffffff0
+# [CASE_START] time=1910.000 ns suite=reduce_tree case=169 description=recursive-golden/terminal-tap/clock-gating split=2f en=01 oc=00000000
+# [CASE_START] time=1920.000 ns suite=reduce_tree case=170 description=recursive-golden/terminal-tap/clock-gating split=37 en=01 oc=ffffffff
+# [CASE_START] time=1930.000 ns suite=reduce_tree case=171 description=recursive-golden/terminal-tap/clock-gating split=3f en=01 oc=84218421
+# [CASE_START] time=1940.000 ns suite=reduce_tree case=172 description=recursive-golden/terminal-tap/clock-gating split=45 en=01 oc=12345678
+# [CASE_START] time=1950.000 ns suite=reduce_tree case=173 description=recursive-golden/terminal-tap/clock-gating split=47 en=01 oc=fffffff0
+# [CASE_START] time=1960.000 ns suite=reduce_tree case=174 description=recursive-golden/terminal-tap/clock-gating split=4f en=01 oc=00000000
+# [CASE_START] time=1970.000 ns suite=reduce_tree case=175 description=recursive-golden/terminal-tap/clock-gating split=57 en=01 oc=ffffffff
+# [CASE_START] time=1980.000 ns suite=reduce_tree case=176 description=recursive-golden/terminal-tap/clock-gating split=5f en=01 oc=84218421
+# [CASE_START] time=1990.000 ns suite=reduce_tree case=177 description=recursive-golden/terminal-tap/clock-gating split=65 en=01 oc=12345678
+# [CASE_START] time=2000.000 ns suite=reduce_tree case=178 description=recursive-golden/terminal-tap/clock-gating split=67 en=01 oc=fffffff0
+# [CASE_START] time=2010.000 ns suite=reduce_tree case=179 description=recursive-golden/terminal-tap/clock-gating split=6f en=01 oc=00000000
+# [CASE_START] time=2020.000 ns suite=reduce_tree case=180 description=recursive-golden/terminal-tap/clock-gating split=77 en=01 oc=ffffffff
+# [CASE_START] time=2030.000 ns suite=reduce_tree case=181 description=recursive-golden/terminal-tap/clock-gating split=7f en=01 oc=84218421
+# [CASE_START] time=2070.000 ns suite=reduce_tree case=182 description=recursive-golden/terminal-tap/clock-gating split=00 en=00 oc=12345678
+# [CASE_START] time=2080.000 ns suite=reduce_tree case=183 description=recursive-golden/terminal-tap/clock-gating split=01 en=00 oc=fffffff0
+# [CASE_START] time=2090.000 ns suite=reduce_tree case=184 description=recursive-golden/terminal-tap/clock-gating split=03 en=00 oc=00000000
+# [CASE_START] time=2100.000 ns suite=reduce_tree case=185 description=recursive-golden/terminal-tap/clock-gating split=05 en=00 oc=ffffffff
+# [CASE_START] time=2110.000 ns suite=reduce_tree case=186 description=recursive-golden/terminal-tap/clock-gating split=07 en=00 oc=84218421
+# [CASE_START] time=2120.000 ns suite=reduce_tree case=187 description=recursive-golden/terminal-tap/clock-gating split=0b en=00 oc=12345678
+# [CASE_START] time=2130.000 ns suite=reduce_tree case=188 description=recursive-golden/terminal-tap/clock-gating split=0f en=00 oc=fffffff0
+# [CASE_START] time=2140.000 ns suite=reduce_tree case=189 description=recursive-golden/terminal-tap/clock-gating split=13 en=00 oc=00000000
+# [CASE_START] time=2150.000 ns suite=reduce_tree case=190 description=recursive-golden/terminal-tap/clock-gating split=17 en=00 oc=ffffffff
+# [CASE_START] time=2160.000 ns suite=reduce_tree case=191 description=recursive-golden/terminal-tap/clock-gating split=1b en=00 oc=84218421
+# [CASE_START] time=2170.000 ns suite=reduce_tree case=192 description=recursive-golden/terminal-tap/clock-gating split=1f en=00 oc=12345678
+# [CASE_START] time=2180.000 ns suite=reduce_tree case=193 description=recursive-golden/terminal-tap/clock-gating split=25 en=00 oc=fffffff0
+# [CASE_START] time=2190.000 ns suite=reduce_tree case=194 description=recursive-golden/terminal-tap/clock-gating split=27 en=00 oc=00000000
+# [CASE_START] time=2200.000 ns suite=reduce_tree case=195 description=recursive-golden/terminal-tap/clock-gating split=2f en=00 oc=ffffffff
+# [CASE_START] time=2210.000 ns suite=reduce_tree case=196 description=recursive-golden/terminal-tap/clock-gating split=37 en=00 oc=84218421
+# [CASE_START] time=2220.000 ns suite=reduce_tree case=197 description=recursive-golden/terminal-tap/clock-gating split=3f en=00 oc=12345678
+# [CASE_START] time=2230.000 ns suite=reduce_tree case=198 description=recursive-golden/terminal-tap/clock-gating split=45 en=00 oc=fffffff0
+# [CASE_START] time=2240.000 ns suite=reduce_tree case=199 description=recursive-golden/terminal-tap/clock-gating split=47 en=00 oc=00000000
+# [CASE_START] time=2250.000 ns suite=reduce_tree case=200 description=recursive-golden/terminal-tap/clock-gating split=4f en=00 oc=ffffffff
+# [CASE_START] time=2260.000 ns suite=reduce_tree case=201 description=recursive-golden/terminal-tap/clock-gating split=57 en=00 oc=84218421
+# [CASE_START] time=2270.000 ns suite=reduce_tree case=202 description=recursive-golden/terminal-tap/clock-gating split=5f en=00 oc=12345678
+# [CASE_START] time=2280.000 ns suite=reduce_tree case=203 description=recursive-golden/terminal-tap/clock-gating split=65 en=00 oc=fffffff0
+# [CASE_START] time=2290.000 ns suite=reduce_tree case=204 description=recursive-golden/terminal-tap/clock-gating split=67 en=00 oc=00000000
+# [CASE_START] time=2300.000 ns suite=reduce_tree case=205 description=recursive-golden/terminal-tap/clock-gating split=6f en=00 oc=ffffffff
+# [CASE_START] time=2310.000 ns suite=reduce_tree case=206 description=recursive-golden/terminal-tap/clock-gating split=77 en=00 oc=84218421
+# [CASE_START] time=2320.000 ns suite=reduce_tree case=207 description=recursive-golden/terminal-tap/clock-gating split=7f en=00 oc=12345678
+# CG_UNIT forwarding_DFF=t1 active_edges=4 gated_checks=946
+# CG_UNIT forwarding_DFF=t2 active_edges=2 gated_checks=948
+# CG_UNIT forwarding_DFF=t3 active_edges=25 gated_checks=913
+# CG_UNIT forwarding_DFF=t4 active_edges=5 gated_checks=936
+# CG_UNIT forwarding_DFF=t5 active_edges=14 gated_checks=918
+# CG_UNIT forwarding_DFF=t6 active_edges=10 gated_checks=916
+# PASS child_consumer_gating pair_suppressed=39 quad_suppressed=5
+# PASS reduce_clock_gating cases=208 terminal_tap_events=155
+# ** Note: $finish    : tb_ClusterReduceTree.sv(203)
+#    Time: 2420 ns  Iteration: 1  Instance: /tb_ClusterReduceTree
+# Break at tb_ClusterReduceTree.sv line 203
+# Stopped at tb_ClusterReduceTree.sv line 203
+#  quit -code 0
+# End time: 18:24:55 on Oct 24,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0

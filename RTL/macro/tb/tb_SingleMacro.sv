@@ -6,14 +6,14 @@ module tb_SingleMacro;
   logic clock = 1'b0;
   always #5 clock = ~clock;
   logic reset = 1'b0;
-  logic cim_ren = 0, cim_station = 1, cim_signed_en = 0, cim_wen = 0;
+  logic cim_ren = 0, cim_station = 1, cim_signed_en = 0, sram_wen = 0;
   logic [511:0] cim_idata = '0;
-  logic [7:0] cim_raddr = '0, cim_waddr = '0;
+  logic [7:0] cim_raddr = '0, sram_waddr = '0;
   logic [3:0] cim_oc_mask = '0;
   logic [2:0] cim_precision = '0;
   logic [1:0] cim_phase = '0;
-  logic [1023:0] cim_wdata = '0;
-  logic [3:0] cim_wmask = '0;
+  logic [1023:0] sram_wdata = '0;
+  logic [3:0] sram_wmask = '0;
   logic sram_ren = 0;
   logic [7:0] sram_raddr = '0;
   wire [1023:0] sram_rdata;
@@ -21,6 +21,7 @@ module tb_SingleMacro;
   wire cim_odata_valid;
   wire [3:0] cim_odata_oc_mask;
   wire [1:0] cim_odata_phase;
+  wire [3:0] cim_result_mask = 4'hf; // Standalone: every enabled OC has a consumer.
   SingleMacro #(.USE_CLOCK_GATING(CLOCK_GATING)) dut (.*);
 
   // Exhaustive primitive test is independent of the macro datapath.

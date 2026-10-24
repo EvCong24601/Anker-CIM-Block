@@ -9,15 +9,15 @@ module tb_Cluster_GEMM_OS1_WS32;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
-  wire [CLUSTERS-1:0] cmd_ready_o;
+  wire [CLUSTERS-1:0] cmd_ready_o, sram_rd_valid;
   logic [1023:0] act_data_i = '0;
   requant_cfg_t requant_cfg_i[CLUSTERS];
-  logic cim_cs_en = 0, cim_wr_en = 0, cim_macro_group = 0;
-  logic [1:0] cim_bank_sel = 0;
-  logic [7:0] cim_row_addr = WEIGHT_ADDR;
-  logic [3:0] cim_wmask = 0;
-  logic [1023:0] cim_wrdata[CLUSTERS];
-  wire [1023:0] cim_rd_data[CLUSTERS], psum_data_o[CLUSTERS];
+  logic sram_cs_en = 0, sram_wr_en = 0, sram_macro_group = 0;
+  logic [1:0] sram_bank_sel = 0;
+  logic [7:0] sram_row_addr = WEIGHT_ADDR;
+  logic [3:0] sram_wmask = 0;
+  logic [1023:0] sram_wrdata[CLUSTERS];
+  wire [1023:0] sram_rd_data[CLUSTERS], psum_data_o[CLUSTERS];
   wire [255:0] requant_data_o[CLUSTERS];
   wire [31:0] out_valid_o[CLUSTERS], requant_valid_o[CLUSTERS];
   wire [CLUSTERS-1:0] issue, batch_active;
@@ -35,14 +35,15 @@ module tb_Cluster_GEMM_OS1_WS32;
       .cmd_ready_o(cmd_ready_o[c]),
       .requant_cfg_i(requant_cfg_i[c]),
       .act_data_i(act_data_i),
-      .cim_cs_en(cim_cs_en),
-      .cim_wr_en(cim_wr_en),
-      .cim_macro_group(cim_macro_group),
-      .cim_bank_sel(cim_bank_sel),
-      .cim_row_addr(cim_row_addr),
-      .cim_wmask(cim_wmask),
-      .cim_wrdata(cim_wrdata[c]),
-      .cim_rd_data(cim_rd_data[c]),
+      .sram_cs_en(sram_cs_en),
+      .sram_wr_en(sram_wr_en),
+      .sram_macro_group(sram_macro_group),
+      .sram_bank_sel(sram_bank_sel),
+      .sram_row_addr(sram_row_addr),
+      .sram_wmask(sram_wmask),
+      .sram_wrdata(sram_wrdata[c]),
+      .sram_rd_data(sram_rd_data[c]),
+      .sram_rd_valid(sram_rd_valid[c]),
       .requant_data_o(requant_data_o[c]),
       .requant_valid_o(requant_valid_o[c])
     );
@@ -55,7 +56,7 @@ module tb_Cluster_GEMM_OS1_WS32;
     assign ren[c] = dut.ren;
     assign station[c] = dut.station;
     assign issue_plane[c] = dut.plane;
-    assign issue_address[c] = dut.command.weight_cim_raddr;
+    assign issue_address[c] = dut.command.cim_weight_raddr;
     always_comb begin
       issue_phase[c]   = dut.phase;
       issue_context[c] = dut.context_idx;

@@ -14,7 +14,7 @@ always @(posedge clock) begin : act_buffer_scoreboard
     if (dut.act_loading) wanted[1024*dut.external_phase+:1024] = act_data_i;
     if (dut.issue && !dut.act_slice_valid[dut.phase])
       $fatal(1, "ACT buffer issued before the selected Plane was received");
-    if (dut.issue && dut.packet_cmd.as_cnt > 1 && dut.context_idx >= dut.command_count)
+    if (dut.issue && dut.packet_cmd.cim_as_cnt > 1 && dut.context_idx >= dut.command_count)
       $fatal(1, "Internal issue before the selected Context address was received");
     if (dut.issue && cmd_valid_i && cmd_ready_o && !dut.packet_active)
       $fatal(1, "ACT input overwrites a packet still being issued");
@@ -53,7 +53,7 @@ always @(posedge clock) begin : buffer_clock_scoreboard
     for (int l = 0; l < 32; l++) begin
       old_tmp[l]  = dut.tmp_result[l];
       want_tmp[l] = dut.capture_data[l];
-      if(dut.capture_valid[l] && (dut.capture_tag[l].cmd.as_cnt<=1 || dut.capture_tag[l].cmd.os_cnt==1) && dut.capture_tag[l].ph>0)
+      if(dut.capture_valid[l] && dut.capture_tag[l].cmd.cim_as_cnt<=1 && dut.capture_tag[l].ph>0)
         want_tmp[l] = old_tmp[l] + (dut.capture_data[l] <<< (4 * dut.capture_tag[l].ph));
     end
     for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++)
@@ -65,10 +65,10 @@ always @(posedge clock) begin : buffer_clock_scoreboard
     if (dut.tmp_valid[l]) begin
       c = dut.tmp_tag[l].ctx;
       ph = dut.tmp_tag[l].ph;
-      ab = abits(int'(dut.tmp_tag[l].cmd.precision));
-      writes_psum=(dut.tmp_tag[l].cmd.as_cnt>1 && dut.tmp_tag[l].cmd.os_cnt>1) ?
-          (dut.tmp_tag[l].cmd.os_cnt>1 || ab>4) :
-          (dut.tmp_tag[l].cmd.os_cnt>1 && ph==ab/4-1);
+      ab = abits(int'(dut.tmp_tag[l].cmd.cim_precision));
+      writes_psum=(dut.tmp_tag[l].cmd.cim_as_cnt>1) ?
+          (dut.tmp_tag[l].cmd.cim_os_cnt>1 || ab>4) :
+          (dut.tmp_tag[l].cmd.cim_os_cnt>1 && ph==ab/4-1);
       // A bypass Context can have an ID beyond the physical Psum array.
       if (writes_psum) begin
         if (c >= OUTPUT_BUFFER_DEPTH) $fatal(1, "TB: Psum Context exceeds depth");
@@ -98,7 +98,7 @@ always @(posedge clock) begin : buffer_clock_scoreboard
     for (int l = 0; l < 32; l++)
     if (!want_p[d][l]) begin
       if (dut.psum[d][l] !== old_p[d][l]) $fatal(1, "Gated Psum DFF changed");
-      if (dut.batch_active && dut.batch_command.os_cnt == 1) bypass_psum_hold_checks++;
+      if (dut.batch_active && dut.batch_command.cim_os_cnt == 1) bypass_psum_hold_checks++;
     end
   end
 end
@@ -124,13 +124,13 @@ always @(posedge clock) begin : arithmetic_scoreboard
         c = dut.tmp_tag[l].ctx;
         ph = dut.tmp_tag[l].ph;
         kt = dut.tmp_tag[l].kt;
-        is_as = dut.tmp_tag[l].cmd.as_cnt > 1 && dut.tmp_tag[l].cmd.os_cnt > 1;
+        is_as = dut.tmp_tag[l].cmd.cim_as_cnt > 1;
         cx[l] = c;
         if (ph == 0 && kt == 0) running_sum[c][l] = 0;
         running_sum[c][l] += raw_slice[l] <<< (4 * ph);
         want[l] = running_sum[c][l];
-        check_p[l] = is_as ? (dut.tmp_tag[l].cmd.os_cnt > 1 || abits(int'(dut.tmp_tag[l].cmd.precision)) > 4) :
-          (dut.tmp_tag[l].cmd.os_cnt > 1 && ph == abits(int'(dut.tmp_tag[l].cmd.precision)) / 4 - 1);
+        check_p[l] = is_as ? (dut.tmp_tag[l].cmd.cim_os_cnt > 1 || abits(int'(dut.tmp_tag[l].cmd.cim_precision)) > 4) :
+          (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == abits(int'(dut.tmp_tag[l].cmd.cim_precision)) / 4 - 1);
         if (dut.psum_write[l] !== check_p[l]) $fatal(1, "Psum write phase mismatch");
         acc = kt > 0 && (is_as ? ph == 0 : check_p[l]);
         fusion = ph > 0;
@@ -148,8 +148,8 @@ always @(posedge clock) begin : arithmetic_scoreboard
           trace_row = $sformatf(
             "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%s,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
             standard_case,
-            int'(dut.tmp_tag[l].cmd.precision),
-            int'(dut.tmp_tag[l].cmd.signed_en),
+            int'(dut.tmp_tag[l].cmd.cim_precision),
+            int'(dut.tmp_tag[l].cmd.cim_signed_en),
             kt,
             c,
             ph,
@@ -215,12 +215,12 @@ always @(posedge clock) begin : scoreboard
         "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%02h,%0d,%0d,%s",
         cycle - first_external,
         standard_case,
-        int'(cmd_i.precision),
-        int'(cmd_i.signed_en),
+        int'(cmd_i.cim_precision),
+        int'(cmd_i.cim_signed_en),
         dut.tile,
         int'(command_sample),
         command_sample ? external_ctx : -1,
-        cmd_i.weight_cim_raddr,
+        cmd_i.cim_weight_raddr,
         int'(act_sample),
         act_sample ? external_ph : -1,
         act_sample ? $sformatf(
@@ -230,7 +230,7 @@ always @(posedge clock) begin : scoreboard
     if (dut.issue) begin
       idx = issue_count;
       t   = idx / (case_r * case_p);
-      if (case_as > 1 && case_os > 1) begin
+      if (case_as > 1) begin
         p = (idx / case_r) % case_p;
         c = idx % case_r;
       end else begin
@@ -244,12 +244,12 @@ always @(posedge clock) begin : scoreboard
       for (int k = 0; k < 256; k++)
       if (dut.plane[4*k+:4] !== (k < case_used_digits ? 4'(activation[t][c][k] >> (4 * p)) : 4'd0))
         $fatal(1, "ACT Plane sampling/reuse mismatch tile=%0d ctx=%0d phase=%0d digit=%0d", t, c, p, k);
-      if (dut.command.weight_cim_raddr !== 8'('h20 + 16 * t + (case_as > 1 ? c : 0)))
+      if (dut.command.cim_weight_raddr !== 8'('h20 + 16 * t + (case_as > 1 ? c : 0)))
         $fatal(1, "Descriptor weight address mismatch");
       if (issue_count == 0) first_issue = cycle;
       if (exact_ii) begin
         if (case_as > 1) begin
-          if(cycle-first_external != t*(1+case_r*case_p)+1+(case_os==1 ? c*case_p+p : p*case_r+c))
+          if(cycle-first_external != t*(1+case_r*case_p)+1+(p*case_r+c))
             $fatal(1, "AS external-load/internal-issue timing mismatch");
         end else if (cycle - first_external != (t * case_r + c) * (case_p + 1) + 1 + p)
           $fatal(1, "WS external-load/internal-issue timing mismatch");
@@ -285,8 +285,8 @@ always @(posedge clock) begin : scoreboard
             1,
             "Raw mismatch case=%0d p=%0d sign=%0d ctx=%0d lane=%0d got=%0d expected=%0d",
             cases_run,
-            cmd_i.precision,
-            cmd_i.signed_en,
+            cmd_i.cim_precision,
+            cmd_i.cim_signed_en,
             tag,
             l,
             $signed(

@@ -81,6 +81,79 @@ task automatic configure_requant(input int profile);
   requant_cfg_i = expected_requant_cfg;
 endtask
 
+// Independent AS2 parameter mapping. Each batch is fully drained before the
+// next one; no buffering or scheduler changes are required for this contract.
+function automatic requant_cfg_t context_test_cfg(input int mode, cx);
+  requant_cfg_t cfg;
+  cfg = '0;
+  cfg.conv_mode = 1'(mode);
+  cfg.requant_mode = 1'(mode);
+  for (int c = 0; c < 4; c++) begin
+    cfg.requant_multiplier[32*c+:32] = mode ? 32'(1 + 4*cx + c) : 32'(1 + 2*cx);
+    cfg.requant_shift[10*c+:10] = mode ? 10'(-5-cx) : 10'(-4-cx);
+    cfg.requant_zp[32*c+:32] = 32'(1 + 10*cx + c);
+  end
+  return cfg;
+endfunction
+
+task automatic run_requant_context_suite();
+  int received, wanted, cx, shift_bits, mult;
+  if (!ENABLE_REQUANT || REQUANT_CONTEXT_DEPTH < 2)
+    $fatal(1, "AS parameter test requires Requant and two Context entries");
+  for (int m = 0; m < 2; m++) begin
+    load_weight_row(m, 8'h20, {512{2'b01}});
+    load_weight_row(m, 8'h21, {512{2'b01}});
+  end
+  for (int mode = 0; mode < 2; mode++)
+    for (int os = 1; os <= 2; os++) begin
+      $display("[CASE_START] time=%0.3f ns suite=requant_context description=independent-AS2-scale-and-zp/serial-batches mode=%0d os=%0d", $realtime, mode, os);
+      cmd_i = '0;
+      cmd_i.cim_os_cnt = 8'(os); cmd_i.cim_ws_cnt = 1; cmd_i.cim_as_cnt = 2;
+      cmd_i.cim_macro_en_mask = 3; cmd_i.cim_macro_oc_mask = 32'hff;
+      cmd_i.cim_reduce_split_mask = 7; cmd_i.cim_act_slot_sel = 24'h8;
+      act_data_i = {256{4'h1}};
+      received = 0;
+      fork
+        begin
+      for (int tile = 0; tile < os; tile++)
+        for (int context_id = 0; context_id < 2; context_id++) begin
+          @(negedge clock);
+          cmd_i.cim_weight_raddr = 8'('h20 + context_id);
+          requant_cfg_i = context_test_cfg(mode, context_id);
+          cmd_valid_i = 1;
+          do @(posedge clock); while (!cmd_ready_o);
+          @(negedge clock); cmd_valid_i = 0;
+        end
+        end
+        begin
+      for (int timeout = 0; timeout < 40; timeout++) begin
+        @(negedge clock);
+        if (requant_valid_o != 0) begin
+          if (requant_valid_o !== 32'hf || received >= 8)
+            $fatal(1, "AS parameter test: unexpected lane mask or duplicate result");
+          cx = received / 4;
+          for (int c = 0; c < 4; c++) begin
+            mult = mode ? 1 + 4*cx + c : 1 + 2*cx;
+            shift_bits = mode ? 5 + cx : 4 + cx;
+            // Two Macros, each with 128 unit weights and unit ACT values.
+            wanted = ((256 * os * mult) >> shift_bits) + 1 + 10*cx + c;
+            if ($signed(requant_data_o[8*c+:8]) != wanted)
+              $fatal(1, "AS parameter mapping mismatch mode=%0d os=%0d ctx=%0d OC=%0d got=%0d expected=%0d", mode, os, cx, c, $signed(requant_data_o[8*c+:8]), wanted);
+            received++;
+          end
+        end
+        if (received == 8 && !dut.batch_active && requant_valid_o == 0) break;
+        if (timeout == 39) $fatal(1, "AS parameter test output timeout");
+      end
+        end
+      join
+      repeat (5) @(negedge clock);
+      if (requant_valid_o != 0 || dut.batch_active)
+        $fatal(1, "AS parameter test: batch did not drain");
+    end
+  $display("PASS requant_context cases=4 quant_checks=32 independent_scale_zp=1 serial_batches=1");
+endtask
+
 // Load the next batch configuration on the exact edge that captures the old
 // batch's last INT8 output. The old result must use the old configuration.
 task automatic run_requant_boundary_suite();
@@ -91,14 +164,14 @@ task automatic run_requant_boundary_suite();
   for (int k = 0; k < 128; k++) weight_row[2*k+:2] = 2'd1;
   load_weight_row(0, 8'h20, weight_row);
   cmd_i = '0;
-  cmd_i.os_cnt = 1;
-  cmd_i.ws_cnt = 1;
-  cmd_i.as_cnt = 1;
-  cmd_i.macro_en_mask = 3;
-  cmd_i.reduce_split_mask = 7'h07;
-  cmd_i.act_slot_sel = 24'h000008;
-  cmd_i.macro_oc_mask = 1;
-  cmd_i.weight_cim_raddr = 8'h20;
+  cmd_i.cim_os_cnt = 1;
+  cmd_i.cim_ws_cnt = 1;
+  cmd_i.cim_as_cnt = 1;
+  cmd_i.cim_macro_en_mask = 3;
+  cmd_i.cim_reduce_split_mask = 7'h07;
+  cmd_i.cim_act_slot_sel = 24'h000008;
+  cmd_i.cim_macro_oc_mask = 1;
+  cmd_i.cim_weight_raddr = 8'h20;
   act_data_i = '0;
   for (int k = 0; k < 128; k++) act_data_i[4*k+:4] = 4'd1;
   requant_cfg_i = '{
@@ -145,9 +218,9 @@ task automatic run_requant_boundary_suite();
 endtask
 
 // Change the live input after batch acceptance, including to an unsupported
-// mode. Only the first accepted Command is allowed to load configuration.
+// mode. WS/single-Context latch once; AS supplies parameters on each Command.
 always @(negedge clock)
-  if (!reset && monitoring && dut.batch_active)
+  if (!reset && monitoring && dut.batch_active && dut.batch_command.cim_as_cnt <= 1)
     requant_cfg_i = '{
       requant_mode: 1'b1,
       requant_multiplier: 32'sd7,
@@ -202,8 +275,16 @@ always @(posedge clock) begin : requant_protocol_scoreboard
     for (int lane = 0; lane < 32; lane++)
     if (!requant_valid_o[lane] && requant_data_o[8*lane+:8] !== previous_data[8*lane+:8])
       $fatal(1, "Requant output register changed without lane valid lane=%0d", lane);
-  if (monitoring && dut.batch_active) begin
-    if (dut.batch_requant_cfg !== expected_requant_cfg) $fatal(1, "Requant configuration changed within a batch");
+  if (ENABLE_REQUANT && monitoring && dut.batch_active) begin
+    if (dut.batch_requant_cfg.conv_mode !== expected_requant_cfg.conv_mode ||
+        dut.batch_requant_cfg.requant_mode !== expected_requant_cfg.requant_mode ||
+        dut.batch_requant_cfg.requant_zp !== expected_requant_cfg.requant_zp ||
+        dut.batch_requant_cfg.requant_multiplier[31:0] !== expected_requant_cfg.requant_multiplier[31:0] ||
+        dut.batch_requant_cfg.requant_shift[9:0] !== expected_requant_cfg.requant_shift[9:0] ||
+        (expected_requant_cfg.requant_mode &&
+         (dut.batch_requant_cfg.requant_multiplier !== expected_requant_cfg.requant_multiplier ||
+          dut.batch_requant_cfg.requant_shift !== expected_requant_cfg.requant_shift)))
+      $fatal(1, "Requant configuration changed within a batch");
     requant_config_hold_checks++;
   end
   if (monitoring)
@@ -272,8 +353,8 @@ task automatic run_requant_reset_suite();
       reset = 1;
       monitoring = 0;
       cmd_valid_i = 0;
-      cim_cs_en = 0;
-      cim_wr_en = 0;
+      sram_cs_en = 0;
+      sram_wr_en = 0;
       disable interrupted_case;
     end
   join
@@ -282,5 +363,31 @@ task automatic run_requant_reset_suite();
   reset = 0;
   repeat (3) @(negedge clock);
   if (requant_valid_o !== 0) $fatal(1, "Stale Requant valid after reset release");
-  $display("PASS requant_reset cancelled_pending=1 registers_cleared=1");
+
+  // Publish an actual quantized result, then assert and release reset entirely
+  // between two rising edges. A synchronous-only output reset fails here.
+  $display("[CASE_START] time=%0.3f ns suite=requant_reset description=async-short-reset-between-clock-edges",
+           $realtime);
+  fork : short_reset_case
+    run_case(1, 1'b1, 7'h07, 8'h03, 32'hffffffff, 24'h000008, 0, 1, 1, 1, 0);
+    begin
+      wait (|requant_valid_o);
+      #1;
+      reset = 1;
+      monitoring = 0;
+      cmd_valid_i = 0;
+      sram_cs_en = 0;
+      sram_wr_en = 0;
+      #0.002;
+      if (requant_valid_o !== 0 || requant_data_o !== 0)
+        $fatal(1, "Requant output did not clear asynchronously without a clock edge");
+      #1;
+      reset = 0;
+      disable short_reset_case;
+    end
+  join
+  repeat (3) @(negedge clock);
+  if (requant_valid_o !== 0 || requant_data_o !== 0)
+    $fatal(1, "Requant output survived a short asynchronous reset pulse");
+  $display("PASS requant_reset cancelled_pending=1 registers_cleared=1 short_async_pulse=1");
 endtask

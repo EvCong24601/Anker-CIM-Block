@@ -16,7 +16,7 @@ function automatic string cluster_suite();
   if ($test$plusargs("REQUANT_CHANNEL_TEST")) return "four-channel-fixed-OC-scale-mapping";
   if ($test$plusargs("REQUANT_TEST")) return "per-tensor-combinational-requant";
   if ($test$plusargs("INPUT_OVERLAP_TEST")) return "same-packet-input-issue-overlap";
-  if ($test$plusargs("CONTEXT_STRESS_TEST")) return "OS1-WS64-AS64/OS2-WS8-AS8";
+  if ($test$plusargs("CONTEXT_STRESS_TEST")) return "OS1-WS64-AS16/OS2-WS8-AS8";
   if ($test$plusargs("OC_MERGE_TEST")) return "leftmost-OC-mask";
   if ($test$plusargs("ACT_BUFFER_TEST")) return "full-plane-ACT-capacity";
   if ($test$plusargs("FULL_ACT_TEST")) return "W8A16-K256-full-ACT";
@@ -53,15 +53,15 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
   case_r = ws > 1 ? ws : as_count;
   case_p = ab / 4;
   d = '0;
-  d.os_cnt = 8'(os);
-  d.ws_cnt = 8'(ws);
-  d.as_cnt = 8'(as_count);
-  d.precision = 3'(precision);
-  d.signed_en = sign_en;
-  d.reduce_split_mask = split;
-  d.macro_en_mask = en;
-  d.macro_oc_mask = oc;
-  d.act_slot_sel = slots;
+  d.cim_os_cnt = 8'(os);
+  d.cim_ws_cnt = 8'(ws);
+  d.cim_as_cnt = 8'(as_count);
+  d.cim_precision = 3'(precision);
+  d.cim_signed_en = sign_en;
+  d.cim_reduce_split_mask = split;
+  d.cim_macro_en_mask = en;
+  d.cim_macro_oc_mask = oc;
+  d.cim_act_slot_sel = slots;
   used_digits = 0;
   for (int m = 0; m < 8; m++)
     if (en[m] && (int'(slots[3*m+:3]) + 1) * kr > used_digits) used_digits = (int'(slots[3*m+:3]) + 1) * kr;
@@ -134,7 +134,7 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
   monitoring = 1;
   for (int kt = 0; kt < os; kt++)
     for (int cx = 0; cx < (as_count > 1 ? 1 : case_r); cx++) begin
-      d.weight_cim_raddr = 8'('h20 + 16 * kt);
+      d.cim_weight_raddr = 8'('h20 + 16 * kt);
       full_act = '0;
       for (int ph = 0; ph < case_p; ph++)
       for (int k = 0; k < used_digits; k++) full_act[1024*ph+4*k+:4] = 4'(activation[kt][cx][k] >> (4 * ph));

@@ -9,7 +9,7 @@ always @(posedge clock) begin : edge_scoreboard
   if (!reset && monitoring) begin
     if (cmd_valid_i && cmd_ready_o) begin
       if (first_accept < 0) first_accept = cycle;
-      if (cycle != first_accept + (phases + 1) * commands || cmd_i.weight_cim_raddr !== 8'(base_address + active_tile))
+      if (cycle != first_accept + (phases + 1) * commands || cmd_i.cim_weight_raddr !== 8'(base_address + active_tile))
         $fatal(1, "Edge GEMM: Command cycle or address mismatch");
       commands++;
       total_commands++;
@@ -19,7 +19,7 @@ always @(posedge clock) begin : edge_scoreboard
       phase = issues % phases;
       if(cycle!=first_accept+(phases+1)*row+1+phase || dut.context_idx!=row || dut.phase!=phase ||
          dut.plane!==act_planes[row*phases+phase] || dut.ren!==8'(en) ||
-         dut.command.weight_cim_raddr!==8'(base_address+active_tile))
+         dut.command.cim_weight_raddr!==8'(base_address+active_tile))
         $fatal(1, "Edge GEMM: internal ACT/Context/phase/weight route mismatch");
       for (int macro = first_macro; macro < first_macro + macro_count; macro++) begin
         if (dut.station[macro] !== (issues == 0)) $fatal(1, "Edge GEMM: WS weight hold refresh mismatch");

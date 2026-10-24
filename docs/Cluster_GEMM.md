@@ -1,18 +1,18 @@
 # Cluster GEMM 用例总览
 
-GEMM 验证由三个 TB 执行，包含 11 个正向 case 和 3 个 AS 参数负向 case。每个正向 case 只使用一个 Cluster，通过 WLC 常规 128 B 接口写入并读回权重，再驱动 Command 和完整 ACT Plane。检查范围包括整数点积、物理输出 lane、raw/INT8 数值、输出周期、寄存器保持、权重 Hold 和适用的 Psum 历史。
+GEMM 验证由三个 TB 执行，包含 11 个正向 case 和 5 个 AS 参数负向 case。每个正向 case 只使用一个 Cluster，通过 WLC 常规 128 B 接口写入并读回权重，再驱动 Command 和完整 ACT Plane。检查范围包括整数点积、物理输出 lane、raw/INT8 数值、输出周期、寄存器保持、权重 Hold 和适用的 Psum 历史。
 
 ## 公共约定
 
 - `M/K/N` 对应 `X[M,K] × W[K,N]`。启用 Requant 时，每个归约组最多输出 4 个 OC，N 方向由批次或 AS Context 覆盖。
 - ACT 使用 per-tensor 非对称量化，weight 使用对称量化。WS32、AS4、高位置组和 N 尾部场景分别具有 per-tensor weight 与 per-channel weight 配置；舍入/饱和场景使用定向 per-channel 参数。
-- 合并输入补偿后的 `zp` 始终逐通道。per-tensor scale 使用参数项 0；per-channel scale 使用 OC 对应项。参数项 c 固定对应 OC c，mask 空洞不压缩索引。
+- 合并输入补偿后的 `zp` 始终逐通道。per-tensor scale 使用当前Context的参数项 0；per-channel scale 使用 OC 对应项。参数项 c 固定对应 OC c，mask 空洞不压缩索引。
 - Python 生成实数参考、整数矩阵、量化参数、权重行、ACT Plane 和整数 golden。SV 检查真实 Macro 乘法及归约路径，输出矩阵与整数 golden 精确比较。
 - raw 经组合 Requant 后，在下一时钟沿写入 INT8 输出寄存器，量化 valid 比 raw 晚 1T。输出为 valid-only 接口，下游须在有效周期接收。
 
 ## W8A16：OS1 / WS32
 
-`X[32,128] × W[128,16]`，`os_cnt/ws_cnt/as_cnt=1/32/1`。八个 Macro 根归约，物理 K256 中高 K128 补零；四批 N4 对应地址 `0x40～0x43`。每批重放 32 行 ACT，OS1 旁路 Psum。
+`X[32,128] × W[128,16]`，`cim_os_cnt/cim_ws_cnt/cim_as_cnt=1/32/1`。八个 Macro 根归约，物理 K256 中高 K128 补零；四批 N4 对应地址 `0x40～0x43`。每批重放 32 行 ACT，OS1 旁路 Psum。
 
 - `gemm_ws32_tensor`：per-tensor weight 与共享 multiplier/shift。
 - `gemm_ws32_channel`：per-channel weight 与逐 OC multiplier/shift。
@@ -23,12 +23,12 @@ TB 为 `tb_Cluster_GEMM_OS1_WS32.sv`，文件列表为 `verilog_file_gemm_ws32.f
 
 ## W8A16：OS2 / AS4
 
-`X[32,512] × W[512,16]`，`os_cnt/ws_cnt/as_cnt=2/1/4`。八个 Macro 每次覆盖 K256/N4，OS2 覆盖 K512，四个 AS Context 覆盖 N16。每行 X 为独立 batch；权重地址 `0x60～0x63` 对应 Tile0，`0x64～0x67` 对应 Tile1。
+`X[32,512] × W[512,16]`，`cim_os_cnt/cim_ws_cnt/cim_as_cnt=2/1/4`。八个 Macro 每次覆盖 K256/N4，OS2 覆盖 K512，四个 AS Context 覆盖 N16。每行 X 为独立 batch；权重地址 `0x60～0x63` 对应 Tile0，`0x64～0x67` 对应 Tile1。
 
 - `gemm_as4_tensor`：per-tensor weight 与共享 multiplier/shift。
 - `gemm_as4_channel`：per-channel weight 与逐 Context、逐 OC multiplier/shift。
 
-每项检查 512 个 raw、512 个 INT8 和 4096 次 Psum 更新。每行相对首命令的 raw 为 C35～C38，INT8 为 C36～C39。四个 Context 的参数表使用 512 bit zp 和 672 bit scale，共 1184 bit，`ZP_DEPTH=4`。
+每项检查 512 个 raw、512 个 INT8 和 4096 次 Psum 更新。每行相对首命令的 raw 为 C35～C38，INT8 为 C36～C39。默认 `ZP_DEPTH=16`，四个 Context 使用其中四项：有效参数为512 bit zp和672 bit scale，共1184 bit；整表容量为4736 bit。
 
 TB 为 `tb_Cluster_GEMM_OS2_AS4.sv`，文件列表为 `verilog_file_gemm_as4.f`。
 
@@ -60,11 +60,13 @@ TB 为 `tb_Cluster_GEMM_OS2_AS4.sv`，文件列表为 `verilog_file_gemm_as4.f`�
 
 ## AS 参数负向 case
 
-三个 case 使用 AS4 TB，成功条件是精确命中指定诊断：
+五个 case 使用 AS4 TB，成功条件是精确命中指定诊断：
 
 - `as_context_capacity`：`ZP_DEPTH=2` 请求 AS4，预期 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
+- `as_context_capacity_default`：`ZP_DEPTH=1` 请求AS4，预期 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
 - `as_context_zp_reload`：同一 Context 跨 K Tile 改变 zp，预期 `CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles`。
 - `as_context_scale_reload`：per-channel 配置跨 K Tile 改变 scale，预期 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
+- `as_context_tensor_scale_reload`：mode=0下同一Context跨K Tile改变第0项scale，预期 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
 
 ## 运行与结果
 
@@ -80,7 +82,7 @@ make run CASE=as_context_zp_reload
 make run CASE=as_context_scale_reload
 ```
 
-`make gemm-regression` 执行全部 11 个正向 GEMM，合计检查 2448 个 raw 和 2448 个 INT8；`make regression` 包含这 11 项及 3 项 AS 参数负向测试。`make list` 列出完整 case 目录。
+`make gemm-regression` 执行全部 11 个正向 GEMM，合计检查 2448 个 raw 和 2448 个 INT8；`make regression` 包含这 11 项及 5 项 AS 参数负向测试。`make list` 列出完整 case 目录。
 
 每项结果存放于 `work/<CASE>/`，包含 data、编译/运行日志和带 case 后缀的 FSDB。case 与 N 批次开始时输出英文时间戳和描述。数据生成、退出状态与诊断检查由 `cases.py` 管理；参数及波形命名见 [VCS 使用说明](../vcs-rtl/README.md)。
 
@@ -90,7 +92,7 @@ WS32 使用地址0x40～0x43，每地址对应八个Macro的一行，共1KiB；�
 
 AS4 使用 `address=0x60+4*tile+context`，每Macro8行、共8KiB，写入/读回各64次。打包公式为 `row[256*c+8*j+:8]=Wq[256*tile+32*macro+j,4*context+c]`。每K Tile的256个ACT元素占用完整4096-bit bank。
 
-两个W8A16场景的descriptor均为precision=6、signed_en=1、reduce_split_mask=0、macro_en_mask=0xff、macro_oc_mask=0xffffffff、act_slot_sel=0xfac688。A0与首Command同拍输入，A1～A3连续输入；A3按signed digit解释。ACT输入端不减ACT_zp。
+两个W8A16场景的descriptor均为cim_precision=6、cim_signed_en=1、cim_reduce_split_mask=0、cim_macro_en_mask=0xff、cim_macro_oc_mask=0xffffffff、cim_act_slot_sel=0xfac688。A0与首Command同拍输入，A1～A3连续输入；A3按signed digit解释。ACT输入端不减ACT_zp。
 
 AS4每行在C0～C3接收Tile0四条地址及A0～A3，在C1～C16按Slice→Context发射；C17～C20接收Tile1输入，在C18～C33发射。每行8条Command、32次发射；全矩阵256条Command、1024次发射，最终raw在C35～C38依Context顺序发布。
 
