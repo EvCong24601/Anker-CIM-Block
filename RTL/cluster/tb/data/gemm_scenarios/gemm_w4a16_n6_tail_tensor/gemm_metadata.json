@@ -1,0 +1,85 @@
+{
+  "M": 8,
+  "K": 160,
+  "N": 6,
+  "wb": 4,
+  "ab": 16,
+  "precision": 4,
+  "first": 4,
+  "split": 1,
+  "base": 160,
+  "case": "w4a16_n6_tail",
+  "weight_quantization": "per-tensor",
+  "act_zp": -8192,
+  "weight_zp": 0,
+  "act_scale": "80/4369",
+  "weight_channel_scales": [
+    "100",
+    "100",
+    "100",
+    "100",
+    "100",
+    "100"
+  ],
+  "multiplier": [
+    18615,
+    18615,
+    18615,
+    18615,
+    18615,
+    18615
+  ],
+  "shift": [
+    -28,
+    -28,
+    -28,
+    -28,
+    -28,
+    -28
+  ],
+  "merged_zp": [
+    -29,
+    -17,
+    -13,
+    -42,
+    -3,
+    28
+  ],
+  "output_zp_reference": [
+    -16,
+    -16,
+    -16,
+    -16,
+    -16,
+    -16
+  ],
+  "channel_map": [
+    [
+      0,
+      1,
+      2,
+      3
+    ],
+    [
+      4,
+      -1,
+      5,
+      -1
+    ]
+  ],
+  "raw_lane_base": 4,
+  "first_raw": 8,
+  "first_quant": 9,
+  "os_cnt": 1,
+  "ws_cnt": 8,
+  "as_cnt": 1,
+  "coverage": {
+    "positive_half": 0,
+    "negative_half": 0,
+    "clip_low": 1,
+    "clip_high": 0,
+    "exact_low": 0,
+    "exact_high": 1
+  },
+  "ideal_quant_max_error": 13
+}

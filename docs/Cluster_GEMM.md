@@ -14,37 +14,37 @@ GEMM 验证由三个 TB 执行，包含 11 个正向 case 和 5 个 AS 参数负
 
 `X[32,128] × W[128,16]`，`cim_os_cnt/cim_ws_cnt/cim_as_cnt=1/32/1`。八个 Macro 根归约，物理 K256 中高 K128 补零；四批 N4 对应地址 `0x40～0x43`。每批重放 32 行 ACT，OS1 旁路 Psum。
 
-- `gemm_ws32_tensor`：per-tensor weight 与共享 multiplier/shift。
-- `gemm_ws32_channel`：per-channel weight 与逐 OC multiplier/shift。
+- `gemm_os1_ws32_w8a16_tensor`：per-tensor weight 与共享 multiplier/shift。
+- `gemm_os1_ws32_w8a16_channel`：per-channel weight 与逐 OC multiplier/shift。
 
 每项检查 512 个 raw 和 512 个 INT8。每批第 m 行在 `C(5m)` 接受 Command，raw 在 `C(5m+9)` 发布，INT8 在 `C(5m+10)` 发布。
 
-TB 为 `tb_Cluster_GEMM_OS1_WS32.sv`，文件列表为 `verilog_file_gemm_ws32.f`。
+TB 为 `tb_Cluster_GEMM_OS1_WS32_W8A16.sv`，文件列表为 `verilog_file_gemm_os1_ws32_w8a16.f`。
 
 ## W8A16：OS2 / AS4
 
 `X[32,512] × W[512,16]`，`cim_os_cnt/cim_ws_cnt/cim_as_cnt=2/1/4`。八个 Macro 每次覆盖 K256/N4，OS2 覆盖 K512，四个 AS Context 覆盖 N16。每行 X 为独立 batch；权重地址 `0x60～0x63` 对应 Tile0，`0x64～0x67` 对应 Tile1。
 
-- `gemm_as4_tensor`：per-tensor weight 与共享 multiplier/shift。
-- `gemm_as4_channel`：per-channel weight 与逐 Context、逐 OC multiplier/shift。
+- `gemm_os2_as4_w8a16_tensor`：per-tensor weight 与共享 multiplier/shift。
+- `gemm_os2_as4_w8a16_channel`：per-channel weight 与逐 Context、逐 OC multiplier/shift。
 
 每项检查 512 个 raw、512 个 INT8 和 4096 次 Psum 更新。每行相对首命令的 raw 为 C35～C38，INT8 为 C36～C39。默认 `ZP_DEPTH=16`，四个 Context 使用其中四项：有效参数为512 bit zp和672 bit scale，共1184 bit；整表容量为4736 bit。
 
-TB 为 `tb_Cluster_GEMM_OS2_AS4.sv`，文件列表为 `verilog_file_gemm_as4.f`。
+TB 为 `tb_Cluster_GEMM_OS2_AS4_W8A16.sv`，文件列表为 `verilog_file_gemm_os2_as4_w8a16.f`。
 
 ## 高位置归约组
 
-以下 case 使用 `tb_Cluster_GEMM_Edges.sv` 和 `verilog_file_gemm_edges.f`，均计算 `X[8,192] × W[192,8]`，配置 `OS1/WS8/AS1`，分两批 N4。
+以下 case 分别使用 `tb_Cluster_GEMM_W4A16_HighGroup.sv`、`tb_Cluster_GEMM_W2A8_HighGroup.sv` 及各自同名场景的 `.f`，共用 `ClusterGemmScenario.sv`，均计算 `X[8,192] × W[192,8]`，配置 `OS1/WS8/AS1`，分两批 N4。
 
-- `gemm_edge_w4_high_tensor`、`gemm_edge_w4_high_channel`：W4A16，Macro4～7，lane4～7，地址 `0x80/0x81`；首行 raw/INT8 为 C8/C9。
-- `gemm_edge_w2_high_tensor`、`gemm_edge_w2_high_channel`：W2A8，Macro6～7，lane12～15，地址 `0x90/0x91`；首行 raw/INT8 为 C5/C6。
+- `gemm_w4a16_high_group_tensor`、`gemm_w4a16_high_group_channel`：W4A16，Macro4～7，lane4～7，地址 `0x80/0x81`；首行 raw/INT8 为 C8/C9。
+- `gemm_w2a8_high_group_tensor`、`gemm_w2a8_high_group_channel`：W2A8，Macro6～7，lane12～15，地址 `0x90/0x91`；首行 raw/INT8 为 C5/C6。
 
 每项检查 64 个 raw 和 64 个 INT8，覆盖高位置物理组的数据路由与参数映射。
 
 ## N 尾部与 OC mask 空洞
 
-- `gemm_edge_n_tail_tensor`
-- `gemm_edge_n_tail_channel`
+- `gemm_w4a16_n6_tail_tensor`
+- `gemm_w4a16_n6_tail_channel`
 
 计算 `X[8,160] × W[160,6]`，W4A16，`OS1/WS8/AS1`，Macro4～7，地址 `0xa0/0xa1`。第二批使用 OC0、OC2，mask 为 `0101`，逻辑列 4、5 对应 lane4、lane6。OC2 使用参数项 2；OC1/OC3 不发布 valid，INT8 寄存器保持。
 
@@ -52,7 +52,7 @@ TB 为 `tb_Cluster_GEMM_OS2_AS4.sv`，文件列表为 `verilog_file_gemm_as4.f`�
 
 ## 舍入与饱和边界
 
-`gemm_edge_boundaries_channel` 计算 `X[12,160] × W[160,4]`，W4A16，`OS1/WS12/AS1`，Macro4～7，地址 `0xb0`。矩阵通过单位基权重形成指定点积，经过实际 Macro 及归约路径。
+`gemm_w4a16_round_clip_channel` 计算 `X[12,160] × W[160,4]`，W4A16，`OS1/WS12/AS1`，Macro4～7，地址 `0xb0`。矩阵通过单位基权重形成指定点积，经过实际 Macro 及归约路径。
 
 四项 multiplier 为 `[1,3,1,1]`、shift 为 `[-1,-2,0,0]`、合并 zp 为 `[0,1,100,-100]`。检查 48 个 raw 和 48 个 INT8，覆盖正半整数 5 项、负半整数 5 项、低端越界 2 项、高端越界 4 项，以及精确 −128/127 各 2 项。
 
@@ -73,9 +73,9 @@ TB 为 `tb_Cluster_GEMM_OS2_AS4.sv`，文件列表为 `verilog_file_gemm_as4.f`�
 在 `vcs-rtl/` 目录执行：
 
 ```sh
-make run CASE=gemm_ws32_channel
-make run CASE=gemm_as4_channel
-make run CASE=gemm_edge_n_tail_channel
+make run CASE=gemm_os1_ws32_w8a16_channel
+make run CASE=gemm_os2_as4_w8a16_channel
+make run CASE=gemm_w4a16_n6_tail_channel
 make gemm-regression
 make run CASE=as_context_capacity
 make run CASE=as_context_zp_reload
@@ -108,8 +108,12 @@ per-channel weight按每个输出列独立校准并量化W，使用该列对应�
 
 ## TB 与数据文件
 
-- `tb_Cluster_GEMM_OS1_WS32.sv`：`cluster_gemm_driver/scoreboard/regression.svh`负责WLC加载、WS驱动、Hold/Psum旁路、输出周期及矩阵收集；golden生成器为 `gemm_vectors.py`。
-- `tb_Cluster_GEMM_OS2_AS4.sv`：`cluster_gemm_as_driver/scoreboard/regression.svh`负责地址与参数加载、ACT复用、4096次Psum历史及矩阵输出；golden生成器为 `gemm_os2_as4_vectors.py`。
-- `tb_Cluster_GEMM_Edges.sv`：`cluster_gemm_edges_driver/scoreboard/regression.svh`负责高位置物理组、OC空洞、mask/参数索引和舍入饱和；golden生成器为 `gemm_edges_vectors.py`。
+- `tb_Cluster_GEMM_OS1_WS32_W8A16.sv`：`cluster_gemm_driver/scoreboard/regression.svh`负责WLC加载、WS驱动、Hold/Psum旁路、输出周期及矩阵收集；golden生成器为 `gemm_os1_ws32_w8a16_vectors.py`。
+- `tb_Cluster_GEMM_OS2_AS4_W8A16.sv`：`cluster_gemm_as_driver/scoreboard/regression.svh`负责地址与参数加载、ACT复用、4096次Psum历史及矩阵输出；golden生成器为 `gemm_os2_as4_w8a16_vectors.py`。
+- `tb_Cluster_GEMM_W4A16_HighGroup.sv`、`tb_Cluster_GEMM_W2A8_HighGroup.sv`、`tb_Cluster_GEMM_W4A16_N6_Tail.sv`、`tb_Cluster_GEMM_W4A16_RoundClip.sv`：通过共用的 `ClusterGemmScenario.sv`，`cluster_gemm_scenario_driver/scoreboard/regression.svh`负责高位置物理组、OC空洞、mask/参数索引和舍入饱和；golden生成器为 `gemm_scenario_vectors.py`。
 
-上述include均位于 `RTL/cluster/tb/include/`，Python位于 `RTL/cluster/tb/py/`。`data/gemm_ws32[_per_channel]/`、`data/gemm_os2_as4[_per_channel]/`及 `data/gemm_edges/` 保存矩阵、参数、权重行、ACT Plane、输入计划、golden、观测CSV与SHA256。仿真使用的可写副本由VCS case入口生成。
+上述include均位于 `RTL/cluster/tb/include/`，Python位于 `RTL/cluster/tb/py/`。`data/gemm_os1_ws32_w8a16[_per_channel]/`、`data/gemm_os2_as4_w8a16[_per_channel]/`及 `data/gemm_scenarios/` 保存矩阵、参数、权重行、ACT Plane、输入计划、golden、观测CSV与SHA256。仿真使用的可写副本由VCS case入口生成。
+
+六个具体TB与六个独立GEMM文件列表对应；四个场景TB实例化共用的`ClusterGemmScenario`，各自固定场景并校验数据尺寸/精度。Tensor/channel模式仍由匹配的数据集决定，OC映射不变。默认FSDB名称包含具体TB，VCS运行时附加完整case名称（包括tensor/channel）。
+
+当前命名下的11个正向GEMM和5个AS参数负向用例均通过，结果与golden匹配；133个Make入口和全部文件列表路径检查通过。证据见`RTL/cluster/tb/log/concrete_gemm_names_validation.log`、`concrete_gemm_names_audit.log`和`concrete_gemm_names_sources.sha256`。历史全量回归日志保留其当时的文件名和源码哈希，不用于证明当前命名的路径有效性。

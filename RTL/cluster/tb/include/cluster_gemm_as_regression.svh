@@ -1,6 +1,6 @@
 initial begin : as_gemm_regression
   int fd;
-  load_as_gemm_vectors();
+  load_as_gemm_os1_ws32_w8a16_vectors();
   $display(
     "[CASE_START] time=%0.3f ns suite=gemm_as_weight_quantization description=per-output-channel-or-tensor-W8-scale per_channel=%0d",
     $realtime, $test$plusargs("PER_CHANNEL_SCALE"));
@@ -54,7 +54,7 @@ initial begin : as_gemm_regression
   $fclose(fd);
   $fclose(trace_fd);
   $display(
-    "PASS gemm_os2_as4 M=32 K=512 N=16 clusters=1 commands=256 issues=1024 raw_checks=%0d quant_checks=%0d psum_checks=%0d zp_bits=512 zp_per_cycle=4 first_raw_per_row=35 last_raw_per_row=38 first_quant_per_row=36 last_quant_per_row=39",
+    "PASS gemm_os2_as4_w8a16 M=32 K=512 N=16 clusters=1 commands=256 issues=1024 raw_checks=%0d quant_checks=%0d psum_checks=%0d zp_bits=512 zp_per_cycle=4 first_raw_per_row=35 last_raw_per_row=38 first_quant_per_row=36 last_quant_per_row=39",
     raw_checks, quant_checks, psum_checks);
   $finish;
 end

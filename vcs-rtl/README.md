@@ -4,11 +4,11 @@
 
 ```sh
 make list
-make run CASE=gemm_ws32_tensor
-make run CASE=gemm_ws32_channel
-make run CASE=gemm_as4_channel
-make run CASE=gemm_edge_n_tail_channel
-make wave CASE=gemm_edge_n_tail_channel
+make run CASE=gemm_os1_ws32_w8a16_tensor
+make run CASE=gemm_os1_ws32_w8a16_channel
+make run CASE=gemm_os2_as4_w8a16_channel
+make run CASE=gemm_w4a16_n6_tail_channel
+make wave CASE=gemm_w4a16_n6_tail_channel
 make gemm-regression
 make regression
 ```
@@ -21,7 +21,7 @@ make regression
 
 - `CASE`：选择下文的预设；自动选择 TB、golden 生成器、编译参数、plusargs 和精确检查标志。
 - `CASE_TAG`：结果目录及波形后缀，默认等于 CASE。建议仅使用英文、数字和下划线。
-- `TB`：不指定 CASE 时可选 `cluster / macro / reduce / requant / gemm / gemm_as / gemm_edges`，用于自定义实验。指定 CASE 时由预设决定。
+- `TB`：不指定 CASE 时可选 `cluster / macro / reduce / requant / gemm_os1_ws32_w8a16 / gemm_os2_as4_w8a16 / gemm_w4a16_high_group / gemm_w2a8_high_group / gemm_w4a16_n6_tail / gemm_w4a16_round_clip`，用于自定义实验。指定 CASE 时由预设决定。
 - `PARAMETERS`：追加 VCS 编译期覆盖，例如 `-pvalue+tb_Cluster.OUTPUT_PSUM_DEPTH=16`。计数、容量和精度参数改变后应重新编译。
 - `PVALUE`：追加运行期 plusargs，例如 `+CAPACITY_SIGN=1`；不能用于改变编译期 parameter。
 - `PYTHON`：Python 命令，默认 `python3`。`WORK_DIR`：结果根目录，默认 `work`。
@@ -33,7 +33,7 @@ make run CASE=context_stress CASE_TAG=os1_as16_os2_as8
 make com CASE=requant_channel
 make sim CASE=requant_channel
 make check CASE=requant_channel
-make run CASE=gemm_edge_w4_high_channel FSDB_FILE=w4_hi_pc.fsdb
+make run CASE=gemm_w4a16_high_group_channel FSDB_FILE=w4_hi_pc.fsdb
 ```
 
 `com/sim/check` 必须使用相同的 CASE、CASE_TAG 和编译参数。`sim` 保留仿真退出状态，`check` 判定最终成功或失败；完整实验使用 `run`。负向测试不能只看进程退出码，检查器要求恰好一个、且匹配预期的 Fatal，其他诊断一律失败。正向 GEMM 除 SV 检查外还逐元素比较 Python golden。
@@ -45,16 +45,19 @@ make run CASE=gemm_edge_w4_high_channel FSDB_FILE=w4_hi_pc.fsdb
 - `verilog_file_macro.f`：SingleMacro TB。
 - `verilog_file_reduce.f`：归约树单元 TB。
 - `verilog_file_requant.f`：组合 Requant 单元 TB。
-- `verilog_file_gemm_ws32.f`：OS1/WS32，M32/K128/N16，四批 N4。
-- `verilog_file_gemm_as4.f`：OS2/AS4，M32/K512/N16，逐 Context 参数表深度16。
-- `verilog_file_gemm_edges.f`：W4/W2 高位置组、N尾部、舍入饱和。
+- `verilog_file_gemm_os1_ws32_w8a16.f`：OS1/WS32，M32/K128/N16，四批 N4。
+- `verilog_file_gemm_os2_as4_w8a16.f`：OS2/AS4，M32/K512/N16，逐 Context 参数表深度16。
+- `verilog_file_gemm_w4a16_high_group.f`：`tb_Cluster_GEMM_W4A16_HighGroup.sv`。
+- `verilog_file_gemm_w2a8_high_group.f`：`tb_Cluster_GEMM_W2A8_HighGroup.sv`。
+- `verilog_file_gemm_w4a16_n6_tail.f`：`tb_Cluster_GEMM_W4A16_N6_Tail.sv`。
+- `verilog_file_gemm_w4a16_round_clip.f`：`tb_Cluster_GEMM_W4A16_RoundClip.sv`。
 - `verilog_file_pl.f`：保留的聚合入口；Makefile 使用上述独立入口。
 
 所有 `.f` 路径相对 `vcs-rtl/`；SV include 路径分别指向两个 TB 目录。`.svh` 不单独编译。
 
 ## 波形与日志
 
-七个 TB 均支持 `+FSDB_FILE=<路径>`。Makefile 自动传入，例如 `tb_Cluster_GEMM_OS2_AS4_gemm_as4_channel.fsdb`，后缀说明当前实验；直接运行 TB 时默认 `<TOP>_default.fsdb`。FSDB 在仿真开始时记录完整层级，同一 suite 内的各子 case 用英文 `[CASE_START] time=... description=...` 日志区分。`make wave CASE=...` 自动打开相同文件。
+七个 TB 均支持 `+FSDB_FILE=<路径>`。Makefile 自动传入，例如 `tb_Cluster_GEMM_OS2_AS4_W8A16_gemm_os2_as4_w8a16_channel.fsdb`，后缀说明当前实验；直接运行 TB 时默认 `<TOP>_default.fsdb`。FSDB 在仿真开始时记录完整层级，同一 suite 内的各子 case 用英文 `[CASE_START] time=... description=...` 日志区分。`make wave CASE=...` 自动打开相同文件。
 
 启用Requant的Cluster专项设置ENABLE_REQUANT=1，raw-only回归保持0。默认Psum/Requant深度16、地址表16、元数据64，AS最多16。OS1/AS的A8/A16使用Psum历史，A4仅旁路地址深表。逐通道参数与OC固定对应。
 
@@ -157,22 +160,22 @@ make run CASE=gemm_edge_w4_high_channel FSDB_FILE=w4_hi_pc.fsdb
 - `address_capacity_s1`：Reject AS16 address capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded`。
 - `metadata_capacity_s0`：Reject AS16 metadata capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: context metadata exceeded`。
 - `metadata_capacity_s1`：Reject AS16 metadata capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: context metadata exceeded`。
-- `gemm_ws32_tensor`：W8A16 M32 K128 N16 OS1 WS32 tensor；成功标志 `PASS cluster_gemm M=32 K=128 N=16`。
-- `gemm_as4_tensor`：W8A16 M32 K512 N16 OS2 AS4 tensor；成功标志 `PASS gemm_os2_as4 M=32 K=512 N=16`。
-- `gemm_ws32_channel`：W8A16 M32 K128 N16 OS1 WS32 channel；成功标志 `PASS cluster_gemm M=32 K=128 N=16`。
-- `gemm_as4_channel`：W8A16 M32 K512 N16 OS2 AS4 channel；成功标志 `PASS gemm_os2_as4 M=32 K=512 N=16`。
+- `gemm_os1_ws32_w8a16_tensor`：W8A16 M32 K128 N16 OS1 WS32 tensor；成功标志 `PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16`。
+- `gemm_os2_as4_w8a16_tensor`：W8A16 M32 K512 N16 OS2 AS4 tensor；成功标志 `PASS gemm_os2_as4_w8a16 M=32 K=512 N=16`。
+- `gemm_os1_ws32_w8a16_channel`：W8A16 M32 K128 N16 OS1 WS32 channel；成功标志 `PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16`。
+- `gemm_os2_as4_w8a16_channel`：W8A16 M32 K512 N16 OS2 AS4 channel；成功标志 `PASS gemm_os2_as4_w8a16 M=32 K=512 N=16`。
 - `as_context_capacity`：Reject as context capacity；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
 - `as_context_capacity_default`：Reject as context capacity default；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
 - `as_context_zp_reload`：Reject as context zp reload；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles`。
 - `as_context_scale_reload`：Reject as context scale reload；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
 - `as_context_tensor_scale_reload`：Reject as context tensor scale reload；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
-- `gemm_edge_w4_high_tensor`：w4 high tensor；成功标志 `PASS gemm_edges`。
-- `gemm_edge_w4_high_channel`：w4 high channel；成功标志 `PASS gemm_edges`。
-- `gemm_edge_w2_high_tensor`：w2 high tensor；成功标志 `PASS gemm_edges`。
-- `gemm_edge_w2_high_channel`：w2 high channel；成功标志 `PASS gemm_edges`。
-- `gemm_edge_n_tail_tensor`：n tail tensor；成功标志 `PASS gemm_edges`。
-- `gemm_edge_n_tail_channel`：n tail channel；成功标志 `PASS gemm_edges`。
-- `gemm_edge_boundaries_channel`：boundaries channel；成功标志 `PASS gemm_edges`。
+- `gemm_w4a16_high_group_tensor`：w4a16 high group；成功标志 `PASS gemm_w4a16_high_group`。
+- `gemm_w4a16_high_group_channel`：w4a16 high group；成功标志 `PASS gemm_w4a16_high_group`。
+- `gemm_w2a8_high_group_tensor`：w2a8 high group；成功标志 `PASS gemm_w2a8_high_group`。
+- `gemm_w2a8_high_group_channel`：w2a8 high group；成功标志 `PASS gemm_w2a8_high_group`。
+- `gemm_w4a16_n6_tail_tensor`：w4a16 n6 tail；成功标志 `PASS gemm_w4a16_n6_tail`。
+- `gemm_w4a16_n6_tail_channel`：w4a16 n6 tail；成功标志 `PASS gemm_w4a16_n6_tail`。
+- `gemm_w4a16_round_clip_channel`：w4a16 round clip；成功标志 `PASS gemm_w4a16_round_clip`。
 - `gate_equiv_default`：Gated/ungated Cluster same-edge comparison: default；成功标志 `PASS configurations=`。
 - `gate_equiv_requant_buffers`：Gated/ungated Cluster same-edge comparison: requant_buffers；成功标志 `PASS context_buffers cases=77`。
 - `gate_equiv_requant_channel`：Gated/ungated Cluster same-edge comparison: requant_channel；成功标志 `PASS requant_channel cases=1536`。

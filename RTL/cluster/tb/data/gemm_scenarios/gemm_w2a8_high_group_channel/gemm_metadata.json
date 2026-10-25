@@ -1,0 +1,95 @@
+{
+  "M": 8,
+  "K": 192,
+  "N": 8,
+  "wb": 2,
+  "ab": 8,
+  "precision": 1,
+  "first": 6,
+  "split": 7,
+  "base": 144,
+  "case": "w2a8_high_group",
+  "weight_quantization": "per-channel",
+  "act_zp": -32,
+  "weight_zp": 0,
+  "act_scale": "80/17",
+  "weight_channel_scales": [
+    "200",
+    "300",
+    "400",
+    "500",
+    "594",
+    "700",
+    "800",
+    "891"
+  ],
+  "multiplier": [
+    6709665,
+    5032249,
+    3354832,
+    2096770,
+    19927704,
+    11741913,
+    6709665,
+    3736445
+  ],
+  "shift": [
+    -28,
+    -27,
+    -26,
+    -25,
+    -28,
+    -27,
+    -26,
+    -25
+  ],
+  "merged_zp": [
+    33,
+    21,
+    48,
+    34,
+    48,
+    34,
+    -49,
+    16
+  ],
+  "output_zp_reference": [
+    34,
+    34,
+    34,
+    34,
+    34,
+    34,
+    34,
+    34
+  ],
+  "channel_map": [
+    [
+      0,
+      1,
+      2,
+      3
+    ],
+    [
+      4,
+      5,
+      6,
+      7
+    ]
+  ],
+  "raw_lane_base": 12,
+  "first_raw": 5,
+  "first_quant": 6,
+  "os_cnt": 1,
+  "ws_cnt": 8,
+  "as_cnt": 1,
+  "coverage": {
+    "positive_half": 0,
+    "negative_half": 0,
+    "clip_low": 2,
+    "clip_high": 4,
+    "exact_low": 0,
+    "exact_high": 0
+  },
+  "ideal_quant_max_error": 53
+}

@@ -1,4 +1,4 @@
-task automatic load_as_gemm_vectors();
+task automatic load_as_gemm_os1_ws32_w8a16_vectors();
   int fd, status, k0, n0;
   longint signed dot, weight_sum;
   if (!$value$plusargs("GEMM_DATA_DIR=%s", data_dir)) $fatal(1, "AS GEMM: require +GEMM_DATA_DIR=PATH");

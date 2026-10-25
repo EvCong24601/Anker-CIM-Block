@@ -12,7 +12,11 @@
 tb_Cluster.sv
 tb_ClusterReduceTree.sv
 tb_ClusterRequant.sv
-tb_Cluster_GEMM_OS1_WS32.sv
-tb_Cluster_GEMM_OS2_AS4.sv
-tb_Cluster_GEMM_Edges.sv
+tb_Cluster_GEMM_OS1_WS32_W8A16.sv
+tb_Cluster_GEMM_OS2_AS4_W8A16.sv
+ClusterGemmScenario.sv
+tb_Cluster_GEMM_W4A16_HighGroup.sv
+tb_Cluster_GEMM_W2A8_HighGroup.sv
+tb_Cluster_GEMM_W4A16_N6_Tail.sv
+tb_Cluster_GEMM_W4A16_RoundClip.sv
 latency_audit.sv

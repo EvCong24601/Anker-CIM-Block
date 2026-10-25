@@ -1,0 +1,95 @@
+{
+  "M": 8,
+  "K": 192,
+  "N": 8,
+  "wb": 4,
+  "ab": 16,
+  "precision": 4,
+  "first": 4,
+  "split": 1,
+  "base": 128,
+  "case": "w4a16_high_group",
+  "weight_quantization": "per-tensor",
+  "act_zp": -8227,
+  "weight_zp": 0,
+  "act_scale": "1199/65535",
+  "weight_channel_scales": [
+    "900/7",
+    "900/7",
+    "900/7",
+    "900/7",
+    "900/7",
+    "900/7",
+    "900/7",
+    "900/7"
+  ],
+  "multiplier": [
+    17454,
+    17454,
+    17454,
+    17454,
+    17454,
+    17454,
+    17454,
+    17454
+  ],
+  "shift": [
+    -28,
+    -28,
+    -28,
+    -28,
+    -28,
+    -28,
+    -28,
+    -28
+  ],
+  "merged_zp": [
+    40,
+    20,
+    40,
+    23,
+    51,
+    23,
+    1,
+    5
+  ],
+  "output_zp_reference": [
+    37,
+    37,
+    37,
+    37,
+    37,
+    37,
+    37,
+    37
+  ],
+  "channel_map": [
+    [
+      0,
+      1,
+      2,
+      3
+    ],
+    [
+      4,
+      5,
+      6,
+      7
+    ]
+  ],
+  "raw_lane_base": 4,
+  "first_raw": 8,
+  "first_quant": 9,
+  "os_cnt": 1,
+  "ws_cnt": 8,
+  "as_cnt": 1,
+  "coverage": {
+    "positive_half": 0,
+    "negative_half": 0,
+    "clip_low": 0,
+    "clip_high": 1,
+    "exact_low": 0,
+    "exact_high": 0
+  },
+  "ideal_quant_max_error": 13
+}

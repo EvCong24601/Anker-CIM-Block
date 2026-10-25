@@ -6,4 +6,9 @@
 # Local tooling: Verible formatter, backups and compile logs.
 /.tools/
 
+# Editor settings carry machine-absolute Verible paths and simulator transcripts
+# are per-run artifacts; neither is shared.
+/.vscode/
+/transcript
+
 **/__pycache__/

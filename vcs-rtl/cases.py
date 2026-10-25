@@ -93,23 +93,22 @@ for resource, param, message in (('address', 'WGT_RADDR_BUFFER_DEPTH=8', 'weight
             f'+CONTEXT_CAPACITY_TEST +{resource.upper()}_CAPACITY_TEST +CAPACITY_PRECISION=6 +CAPACITY_SIGN={sign}',
             params=param, negative=True)
 for mode in ('tensor', 'channel'):
-    add('gemm_ws32_'+mode, 'gemm', 'W8A16 M32 K128 N16 OS1 WS32 '+mode,
-        'PASS cluster_gemm M=32 K=128 N=16', generator='ws32', channel=mode=='channel')
-    add('gemm_as4_'+mode, 'gemm_as', 'W8A16 M32 K512 N16 OS2 AS4 '+mode,
-        'PASS gemm_os2_as4 M=32 K=512 N=16', generator='as4', channel=mode=='channel')
+    add('gemm_os1_ws32_w8a16_'+mode, 'gemm_os1_ws32_w8a16', 'W8A16 M32 K128 N16 OS1 WS32 '+mode,
+        'PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16', generator='ws32', channel=mode=='channel')
+    add('gemm_os2_as4_w8a16_'+mode, 'gemm_os2_as4_w8a16', 'W8A16 M32 K512 N16 OS2 AS4 '+mode,
+        'PASS gemm_os2_as4_w8a16 M=32 K=512 N=16', generator='as4', channel=mode=='channel')
 for name, params, args, message, channel in (
         ('as_context_capacity', 'ZP_DEPTH=2', '', 'AS context zp depth exceeded', False),
         ('as_context_capacity_default', 'ZP_DEPTH=1', '', 'AS context zp depth exceeded', False),
         ('as_context_zp_reload', '', '+NEGATIVE_ZP_RELOAD', 'AS context zp changed across K Tiles', False),
         ('as_context_scale_reload', '', '+NEGATIVE_SCALE_RELOAD', 'AS context scale changed across K Tiles', True),
         ('as_context_tensor_scale_reload', '', '+NEGATIVE_SCALE_RELOAD', 'AS context scale changed across K Tiles', False)):
-    add(name, 'gemm_as', 'Reject '+name.replace('_', ' '), 'CLUSTER_REQUANT_CONFIG: '+message,
+    add(name, 'gemm_os2_as4_w8a16', 'Reject '+name.replace('_', ' '), 'CLUSTER_REQUANT_CONFIG: '+message,
         args, params, 'as4', channel, True)
-for edge in ('w4_high', 'w2_high', 'n_tail', 'boundaries'):
-    for mode in (('channel',) if edge=='boundaries' else ('tensor', 'channel')):
-        add('gemm_edge_'+edge+'_'+mode, 'gemm_edges', edge.replace('_', ' ')+' '+mode,
-            'PASS gemm_edges', generator=edge, channel=mode=='channel')
-
+for scenario in ('w4a16_high_group','w2a8_high_group','w4a16_n6_tail','w4a16_round_clip'):
+    for mode in (('channel',) if scenario=='w4a16_round_clip' else ('tensor','channel')):
+        add('gemm_'+scenario+'_'+mode, 'gemm_'+scenario, scenario.replace('_',' ')+' '+mode,
+            'PASS gemm_'+scenario, generator=scenario, channel=mode=='channel')
 
 add('gate_equiv_default','cluster','Gated/ungated Cluster same-edge comparison: default','PASS configurations=','',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=0')
 add('gate_equiv_requant_buffers','cluster','Gated/ungated Cluster same-edge comparison: requant_buffers','PASS context_buffers cases=77','+CONTEXT_BUFFER_TEST',params='CHECK_GATE_EQUIVALENCE=1 ENABLE_REQUANT=1')
@@ -145,7 +144,7 @@ def write_makefile():
         elif c['generator']:
             lines.append('CASE_ARGS += +GEMM_DATA_DIR=$(abspath $(RUN_DIR))/data')
             if c['generator'] not in ('ws32','as4'):
-                lines.append('CASE_ARGS += +EDGE_CASE_NAME=$(CASE)')
+                lines.append('CASE_ARGS += +GEMM_CASE_NAME=$(CASE)')
         lines.append('endif')
     (HERE/'cases.mk').write_text('\n'.join(lines)+'\n', encoding='utf-8')
 
@@ -159,10 +158,10 @@ def prepare(name, directory):
         mod.write_vectors(directory/'requant_vectors.txt')
         mod.write_channel_vectors(directory/'requant_channel_vectors.txt')
     elif gen in ('ws32', 'as4'):
-        mod=importlib.import_module('gemm_vectors' if gen=='ws32' else 'gemm_os2_as4_vectors')
+        mod=importlib.import_module('gemm_os1_ws32_w8a16_vectors' if gen=='ws32' else 'gemm_os2_as4_w8a16_vectors')
         mod.generate(data, per_channel=c['channel'])
     elif gen:
-        importlib.import_module('gemm_edges_vectors').generate(data, gen, c['channel'])
+        importlib.import_module('gemm_scenario_vectors').generate(data, gen, c['channel'])
     print(f'[CASE] name={name} description={c["description"]}')
 
 
@@ -187,9 +186,9 @@ def check(name, directory):
         raise SystemExit('FAIL: missing whole-Cluster gate equivalence marker')
     if not c['negative']:
         if c['generator'] in ('ws32', 'as4'):
-            importlib.import_module('gemm_vectors').verify_outputs(directory/'data')
+            importlib.import_module('gemm_os1_ws32_w8a16_vectors').verify_outputs(directory/'data')
         elif c['generator'] and c['generator']!='requant':
-            importlib.import_module('gemm_edges_vectors').verify_outputs(directory/'data')
+            importlib.import_module('gemm_scenario_vectors').verify_outputs(directory/'data')
         if name=='cluster_default':
             import subprocess
             subprocess.run([sys.executable,str(PY/'verify_manifest.py'),str(directory/'data/split_cases.csv')],check=True)

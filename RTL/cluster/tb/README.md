@@ -5,7 +5,7 @@
 - `tb_Cluster.sv`：raw算术、参数映射、容量、接收/发射重叠及实际门控检查。
 - `tb_ClusterReduceTree.sv`：208种树/掩码组合，逐节点/OC检查门控及保持。
 - `tb_ClusterRequant.sv`：独立Python整数向量。
-- `tb_Cluster_GEMM_OS1_WS32.sv`、`tb_Cluster_GEMM_OS2_AS4.sv`、`tb_Cluster_GEMM_Edges.sv`：11个端到端矩阵case。
+- `tb_Cluster_GEMM_OS1_WS32_W8A16.sv`、`tb_Cluster_GEMM_OS2_AS4_W8A16.sv`及四个按精度和场景命名的 `tb_Cluster_GEMM_W*.sv`：11个端到端矩阵case。`ClusterGemmScenario.sv`共用驱动和检查逻辑。
 - `include/cluster_context_buffer_cases.svh`：AS固定参数槽位、A4地址旁路与参数收集/发射重叠。
 - `include/cluster_gate_checks.svh`：Macro控制/存储/ACT分区、参数组及共享路径标签及INT8数据时钟脉冲和保持检查。
 - `py/buffer_schedule.py`、`py/generate_readme.py`：调度公式、trace核对及根README的42组逐拍表。

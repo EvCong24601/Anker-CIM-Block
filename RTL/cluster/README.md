@@ -14,8 +14,8 @@ RTL/cluster/
     tb_Cluster.sv          Cluster 仿真顶层
     tb_ClusterReduceTree.sv 归约树单元测试
     tb_ClusterRequant.sv    无时钟Requant算术单元测试
-    tb_Cluster_GEMM_OS1_WS32.sv      单Cluster四批N4的W8A16 M32/K128/N16矩阵验证
-    tb_Cluster_GEMM_OS2_AS4.sv 单Cluster八Macro归约的M32/K512/N16验证
+    tb_Cluster_GEMM_OS1_WS32_W8A16.sv      单Cluster四批N4的W8A16 M32/K128/N16矩阵验证
+    tb_Cluster_GEMM_OS2_AS4_W8A16.sv 单Cluster八Macro归约的M32/K512/N16验证
     latency_audit.sv       仿真时延观察器
     include/              驱动、参考模型、检查器、case 与 suite
     py/                   回归入口、数据生成与时延核对
