@@ -5,7 +5,7 @@ package cluster_pkg;
     logic conv_mode;  // Convolution: one enabled 4-OC reduction group
     logic requant_mode;  // 0: shared entry 0; 1: entry c corresponds to OC c
     logic [127:0] requant_multiplier;  // INT32 entry c: [32*c+:32]
-    logic [39:0] requant_shift;  // INT10 entry c: [10*c+:10], -31..31
+    logic [39:0] requant_shift;  // INT10 entry c: [10*c+:10], -512..511
     // Per-channel INT32 effective zero point supplied by the parameter
     // producer, including input-offset compensation. mode controls scale only.
     logic [127:0] requant_zp;  // OC c: [32*c+:32], never compact masked OCs

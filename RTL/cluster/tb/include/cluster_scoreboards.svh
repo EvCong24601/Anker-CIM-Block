@@ -66,8 +66,7 @@ always @(posedge clock) begin : buffer_clock_scoreboard
       c = dut.tmp_tag[l].ctx;
       ph = dut.tmp_tag[l].ph;
       ab = abits(int'(dut.tmp_tag[l].cmd.cim_precision));
-      writes_psum = (dut.tmp_tag[l].cmd.cim_as_cnt > 1) ?
-        (dut.tmp_tag[l].cmd.cim_os_cnt > 1 || ab > 4) :
+      writes_psum = (dut.tmp_tag[l].cmd.cim_as_cnt > 1) ? 1 :
         (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == ab / 4 - 1);
       // A bypass Context can have an ID beyond the physical Psum array.
       if (writes_psum) begin
@@ -129,7 +128,7 @@ always @(posedge clock) begin : arithmetic_scoreboard
         if (ph == 0 && kt == 0) running_sum[c][l] = 0;
         running_sum[c][l] += raw_slice[l] <<< (4 * ph);
         want[l] = running_sum[c][l];
-        check_p[l] = is_as ? (dut.tmp_tag[l].cmd.cim_os_cnt > 1 || abits(int'(dut.tmp_tag[l].cmd.cim_precision)) > 4) :
+        check_p[l] = is_as ? 1 :
           (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == abits(int'(dut.tmp_tag[l].cmd.cim_precision)) / 4 - 1);
         if (dut.psum_write[l] !== check_p[l]) $fatal(1, "Psum write phase mismatch");
         acc = kt > 0 && (is_as ? ph == 0 : check_p[l]);
@@ -267,9 +266,9 @@ always @(posedge clock) begin : scoreboard
     for (int cx = 0; cx < case_r; cx++)
     for (int l = 0; l < 32; l++)
     if (lane_due[cx][l] >= cycle) begin
-      if (cycle < lane_due[cx][l] && dut.result_ready[cx][l])
+      if (cycle < lane_due[cx][l] && completion_seen[cx][l])
         $fatal(1, "Premature terminal write ctx=%0d lane=%0d", cx, l);
-      if (cycle == lane_due[cx][l] && (!dut.result_ready[cx][l] || !dut.raw_valid[l]))
+      if (cycle == lane_due[cx][l] && (!completion_seen[cx][l] || !dut.raw_valid[l]))
         $fatal(1, "Missing direct terminal write ctx=%0d lane=%0d", cx, l);
     end
     if (dut.raw_valid != 0) begin

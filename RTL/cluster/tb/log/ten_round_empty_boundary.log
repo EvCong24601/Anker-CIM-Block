@@ -1,0 +1,14 @@
+empty_p0: # REPRO_FALSE_TMP_CLOCK cycle=26 clock=0000000f capture=00000000 tmp=0 previous_tmp=256 EP=0
+empty_p0: # REVIEW_RESULT false_tmp_clocks=1 numeric_outputs=2
+empty_p1: # REPRO_FALSE_TMP_CLOCK cycle=27 clock=0000000f capture=00000000 tmp=0 previous_tmp=256 EP=1
+empty_p1: # REVIEW_RESULT false_tmp_clocks=1 numeric_outputs=2
+empty_p2: # REPRO_FALSE_TMP_CLOCK cycle=26 clock=0000000f capture=00000000 tmp=0 previous_tmp=256 EP=2
+empty_p2: # REVIEW_RESULT false_tmp_clocks=1 numeric_outputs=2
+empty_p3: # REPRO_FALSE_TMP_CLOCK cycle=27 clock=0000000f capture=00000000 tmp=0 previous_tmp=256 EP=3
+empty_p3: # REVIEW_RESULT false_tmp_clocks=1 numeric_outputs=2
+empty_p4: # REPRO_FALSE_TMP_CLOCK cycle=29 clock=0000000f capture=00000000 tmp=0 previous_tmp=256 EP=4
+empty_p4: # REVIEW_RESULT false_tmp_clocks=1 numeric_outputs=2
+empty_p5: # REPRO_FALSE_TMP_CLOCK cycle=27 clock=0000000f capture=00000000 tmp=0 previous_tmp=256 EP=5
+empty_p5: # REVIEW_RESULT false_tmp_clocks=1 numeric_outputs=2
+empty_p6: # REPRO_FALSE_TMP_CLOCK cycle=29 clock=0000000f capture=00000000 tmp=0 previous_tmp=256 EP=6
+empty_p6: # REVIEW_RESULT false_tmp_clocks=1 numeric_outputs=2

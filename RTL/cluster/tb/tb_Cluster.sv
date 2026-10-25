@@ -6,8 +6,9 @@ module tb_Cluster;
   parameter logic [31:0] OC_MASK = 32'hffff_ffff;
   parameter int OS_TILES = 1;
   parameter int PATTERNS = 6;
-  parameter int OUTPUT_BUFFER_DEPTH = 16;  // Context entries per channel
-  parameter int WGT_RADDR_BUFFER_DEPTH = 16;  // Eight-bit AS addresses only
+  parameter int OUTPUT_PSUM_DEPTH = 16;  // Unified Psum/address/Requant depth
+  parameter int OUTPUT_BUFFER_DEPTH = OUTPUT_PSUM_DEPTH;  // Context entries per channel
+  parameter int WGT_RADDR_BUFFER_DEPTH = OUTPUT_BUFFER_DEPTH;  // Eight-bit AS addresses only
   parameter int MAX_CONTEXTS = 64;  // Completion/tag capacity; independent of Psum
   parameter int REQUANT_CONTEXT_DEPTH = OUTPUT_BUFFER_DEPTH;  // Deep AS parameter capacity
   parameter bit CHECK_GATE_EQUIVALENCE = 0;  // Optional ungated mirror under identical inputs
@@ -43,6 +44,7 @@ module tb_Cluster;
   wire sram_rd_valid;
   wire [1023:0] psum_data_o;
   cluster_top #(
+    .OUTPUT_PSUM_DEPTH(OUTPUT_PSUM_DEPTH),
     .WGT_RADDR_BUFFER_DEPTH(WGT_RADDR_BUFFER_DEPTH),
     .MAX_CONTEXTS(MAX_CONTEXTS),
     .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
@@ -94,11 +96,13 @@ module tb_Cluster;
   `include "include/cluster_context_buffer_cases.svh"
   `include "include/cluster_gate_checks.svh"
   `include "include/cluster_gate_equivalence.svh"
+  `include "include/cluster_completion_checks.svh"
   `include "include/cluster_scoreboards.svh"
   `include "include/cluster_compute_cases.svh"
   `include "include/cluster_sram_cases.svh"
   `include "include/cluster_sram_response_cases.svh"
   `include "include/cluster_suites.svh"
+  `include "include/cluster_empty_batch_cases.svh"
   `include "include/cluster_regression.svh"
 
   // VCS supplies a case-specific path; direct runs retain a descriptive default.

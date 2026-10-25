@@ -1,0 +1,10 @@
+PASS gate_equiv_context_stress: cycles=70030 raw_events=49152 quant_events=0
+PASS gate_equiv_default: cycles=67714 raw_events=31424 quant_events=0
+PASS gate_equiv_input_overlap: cycles=11320 raw_events=2560 quant_events=0
+PASS gate_equiv_requant_boundary: cycles=19 raw_events=2 quant_events=2
+PASS gate_equiv_requant_buffers: cycles=20742 raw_events=2912 quant_events=2912
+PASS gate_equiv_requant_channel: cycles=101062 raw_events=5120 quant_events=5120
+PASS gate_equiv_requant_reset: cycles=70 raw_events=8 quant_events=4
+PASS gate_equiv_sram: cycles=21894 raw_events=96 quant_events=0
+PASS gate_equiv_sram_response: cycles=90 raw_events=0 quant_events=0
+PASS complete Cluster gate equivalence: suites=9 cycles=292941

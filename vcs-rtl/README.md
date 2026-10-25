@@ -13,7 +13,7 @@ make gemm-regression
 make regression
 ```
 
-`run` 按顺序生成数据、编译、仿真、检查。全部 134 个 case 中，41 个为正向测试，93 个应命中指定 Fatal；`gemm-regression` 包含 11 个正向端到端 GEMM。`cases.py` 是配置来源；修改后执行 `python3 cases.py --write` 更新 `cases.mk`。
+`run` 按顺序生成数据、编译、仿真、检查。全部 133 个 case 中，43 个为正向测试，90 个应命中指定 Fatal；`gemm-regression` 包含 11 个正向端到端 GEMM。`cases.py` 是配置来源；修改后执行 `python3 cases.py --write` 更新 `cases.mk`。
 
 每个 case 使用独立的 `work/<CASE>/`，包含编译产物、`compile.log`、`sim.log`、退出状态、`data/` 和波形。重复相同 case 会更新该目录；保留多次结果时指定不同 `CASE_TAG`。
 
@@ -22,7 +22,7 @@ make regression
 - `CASE`：选择下文的预设；自动选择 TB、golden 生成器、编译参数、plusargs 和精确检查标志。
 - `CASE_TAG`：结果目录及波形后缀，默认等于 CASE。建议仅使用英文、数字和下划线。
 - `TB`：不指定 CASE 时可选 `cluster / macro / reduce / requant / gemm / gemm_as / gemm_edges`，用于自定义实验。指定 CASE 时由预设决定。
-- `PARAMETERS`：追加 VCS 编译期覆盖，例如 `-pvalue+tb_Cluster.OUTPUT_BUFFER_DEPTH=16`。计数、容量和精度参数改变后应重新编译。
+- `PARAMETERS`：追加 VCS 编译期覆盖，例如 `-pvalue+tb_Cluster.OUTPUT_PSUM_DEPTH=16`。计数、容量和精度参数改变后应重新编译。
 - `PVALUE`：追加运行期 plusargs，例如 `+CAPACITY_SIGN=1`；不能用于改变编译期 parameter。
 - `PYTHON`：Python 命令，默认 `python3`。`WORK_DIR`：结果根目录，默认 `work`。
 - `OUTPUT`：可执行文件名，默认 TB 名。`FSDB_FILE`：自定义波形路径，默认 `<TOP>_<CASE_TAG>.fsdb`。
@@ -90,10 +90,7 @@ make run CASE=gemm_edge_w4_high_channel FSDB_FILE=w4_hi_pc.fsdb
 - `requant_unit`：Integer quantization arithmetic and four OC mapping；成功标志 `PASS requant_unit`。
 - `requant_negative_as17_capacity`：Reject Requant as17 capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
 - `requant_negative_mode`：Reject Requant mode；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: per-channel scale requires conv_mode`。
-- `requant_negative_shift_low`：Reject Requant shift low；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: shift must be -31..31`。
-- `requant_negative_shift_high`：Reject Requant shift high；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: shift must be -31..31`。
 - `requant_negative_unknown`：Reject Requant unknown；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: unknown configuration`。
-- `requant_negative_channel_shift`：Reject Requant channel shift；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: shift must be -31..31`。
 - `requant_negative_conv_group`：Reject Requant conv group；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group`。
 - `requant_negative_zp_group`：Reject Requant zp group；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group`。
 - `requant_integration`：requant integration；成功标志 `PASS requant_integration cases=168`。
@@ -202,3 +199,12 @@ make run CASE=gemm_edge_w4_high_channel FSDB_FILE=w4_hi_pc.fsdb
 - `gate_equiv_sram_response`：Read response gated/ungated comparison；成功标志 `PASS sram_response reads=32`。
 
 详见[验证清单](../docs/Cluster_Verification.md)。
+
+## 统一 Buffer 深度
+
+集成使用 `OUTPUT_PSUM_DEPTH`（默认16）统一设置 Psum、权重CIM读地址表及Requant Context参数表深度。兼容参数依赖为 `OUTPUT_BUFFER_DEPTH=OUTPUT_PSUM_DEPTH`，`WGT_RADDR_BUFFER_DEPTH=OUTPUT_BUFFER_DEPTH`，`REQUANT_CONTEXT_DEPTH=OUTPUT_BUFFER_DEPTH`；仅覆盖统一参数即可联动三表。容量负向测试可以显式覆盖兼容参数，显式覆盖会优先于默认联动。MAX_CONTEXTS为独立的调度标签容量，仍须满足其限制。
+
+每个物理输出OC只有一套acc与一套bit-fusion组合算术，全部Context通过Psum索引复用；不同OC之间保持独立，以支持并行输出。Context深度只扩展状态存储，不复制算术单元。
+
+- `requant_full_shift`：完整INT10的AS Context参数、两种scale模式及门控对照；`make run CASE=requant_full_shift`。
+- `requant_empty_batch`：七精度空批次后的最早接收、tmp时钟请求及输出检查；`make run CASE=requant_empty_batch`。

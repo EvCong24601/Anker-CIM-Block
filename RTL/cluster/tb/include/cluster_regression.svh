@@ -6,6 +6,10 @@ initial begin : regression
   string data_dir;
   int capacity_precision, capacity_sign, zero_count, capacity_count, capacity_os;
   string requant_negative;
+  if ($test$plusargs("EMPTY_BATCH_TEST")) begin
+    repeat (4) @(negedge clock); reset = 0;
+    run_empty_batch_suite(); $finish;
+  end
   if ($bits(requant_cfg_t) != 298) $fatal(1, "TB: Requant config must be 298 bits");
   if ($value$plusargs("REQUANT_NEGATIVE=%s", requant_negative)) begin
     repeat (4) @(negedge clock);
@@ -22,16 +26,7 @@ initial begin : regression
     case (requant_negative)
       "as17_capacity": cmd_i.cim_as_cnt = 17;
       "mode": requant_cfg_i.requant_mode = 1;
-      "shift_low": requant_cfg_i.requant_shift = -32;
-      "shift_high": requant_cfg_i.requant_shift = 32;
       "unknown": requant_cfg_i.requant_multiplier = 'x;
-      "channel_shift": begin
-        requant_cfg_i.conv_mode = 1;
-        requant_cfg_i.requant_mode = 1;
-        requant_cfg_i.requant_shift[30+:10] = 32;
-        cmd_i.cim_precision = 6;
-        cmd_i.cim_macro_en_mask = 8'hff;
-      end
       "conv_group": begin
         requant_cfg_i.conv_mode = 1;
         cmd_i.cim_precision = 4;

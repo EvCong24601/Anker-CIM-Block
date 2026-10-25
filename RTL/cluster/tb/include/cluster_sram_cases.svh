@@ -154,8 +154,10 @@ task automatic run_sram_cases;
   for (int m = 0; m < 8; m++) sram_write(m, 7, {128{8'h11}}, 4'h0);
   sram_compute_check(0);
   saved_hold = dut.hold_valid;
-  sram_read_check(5, 7);
-  if (dut.hold_valid !== saved_hold) $fatal(1, "Raw read invalidated Hold");
+  sram_read_check(5, 8);
+  if (dut.hold_valid !== saved_hold || dut.hold_addr[5] !== 8)
+    $fatal(1, "Ordinary read did not retag the selected Macro SRAM output");
+  sram_compute_check(0); // Macro5 must refresh Row7 rather than reuse Row8.
   sram_write(5, 7, {128{8'h22}}, 4'b1101);  // only OC1 changes
   if (dut.hold_valid !== 8'hdf) $fatal(1, "Masked write did not invalidate only Macro5 Hold");
   sram_compute_check(1);
@@ -163,6 +165,6 @@ task automatic run_sram_cases;
   if (dut.hold_valid !== 8'hff) $fatal(1, "All-masked write invalidated Hold");
   sram_read_check(5, 7);
   sram_compute_check(1);
-  $display("PASS sram_rw writes=%0d reads=%0d masks=16 macros=8 rows=256 compute=3", sram_write_cases,
+  $display("PASS sram_rw writes=%0d reads=%0d masks=16 macros=8 rows=256 compute=4", sram_write_cases,
            sram_read_checks);
 endtask

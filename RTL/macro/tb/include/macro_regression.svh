@@ -76,6 +76,17 @@ initial begin : stimulus
   send_phase(0, 0, 1, 15, 2, 1, {128{4'h8}});
   send_phase(2, 0, 1, 15, 3, 1, padded_activation({128{4'h8}}, 2));
 
+  // Exercise every ordered precision transition with no bubble, under
+  // refresh and Hold reuse. Poison unused high bits instead of padding zero.
+  case_description = "ACT-bank-gating/all-precision-transitions/upper-bit-poison";
+  for (int refresh = 0; refresh < 2; refresh++)
+  for (int src = 0; src < 7; src++)
+  for (int dst = 0; dst < 7; dst++) begin
+    send_phase(3'(src), 0, 1, 15, 24, 1, random_activation());
+    send_phase(3'(dst), 0, 1, 15, 24, 1'(refresh), random_activation());
+  end
+  drain();
+
   // Hold preserves masked-off OC data and ignores zero-mask refreshes.
   case_description = "Hold-preservation/zero-compute-mask";
   send_phase(3, 0, 1, 1, 5, 1, padded_activation(random_activation(), 3));
@@ -106,6 +117,17 @@ initial begin : stimulus
   // Known unused upper ACT bits must not enter the arithmetic.
   case_description = "unused-upper-ACT-bits";
   send_phase(5, 0, 0, 15, 6, 1, '1);
+
+  // A regular read changes the retained SRAM output and its reuse tag.
+  case_description = "SRAM-output-reuse/ordinary-read-row-switch";
+  drain();
+  read_row(12);
+  send_phase(0, 0, 0, 15, 12, 0, random_activation());
+  drain();
+  read_row(11);
+  send_phase(0, 0, 0, 15, 11, 0, random_activation());
+  send_phase(0, 0, 0, 15, 12, 1, random_activation());
+  drain();
 
   // Independent consecutive requests with bubbles and dynamic controls.
   case_description = "random-back-to-back/bubbles/dynamic-controls";

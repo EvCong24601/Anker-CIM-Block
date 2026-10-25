@@ -22,7 +22,8 @@ always @(posedge clock) begin : edge_scoreboard
         dut.command.cim_weight_raddr !== 8'(base_address + active_tile))
         $fatal(1, "Edge GEMM: internal ACT/Context/phase/weight route mismatch");
       for (int macro = first_macro; macro < first_macro + macro_count; macro++) begin
-        if (dut.station[macro] !== (issues == 0)) $fatal(1, "Edge GEMM: WS weight hold refresh mismatch");
+        // One-tile preload readback already retains the first weight row.
+        if (dut.station[macro] !== (issues == 0 && !(active_tile == 0 && n_tiles == 1))) $fatal(1, "Edge GEMM: WS weight hold refresh mismatch");
         if (dut.station[macro]) refreshes[macro]++;
       end
       issues++;

@@ -66,3 +66,19 @@ task automatic async_reset();
   @(negedge clock);
   reset = 0;
 endtask
+
+// Ordinary SRAM reads replace the same output row later reused by CIM.
+task automatic read_row(input logic [7:0] address);
+  display_case($sformatf("regular-read/output-row-replacement address=%0d", address));
+  @(negedge clock);
+  cim_ren = 0;
+  sram_wen = 0;
+  sram_ren = 1;
+  sram_raddr = address;
+  @(posedge clock);
+  #1;
+  if (!negative_mode && sram_rdata !== reference_memory[address])
+    $fatal(1, "TB: ordinary read output mismatch row=%0d", address);
+  @(negedge clock);
+  sram_ren = 0;
+endtask

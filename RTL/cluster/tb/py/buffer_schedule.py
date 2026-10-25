@@ -52,7 +52,7 @@ def operation(p, counts, k, c, ph):
     last = ph == ABITS[p] // 4 - 1
     fusion = ph > 0
     acc = k > 0 and (ph == 0 if ac > 1 else last and os > 1)
-    ps_write = (os > 1 or ABITS[p] > 4) if ac > 1 else (os > 1 and last)
+    ps_write = True if ac > 1 else (os > 1 and last)
     done = last and k == os - 1
     ps = f'P[{c}]'
     if ac > 1:
@@ -180,7 +180,7 @@ def main():
                                  issue_cycle=q, tmp_capture=q+d-1, compute_cycle=q+d,
                                  tile=k, context=c, phase=ph,
                                  weight_address=f"8'h{0x20+16*k+(c if ac>1 else 0):02x}",
-                                 psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if os>1 or (ac>1 and ABITS[p]>4) else 0:x}',
+                                 psum_depth_open_hex=f'{((1 << max(ws,ac))-1) if os>1 or ac>1 else 0:x}',
                                  fusion_cycle=(q+d-(0 if ac>1 else 1)) if ph>0 else '',
                                  icg_enable_cycle=q+d-1,
                                  act_buffer_read=1,
@@ -196,9 +196,9 @@ def main():
             'C0为首外部Command+A0；q为内部发射周期。当前Plane/地址寄存后一拍即可发射，与同包后续输入重叠；tmp在C(q+D-1)捕获，完成C(q+D)。',
             '标准 W2/W4/W8 的 D=3/4/5T。无停顿、无 requant；WS归约末级与fusion在tmp前的路径需STA。',
             'WS每Tile实际计算P*ws_cnt拍；ws_cnt仍为完整ACT/Context数，P=A位宽/4；无空拍时每Tile共(P+1)*ws_cnt拍。',
-            'WS的os=1不写Psum；AS的A8/A16即使os=1也写P[ctx]保存fusion历史。首Tile/A0填充，后续Tile/A0 acc，高phase fusion。',
+            'WS的os=1不写Psum；所有多Context AS（包括A4/os=1）均写P[ctx]保存结果或fusion历史。首Tile/A0填充，后续Tile/A0 acc，高phase fusion。',
             'AS中n=as_cnt，P=A位宽/4：同Tile同Context的slice间隔n；相邻Tile同一slice间隔1+n*P，含下一包ACT/地址接收。',
-            'Psum高地址深度d>=max(ws,as)整批关闭；每OC每拍只时钟一个Context entry。WS os=1及AS A4 os=1关闭Psum。', '']
+            'Psum高地址深度d>=max(ws,as)整批关闭；每OC每拍只时钟一个Context entry。WS/单Context在os=1时关闭Psum。', '']
     for p, name in enumerate(NAMES):
         for case, counts in enumerate(COUNTS, 1):
             text += [f'precision={p} {name} case={case} os/ws/as={"/".join(map(str,counts))}',

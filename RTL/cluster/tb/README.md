@@ -7,9 +7,17 @@
 - `tb_ClusterRequant.sv`：独立Python整数向量。
 - `tb_Cluster_GEMM_OS1_WS32.sv`、`tb_Cluster_GEMM_OS2_AS4.sv`、`tb_Cluster_GEMM_Edges.sv`：11个端到端矩阵case。
 - `include/cluster_context_buffer_cases.svh`：AS固定参数槽位、A4地址旁路与参数收集/发射重叠。
-- `include/cluster_gate_checks.svh`：Macro计算/存储/Hold、参数组及raw/INT8数据时钟脉冲和保持检查。
+- `include/cluster_gate_checks.svh`：Macro控制/存储/ACT分区、参数组及共享路径标签及INT8数据时钟脉冲和保持检查。
 - `py/buffer_schedule.py`、`py/generate_readme.py`：调度公式、trace核对及根README的42组逐拍表。
 
-默认Psum及Requant Context深度16、地址表深度16、标签容量64。AS最多16；OS1 WS64可用。Psum使用条件为`cim_os_cnt>1 || (cim_as_cnt>1 && act_bits>4)`。
+默认Psum及Requant Context深度16、地址表深度16、标签容量64。AS最多16；OS1 WS64可用。Psum使用条件为`cim_os_cnt>1 || cim_as_cnt>1`。
 
 运行使用 [VCS配置](../../../vcs-rtl/README.md)。所有display及case描述使用英文。
+
+## 统一 Buffer 深度
+
+集成使用 `OUTPUT_PSUM_DEPTH`（默认16）统一设置 Psum、权重CIM读地址表及Requant Context参数表深度。兼容参数依赖为 `OUTPUT_BUFFER_DEPTH=OUTPUT_PSUM_DEPTH`，`WGT_RADDR_BUFFER_DEPTH=OUTPUT_BUFFER_DEPTH`，`REQUANT_CONTEXT_DEPTH=OUTPUT_BUFFER_DEPTH`；仅覆盖统一参数即可联动三表。容量负向测试可以显式覆盖兼容参数，显式覆盖会优先于默认联动。MAX_CONTEXTS为独立的调度标签容量，仍须满足其限制。
+
+每个物理输出OC只有一套acc与一套bit-fusion组合算术，全部Context通过Psum索引复用；不同OC之间保持独立，以支持并行输出。Context深度只扩展状态存储，不复制算术单元。
+
+`include/cluster_completion_checks.svh`独立检查逐Context/lane的预留、唯一发布和完整批次结束；检查表属于TB，不进入RTL。

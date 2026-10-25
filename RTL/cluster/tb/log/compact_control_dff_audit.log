@@ -1,0 +1,4 @@
+PASS depth=8 nominal_DFF=22590 SRAM_read_model=8192 ICG_latches=428
+PASS depth=16 nominal_DFF=33486 SRAM_read_model=8192 ICG_latches=684
+PASS depth=32 nominal_DFF=55278 SRAM_read_model=8192 ICG_latches=1196
+TOTAL default_nominal=33486 including_SRAM_read_model=41678; not synthesized cell counts

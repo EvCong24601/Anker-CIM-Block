@@ -33,8 +33,6 @@ module SingleMacro #(
 
   logic         in_valid;  // Valid request at the input boundary.
   logic [511:0] activation_in;  // Registered ACT digits shared by all OCs.
-  logic [  7:0] read_address_in;  // Weight row address for this request.
-  logic         station_in;  // 1: read SRAM and refresh Hold; 0: reuse Hold.
   logic [  1:0] weight_mode_in;  // Decoded W2/W4/W8 weight mode.
   logic         signed_en_in;  // Signed interpretation of weight digits.
   logic         activation_signed_in;  // Signed interpretation of this ACT digit.
@@ -44,9 +42,8 @@ module SingleMacro #(
 
   wire          issue = !reset && cim_ren && (|cim_oc_mask);
   wire          write_active = sram_wen && !(&sram_wmask);
-  wire macro_clock, memory_clock, hold_clock;
+  wire macro_clock, memory_clock;
   wire memory_active = !reset && (write_active || sram_ren || (issue && cim_station));
-  wire hold_active = !reset && (write_active || (in_valid && station_in));
   // Include output valid to preserve the final valid-clearing edge n+2.
   wire clock_active = !reset && (issue || in_valid || cim_odata_valid);
   generate
@@ -61,25 +58,45 @@ module SingleMacro #(
         .enable(memory_active),
         .gated_clock(memory_clock)
       );
-      MacroClockGate u_hold_gate (
-        .clock(clock),
-        .enable(hold_active),
-        .gated_clock(hold_clock)
-      );
     end else begin : g_no_icg
       assign macro_clock  = clock;
       assign memory_clock = clock;
-      assign hold_clock   = clock;
     end
   endgenerate
 
-  logic [1023:0] held_weight;
+  // ACT is an input boundary, separate from control/output drain clocks.
+  // Decode the incoming request, not weight_mode_in from the previous issue.
+  // Cluster supplies this request from its registered packet/scheduler state;
+  // the ICG captures the enable during the low phase before the input edge.
+  wire [1:0] input_weight_mode = decode_weight_mode(cim_precision);
+  wire [2:0] act_capture_en = {
+    issue && input_weight_mode == W_MODE_2,
+    issue && input_weight_mode != W_MODE_8,
+    issue
+  };
+  wire [2:0] act_clock;
+  for (genvar bank = 0; bank < 3; bank++) begin : g_act_bank
+    localparam int FIRST = bank == 0 ? 0 : bank == 1 ? 128 : 256;
+    localparam int WIDTH = bank == 2 ? 256 : 128;
+    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_clock_gate (
+      .clock(clock),
+      .enable(act_capture_en[bank]),
+      .gated_clock(act_clock[bank])
+    );
+    // Inactive banks retain their old contents, including in the ICG-bypass
+    // reference. Every newly needed bank updates on the same acceptance edge.
+    always_ff @(posedge act_clock[bank] or posedge reset)
+      if (reset) activation_in[FIRST +: WIDTH] <= '0;
+      else if (act_capture_en[bank]) activation_in[FIRST +: WIDTH] <= cim_idata[FIRST +: WIDTH];
+  end
+
   logic [7:0] held_address;
   logic hold_valid;
   wire [1023:0] sram_read_data;
   wire sram_read_enable = !reset && issue && cim_station;
-  // Refresh uses the current SRAM data directly, never an extra weight stage.
-  wire [1023:0] compute_weight = !in_valid ? 1024'b0 : station_in ? sram_read_data : held_weight;
+  // Both refresh and reuse consume the SRAM's retained read output.
+  // There is no second 1024-bit weight data register after the SRAM.
+  wire [1023:0] compute_weight = in_valid ? sram_read_data : 1024'b0;
   MacroWeightSRAM u_weight_sram (
     .clock(memory_clock),
     .write_enable(!reset && write_active),
@@ -98,21 +115,18 @@ module SingleMacro #(
     else sram_response_valid <= sram_ren;
   assign sram_rdata = sram_response_valid ? sram_read_data : 1024'b0;
 
-  // Persistent storage/reuse state, not a current-request pipeline stage.
-  // Hold payload need not reset: only a valid, correctly addressed Hold may
-  // be used. At n+1 a refresh commits while the next reuse enters R_in.
-  always_ff @(posedge hold_clock) begin
-    if (!reset && in_valid && station_in) held_weight <= sram_read_data;
-  end
-  always_ff @(posedge hold_clock or posedge reset) begin
+  // Tags describe the actual SRAM output, including ordinary reads. Writes
+  // invalidate the tag because read_data retains the old contents on a write.
+  // Only address/valid state is stored here, not another copy of the row.
+  always_ff @(posedge memory_clock or posedge reset) begin
     if (reset) begin
       held_address <= '0;
-      hold_valid   <= 1'b0;
+      hold_valid <= 1'b0;
     end else if (write_active) begin
       hold_valid <= 1'b0;
-    end else if (in_valid && station_in) begin
-      held_address <= read_address_in;
-      hold_valid   <= 1'b1;
+    end else if (sram_ren || sram_read_enable) begin
+      held_address <= sram_ren ? sram_raddr : cim_raddr;
+      hold_valid <= 1'b1;
     end
   end
 
@@ -137,9 +151,9 @@ module SingleMacro #(
         assign result_clock = clock;
       end
       // Masked OC payload holds. Valid/mask identify which values belong to
-      // this request; shared ACT, SRAM and full-row Hold serve active OCs.
+      // this request; shared ACT and SRAM retained output serve active OCs.
       // Parent-blocked OC results also hold; local valid/phase/Hold semantics
-      // remain unchanged, so no extra pipeline stage or refresh is introduced.
+      // stay aligned, so no extra pipeline stage is introduced.
       always_ff @(posedge result_clock or posedge reset)
         if (reset) cim_odata[18*c+:18] <= '0;
         else if (result_enable) cim_odata[18*c+:18] <= sum_l5[c];
@@ -210,9 +224,6 @@ module SingleMacro #(
   always_ff @(posedge macro_clock or posedge reset) begin
     if (reset) begin
       in_valid <= 1'b0;
-      activation_in <= '0;
-      read_address_in <= '0;
-      station_in <= 1'b0;
       weight_mode_in <= W_MODE_2;
       signed_en_in <= 1'b0;
       activation_signed_in <= 1'b0;
@@ -226,9 +237,6 @@ module SingleMacro #(
       in_valid <= issue;
       cim_odata_valid <= in_valid;
       if (issue) begin
-        activation_in <= cim_idata;
-        read_address_in <= cim_raddr;
-        station_in <= cim_station;
         weight_mode_in <= decode_weight_mode(cim_precision);
         signed_en_in <= cim_signed_en;
         activation_signed_in <= digit_is_signed(cim_precision, cim_phase, cim_signed_en);
@@ -265,14 +273,8 @@ module SingleMacro #(
           $fatal(1, "SM_PROTOCOL: unknown compute input");
         if (!legal_phase(cim_precision, cim_phase)) $fatal(1, "SM_PROTOCOL: illegal precision/phase");
         if (!cim_station) begin
-          // A preceding refresh commits at THIS edge; evaluate the
-          // resulting logical Hold rather than stale pre-NBA flags.
-          if (in_valid && station_in) begin
-            if (cim_raddr != read_address_in) $fatal(1, "SM_PROTOCOL: reuse address mismatch");
-          end else begin
-            if (!hold_valid) $fatal(1, "SM_PROTOCOL: reuse invalid hold");
-            if (cim_raddr != held_address) $fatal(1, "SM_PROTOCOL: reuse address mismatch");
-          end
+          if (!hold_valid) $fatal(1, "SM_PROTOCOL: reuse invalid hold");
+          if (cim_raddr != held_address) $fatal(1, "SM_PROTOCOL: reuse address mismatch");
         end
         // A partial write initializes only its unmasked OCs, even
         // when an earlier refresh already captured the whole row.

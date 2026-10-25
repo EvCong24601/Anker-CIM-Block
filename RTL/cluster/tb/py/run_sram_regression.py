@@ -204,15 +204,17 @@ def main():
         for scenario, message in (
             ('as17_capacity','AS count exceeds output depth'),
             ('mode','per-channel scale requires conv_mode'),
-            ('shift_low','shift must be -31..31'),
-            ('shift_high','shift must be -31..31'),
             ('unknown','unknown configuration'),
-            ('channel_shift','shift must be -31..31'),
             ('conv_group','Requant requires one aligned reduction group'),
             ('zp_group','Requant requires one aligned reduction group'),
         ):
             simulate('requant_negative_'+scenario,'tb_Cluster',
                      ['+REQUANT_NEGATIVE='+scenario], ('CLUSTER_CONTEXT_CAPACITY: ' if scenario=='as17_capacity' else 'CLUSTER_REQUANT_CONFIG: ')+message, True)
+        simulate('requant_full_shift','tb_Cluster',
+                 ['+CONTEXT_BUFFER_TEST','+FULL_SHIFT_TEST','-gCHECK_GATE_EQUIVALENCE=1'],
+                 'PASS context_buffers cases=77')
+        simulate('requant_empty_batch','tb_Cluster',
+                 ['+EMPTY_BATCH_TEST','-gCHECK_GATE_EQUIVALENCE=1'], 'PASS empty_batch cases=7')
         data=dest/'requant_integration_data'
         data.mkdir(exist_ok=True)
         simulate('requant_integration','tb_Cluster',

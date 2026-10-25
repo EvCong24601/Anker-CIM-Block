@@ -1,0 +1,264 @@
+Reading pref.tcl
+
+# 2020.4
+
+# vsim -c -onfinish stop work.tb_dff_audit -do "run -all; quit -code 0" -gD=8
+# Start time: 01:30:17 on Oct 25,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: tb_dff_audit.sv(5): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 18, found 13.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'requant_valid_o'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'requant_data_o'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'sram_rd_valid'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'sram_rd_data'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'cmd_ready_o'.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=6.
+# //  ModelSim SE-64 2020.4 Oct 13 2020
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_dff_audit(fast)
+# Loading work.single_macro_pkg(fast)
+# Loading work.cluster_pkg(fast)
+# Loading work.cluster_top(fast)
+# Loading work.SingleMacro(fast__1)
+# run -all
+# PASS unified depth=8 psum=8 waddr=8 requant=8
+# DFF_ROW psum 8192
+# DFF_ROW tmp 1024
+# DFF_ROW act 4096
+# DFF_ROW qcontext 2376
+# DFF_ROW qbatch 298
+# DFF_ROW waddr 72
+# DFF_ROW rawdata 0
+# DFF_ROW rawctx 18
+# DFF_ROW rawvalid 32
+# DFF_ROW qout 288
+# DFF_ROW descriptor 214
+# DFF_ROW pipetags 68
+# DFF_ROW tmptags 83
+# DFF_ROW completion 4096
+# DFF_ROW buffer_en 296
+# DFF_ROW schedule 273
+# DFF_ROW sram_rsp 4
+# DFF_ROW macro_act 4096
+# DFF_ROW macro_hold 72
+# DFF_ROW macro_out 576
+# DFF_ROW macro_inctrl 120
+# DFF_ROW macro_outctrl 56
+# DFF_ROW macro_rvalid 8
+# DFF_ROW reduce_data 464
+# DFF_ROW reduce_ctrl 120
+# DFF_ROW sram_read_model 8192
+# DFF_ROW sram_array 2097152
+# DFF_ROW icg 428
+# ** Note: $finish    : tb_dff_audit.sv(42)
+#    Time: 20 ns  Iteration: 1  Instance: /tb_dff_audit
+# Break at tb_dff_audit.sv line 42
+# Stopped at tb_dff_audit.sv line 42
+#  quit -code 0
+# End time: 01:30:19 on Oct 25,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 6
+
+Reading pref.tcl
+
+# 2020.4
+
+# vsim -c -onfinish stop work.tb_dff_audit -do "run -all; quit -code 0" -gD=16
+# Start time: 01:30:20 on Oct 25,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: tb_dff_audit.sv(5): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 18, found 13.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'requant_valid_o'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'requant_data_o'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'sram_rd_valid'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'sram_rd_data'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'cmd_ready_o'.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=6.
+# //  ModelSim SE-64 2020.4 Oct 13 2020
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_dff_audit(fast)
+# Loading work.single_macro_pkg(fast)
+# Loading work.cluster_pkg(fast)
+# Loading work.cluster_top(fast)
+# Loading work.SingleMacro(fast__1)
+# run -all
+# PASS unified depth=16 psum=16 waddr=16 requant=16
+# DFF_ROW psum 16384
+# DFF_ROW tmp 1024
+# DFF_ROW act 4096
+# DFF_ROW qcontext 4752
+# DFF_ROW qbatch 298
+# DFF_ROW waddr 136
+# DFF_ROW rawdata 0
+# DFF_ROW rawctx 18
+# DFF_ROW rawvalid 32
+# DFF_ROW qout 288
+# DFF_ROW descriptor 214
+# DFF_ROW pipetags 68
+# DFF_ROW tmptags 83
+# DFF_ROW completion 4096
+# DFF_ROW buffer_en 560
+# DFF_ROW schedule 273
+# DFF_ROW sram_rsp 4
+# DFF_ROW macro_act 4096
+# DFF_ROW macro_hold 72
+# DFF_ROW macro_out 576
+# DFF_ROW macro_inctrl 120
+# DFF_ROW macro_outctrl 56
+# DFF_ROW macro_rvalid 8
+# DFF_ROW reduce_data 464
+# DFF_ROW reduce_ctrl 120
+# DFF_ROW sram_read_model 8192
+# DFF_ROW sram_array 2097152
+# DFF_ROW icg 684
+# ** Note: $finish    : tb_dff_audit.sv(42)
+#    Time: 20 ns  Iteration: 1  Instance: /tb_dff_audit
+# Break at tb_dff_audit.sv line 42
+# Stopped at tb_dff_audit.sv line 42
+#  quit -code 0
+# End time: 01:30:23 on Oct 25,2026, Elapsed time: 0:00:03
+# Errors: 0, Warnings: 6
+
+Reading pref.tcl
+
+# 2020.4
+
+# vsim -c -onfinish stop work.tb_dff_audit -do "run -all; quit -code 0" -gD=32
+# Start time: 01:30:24 on Oct 25,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: tb_dff_audit.sv(5): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 18, found 13.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'requant_valid_o'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'requant_data_o'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'sram_rd_valid'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'sram_rd_data'.
+# ** Warning: tb_dff_audit.sv(5): (vopt-2718) [TFMPC] - Missing connection for port 'cmd_ready_o'.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=6.
+# //  ModelSim SE-64 2020.4 Oct 13 2020
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_dff_audit(fast)
+# Loading work.single_macro_pkg(fast)
+# Loading work.cluster_pkg(fast)
+# Loading work.cluster_top(fast)
+# Loading work.SingleMacro(fast__1)
+# run -all
+# PASS unified depth=32 psum=32 waddr=32 requant=32
+# DFF_ROW psum 32768
+# DFF_ROW tmp 1024
+# DFF_ROW act 4096
+# DFF_ROW qcontext 9504
+# DFF_ROW qbatch 298
+# DFF_ROW waddr 264
+# DFF_ROW rawdata 0
+# DFF_ROW rawctx 18
+# DFF_ROW rawvalid 32
+# DFF_ROW qout 288
+# DFF_ROW descriptor 214
+# DFF_ROW pipetags 68
+# DFF_ROW tmptags 83
+# DFF_ROW completion 4096
+# DFF_ROW buffer_en 1088
+# DFF_ROW schedule 273
+# DFF_ROW sram_rsp 4
+# DFF_ROW macro_act 4096
+# DFF_ROW macro_hold 72
+# DFF_ROW macro_out 576
+# DFF_ROW macro_inctrl 120
+# DFF_ROW macro_outctrl 56
+# DFF_ROW macro_rvalid 8
+# DFF_ROW reduce_data 464
+# DFF_ROW reduce_ctrl 120
+# DFF_ROW sram_read_model 8192
+# DFF_ROW sram_array 2097152
+# DFF_ROW icg 1196
+# ** Note: $finish    : tb_dff_audit.sv(42)
+#    Time: 20 ns  Iteration: 1  Instance: /tb_dff_audit
+# Break at tb_dff_audit.sv line 42
+# Stopped at tb_dff_audit.sv line 42
+#  quit -code 0
+# End time: 01:30:26 on Oct 25,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 6
+
+Reading pref.tcl
+
+# 2020.4
+
+# vsim -c -onfinish stop work.tb_shared_as16 -do "onbreak {quit -code 1}; run -all; quit -code 0"
+# Start time: 01:30:27 on Oct 25,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  ModelSim SE-64 2020.4 Oct 13 2020
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.cluster_pkg(fast)
+# Loading work.tb_shared_as16(fast)
+# Loading work.single_macro_pkg(fast)
+# Loading work.SingleMacro(fast)
+# onbreak {quit -code 1}
+#  Warning: onbreak command for use within macro
+#  run -all
+# RAW_STORAGE_CONFLICT raw_ctx=0 raw=0 tmp_ctx=1 tmp=256 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=1 raw=256 tmp_ctx=2 tmp=512 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=2 raw=512 tmp_ctx=3 tmp=768 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=3 raw=768 tmp_ctx=4 tmp=1024 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=4 raw=1024 tmp_ctx=5 tmp=1280 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=5 raw=1280 tmp_ctx=6 tmp=1536 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=6 raw=1536 tmp_ctx=7 tmp=1792 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=7 raw=1792 tmp_ctx=8 tmp=2048 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=8 raw=2048 tmp_ctx=9 tmp=2304 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=9 raw=2304 tmp_ctx=10 tmp=2560 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=10 raw=2560 tmp_ctx=11 tmp=2816 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=11 raw=2816 tmp_ctx=12 tmp=3072 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=12 raw=3072 tmp_ctx=13 tmp=3328 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=13 raw=3328 tmp_ctx=14 tmp=3584 psum_depth_open=ffff
+# RAW_STORAGE_CONFLICT raw_ctx=14 raw=3584 tmp_ctx=15 tmp=3840 psum_depth_open=ffff
+# PASS shared-AS16 outputs=16 alias_conflicts=15 golden=0,8,...,120
+# ** Note: $finish    : tb_shared_as16.sv(41)
+#    Time: 1150 ns  Iteration: 1  Instance: /tb_shared_as16
+# Break at tb_shared_as16.sv line 41
+# Stopped at tb_shared_as16.sv line 41
+#  quit -code 0
+# End time: 01:30:29 on Oct 25,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 0

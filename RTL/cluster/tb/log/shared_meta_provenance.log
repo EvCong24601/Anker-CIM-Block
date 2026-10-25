@@ -1,0 +1,6 @@
+Shared metadata/storage implementation passed full regression: 134 suites, 93 expected rejections.
+Subsequent changes add OUTPUT_PSUM_DEPTH and default parameter aliases to RTL/TB, plus comments. Default capacities remain 16.
+Unified depth tested by elaborating only OUTPUT_PSUM_DEPTH=8/16/32 and asserting all three arrays match; continuous AS16 unique-weight test rerun.
+Latest timing/model, SYNTHESIS compilation/elaboration and VCS file-list checks are separate from the earlier full regression.
+Original full-regression source hashes: shared_meta_sources.sha256. Latest audited sources: shared_meta_audit_sources.sha256.
+DOCX content/OOXML validated; visual rendering unavailable because LibreOffice soffice.exe is absent. No PDF exported.

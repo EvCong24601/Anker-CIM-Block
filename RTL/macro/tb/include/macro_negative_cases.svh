@@ -21,13 +21,17 @@ task automatic run_negative(input string test_name);
     send_phase(2, 0, 0, 1, 255, 1, '0);  // initialized OC0 may refresh
     send_phase(2, 0, 0, 2, 255, 0, '0);  // OC1 is still uninitialized
   end else if (test_name == "hold_address") begin
+    write_row(1, {128{8'h12}});
+    idle_cycle();
     send_phase(0, 0, 0, 15, 0, 1, '0);
-    send_phase(0, 0, 0, 15, 1, 0, '0);
+    drain();
+    read_row(1);
+    send_phase(0, 0, 0, 15, 0, 0, '0);
   end else if (test_name == "hold_address_pending") begin
     write_row(8'd1, {128{8'h12}});
     send_phase(0, 0, 0, 15, 0, 1, '0);
     send_phase(0, 0, 0, 15, 1, 1, '0);
-    // Old Hold is Row0 before this edge, but Row1 commits now.
+    // SRAM output already holds Row1; reusing Row0 must be rejected.
     send_phase(0, 0, 0, 15, 0, 0, '0);
   end else if (test_name == "unknown_write") begin
     write_row(0, '0);

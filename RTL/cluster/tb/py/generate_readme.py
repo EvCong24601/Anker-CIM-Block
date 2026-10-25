@@ -6,7 +6,7 @@ REPO = Path(__file__).resolve().parents[4]
 
 BODY = r"""# CIM Cluster 输入与计算说明
 
-八个 SingleMacro 组成一个 Cluster。当前包内ACT Plane、AS地址和量化参数接收与内部发射重叠；输入寄存后下一拍即可发射。正式输出为寄存INT8和逐lane valid，raw signed32仅供TB观察。
+八个 SingleMacro 组成一个 Cluster。当前包内ACT Plane、AS地址和量化参数接收与内部发射重叠；输入寄存后下一拍即可发射。正式输出为寄存INT8和逐lane valid，raw signed32仅供TB观察。批次配置及组合解码共享，Packet只存8bit变化地址；每OC的acc/bit-fusion复用一个组合加法器；三条归约路径的末Context完成位决定批次结束，逐lane完整性由独立TB检查。
 
 ## 源码与运行
 
@@ -21,17 +21,17 @@ BODY = r"""# CIM Cluster 输入与计算说明
 
 所有多Context AS采用Tile → Slice → Context，包括OS1；WS/单Context采用Tile → Context → Slice。AS参数与地址不要求整包收齐，当前Context已收到即可计算。ACT bank为4096bit，后续Plane固定连续输入。
 
-默认权重行地址表16×8bit；仅AS A8/A16使用深表，A4使用当前地址寄存器。Requant参数表默认16项，与OUTPUT_BUFFER_DEPTH一致，所有AS精度均使用固定槽位，不回收、不覆盖。所有精度cim_as_cnt≤16。
+OUTPUT_PSUM_DEPTH默认16，统一控制Psum、权重地址表及Requant Context表深度；兼容参数可由容量专项单独覆盖。默认权重行地址表16×8bit；仅AS A8/A16使用深表，A4使用当前地址寄存器。Requant参数表默认16项，与OUTPUT_BUFFER_DEPTH一致，所有AS精度均使用固定槽位，不回收、不覆盖。所有精度cim_as_cnt≤16。
 
 非AS关闭地址和量化参数深表，使用当前地址及批次参数。Per-tensor每Context仅使用第0组multiplier/shift并广播，另外三组关钟；ZP始终保留四项逐通道参数。参数c固定对应本地OC c，不按mask压缩。
 
-Psum使用条件：`cim_os_cnt>1 || (cim_as_cnt>1 && act_bits>4)`。WS/单Context在tmp中融合Slice；AS A8/A16在Psum中保存各Context融合历史；OS>1还累加K Tile。OS1 WS64合法，OS1 AS16合法，AS17/AS64拒绝。三个count均为8bit、1～255，WS/AS不能同时大于1。
+Psum使用条件：`cim_os_cnt>1 || cim_as_cnt>1`。WS/单Context在tmp中融合Slice；所有AS多Context在Psum中保存各Context结果及融合历史；OS>1还累加K Tile。OS1 WS64合法，OS1 AS16合法，AS17/AS64拒绝。三个count均为8bit、1～255，WS/AS不能同时大于1。
 
 ## 时钟与结果
 
-SRAM上升沿采样读写。同步读响应带sram_rd_valid，Macro编号随请求锁存；下一请求不改变当前响应。Macro在输入接受沿读权重，下一沿寄存计算结果，II=1。计算、SRAM访问、Hold更新时钟独立；归约转发按节点/OC门控，raw/INT8数据按对齐有效事件门控，valid保留清零尾沿。Context表采用整批门控。工艺ICG/SRAM映射及STA需由集成实现确认。
+SRAM上升沿采样读写。同步读响应带sram_rd_valid，Macro编号随请求锁存；下一请求不改变当前响应。Macro在输入接受沿读权重，下一沿寄存计算结果，II=1。控制、SRAM访问及ACT分区时钟独立；权重由SRAM输出保持，行号/valid随访问更新；归约转发按节点/OC门控，tmp/Psum及INT8数据按对齐有效事件门控，valid保留清零尾沿。Context表采用整批门控。工艺ICG/SRAM映射及STA需由集成实现确认。
 
-Requant使用一级组合算术及输出寄存器，INT8 valid比raw晚1T，没有输出反压。公式：`clip_INT8(round(raw × multiplier × 2^shift) + zp)`，半整数远离零，shift范围−31～31。merged ZP逐通道，scale支持per-tensor/per-channel。
+Requant使用一级组合算术及输出寄存器，INT8 valid比raw晚1T，没有输出反压。公式：`clip_INT8(round(raw × multiplier × 2^shift) + zp)`，半整数远离零，shift范围−512～511。merged ZP逐通道，scale支持per-tensor/per-channel。组编号由批次配置统一解码，四通道共享AS Context选择，各OC保留独立隔离和输出门控。
 
 启用量化时每拍只允许一组、最多四个OC：W8八Macro归约，W4对齐四Macro组，W2对齐两Macro组。raw归约单测可关闭量化。中间tmp/Psum必须符合signed32范围；最终clip不修复历史回绕。
 

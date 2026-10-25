@@ -28,6 +28,15 @@ module ClusterReduceTree #(
   } ctrl_t;
   ctrl_t early_ctrl, c0, c1, c2;
   ctrl_t source_ctrl[0:6];
+  // Each stage decodes its OWN aligned control. No sharing across time.
+  ctrl_t decode_ctrl[0:3];  // early, c0, c1, c2
+  logic leaf_live[0:3][0:7][0:3];
+  logic pair_live[0:3][0:3][0:3];
+  logic quad_live[0:3][0:1][0:3];
+  logic node_live[0:3][0:6][0:3];
+  logic node_left_live[0:6][0:3], node_right_live[0:6][0:3];
+  logic [31:0] decode_demand[0:3];
+  logic [3:0] decode_forward[0:3][0:6];
   logic [3:0] cg_channel_req[1:6];
   wire [6:1] reduce_clock;
   wire signed [20:0] forward_q[1:6][0:3];
@@ -86,16 +95,56 @@ module ClusterReduceTree #(
   always_comb begin
     early_ctrl = '{early_valid_i, early_split_i, early_en_i, early_oc_i};
     c0 = '{valid_i, split_i, en_i, oc_i};
+    decode_ctrl[0] = early_ctrl;
+    decode_ctrl[1] = c0;
+    decode_ctrl[2] = c1;
+    decode_ctrl[3] = c2;
+    for (int stage = 0; stage < 4; stage++) begin
+      for (int m = 0; m < 8; m++)
+      for (int c = 0; c < 4; c++) begin
+        leaf_live[stage][m][c] = decode_ctrl[stage].en[m] && decode_ctrl[stage].oc[4*m+c];
+        decode_demand[stage][4*m+c] = merge_contributes(
+            decode_ctrl[stage].split, decode_ctrl[stage].oc, m, c);
+      end
+      for (int c = 0; c < 4; c++) begin
+        for (int pair = 0; pair < 4; pair++) begin
+          pair_live[stage][pair][c] = decode_ctrl[stage].oc[8*pair+c] &&
+              (leaf_live[stage][2*pair][c] || leaf_live[stage][2*pair+1][c]);
+          node_live[stage][3+pair][c] = pair_live[stage][pair][c];
+        end
+        for (int quad = 0; quad < 2; quad++) begin
+          quad_live[stage][quad][c] = decode_ctrl[stage].oc[16*quad+c] &&
+              (pair_live[stage][2*quad][c] || pair_live[stage][2*quad+1][c]);
+          node_live[stage][1+quad][c] = quad_live[stage][quad][c];
+        end
+        node_live[stage][0][c] = decode_ctrl[stage].oc[c] &&
+            (quad_live[stage][0][c] || quad_live[stage][1][c]);
+      end
+      for (int n = 0; n < 7; n++) begin
+        decode_forward[stage][n] = '0;
+        if (decode_ctrl[stage].valid && !decode_ctrl[stage].split[n] &&
+            (n < 3 ? !decode_ctrl[stage].split[0] : !decode_ctrl[stage].split[1+(n-3)/2]))
+          for (int c = 0; c < 4; c++)
+            decode_forward[stage][n][c] = node_live[stage][n][c] &&
+                decode_demand[stage][4*start_of(n)+c];
+      end
+    end
     for (int n = 0; n < 7; n++) begin
       source_ctrl[n] = n == 0 ? c2 : n < 3 ? c1 : c0;
       for (int c = 0; c < 4; c++) begin
         if (n == 0) begin
+          node_left_live[n][c] = quad_live[3][0][c];
+          node_right_live[n][c] = quad_live[3][1][c];
           left_data[n][c]  = forward_q[1][c];
           right_data[n][c] = forward_q[2][c];
         end else if (n < 3) begin
+          node_left_live[n][c] = pair_live[2][2*(n-1)][c];
+          node_right_live[n][c] = pair_live[2][2*(n-1)+1][c];
           left_data[n][c]  = forward_q[3+2*(n-1)][c];
           right_data[n][c] = forward_q[4+2*(n-1)][c];
         end else begin
+          node_left_live[n][c] = leaf_live[1][2*(n-3)][c];
+          node_right_live[n][c] = leaf_live[1][2*(n-3)+1][c];
           left_data[n][c]  = $signed(macro_data_i[72*(2*(n-3))+18*c+:18]);
           right_data[n][c] = $signed(macro_data_i[72*(2*(n-3)+1)+18*c+:18]);
         end
@@ -114,10 +163,10 @@ module ClusterReduceTree #(
     end
     always_comb
       for (int c = 0; c < 4; c++) begin
-        if (side_live(source_ctrl[n], n, c, 0) && side_live(source_ctrl[n], n, c, 1))
+        if (node_left_live[n][c] && node_right_live[n][c])
           node_value[n][c] = node_adder[n][c];
-        else if (side_live(source_ctrl[n], n, c, 0)) node_value[n][c] = left_data[n][c];
-        else if (side_live(source_ctrl[n], n, c, 1)) node_value[n][c] = right_data[n][c];
+        else if (node_left_live[n][c]) node_value[n][c] = left_data[n][c];
+        else if (node_right_live[n][c]) node_value[n][c] = right_data[n][c];
         else node_value[n][c] = '0;
       end
   end
@@ -134,7 +183,7 @@ module ClusterReduceTree #(
       c1 <= c0;
       c2 <= c1;
       for (int n = 1; n < 7; n++) begin
-        cg_channel_req[n] <= forward_mask(n < 3 ? c0 : early_ctrl, n);
+        cg_channel_req[n] <= decode_forward[n < 3 ? 1 : 0][n];
       end
     end
   end
@@ -208,7 +257,7 @@ module ClusterReduceTree #(
                 end
               end else begin
                 n = width == 2 ? 3 + m / 2 : width == 4 ? 1 + m / 4 : 0;
-                if (subtree_live(ctrl, start_of(n), size_of(n), c)) begin
+                if (node_live[stage+1][n][c]) begin
                   tap_mask_o[stage][4*g+c] = 1;
                   tap_data_o[stage][21*(4*g+c)+:21] = node_value[n][c];
                 end

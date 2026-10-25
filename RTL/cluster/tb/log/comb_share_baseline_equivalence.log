@@ -1,0 +1,7 @@
+Before/after RTL comparison: ready, batch_active, issue, raw, INT8, ACT, tmp/Psum, Macro/reduce and parameters every cycle.
+mixed: # PASS cluster_gate_equivalence cycles=1784 raw_events=576 quant_events=0
+oc_merge: # PASS cluster_gate_equivalence cycles=24722 raw_events=1160 quant_events=0
+requant_buffers: # PASS cluster_gate_equivalence cycles=20742 raw_events=2912 quant_events=2912
+requant_boundary: # PASS cluster_gate_equivalence cycles=19 raw_events=2 quant_events=2
+input_overlap: # PASS cluster_gate_equivalence cycles=11320 raw_events=2560 quant_events=0
+context_stress: # PASS cluster_gate_equivalence cycles=70030 raw_events=49152 quant_events=0

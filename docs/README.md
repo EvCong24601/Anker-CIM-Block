@@ -11,3 +11,6 @@
 运行配置统一见 [VCS说明](../vcs-rtl/README.md)。Word文件为独立规格文件；端口连接和仿真入口按当前RTL及上述Markdown使用。
 
 - [验证清单](Cluster_Verification.md)：调度、容量、Context参数、OC门控、整Cluster逐拍对照及同步SRAM证据。
+- [十轮检查与问题记录](Cluster_Bug_Review.md)：完整 INT10、空批次门控、Psum 溢出与未知控制检查的复现及验证范围。
+
+- [Macro ACT分区门控](Cluster_ACT_Gating.md)：W2/W4/W8的512/256/128bit捕获、输入精度切换与门控验证。

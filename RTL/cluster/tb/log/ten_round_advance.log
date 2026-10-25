@@ -1,0 +1,11 @@
+reduce: # PASS child_consumer_gating pair_suppressed=39 quad_suppressed=5
+# PASS reduce_clock_gating cases=208 terminal_tap_events=155
+buffers: # PASS context_buffers cases=77 raw_checks=2912 quant_checks=2912 fixed_slots=16 A4_weight_bypass=1 input_issue_overlap=1
+# PASS cluster_gate_equivalence cycles=20742 raw_events=2912 quant_events=2912
+# ADVANCE_GATE_AUDIT cycles=20741 checked=reduce/tmp/Psum/raw/INT8/Macro-result
+boundary: # PASS requant_boundary batches=2 earliest_reload=1 latency=1
+# PASS cluster_gate_equivalence cycles=19 raw_events=2 quant_events=2
+# ADVANCE_GATE_AUDIT cycles=18 checked=reduce/tmp/Psum/raw/INT8/Macro-result
+sram: # PASS sram_rw writes=2618 reads=8330 masks=16 macros=8 rows=256 compute=4
+# PASS cluster_gate_equivalence cycles=21903 raw_events=128 quant_events=0
+# ADVANCE_GATE_AUDIT cycles=21901 checked=reduce/tmp/Psum/raw/INT8/Macro-result

@@ -6,7 +6,7 @@ Cluster内部保存raw signed32，正式结果由Requant端口输出。Requant�
 
 ## 数据通路和限制
 
-内部raw Psum寄存器 → 四通道组合Requant → INT8输出寄存器。量化valid严格比对应raw valid晚一拍，没有内部算术流水、FIFO或反压。仅全部slice和OS Tile完成后的最终raw量化一次；不改变tmp/Psum历史。无valid的lane保持，复位清零并取消待输出结果。
+tmp/Psum存储的raw视图 → 四通道组合Requant → INT8输出寄存器。raw没有独立的数据寄存器，仅raw valid为发布事件；raw仅在valid时有观察合同。量化valid严格比对应raw valid晚一拍，没有内部算术流水、FIFO或反压。仅全部slice和OS Tile完成后的最终raw量化一次；不改变tmp/Psum历史。无valid的lane保持，复位清零并取消待输出结果。
 
 reset 高有效、异步置位，INT8 数据与 valid 均不等待时钟边沿清零；两个上升沿之间的短复位脉冲也清除输出和待发布结果。释放由上游同步并满足恢复/移除时序。
 
@@ -27,7 +27,7 @@ cim_reduce_split_mask必须使所选组完整归约；不属于该组的Macro不
 requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×INT10 shift + 4×INT32 zp。compute descriptor 为107 bit。
 
 - requant_multiplier[32*c+:32]：OC c的signed INT32乘数，四项共128bit。
-- requant_shift[10*c+:10]：OC c的signed INT10移位，四项共40bit；当前有效配置为−31～31。
+- requant_shift[10*c+:10]：OC c的signed INT10移位，四项共40bit；当前有效配置为−512～511。
 - requant_zp[32*c+:32]：OC c的signed INT32有效偏置，四项共128bit。
 - requant_mode=0：四个OC共用multiplier/shift的第0项，其余三项不参与算术；zp仍分别使用四项。
 - requant_mode=1：四个OC分别使用自己的multiplier/shift，要求conv_mode=1。conv_mode表示普通卷积模式；统一的单组/4OC限制也适用于mode=0。
@@ -52,9 +52,9 @@ requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×I
 
 每项完整配置为4×INT32 multiplier、4×INT10 shift、4×INT32 zp，共296bit；16项为4736bit/592B，不含valid及公共控制。mode0每个Context只更新第0项scale并广播，另外三项scale/shift关闭时钟；不同Context仍可有不同的共享scale。mode1更新四组scale。两种模式都保存四个逐通道zp。
 
-参数深表整批门控，不做逐地址ICG；非AS批次配置仅在加载时打开时钟。raw和INT8输出数据按lane有效事件独立门控，valid保持主时钟清零。测试可将参数深度覆盖为1或2，AS4必须报告容量错误。
+参数深表整批门控，不做逐地址ICG；非AS批次配置仅在加载时打开时钟。tmp/Psum和INT8输出数据按lane有效事件独立门控，valid保持主时钟清零。测试可将参数深度覆盖为1或2，AS4必须报告容量错误。
 
-最后raw后的下一沿可同时捕获旧INT8和接受新batch配置，旧结果使用沿前旧参数。输出valid、保持和复位规则不变。配置未知、shift越界、分组违规、Context容量不足或跨Tile参数不一致时，仿真必须命中准确诊断。
+最后raw后的下一沿可同时捕获旧INT8和接受新batch配置，旧结果使用沿前旧参数。输出valid、保持和复位规则不变。配置未知、分组违规、Context容量不足或跨Tile参数不一致时，仿真必须命中准确诊断。
 
 ## Psum 数值范围与溢出处理 TBD
 
@@ -70,17 +70,17 @@ TBD：逐次写入的检测位置、溢出后的拒绝或终止、饱和或扩�
 
 ## 测试与运行
 
-- tb_ClusterRequant.sv：9611个原始整数向量，以及512个独立四通道Python向量；覆盖两种scale模式、不同参数、16种OC mask及高位置输出组。
+- tb_ClusterRequant.sv：17908个原始整数向量，以及512个独立四通道Python向量；覆盖两种scale模式、不同参数、16种OC mask及高位置输出组。
 - +REQUANT_TEST：168个per-tensor集成case；+REQUANT_CHANNEL_TEST：1536个per-channel case，覆盖七精度、所有可选Macro组、16种mask、OS1/2和Single/WS/AS。
 - +CONTEXT_BUFFER_TEST：77个固定槽位case，2912个raw和2912个INT8检查；七精度、两种scale模式及参数接收/发射重叠。A4专项用地址深度1验证旁路。
 - +REQUANT_CONTEXT_TEST：OS1/OS2与两种scale模式，4个串行批次、32个输出，检查不同Context的独立multiplier/shift/zp映射。
 - 独立验证量化valid晚1T、数据保持、复位取消、无时钟边沿的短异步复位和最早批次配置切换。
 - 两个GEMM TB均运行per-tensor weight与per-channel weight版本，每版精确检查512个raw和512个INT8；OS2/AS4另查4096次Psum历史。
-- 所有case开始打印英文时间戳和描述；负向检查包括非conv的per-channel配置、单组限制、shift、未知值、AS参数深度及跨Tile scale/zp变化。
+- 所有case开始打印英文时间戳和描述；负向检查包括非conv的per-channel配置、单组限制、未知值、AS参数深度及跨Tile scale/zp变化。
 
 仿真使用 [VCS case 入口](../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 
-计算OC mask关闭对应Macro结果、归约转发、tmp/Psum及raw/INT8数据寄存器时钟；对应组合算术操作数隔离。门控按已对齐事务标签生效。公共ACT入口、SRAM整行访问和完整行Hold为其他有效OC保留工作能力。
+计算OC mask关闭对应Macro结果、归约转发、tmp/Psum及tmp/Psum和INT8数据寄存器时钟；对应组合算术操作数隔离。门控按已对齐事务标签生效。公共ACT入口、SRAM整行访问和完整行Hold为其他有效OC保留工作能力。
 
 两种scale模式均以不同Context的独立shift验证参数选择；完整Cluster门控开关逐拍比较见[验证清单](Cluster_Verification.md)。
 
@@ -92,4 +92,33 @@ output Psum寄存器和Requant Context参数存储在无写入时保持，不清
 
 归约树将父节点的消费需求向下传递到子节点输出寄存器。Macro结果的需求在输入沿寄存，下一沿控制逐OC结果时钟；归约转发需求仍提前一拍寄存。条件包含从子节点到所属终点的全部合并mask，父节点不消费时，相关子节点输出保持原值，从而保持父节点加法器输入。独立终点tap保留自己的有效数据路径，不因其他组被屏蔽而关闭。此路径不加入强制置零隔离或数据流水，输出延迟保持原定义。
 
-门控作用于子节点输出寄存器；共享ACT、完整行SRAM/Hold及Macro结果寄存器前的组合乘法不因此保证停止翻转。事务配置切换引起的控制翻转与持续数据翻转分开验证。
+门控作用于子节点输出寄存器；共享ACT、SRAM保持输出及Macro结果寄存器前的组合乘法不因此保证停止翻转。事务配置切换引起的控制翻转与持续数据翻转分开验证。
+
+## 共享事务标签与结果存储
+
+批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签17bit；四级流水68bit、三路径 tmp 标签51bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
+
+Psum 使用条件为 `cim_os_cnt>1 || cim_as_cnt>1`。OS1/AS2～16（含 A4）按 Context 保存结果；深度16允许AS16，AS17/AS64拒绝。AS的 Tile→Slice→Context 发射顺序以及包内接收/发射重叠保持。A4仅旁路深权重地址表，Requant Context 参数仍须保留至消费。
+
+raw 数据直接选择对应 Context 的 Psum 或单 Context/WS 的 tmp，不另设1024bit raw DFF。raw valid 保持原发布时刻，INT8 输出寄存器及 valid 仍晚1T。无效周期 raw 视图可能变化；正式 INT8 输出在无 valid 时保持。各路径指针和标签按提前门控请求更新。
+
+## 共享组和Context选择
+
+ClusterRequant的内部输入group_sel_i为3bit物理归约组编号，由Cluster的批次配置解码生成。valid_i只能标记该组的有效OC；四个通道按4×group_sel_i+c直接选取原始物理lane，不分别扫描优先级链。OC c始终对应参数c，mask不压紧编号。OC0被mask以及全部OC被mask时，组编号仍由配置确定。
+
+AS四通道共享该组归约路径的raw Context指针，统一寻址Requant Context表。各OC按自身valid选取ZP及per-channel scale，per-tensor的scale始终读取当前Context的OC参数槽0，不依赖OC0 valid。每个算术通道入口的Psum、multiplier、INT10 shift及ZP隔离和输出寄存器门控保持独立。
+
+该共享仅用于合法单组Requant。raw-only多组归约仍保留32lane存储及三个不同延迟路径；当前Psum计算读地址和上一Context的Requant读取地址不能合并。INT10接口及存储位宽保持；完整INT10移位运算范围的修复不属于组合共享改动。
+
+## INT10 运算与边界测试
+
+全部 signed INT10 编码 −512～511 均有效；寄存位宽仍为10 bit。乘积为完整 signed64，普通范围内在扩展位宽后移位，ZP在舍入之后、最终饱和之前相加。
+
+- 左移0～31：保留扩展乘积及ZP相消能力，包括 shift=31、ZP=INT32_MIN 的相消边界。
+- 左移32～511：非零整数乘积无法被任何INT32 ZP抵消到INT8范围，直接按乘积符号饱和；乘积为0时仍按ZP输出。
+- 右移1～63：按绝对值舍入，半值远离零，再恢复符号。右移63位时最大乘积2^62恰为半值，必须保留输出1。
+- 右移64～512：INT32乘积的绝对值不超过2^62，舍入结果为0，再加入ZP并饱和。
+
+这些范围判定保持公式的精确整数结果，不扩展移位寄存器，不改变一级组合逻辑及INT8输出寄存器的1T延迟。Python任意精度golden覆盖全部1024种shift编码、正负及零乘积、极值ZP和半值边界；SV集成参考模型使用576位整数，与RTL的范围分支实现独立。
+
+`requant_full_shift`检查七种精度、OS1/OS2、两种scale模式、AS Context独立参数和屏蔽OC；`requant_empty_batch`检查七精度空批次与有效批次的最早连续接收。VCS入口和FSDB名称由相同case目录管理。

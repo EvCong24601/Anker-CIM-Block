@@ -1,0 +1,5 @@
+parent_mask_empty: # PASS empty_batch cases=7 valid_outputs=8 tmp_capture_request_match=1
+parent_mask_empty: # PASS cluster_gate_equivalence cycles=137 raw_events=32 quant_events=32
+old_tag_expected_failure: # ** Fatal: TMP clock request has no matching capture transaction
+old_tag_expected_failure: # PASS cluster_gate_equivalence cycles=40 raw_events=4 quant_events=4
+PASS parent-only empty masks and mutation sensitivity; production RTL was not modified

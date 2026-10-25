@@ -8,6 +8,7 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
   wire [  31:0] reference_quant_valid;
   int checked_cycles = 0, raw_events = 0, quant_events = 0;
   cluster_top #(
+    .OUTPUT_PSUM_DEPTH(OUTPUT_PSUM_DEPTH),
     .WGT_RADDR_BUFFER_DEPTH(WGT_RADDR_BUFFER_DEPTH),
     .MAX_CONTEXTS(MAX_CONTEXTS),
     .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
@@ -22,6 +23,13 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
     .requant_valid_o(reference_quant_valid),
     .*
   );
+  for (genvar m = 0; m < 8; m++) begin : g_act_compare
+    always @(posedge clock) begin
+      #0.003;
+      if (dut.g_macro[m].u_macro.activation_in !== dut_ungated.g_macro[m].u_macro.activation_in)
+        $fatal(1, "CLUSTER_GATE_EQUIVALENCE: ACT bank capture/hold mismatch macro=%0d", m);
+    end
+  end
   always @(posedge clock) begin
     #0.003;
     if (reference_ready !== cmd_ready_o || reference_sram !== sram_rd_data || reference_sram_valid !== sram_rd_valid ||
@@ -30,7 +38,8 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
     if (dut_ungated.raw_data !== dut.raw_data || dut_ungated.raw_valid !== dut.raw_valid ||
       dut_ungated.act_buffer !== dut.act_buffer || dut_ungated.issue !== dut.issue ||
       dut_ungated.phase != dut.phase || dut_ungated.context_idx != dut.context_idx ||
-      dut_ungated.tile != dut.tile || dut_ungated.macro_data !== dut.macro_data ||
+      dut_ungated.tile != dut.tile || dut_ungated.completion_path_done !== dut.completion_path_done ||
+      dut_ungated.batch_active !== dut.batch_active || dut_ungated.macro_data !== dut.macro_data ||
       dut_ungated.macro_valid !== dut.macro_valid)
       $fatal(1, "CLUSTER_GATE_EQUIVALENCE: raw/Macro/schedule mismatch");
     for (int l = 0; l < 32; l++) begin

@@ -6,6 +6,7 @@ module tb_ClusterRequant;
   requant_cfg_t cfg_i;
   logic [1023:0] psum_i;
   logic [31:0] valid_i;
+  logic [2:0] group_sel_i = '0;
   wire [255:0] data_o;
   wire [31:0] valid_o;
   ClusterRequant dut (.*);
@@ -67,12 +68,14 @@ module tb_ClusterRequant;
       // Exercise every numeric vector with four active channels first,
       // then check masking/isolation without losing arithmetic coverage.
       vector_mask = valid_i;
+      group_sel_i = 0;
       valid_i = 32'hf;
       #0.001;
       for (int c = 0; c < 4; c++) begin
         if (data_o[8*c+:8] !== 8'(wanted)) $fatal(1, "Active numeric vector mismatch");
         numeric_checks++;
       end
+      group_sel_i = cases % 4 == 2 ? 3'd6 : cases % 4 == 3 ? 3'd3 : 3'd0;
       valid_i = vector_mask;
       #0.001;
       check_isolated_channels();
@@ -142,6 +145,7 @@ module tb_ClusterRequant;
         valid_i[l] = (l / 4 == channel_cases % 8) && 1'(mask >> (l % 4));
       end
       vector_mask = valid_i;
+      group_sel_i = 3'(channel_cases % 8);
       valid_i = 32'hf << (4 * (channel_cases % 8));
       #0.001;
       for (int l = 0; l < 32; l++)

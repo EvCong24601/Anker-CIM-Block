@@ -37,7 +37,7 @@ CIM刷新在Macro接受输入的边沿同步读SRAM，同沿寄存ACT，下一�
 
 常规访问与 CIM 计算分阶段使用同一 SRAM，无并发双端口能力。片选期间 cmd_ready_o 为零；若常规访问与有效 Command、活动计算批次重叠，仿真报告 CLUSTER_SRAM_PROTOCOL 错误，禁止将其当作静默仲裁。
 
-有效写入使所选 Macro 的 Cluster Hold 跟踪和 SingleMacro Hold 同时失效，下次计算刷新该行。全屏蔽写入、未片选写入及常规读不改变 Hold 有效状态。reset 清控制与 Hold，不清 SRAM。CIM 计算继续使用广播的 cim_weight_raddr，不经 sram_rd_data 返回原始权重。
+有效写入使所选Macro的SRAM输出行标签失效；全屏蔽写及未片选写保持状态。常规读和CIM刷新均更新实际读出行号与valid；普通读过其他行后，下一次CIM须按目标地址重新判断刷新，不能沿用旧计算行。reset清标签，不清SRAM阵列。计算直接使用SRAM保持输出，不配置独立held_weight，也不经对外sram_rd_data返回路径取数。
 
 Cluster 权重存储仅通过常规 WLC 接口访问：每次选择一个 Macro 的一行，写入/读回均为 128 B。TB 逐 Macro 写入并读回校验后，再开始计算。
 
@@ -51,8 +51,10 @@ VCS 运行入口及各 case 的参数见 [vcs-rtl 使用说明](../vcs-rtl/READM
 
 VCS 从 vcs-rtl 目录执行 `make sram`；或在已完成编译后执行 `make sim PVALUE=+SRAM_RW_TEST`。专项成功标志为 `PASS sram_rw`。该专项不生成或覆盖默认计算 suite 的 split/operation CSV，不适用默认 make check。
 
-用例覆盖全部 8×256 行、全部 16 种写掩码、0/1/127/255 边界及内部地址、其他 Macro/邻行/屏蔽 OC 保持、CS=0、读忽略掩码、连续写、复位保留、逐 Macro 写入并经常规口读回，以及三次真实 W4A4 计算检查写后 Hold 刷新。
+用例覆盖全部 8×256 行、全部 16 种写掩码、0/1/127/255 边界及内部地址、其他 Macro/邻行/屏蔽 OC 保持、CS=0、读忽略掩码、连续写、复位保留、逐 Macro 写入并经常规口读回，以及四次真实 W4A4 计算检查写后 Hold 刷新。
 
 所有测试在 case 开始打印 `[CASE_START] time=... ns suite=... description=...`，时间为仿真时间。Cluster case 还包含 cim_precision、sign、counts、split、EN、OC mask、slot、pattern、空拍和 seed；SRAM case 包含 Macro、行号、mask 和片选；SingleMacro 包含场景、精度、phase、刷新/复用等信息；归约树包含树配置和掩码。CMD_SEND/CMD_ACCEPT 日志继续保留。
 
 TB 文件拆分和采样说明见 [Testbench 阅读指南](Testbench_Guide.md)。
+
+同地址复用依赖SRAM输出在无新读期间保持稳定。常规读恰好读入下一计算地址时，可直接复用；新读取其他地址则覆盖保持行。有效写入后的旧读出不能视为新权重，必须先重新读取。1T/II1与常规口sram_rd_valid时序不变。

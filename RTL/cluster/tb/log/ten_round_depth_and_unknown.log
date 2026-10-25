@@ -1,0 +1,9 @@
+round8_depth1: # PASS depth_review depth=1 outputs=1 alias_conflicts=0
+round8_depth2: # PASS depth_review depth=2 outputs=2 alias_conflicts=1
+round8_depth3: # PASS depth_review depth=3 outputs=3 alias_conflicts=2
+round8_depth5: # PASS depth_review depth=5 outputs=5 alias_conflicts=4
+round8_depth16: # PASS depth_review depth=16 outputs=16 alias_conflicts=15
+round8_depth17: # PASS depth_review depth=17 outputs=17 alias_conflicts=16
+round8_depth32: # PASS depth_review depth=32 outputs=32 alias_conflicts=31
+round8_depth64: # PASS depth_review depth=64 outputs=64 alias_conflicts=63
+round6_unknown: # REVIEW_UNKNOWN_MASK no_protocol_rejection=1 output_valid=1 output_oc_mask=0001 result=0

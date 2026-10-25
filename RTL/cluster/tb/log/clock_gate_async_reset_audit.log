@@ -1,0 +1,11 @@
+PASS asynchronous Requant reset: short pulse without clock edge clears valid and data
+PASS repository RTL regression: 76 suites, 48 expected rejections
+PASS isolated Macro ICG-on variant regression: 76 suites, 48 expected rejections
+PASS 290 CSV/HEX files identical between repository and ICG-on variant
+AUDIT repository has USE_CLOCK_GATING=0 in all eight SingleMacro instances
+AUDIT idle 12 root edges: Macro0/7 clocks 12/12 (repository), 0/0 (isolated ICG-on variant)
+AUDIT idle tmp/Psum/forward-node clocks: zero edges in both configurations
+AUDIT forwarding node t3 clocks twice with only OC0 requested: shared node clock reaches masked OC1
+AUDIT ACT/raw/Requant/address/config/tag registers have no explicit per-bank/per-lane ICG
+NOTE ICG-on is an external audit variant; the repository gating configuration is unchanged
+NOTE Intermediate signed32 overflow and depth1 AS shared parameters remain documented limitations

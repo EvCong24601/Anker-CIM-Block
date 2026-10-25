@@ -35,10 +35,21 @@ def write_vectors(path):
     cases.extend([(1, 1, 31, -(2**31), 'zp-cancels-left-shift'),
                   (-1, 1, 31, 2**31-1, 'zp-cancels-negative-shift'),
                   (-1, 1, -1, 1, 'zp-after-negative-half-round')])
+    # Every signed INT10 encoding: positive/negative/zero products and ZP extremes.
+    for shift in range(-512, 512):
+        for p, m, z in [(1,1,0),(-1,1,0),(0,1,97),(1,0,-97),
+                         (-(2**31),-(2**31),-1), (-(2**31),2**31-1,1),
+                         (1,1,-(2**31)),(-1,1,2**31-1)]:
+            cases.append((p,m,shift,z,'full-int10-domain'))
+    for p,m in [(-(2**31),-(2**31)), (-(2**31),2**31-1),
+                (2**31-1,2**31-1)]:
+        for shift in [-64,-63,-62,-32,31,32,511]:
+            for z in [-128,-1,0,1,127]:
+                cases.append((p,m,shift,z,'product-boundary-and-ties'))
     rng = random.Random(0x524551)
     for _ in range(3000):
         cases.append((rng.randrange(-(2**31), 2**31),
-                      rng.randrange(-(2**31), 2**31), rng.randrange(-31, 32),
+                      rng.randrange(-(2**31), 2**31), rng.randrange(-512, 512),
                       rng.randrange(-(2**31), 2**31), 'seeded-random'))
     # Non-saturated results: random extremes above mostly exercise clipping.
     for _ in range(1000):
@@ -59,7 +70,7 @@ def write_channel_vectors(path):
         valid=(index//2)%16
         p=[rng.randrange(-32768,32768) for _ in range(4)]
         mul=[rng.randrange(-64,65) for _ in range(4)]
-        shift=[rng.randrange(-17,2) for _ in range(4)]
+        shift=[rng.randrange(-512,512) if index%3 else rng.randrange(-17,2) for _ in range(4)]
         zp=[rng.randrange(-127,128) for _ in range(4)]
         wanted=[golden(p[c],mul[c if mode else 0],shift[c if mode else 0],zp[c]) for c in range(4)]
         rows.append(' '.join(map(str,[mode,valid,*p,*mul,*shift,*zp,*wanted])))

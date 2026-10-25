@@ -38,6 +38,11 @@ always @(posedge clock or posedge reset) begin : scoreboard
       for (int b = 0; b < 128; b++) if (!sram_wmask[b/32]) reference_memory[sram_waddr][8*b+:8] = sram_wdata[8*b+:8];
       if (!(&sram_wmask)) reference_hold_valid = 0;
     end
+    if (sram_ren) begin
+      reference_hold = reference_memory[sram_raddr];
+      reference_hold_address = sram_raddr;
+      reference_hold_valid = 1;
+    end
     if (expected_valid[0]) begin
       accepted_count++;
       if (cim_station) begin
@@ -83,5 +88,33 @@ always @(posedge clock or posedge reset) begin : scoreboard
         cim_odata_oc_mask,
         cim_odata_phase
       );
+  end
+end
+
+// Incoming W precision controls ACT capture on this edge. Check real clocks,
+// exact captured data and retained inactive bits, independently of RTL decode.
+for (genvar bank = 0; bank < 3; bank++) begin : g_act_capture_check
+  localparam int FIRST = bank == 0 ? 0 : bank == 1 ? 128 : 256;
+  localparam int WIDTH = bank == 2 ? 256 : 128;
+  always @(posedge clock or posedge reset) begin
+    bit want;
+    logic [WIDTH - 1:0] saved, expected_act;
+    if (reset) begin
+      #0.002;
+      if (dut.activation_in[FIRST +: WIDTH] !== '0)
+        $fatal(1, "ACT bank asynchronous reset failed bank=%0d", bank);
+    end else if (!negative_mode) begin
+      want = cim_ren && (|cim_oc_mask) &&
+             (bank == 0 || (bank == 1 && cim_precision <= 4) || (bank == 2 && cim_precision <= 1));
+      saved = dut.activation_in[FIRST +: WIDTH];
+      expected_act = cim_idata[FIRST +: WIDTH];
+      #0.002;
+      if (!reset) begin
+        if (dut.act_clock[bank] !== (CLOCK_GATING ? want : 1'b1))
+          $fatal(1, "ACT bank clock mismatch bank=%0d precision=%0d", bank, cim_precision);
+        if (dut.activation_in[FIRST +: WIDTH] !== (want ? expected_act : saved))
+          $fatal(1, "ACT bank capture/hold mismatch bank=%0d precision=%0d", bank, cim_precision);
+      end
+    end
   end
 end

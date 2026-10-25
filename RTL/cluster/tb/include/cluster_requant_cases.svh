@@ -1,14 +1,14 @@
-// Integration-only golden uses bounded configuration profiles, so its INT64
-// arithmetic is exact. Full INT32 parameter extremes use Python vector golden.
+// Wide TB-only integer reference covers all INT10 shifts without RTL shortcuts.
+// Python arbitrary-precision vectors independently check parameter extremes.
 function automatic logic signed [7:0] requant_expected(input longint signed psum, input int lane = 0);
-  longint signed value, magnitude, divisor, quotient, remainder;
+  logic signed [575:0] value, magnitude, divisor, quotient, remainder;
   int shift_amount, entry_id;
   entry_id = expected_requant_cfg.requant_mode ? lane % 4 : 0;
   value = psum * longint'($signed(expected_requant_cfg.requant_multiplier[32*entry_id+:32]));
   shift_amount = int'($signed(expected_requant_cfg.requant_shift[10*entry_id+:10]));
-  if (shift_amount >= 0) value *= 64'sd1 << shift_amount;
+  if (shift_amount >= 0) value *= 576'sd1 << shift_amount;
   else begin
-    divisor   = 64'sd1 << (-shift_amount);
+    divisor   = 576'sd1 << (-shift_amount);
     magnitude = value < 0 ? -value : value;
     quotient  = magnitude / divisor;
     remainder = magnitude % divisor;

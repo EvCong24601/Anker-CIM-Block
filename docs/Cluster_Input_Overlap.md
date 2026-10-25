@@ -45,13 +45,13 @@ A16、AS2 的 OS1/OS>1 都采用以下包内时序：
 need_psum = (cim_os_cnt > 1) || ((cim_as_cnt > 1) && (act_bits > 4));
 ```
 
-WS/单 Context 用每 OC 唯一 tmp 融合连续 Slice，仅 OS>1 的最后 Slice 提交 Psum。AS 按 Slice 遍历 Context：首 Tile A0 填充历史，后续 Tile A0执行累加，高 Slice执行 bit fusion。AS A8/A16 即使 OS1 也需要各 Context 的 Psum；AS A4 OS1旁路 Psum。
+WS/单 Context 用每 OC 唯一 tmp 融合连续 Slice，仅 OS>1 的最后 Slice 提交 Psum。AS 按 Slice 遍历 Context：首 Tile A0 填充历史，后续 Tile A0执行累加，高 Slice执行 bit fusion。所有 AS 多 Context 批次（包括 OS1/A4）均在 Psum 中保存各 Context 的结果及融合历史。
 
 批次只开放实际使用的低地址 Psum 项，其余项整批关钟。数据限于 signed32，范围要求见 [Requant](Cluster_Requant.md)。
 
 ## 时钟门控
 
-Macro 启用 ICG，计算、SRAM读写访问、Hold更新使用独立时钟。常规访问期间计算时钟关闭；同步读必须打开 SRAM 访问时钟。valid 清零所需尾沿保留。
+Macro 启用 ICG，控制、SRAM读写和ACT分区使用独立时钟；权重由SRAM输出保持，行号/valid随访问更新。常规访问期间计算时钟关闭；同步读必须打开 SRAM 访问时钟。valid 清零所需尾沿保留。
 
 归约树 t1～t6 每节点、每 OC 独立门控，共24个转发数据时钟；终点无需转发时关闭。tmp 按 OC、Psum 按深度和 OC门控。raw 数据/Context 和 INT8 数据按对齐后的结果有效事件门控；valid/control继续由主时钟推进，不直接使用当前命令的 OC mask。
 
@@ -67,8 +67,38 @@ ICG 为低电平锁存功能模型，工艺实现需映射时钟门控单元并�
 
 运行方法见 [VCS入口](../vcs-rtl/README.md)。根README的42组逐拍表由独立Python调度模型生成，并与仿真trace核对。
 
-计算OC mask关闭对应Macro结果、归约转发、tmp/Psum及raw/INT8数据寄存器时钟；对应组合算术操作数隔离。门控按已对齐事务标签生效。公共ACT入口、SRAM整行访问和完整行Hold为其他有效OC保留工作能力。
+计算OC mask关闭对应Macro结果、归约转发、tmp/Psum及tmp/Psum和INT8数据寄存器时钟；对应组合算术操作数隔离。门控按已对齐事务标签生效。公共ACT入口、SRAM整行访问和完整行Hold为其他有效OC保留工作能力。
 
 ## Psum 数值边界
 
 Psum深度限制Context数量，signed32位宽限制每次写入的数值，两者不能互相替代。WS/单Context的tmp融合、AS的逐Context历史及OS累加均需逐次满足signed32范围。当前写入会截断，最终raw检查不覆盖先前回绕；拒绝、饱和、扩位和错误状态策略为TBD，详见[Requant中的Psum限制](Cluster_Requant.md)。调度和raw/INT8延迟不因该待定项而改变。
+
+## 共享事务标签与结果存储
+
+批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签17bit；四级流水68bit、三路径 tmp 标签51bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
+
+Psum 使用条件为 `cim_os_cnt>1 || cim_as_cnt>1`。OS1/AS2～16（含 A4）按 Context 保存结果；深度16允许AS16，AS17/AS64拒绝。AS的 Tile→Slice→Context 发射顺序以及包内接收/发射重叠保持。A4仅旁路深权重地址表，Requant Context 参数仍须保留至消费。
+
+raw 数据直接选择对应 Context 的 Psum 或单 Context/WS 的 tmp，不另设1024bit raw DFF。raw valid 保持原发布时刻，INT8 输出寄存器及 valid 仍晚1T。无效周期 raw 视图可能变化；正式 INT8 输出在无 valid 时保持。各路径指针和标签按提前门控请求更新。
+
+## 统一 Buffer 深度
+
+集成使用 `OUTPUT_PSUM_DEPTH`（默认16）统一设置 Psum、权重CIM读地址表及Requant Context参数表深度。兼容参数依赖为 `OUTPUT_BUFFER_DEPTH=OUTPUT_PSUM_DEPTH`，`WGT_RADDR_BUFFER_DEPTH=OUTPUT_BUFFER_DEPTH`，`REQUANT_CONTEXT_DEPTH=OUTPUT_BUFFER_DEPTH`；仅覆盖统一参数即可联动三表。容量负向测试可以显式覆盖兼容参数，显式覆盖会优先于默认联动。MAX_CONTEXTS为独立的调度标签容量，仍须满足其限制。
+
+每个物理输出OC由acc和bit-fusion共用一个组合加法器，全部Context通过Psum索引复用；不同OC之间保持独立，以支持并行输出。Context深度只扩展状态存储，不复制算术单元。
+
+## 组合逻辑共享
+
+每个物理OC的fusion和acc操作互斥，共享一个64bit有符号加法表达式。WS的fusion在tmp捕获路径，AS的fusion及OS累加在tmp消费路径；选择相应操作数后求和，再送回原有tmp/Psum写回路径。算术扩展、移位、存储截断、raw发布及INT8晚1T规则保持。闲置操作数隔离为0，各OC保持独立；TB检查两个操作不会同时请求同一个加法器。
+
+批次仅进行一份组合解码，生成Macro有效需求、物理归约组、结构组大小、延迟路径、输出lane mask、ACT digit数量及末Slice/Tile条件。标签视图、发射、ACT选择和提前门控请求复用该解码。结构组大小包含被禁用的Macro，不能用实际使能数量决定路径延迟。输入Command首次接受的合法性检查仍读取输入配置。
+
+归约树分别对early/c0/c1/c2控制进行对齐解码，得到叶节点、两Macro、四Macro及根节点的OC存活信息。数据左右选择、终点tap和提前一拍的转发门控请求复用对应流水级的结果。不同流水级不共用实时控制；子节点的独立OC门控和数据保持规则保持。
+
+本结构没有增加流水或DFF，默认名义DFF33486bit，ICG锁存位684。MacroSliceFusion保持现状。共享加法器的输入选择器可能影响关键路径，面积及时序收益须由实际综合及STA评估。
+
+## 零输出批次的标签与门控
+
+内部issue保留原输入接收、计数和批次结束时序；当有效输出lane mask为0时，`pipe_meta[0].valid`保持0，不向归约与tmp路径传播有效事务。空批次的旧valid不会在下一批次更新共享mask后被重新解释。
+
+tmp门控请求在捕获沿必须与真实`capture_valid`一致。`requant_empty_batch`在ready最早恢复时发送下一批次，检查全OC屏蔽批次没有多余输出、误开钟或无消费写入；父节点mask形成零输出的情况由同一有效mask条件处理。非空批次的流水延迟保持原定义。

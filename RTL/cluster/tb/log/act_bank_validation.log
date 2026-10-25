@@ -1,0 +1,135 @@
+PASS gemm_edge_w4_high_tensor: gemm_edges description=gemm_edge_w4_high_tensor raw_checks=64 quant_checks=64 commands=16 issues=64 lane_base=4 latency=1
+PASS gemm_edge_w4_high_channel: gemm_edges description=gemm_edge_w4_high_channel raw_checks=64 quant_checks=64 commands=16 issues=64 lane_base=4 latency=1
+PASS gemm_edge_w2_high_tensor: gemm_edges description=gemm_edge_w2_high_tensor raw_checks=64 quant_checks=64 commands=16 issues=32 lane_base=12 latency=1
+PASS gemm_edge_w2_high_channel: gemm_edges description=gemm_edge_w2_high_channel raw_checks=64 quant_checks=64 commands=16 issues=32 lane_base=12 latency=1
+PASS gemm_edge_n_tail_tensor: gemm_edges description=gemm_edge_n_tail_tensor raw_checks=48 quant_checks=48 commands=16 issues=64 lane_base=4 latency=1
+PASS gemm_edge_n_tail_channel: gemm_edges description=gemm_edge_n_tail_channel raw_checks=48 quant_checks=48 commands=16 issues=64 lane_base=4 latency=1
+PASS gemm_edge_boundaries_channel: gemm_edges description=gemm_edge_boundaries_channel raw_checks=48 quant_checks=48 commands=12 issues=48 lane_base=4 latency=1
+PASS gemm_os2_as4: M=32 K=512 N=16 clusters=1 commands=256 issues=1024 raw_checks=512 quant_checks=512 psum_checks=4096 zp_bits=512 zp_per_cycle=4 first_raw_per_row=35 last_raw_per_row=38 first_quant_per_row=36 last_quant_per_row=39
+PASS as_context_capacity: caught expected CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded
+PASS as_context_capacity_default: caught expected CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded
+PASS as_context_zp_reload: caught expected CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles
+PASS gemm_as_channel: gemm_os2_as4 M=32 K=512 N=16 clusters=1 commands=256 issues=1024 raw_checks=512 quant_checks=512 psum_checks=4096 zp_bits=512 zp_per_cycle=4 first_raw_per_row=35 last_raw_per_row=38 first_quant_per_row=36 last_quant_per_row=39
+PASS as_context_scale_reload: caught expected CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles
+PASS as_context_tensor_scale_reload: caught expected CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles
+PASS cluster_gemm: M=32 K=128 N=16 clusters=1 n_tiles=4 commands=128 issues=512 raw_checks=512 quant_checks=512 first_raw_per_tile=9 last_raw_per_tile=164 first_quant_per_tile=10 last_quant_per_tile=165 refreshes_per_macro_per_tile=1
+PASS gemm_ws_channel: cluster_gemm M=32 K=128 N=16 clusters=1 n_tiles=4 commands=128 issues=512 raw_checks=512 quant_checks=512 first_raw_per_tile=9 last_raw_per_tile=164 first_quant_per_tile=10 last_quant_per_tile=165 refreshes_per_macro_per_tile=1
+PASS sram_response: reads=32 macros=8 checks=90 request_hold=1 async_reset=1
+PASS sram_rw: writes=2618 reads=8330 masks=16 macros=8 rows=256 compute=3
+PASS sram_write_compute_conflict: caught expected CLUSTER_SRAM_PROTOCOL: regular access overlaps compute
+PASS sram_compute_conflict: caught expected CLUSTER_SRAM_PROTOCOL: regular access overlaps compute
+PASS macro_gate0: clock_gating=0 primitive=256 accepted=2462 results=2461 cancelled=1 bubbles=399 zero_mask=163
+PASS macro_gate1: clock_gating=1 primitive=256 accepted=2462 results=2461 cancelled=1 bubbles=399 zero_mask=163
+PASS macro_negative_precision: caught expected SM_PROTOCOL: illegal precision/phase
+PASS macro_negative_phase: caught expected SM_PROTOCOL: illegal precision/phase
+PASS macro_negative_hold_invalid: caught expected SM_PROTOCOL: reuse invalid hold
+PASS macro_negative_uninitialized: caught expected SM_PROTOCOL: read uninitialized row
+PASS macro_negative_masked_uninitialized: caught expected SM_PROTOCOL: read uninitialized row
+PASS macro_negative_masked_uninitialized_reuse: caught expected SM_PROTOCOL: read uninitialized row
+PASS macro_negative_hold_address: caught expected SM_PROTOCOL: reuse address mismatch
+PASS macro_negative_hold_address_pending: caught expected SM_PROTOCOL: reuse address mismatch
+PASS macro_negative_unknown_write: caught expected SM_PROTOCOL: unknown write input
+PASS macro_negative_unknown_activation: caught expected SM_PROTOCOL: unknown compute input
+PASS macro_negative_unknown_control: caught expected SM_PROTOCOL: unknown compute input
+PASS macro_negative_read_write: caught expected SM_PROTOCOL: simultaneous read/write
+PASS macro_negative_write_busy: caught expected SM_PROTOCOL: write before pipeline drain
+PASS macro_negative_hold_after_write: caught expected SM_PROTOCOL: reuse invalid hold
+PASS macro_negative_hold_after_reset: caught expected SM_PROTOCOL: reuse invalid hold
+PASS requant_unit: cases=9611 lane_checks=307552 latency=0 no_clock=1 operand_isolation=1 numeric_checks=40492
+PASS requant_negative_as17_capacity: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS requant_negative_mode: caught expected CLUSTER_REQUANT_CONFIG: per-channel scale requires conv_mode
+PASS requant_negative_shift_low: caught expected CLUSTER_REQUANT_CONFIG: shift must be -31..31
+PASS requant_negative_shift_high: caught expected CLUSTER_REQUANT_CONFIG: shift must be -31..31
+PASS requant_negative_unknown: caught expected CLUSTER_REQUANT_CONFIG: unknown configuration
+PASS requant_negative_channel_shift: caught expected CLUSTER_REQUANT_CONFIG: shift must be -31..31
+PASS requant_negative_conv_group: caught expected CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group
+PASS requant_negative_zp_group: caught expected CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group
+PASS requant_integration: cases=168 profiles=8 checks=840 config_hold_checks=1856 latency=1
+PASS requant_channel: cases=1536 masks=16 groups=7 precisions=7 checks=5120 latency=1
+PASS requant_buffers: context_buffers cases=77 raw_checks=2912 quant_checks=2912 fixed_slots=16 A4_weight_bypass=1 input_issue_overlap=1
+PASS requant_a4_address_bypass: context_buffers cases=22 raw_checks=832 quant_checks=832 fixed_slots=16 A4_weight_bypass=1 input_issue_overlap=1
+PASS requant_context: cases=4 quant_checks=32 independent_scale_zp=1 serial_batches=1
+PASS requant_reset: cancelled_pending=1 registers_cleared=1 short_async_pulse=1
+PASS requant_boundary: batches=2 earliest_reload=1 latency=1
+PASS zero_count_0: caught expected CLUSTER_COUNT_RANGE: counts must be 1..255
+PASS zero_count_1: caught expected CLUSTER_COUNT_RANGE: counts must be 1..255
+PASS zero_count_2: caught expected CLUSTER_COUNT_RANGE: counts must be 1..255
+PASS os_count_limit: cases=12 os_max=255 descriptor_bits=107
+PASS cluster_default: configurations=200 cases=1368 reuse=3032 seed=19e2a407
+PASS reduce_tree: reduce_clock_gating cases=208 terminal_tap_events=155
+PASS oc_merge: oc_merge_leftmost cases=288
+PASS act_buffer: act_buffer_capacity cases=280 max_planes=4 buffer_bits=4096 max_contexts=16 checks=55462
+PASS full_act: full_act_4096 cases=12
+PASS mixed_context: cases=24
+PASS input_overlap: cases=168 registered_input_delay=1
+PASS context_stress: cases=224 OS1_WS64=56 OS1_AS16=56 OS2_WS8=56 OS2_AS8=56 psum_depth=16 max_contexts=64 weight_address_depth=16 weight_address_bits=128
+PASS context_capacity_p0_s0: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p0_s1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p1_s0: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p1_s1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p2_s0: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p2_s1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p3_s0: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p3_s1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p4_s0: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p4_s1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p5_s0: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p5_s1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p6_s0: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS context_capacity_p6_s1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p0_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p0_s0_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p0_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p0_s1_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p1_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p1_s0_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p1_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p1_s1_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p2_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p2_s0_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p2_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p2_s1_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p3_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p3_s0_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p3_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p3_s1_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p4_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p4_s0_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p4_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p4_s1_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p5_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p5_s0_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p5_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p5_s1_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p6_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p6_s0_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p6_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as17_p6_s1_os2: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p0_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p0_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p1_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p1_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p2_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p2_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p3_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p3_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p4_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p4_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p5_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p5_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p6_s0_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS as64_p6_s1_os1: caught expected CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth
+PASS address_capacity_s0: caught expected CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded
+PASS address_capacity_s1: caught expected CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded
+PASS metadata_capacity_s0: caught expected CLUSTER_CONTEXT_CAPACITY: context metadata exceeded
+PASS metadata_capacity_s1: caught expected CLUSTER_CONTEXT_CAPACITY: context metadata exceeded
+PASS gate_equiv_default: configurations=200 cases=1368 reuse=3032 seed=19e2a407
+PASS gate_equiv_requant_buffers: context_buffers cases=77 raw_checks=2912 quant_checks=2912 fixed_slots=16 A4_weight_bypass=1 input_issue_overlap=1
+PASS gate_equiv_requant_channel: requant_channel cases=1536 masks=16 groups=7 precisions=7 checks=5120 latency=1
+PASS gate_equiv_context_stress: context_stress cases=224 OS1_WS64=56 OS1_AS16=56 OS2_WS8=56 OS2_AS8=56 psum_depth=16 max_contexts=64 weight_address_depth=16 weight_address_bits=128
+PASS gate_equiv_input_overlap: input_overlap cases=168 registered_input_delay=1
+PASS gate_equiv_sram: sram_rw writes=2618 reads=8330 masks=16 macros=8 rows=256 compute=3
+PASS gate_equiv_requant_reset: requant_reset cancelled_pending=1 registers_cleared=1 short_async_pulse=1
+PASS gate_equiv_requant_boundary: requant_boundary batches=2 earliest_reload=1 latency=1
+PASS gate_equiv_sram_response: sram_response reads=32 macros=8 checks=90 request_hold=1 async_reset=1
+PASS regression: suites=134 expected_rejections=93

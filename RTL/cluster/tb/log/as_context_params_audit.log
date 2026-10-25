@@ -1,0 +1,8 @@
+PASS AS per-Context parameters: 79 suites, 50 expected rejections
+PASS focused mapping: OS1/OS2, tensor/channel modes, 4 serial batches, 32 INT8 checks
+PASS depth1/depth2 AS4 capacity rejection and tensor/channel cross-K-Tile scale consistency
+PASS 290 baseline CSV/HEX files unchanged
+PASS current source SHA256, Markdown links and 79-case VCS catalogue
+NOTE depth1 remains the single configuration path; AS requires depth >= as_cnt
+NOTE per-tensor scale selects entry0 of the matching Context; zp is per Context and OC
+NOTE no scheduling, handshake, double buffering or additional clock-gate changes

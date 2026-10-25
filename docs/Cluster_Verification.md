@@ -8,7 +8,7 @@
 - [x] AS16正向：`context_stress`、`requant_buffers`，覆盖OS1/2。OS1 WS64及OS2 WS8/AS8分别检查，Context之间不串数据。
 - [x] AS17、AS64拒绝：七精度×两种符号×OS1/2，必须命中`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。地址、标签、参数深度不足分别匹配对应诊断。
 
-所有AS采用Tile→Slice→Context，默认最多16个Context。Psum使用条件为`cim_os_cnt>1 || (cim_as_cnt>1 && act_bits>4)`，每OC最多一个Context项在同一沿写入，高地址项整批关钟。
+所有AS采用Tile→Slice→Context，默认最多16个Context。Psum使用条件为`cim_os_cnt>1 || cim_as_cnt>1`，每OC最多一个Context项在同一沿写入，高地址项整批关钟。
 
 ## Context量化参数与OC映射
 
@@ -26,7 +26,7 @@
 ## 门控与逐拍一致性
 
 - [x] 子节点消费需求：`reduce_tree`用独立祖先路径模型核对两层转发门控；整Cluster检查Macro结果需求在输入沿寄存、被屏蔽子节点的实际时钟和输出保持，以及两侧关钟时父节点加法器输入/和保持。独立终点继续与数值golden及原时序比对。两层分别覆盖39次pair、5次四Macro本地有效而祖先屏蔽的转发关钟；额外42651周期检查计算数据路径使能从前一沿建立后保持到捕获沿。
-- [x] 实际脉冲及保持：Macro计算/SRAM/Hold三个域、Macro逐OC结果、归约树逐节点/OC、tmp/Psum、raw/INT8逐lane、Context参数组均由检查器验证。
+- [x] 实际脉冲及保持：Macro控制与SRAM访问域、Macro逐OC结果、归约树逐节点/OC、tmp/Psum、raw/INT8逐lane、Context参数组均由检查器验证。
 - [x] `gate_equiv_default`：同输入的门控实例与全ICG旁路实例逐拍比较，覆盖raw归约布局、七精度、WS/AS和Tile累加。
 - [x] `gate_equiv_requant_buffers`、`gate_equiv_requant_channel`：不同Context参数、量化映射及masked OC保持值逐拍一致。
 - [x] `gate_equiv_context_stress`、`gate_equiv_input_overlap`：大Context、接收/发射重叠和命令空拍逐拍一致。
@@ -46,9 +46,9 @@
 
 ## 复现与证据
 
-从`vcs-rtl/`运行`make run CASE=<用例名>`；`make regression`包含134个suite，41个正向、93个预期拒绝。用例定义在`cases.py`，`cases.mk`由其生成；波形文件带case名称后缀。
+从`vcs-rtl/`运行`make run CASE=<用例名>`；`make regression`包含133个suite，43个正向、90个预期拒绝。用例定义在`cases.py`，`cases.mk`由其生成；波形文件带case名称后缀。
 
-本地完整回归134个suite通过，其中93个为预期拒绝。九组整Cluster对照共比较292941个周期。量化单元完成40492次有效算术检查，并核对无效通道的四个操作数全部为0。
+本地完整回归134个suite通过，其中93个为预期拒绝。九组整Cluster对照共比较292950个周期。量化单元完成40492次有效算术检查，并核对无效通道的四个操作数全部为0。
 
 证据：`RTL/cluster/tb/log/child_consumer_validation.log`、`child_consumer_sources.sha256`、`child_consumer_unit.log`和`child_consumer_gate_equivalence.log`对应子节点消费需求门控版本；`child_consumer_audit.log`保存时序、文件列表和编译审计。源码哈希对应本轮受测RTL/TB。
 
@@ -61,3 +61,55 @@
 完整功能回归覆盖满足数值边界的输入，不表示已验证超范围Psum的正确性。现有最终raw范围检查不能替代逐次写入检测；具体可复现回绕及调用方约束见[数值范围与TBD](Cluster_Requant.md)。
 
 当前格式源码的完整回归记录为`RTL/cluster/tb/log/reformatted_validation.log`，44个SV/SVH受测文件哈希为`reformatted_sources.sha256`；与功能回归基线8c70724逐token一致。两份Word规格与本清单共同区分已验证的正常输入和仍为TBD的中间溢出策略。
+
+## Macro ACT 精度分区门控
+
+- [x] 三段ACT时钟与捕获/保持/异步复位：W2为512bit、W4为256bit、W8为128bit；使能来自当前输入精度。
+- [x] Macro覆盖49种有序精度切换×刷新/复用，共196笔连续定向请求；高位扰动不影响未使用区的数值。
+- [x] 整Cluster门控开关逐拍比较完整activation_in，覆盖七精度和OS/WS/AS。
+
+ACT分区门控的受测源码及完整回归证据见`RTL/cluster/tb/log/act_bank_sources.sha256`与`act_bank_validation.log`，时序及结构审计见`act_bank_audit.log`。位数不变，默认ICG锁存位为684，资源口径见[主要DFF统计](Cluster_DFF_Usage.md)。
+
+## SRAM 输出保持复用
+
+- [x] 无独立held_weight数据寄存器，直接使用SRAM保持输出，行号/valid在每次普通读或CIM刷新沿更新。
+- [x] 普通读后同地址复用、跨行后重新刷新、连续CIM刷新/复用、有效写失效及异步复位；负向case拒绝普通读换行后误用旧地址。
+- [x] 端到端GEMM在预加载读回命中首行时允许首发射复用，数值、ACT与raw/INT8时序继续由独立golden核对。
+
+SRAM输出复用专项源码与回归见`RTL/cluster/tb/log/sram_output_sources.sha256`和`sram_output_validation.log`；时序、资源及VCS入口审计见`sram_output_audit.log`。逻辑DFF名义33486bit，ICG锁存位684，SRAM读出保持模型另计8192bit。
+
+## 共享标签和统一深度验证
+
+共享批次描述符、三路径窄标签及tmp/Psum直接供Requant的实现通过134组完整回归（93组预期拒绝），见`shared_meta_validation.log`及`shared_meta_sources.sha256`。连续OS1/AS16、W4A4专项采用16组不同权重，确认tmp被下一个Context覆盖时，raw仍读取正确Psum槽，16个INT8结果全部匹配。
+
+统一参数联动后，单独覆盖OUTPUT_PSUM_DEPTH=8/16/32并检查Psum、权重地址、Requant参数数组深度，三组均通过；连续AS16专项复测通过。见`shared_meta_unified_depth.log`。默认容量仍为16；统一深度及完成跟踪压缩后的当前源码通过完整134组回归，并通过逐拍模型、容量拒绝、SYNTHESIS编译/展开和9个VCS文件列表、134个Make入口检查。源码版本及验证范围见`shared_meta_provenance.log`和`shared_meta_audit_sources.sha256`。
+
+## 完成跟踪和调度压缩验证
+
+当前RTL/TB的受测源码为`compact_control_sources.sha256`，完整回归134组通过，包含93组准确匹配的预期拒绝，见`compact_control_validation.log`。完成位替代逐Context/lane硬件检查表，lane级完整性由独立TB检查，包括空mask、混合归约路径、七精度OS/WS/AS、WS64/AS16、OS255和异步复位。
+
+`compact_control_baseline_equivalence.log`记录修改前后RTL共47267拍比较，覆盖mixed_context、oc_merge、requant_buffers、requant_boundary。ready、batch_active关闭周期、issue及raw/INT8和存储内容一致。门控/旁路镜像的九组验证包含在完整回归内。
+
+`compact_control_dff_audit.log`以独立TB的$bits展开深度8/16/32，默认名义DFF33486bit，ICG锁存位684。逐拍时序及SYNTHESIS编译/展开、9个VCS文件列表和134个Make入口检查见`compact_control_audit.log`。没有执行实际VCS仿真或工艺综合/STA。
+
+shift接口、存储及运算支持完整INT10；完整编码域证据见下文。
+
+## 组合共享验证
+
+受测源码见`comb_share_sources.sha256`，完整回归134组通过（93组预期拒绝），见`comb_share_validation.log`。TB逐OC检查fusion/acc请求互斥及空闲共享加法器操作数隔离。独立golden、逐拍历史、物理输出lane、mask和提前门控检查继续运行。
+
+修改前后RTL在mixed_context、oc_merge、requant_buffers、requant_boundary、input_overlap、context_stress六组专项共128617拍比较一致。比较ready、batch结束周期、raw/INT8、tmp/Psum及算术写回数据，并逐节点比较归约OC门控请求，见`comb_share_baseline_equivalence.log`。直接量化单测显式驱动统一group_sel_i，覆盖高位置组、OC0屏蔽、空mask、两种scale模式和逐OC参数。
+
+`comb_share_audit.log`记录140个Context延迟、480个Buffer操作及396个外部输入事件的独立模型核对，并检查SYNTHESIS编译/展开、9个VCS文件列表和134个Make入口。`comb_share_dff_audit.log`确认深度8/16/32的资源展开值保持，默认名义DFF33486bit，ICG锁存位684。未执行实际VCS仿真、工艺综合或STA，不能据此断言实际面积收益或时序收敛。
+
+MacroSliceFusion及SingleMacro与组合共享前版本逐字节一致。Requant保留INT10接口和存储，完整INT10编码域由独立Python向量和Context专项验证。
+
+## 当前空批次与完整 INT10 验证
+
+当前完整回归为133组，包含90组准确匹配的预期拒绝。源码哈希和结果见`fix_empty_int10_sources.sha256`、`fix_empty_int10_validation.log`；前文其他文件名对应各专项的源码快照。
+
+- `requant_unit`：17908个整数向量、512个四通道向量，共73680次数值核对；覆盖全部1024种INT10编码、零乘积、极值ZP和右移63位半值。
+- `requant_full_shift`：77组七精度Context测试，2912个raw和2912个INT8比对，包含OS1/OS2、稀疏OC、两种scale模式及接收/发射重叠。
+- `requant_empty_batch`：七精度空批次后最早加载下一批次，8次有效输出，逐捕获沿检查tmp开钟请求与消费相等。独立专项覆盖父节点屏蔽的七组空批次；将事务valid恢复为无条件issue时，检查器准确拒绝误开钟。
+
+输出仍为raw后1T的寄存INT8；没有增加流水级或DFF。时序模型、SYNTHESIS条件编译/展开和VCS文件列表/Make入口审计见`fix_empty_int10_audit.log`，并不代替工艺综合或STA。Psum中间溢出策略和未知result mask断言缺口仍待处理。

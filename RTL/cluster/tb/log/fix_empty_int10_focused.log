@@ -1,0 +1,7 @@
+unit: # PASS requant_channel_unit cases=512 lane_checks=16384 masks=16
+unit: # PASS requant_unit cases=17908 lane_checks=573056 latency=0 no_clock=1 operand_isolation=1 numeric_checks=73680
+empty: # PASS empty_batch cases=7 valid_outputs=8 tmp_capture_request_match=1
+empty: # PASS cluster_gate_equivalence cycles=137 raw_events=32 quant_events=32
+shift_contexts: # PASS context_buffers cases=77 raw_checks=2912 quant_checks=2912 fixed_slots=16 A4_weight_bypass=1 input_issue_overlap=1
+shift_contexts: # PASS cluster_gate_equivalence cycles=20742 raw_events=2912 quant_events=2912
+PASS targeted empty and full INT10 tests; Python vectors=17908

@@ -1,0 +1,12 @@
+round2_reduce_all_en: # PASS child_consumer_gating pair_suppressed=2088 quad_suppressed=217
+round2_reduce_all_en: # PASS reduce_clock_gating cases=6656 terminal_tap_events=5975
+round5_shift: # REVIEW_INT10 known=63 unknown=961
+round7_overflow: # PROBE overflow expected_true_sum=5326603520 raw=1031636224 q=15 expected_wide_q=79
+round4_batch_boundary: # PASS review_batch_boundary cases=12 quant_checks=192 earliest_AS_parameter_reuse=1
+round4_batch_boundary: # PASS cluster_gate_equivalence cycles=354 raw_events=192 quant_events=192
+round3_schedule_seed12345: # PASS configurations=200 cases=368 reuse=2070 seed=00003039
+round3_schedule_seed12345: # PASS cluster_gate_equivalence cycles=41144 raw_events=8864 quant_events=0
+round3_schedule_seed67891: # PASS configurations=200 cases=368 reuse=2730 seed=00010933
+round3_schedule_seed67891: # PASS cluster_gate_equivalence cycles=52204 raw_events=8864 quant_events=0
+round3_schedule_seed97531: # PASS configurations=200 cases=368 reuse=3390 seed=00017cfb
+round3_schedule_seed97531: # PASS cluster_gate_equivalence cycles=63464 raw_events=8864 quant_events=0

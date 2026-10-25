@@ -37,9 +37,9 @@ for name, message in dict(precision='illegal precision/phase', phase='illegal pr
         'SM_PROTOCOL: '+message, '+NEGATIVE='+name, negative=True)
 add('requant_unit', 'requant', 'Integer quantization arithmetic and four OC mapping',
     'PASS requant_unit', generator='requant')
-for name, message in dict(as17_capacity='AS count exceeds output depth', mode='per-channel scale requires conv_mode', shift_low='shift must be -31..31',
-        shift_high='shift must be -31..31', unknown='unknown configuration',
-        channel_shift='shift must be -31..31', conv_group='Requant requires one aligned reduction group',
+for name, message in dict(as17_capacity='AS count exceeds output depth', mode='per-channel scale requires conv_mode',
+        unknown='unknown configuration',
+        conv_group='Requant requires one aligned reduction group',
         zp_group='Requant requires one aligned reduction group').items():
     add('requant_negative_'+name, 'cluster', 'Reject Requant '+name.replace('_', ' '),
         ('CLUSTER_CONTEXT_CAPACITY: ' if name=='as17_capacity' else 'CLUSTER_REQUANT_CONFIG: ')+message, '+REQUANT_NEGATIVE='+name,
@@ -59,6 +59,11 @@ for name, flag, marker in (
         ('context_stress', 'CONTEXT_STRESS_TEST', 'PASS context_stress cases=224')):
     add(name, 'cluster', name.replace('_', ' '), marker, '+'+flag,
         params='ENABLE_REQUANT=1' if name.startswith('requant') else '')
+add('requant_full_shift','cluster','Full INT10 AS Context parameters and OC gating',
+    'PASS context_buffers cases=77','+CONTEXT_BUFFER_TEST +FULL_SHIFT_TEST',
+    params='ENABLE_REQUANT=1 CHECK_GATE_EQUIVALENCE=1')
+add('requant_empty_batch','cluster','Seven precisions empty batch to live batch clock hold',
+    'PASS empty_batch cases=7','+EMPTY_BATCH_TEST',params='ENABLE_REQUANT=1 CHECK_GATE_EQUIVALENCE=1')
 add('requant_buffers', 'cluster', 'Seven precisions AS16/AS8 fixed slots and A4 weight bypass',
     'PASS context_buffers cases=77', '+CONTEXT_BUFFER_TEST', params='ENABLE_REQUANT=1')
 add('requant_a4_address_bypass','cluster','A4 AS16 with one weight address register',

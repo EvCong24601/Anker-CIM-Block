@@ -26,6 +26,21 @@ function automatic requant_cfg_t context_buffer_cfg(input int mode, cx, precisio
     cfg.requant_shift[10*c+:10] = 10'(-(abits(precision) + 3 + cx % 3));
     cfg.requant_zp[32*c+:32] = 32'(-32 + (3 * cx + c) % 64);
   end
+  if ($test$plusargs("FULL_SHIFT_TEST")) begin
+    for (int c = 0; c < 4; c++) begin
+      case ((cx + c) % 8)
+        0: cfg.requant_shift[10*c+:10] = 10'(-512);
+        1: cfg.requant_shift[10*c+:10] = 10'(-64);
+        2: cfg.requant_shift[10*c+:10] = 10'(-63);
+        3: cfg.requant_shift[10*c+:10] = 10'(-32);
+        4: cfg.requant_shift[10*c+:10] = 10'(31);
+        5: cfg.requant_shift[10*c+:10] = 10'(32);
+        6: cfg.requant_shift[10*c+:10] = 10'(63);
+        7: cfg.requant_shift[10*c+:10] = 10'(511);
+      endcase
+      cfg.requant_multiplier[32*c+:32] = 32'(c == 2 ? 0 : (cx % 2 ? -1 : 1));
+    end
+  end
   return cfg;
 endfunction
 

@@ -4,12 +4,13 @@
 // at most one active reduction group; masks never compact OC indices.
 // No clock, pipeline or data registers. LANES must be in 1..32.
 // Channel c always selects entry c, even when another OC is masked off.
-// Legal configuration: signed shift in -31..31. The owner validates
-// configuration when loading it; unsupported configurations produce X data.
+// Full signed INT10 shift (-512..511), round half away from zero.
+// Large shifts use exact range decisions instead of a 512-bit datapath.
 module ClusterRequant #(
   parameter int LANES = 32
 ) (
   input cluster_pkg::requant_cfg_t cfg_i,
+  input logic [2:0] group_sel_i,  // Shared physical group, fixed by the batch descriptor.
   input logic [32 * LANES - 1:0] psum_i,
   input logic [LANES - 1:0] valid_i,
   output wire [8 * LANES - 1:0] data_o,
@@ -27,8 +28,15 @@ module ClusterRequant #(
     rounded_magnitude = '0;
     scaled = {{32{product[63]}}, product};
     shifted_zp = {{64{zp[31]}}, zp};
-    if (shift_amount < -31 || shift_amount > 31) return 'x;
-    if (shift_amount >= 0) begin
+    // For a nonzero integer product, shifting left by >=32 cannot be
+    // cancelled into INT8 range by any signed32 ZP. Zero still adds ZP.
+    if (shift_amount >= 32 && product != 0)
+      return product[63] ? -8'sd128 : 8'sd127;
+    if (shift_amount >= 32 || shift_amount <= -64) begin
+      // |INT32*INT32| <= 2^62, below the half threshold for right shift >=64.
+      // Right shift 63 is NOT bypassed: +2^62 rounds to +1.
+      scaled = '0;
+    end else if (shift_amount >= 0) begin
       // Extend BEFORE shifting, preserving a full INT32*INT32 product.
       scaled = scaled <<< shift_amount;
     end else begin
@@ -51,14 +59,13 @@ module ClusterRequant #(
     logic [31:0] selected_psum;
     bit found;
     wire [1:0] entry_id = cfg_i.requant_mode ? 2'(c) : 2'd0;
+    wire [4:0] selected_lane = {group_sel_i, 2'(c)};
     always_comb begin
       selected_psum = '0;
       found = 0;
-      for (int l = c; l < LANES; l += 4) begin
-        if (valid_i[l] && !found) begin
-          selected_psum = psum_i[32*l+:32];
-          found = 1;
-        end
+      if (int'(selected_lane) < LANES) begin
+        found = valid_i[selected_lane];
+        if (found) selected_psum = psum_i[32*selected_lane+:32];
       end
     end
     // Isolate BOTH sources at the channel read endpoint. A held nonzero

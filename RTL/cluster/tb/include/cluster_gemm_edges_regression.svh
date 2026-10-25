@@ -36,7 +36,7 @@ initial begin : edge_regression
     if (raw_next[c] != (n_map[tile][c] >= 0 ? m_count : 0) || quant_next[c] != raw_next[c])
       $fatal(1, "Edge GEMM: missing or duplicate OC result");
     for (int macro = 0; macro < 8; macro++)
-    if (refreshes[macro] != ((macro >= first_macro && macro < first_macro + macro_count) ? 1 : 0))
+    if (refreshes[macro] != ((macro >= first_macro && macro < first_macro + macro_count) ? ((active_tile == 0 && n_tiles == 1) ? 0 : 1) : 0))
       $fatal(1, "Edge GEMM: enabled/disabled Macro refresh count mismatch");
     monitoring = 0;
   end
