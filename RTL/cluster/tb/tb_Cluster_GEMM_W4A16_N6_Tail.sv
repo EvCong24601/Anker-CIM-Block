@@ -11,4 +11,15 @@ module tb_Cluster_GEMM_W4A16_N6_Tail;
     $fsdbDumpvars(0, tb_Cluster_GEMM_W4A16_N6_Tail, "+all");
   end
 `endif
+  // Dump FST under --trace-fst (wave-mcp reads it directly); leave CLUSTER_FST
+  // undefined for VCS/Icarus runs.
+`ifdef CLUSTER_FST
+  initial begin : case_fst_dump
+    string fst_file;
+    if (!$value$plusargs("FST_FILE=%s", fst_file)) fst_file = "tb_Cluster_GEMM_W4A16_N6_Tail.fst";
+    $display("[WAVE] file=%s", fst_file);
+    $dumpfile(fst_file);
+    $dumpvars(0, tb_Cluster_GEMM_W4A16_N6_Tail);
+  end
+`endif
 endmodule

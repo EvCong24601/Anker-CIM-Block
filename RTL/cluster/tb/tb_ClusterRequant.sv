@@ -52,13 +52,13 @@ module tb_ClusterRequant;
         string'({"[CASE_START] time=%0.3f ns suite=requant_unit case=%0d ",
                  "description=%s psum=%0d multiplier=%0d shift=%0d zp=%0d"}),
         $realtime, cases, description, p, m, s, z);
-      cfg_i = '{
-        requant_mode: 1'b0,
-        requant_multiplier: 32'(m),
-        requant_shift: 10'(s),
-        requant_zp: {4{32'(z)}},
-        default: '0
-      };
+      // Assign field by field: VCS 2020.03 mis-sizes 32'(m) inside a struct
+      // literal for m = -2^31 (builds 0xFFFFFFFE), so this path avoids casts.
+      cfg_i = '0;
+      cfg_i.requant_mode = 1'b0;
+      cfg_i.requant_multiplier[31:0] = m;
+      cfg_i.requant_shift[9:0] = s;
+      for (int c = 0; c < 4; c++) cfg_i.requant_zp[32*c+:32] = z;
       for (int lane = 0; lane < 32; lane++) psum_i[32*lane+:32] = 32'(p);
       unique case (cases % 4)
         0: valid_i = 32'h0000000f;
@@ -180,6 +180,17 @@ module tb_ClusterRequant;
     $display("[WAVE] file=%s", fsdb_file);
     $fsdbDumpfile(fsdb_file);
     $fsdbDumpvars(0, tb_ClusterRequant, "+all");
+  end
+`endif
+  // Dump FST under --trace-fst (wave-mcp reads it directly); leave CLUSTER_FST
+  // undefined for VCS/Icarus runs.
+`ifdef CLUSTER_FST
+  initial begin : case_fst_dump
+    string fst_file;
+    if (!$value$plusargs("FST_FILE=%s", fst_file)) fst_file = "tb_ClusterRequant_default.fst";
+    $display("[WAVE] file=%s", fst_file);
+    $dumpfile(fst_file);
+    $dumpvars(0, tb_ClusterRequant);
   end
 `endif
 endmodule

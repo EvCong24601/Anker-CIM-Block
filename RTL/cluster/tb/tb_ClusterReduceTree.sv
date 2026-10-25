@@ -222,4 +222,15 @@ module tb_ClusterReduceTree;
     $fsdbDumpvars(0, tb_ClusterReduceTree, "+all");
   end
 `endif
+  // Dump FST under --trace-fst (wave-mcp reads it directly); leave CLUSTER_FST
+  // undefined for VCS/Icarus runs.
+`ifdef CLUSTER_FST
+  initial begin : case_fst_dump
+    string fst_file;
+    if (!$value$plusargs("FST_FILE=%s", fst_file)) fst_file = "tb_ClusterReduceTree_default.fst";
+    $display("[WAVE] file=%s", fst_file);
+    $dumpfile(fst_file);
+    $dumpvars(0, tb_ClusterReduceTree);
+  end
+`endif
 endmodule
