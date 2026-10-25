@@ -1,0 +1,1082 @@
+ 
+****************************************
+Report : power
+        -analysis_effort low
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Sat Oct 24 21:52:10 2026
+****************************************
+
+
+Library(s) Used:
+
+    tcbn22ullbwp30p140hvttt0p8v25c (File: /lamport/shared/hzzhu/techlib/tn22ull/stdcell/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tcbn22ullbwp30p140hvt_110b/tcbn22ullbwp30p140hvttt0p8v25c.db)
+
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+Design        Wire Load Model            Library
+------------------------------------------------
+SingleMacro            ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroSignControl       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_511
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_3    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_0    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_1    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_2    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_0
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_1
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_2
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_3
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_4
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_5
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_6
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_7
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_8
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_9
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_10
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_11
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_12
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_13
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_14
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_15
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_16
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_17
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_18
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_19
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_20
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_21
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_22
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_23
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_24
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_25
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_26
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_27
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_28
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_29
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_30
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_31
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_32
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_33
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_34
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_35
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_36
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_37
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_38
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_39
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_40
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_41
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_42
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_43
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_44
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_45
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_46
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_47
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_48
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_49
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_50
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_51
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_52
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_53
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_54
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_55
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_56
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_57
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_58
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_59
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_60
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_61
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_62
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_63
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_64
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_65
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_66
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_67
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_68
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_69
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_70
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_71
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_72
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_73
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_74
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_75
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_76
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_77
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_78
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_79
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_80
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_81
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_82
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_83
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_84
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_85
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_86
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_87
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_88
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_89
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_90
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_91
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_92
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_93
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_94
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_95
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_96
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_97
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_98
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_99
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_100
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_101
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_102
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_103
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_104
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_105
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_106
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_107
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_108
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_109
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_110
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_111
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_112
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_113
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_114
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_115
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_116
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_117
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_118
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_119
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_120
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_121
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_122
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_123
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_124
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_125
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_126
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_127
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_128
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_129
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_130
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_131
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_132
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_133
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_134
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_135
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_136
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_137
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_138
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_139
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_140
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_141
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_142
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_143
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_144
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_145
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_146
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_147
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_148
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_149
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_150
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_151
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_152
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_153
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_154
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_155
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_156
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_157
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_158
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_159
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_160
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_161
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_162
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_163
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_164
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_165
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_166
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_167
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_168
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_169
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_170
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_171
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_172
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_173
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_174
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_175
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_176
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_177
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_178
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_179
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_180
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_181
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_182
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_183
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_184
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_185
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_186
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_187
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_188
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_189
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_190
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_191
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_192
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_193
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_194
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_195
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_196
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_197
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_198
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_199
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_200
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_201
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_202
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_203
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_204
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_205
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_206
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_207
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_208
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_209
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_210
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_211
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_212
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_213
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_214
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_215
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_216
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_217
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_218
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_219
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_220
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_221
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_222
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_223
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_224
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_225
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_226
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_227
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_228
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_229
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_230
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_231
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_232
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_233
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_234
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_235
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_236
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_237
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_238
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_239
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_240
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_241
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_242
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_243
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_244
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_245
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_246
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_247
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_248
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_249
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_250
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_251
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_252
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_253
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_254
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_255
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_256
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_257
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_258
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_259
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_260
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_261
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_262
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_263
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_264
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_265
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_266
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_267
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_268
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_269
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_270
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_271
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_272
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_273
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_274
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_275
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_276
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_277
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_278
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_279
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_280
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_281
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_282
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_283
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_284
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_285
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_286
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_287
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_288
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_289
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_290
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_291
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_292
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_293
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_294
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_295
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_296
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_297
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_298
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_299
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_300
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_301
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_302
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_303
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_304
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_305
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_306
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_307
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_308
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_309
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_310
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_311
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_312
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_313
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_314
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_315
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_316
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_317
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_318
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_319
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_320
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_321
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_322
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_323
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_324
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_325
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_326
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_327
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_328
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_329
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_330
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_331
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_332
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_333
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_334
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_335
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_336
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_337
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_338
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_339
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_340
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_341
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_342
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_343
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_344
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_345
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_346
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_347
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_348
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_349
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_350
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_351
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_352
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_353
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_354
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_355
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_356
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_357
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_358
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_359
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_360
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_361
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_362
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_363
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_364
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_365
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_366
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_367
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_368
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_369
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_370
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_371
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_372
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_373
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_374
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_375
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_376
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_377
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_378
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_379
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_380
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_381
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_382
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_383
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_384
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_385
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_386
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_387
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_388
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_389
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_390
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_391
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_392
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_393
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_394
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_395
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_396
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_397
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_398
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_399
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_400
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_401
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_402
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_403
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_404
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_405
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_406
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_407
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_408
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_409
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_410
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_411
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_412
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_413
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_414
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_415
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_416
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_417
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_418
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_419
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_420
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_421
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_422
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_423
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_424
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_425
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_426
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_427
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_428
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_429
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_430
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_431
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_432
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_433
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_434
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_435
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_436
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_437
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_438
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_439
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_440
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_441
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_442
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_443
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_444
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_445
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_446
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_447
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_448
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_449
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_450
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_451
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_452
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_453
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_454
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_455
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_456
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_457
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_458
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_459
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_460
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_461
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_462
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_463
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_464
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_465
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_466
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_467
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_468
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_469
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_470
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_471
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_472
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_473
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_474
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_475
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_476
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_477
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_478
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_479
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_480
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_481
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_482
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_483
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_484
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_485
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_486
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_487
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_488
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_489
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_490
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_491
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_492
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_493
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_494
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_495
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_496
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_497
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_498
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_499
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_500
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_501
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_502
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_503
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_504
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_505
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_506
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_507
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_508
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_509
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_510
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+
+
+Global Operating Voltage = 0.8  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1nW
+
+
+  Cell Internal Power  = 160.4792 uW    (2%)
+  Net Switching Power  =  10.2866 mW   (98%)
+                         ---------
+Total Dynamic Power    =  10.4471 mW  (100%)
+
+Cell Leakage Power     =   5.1219 uW
+
+
+                 Internal         Switching           Leakage            Total
+Power Group      Power            Power               Power              Power   (   %    )  Attrs
+--------------------------------------------------------------------------------------------------
+io_pad             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+memory             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+black_box          0.0000            0.0000            0.0000            0.0000  (   0.00%)
+clock_network  5.4534e-02           10.2675        3.4363e+03           10.3258  (  98.79%)
+register           0.1021        6.7427e-04        1.3072e+03            0.1040  (   1.00%)
+sequential         0.0000            0.0000            0.0000            0.0000  (   0.00%)
+combinational  3.8792e-03        1.8566e-02          378.4214        2.2823e-02  (   0.22%)
+--------------------------------------------------------------------------------------------------
+Total              0.1605 mW        10.2868 mW     5.1219e+03 nW        10.4527 mW
+1

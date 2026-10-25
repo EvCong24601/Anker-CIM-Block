@@ -1,0 +1,2101 @@
+ 
+****************************************
+Report : power
+        -hier
+        -analysis_effort low
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Sat Oct 24 21:52:10 2026
+****************************************
+
+
+Library(s) Used:
+
+    tcbn22ullbwp30p140hvttt0p8v25c (File: /lamport/shared/hzzhu/techlib/tn22ull/stdcell/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tcbn22ullbwp30p140hvt_110b/tcbn22ullbwp30p140hvttt0p8v25c.db)
+
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+Design        Wire Load Model            Library
+------------------------------------------------
+SingleMacro            ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroSignControl       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_511
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_3    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_0    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_1    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroWeightFusion_2    ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_0
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_1
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_2
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_3
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_4
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_5
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_6
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_7
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_8
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_9
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_10
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_11
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_12
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_13
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_14
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_15
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_16
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_17
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_18
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_19
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_20
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_21
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_22
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_23
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_24
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_25
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_26
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_27
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_28
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_29
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_30
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_31
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_32
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_33
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_34
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_35
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_36
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_37
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_38
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_39
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_40
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_41
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_42
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_43
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_44
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_45
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_46
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_47
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_48
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_49
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_50
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_51
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_52
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_53
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_54
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_55
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_56
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_57
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_58
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_59
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_60
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_61
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_62
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_63
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_64
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_65
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_66
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_67
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_68
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_69
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_70
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_71
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_72
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_73
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_74
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_75
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_76
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_77
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_78
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_79
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_80
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_81
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_82
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_83
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_84
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_85
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_86
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_87
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_88
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_89
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_90
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_91
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_92
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_93
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_94
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_95
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_96
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_97
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_98
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_99
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_100
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_101
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_102
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_103
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_104
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_105
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_106
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_107
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_108
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_109
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_110
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_111
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_112
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_113
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_114
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_115
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_116
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_117
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_118
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_119
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_120
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_121
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_122
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_123
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_124
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_125
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_126
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_127
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_128
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_129
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_130
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_131
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_132
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_133
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_134
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_135
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_136
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_137
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_138
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_139
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_140
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_141
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_142
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_143
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_144
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_145
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_146
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_147
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_148
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_149
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_150
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_151
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_152
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_153
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_154
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_155
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_156
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_157
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_158
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_159
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_160
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_161
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_162
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_163
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_164
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_165
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_166
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_167
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_168
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_169
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_170
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_171
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_172
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_173
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_174
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_175
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_176
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_177
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_178
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_179
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_180
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_181
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_182
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_183
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_184
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_185
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_186
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_187
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_188
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_189
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_190
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_191
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_192
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_193
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_194
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_195
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_196
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_197
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_198
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_199
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_200
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_201
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_202
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_203
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_204
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_205
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_206
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_207
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_208
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_209
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_210
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_211
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_212
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_213
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_214
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_215
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_216
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_217
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_218
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_219
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_220
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_221
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_222
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_223
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_224
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_225
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_226
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_227
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_228
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_229
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_230
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_231
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_232
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_233
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_234
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_235
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_236
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_237
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_238
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_239
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_240
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_241
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_242
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_243
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_244
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_245
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_246
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_247
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_248
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_249
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_250
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_251
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_252
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_253
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_254
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_255
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_256
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_257
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_258
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_259
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_260
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_261
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_262
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_263
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_264
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_265
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_266
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_267
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_268
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_269
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_270
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_271
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_272
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_273
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_274
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_275
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_276
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_277
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_278
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_279
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_280
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_281
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_282
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_283
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_284
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_285
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_286
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_287
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_288
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_289
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_290
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_291
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_292
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_293
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_294
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_295
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_296
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_297
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_298
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_299
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_300
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_301
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_302
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_303
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_304
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_305
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_306
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_307
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_308
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_309
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_310
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_311
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_312
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_313
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_314
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_315
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_316
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_317
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_318
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_319
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_320
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_321
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_322
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_323
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_324
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_325
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_326
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_327
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_328
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_329
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_330
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_331
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_332
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_333
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_334
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_335
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_336
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_337
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_338
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_339
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_340
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_341
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_342
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_343
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_344
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_345
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_346
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_347
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_348
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_349
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_350
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_351
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_352
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_353
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_354
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_355
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_356
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_357
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_358
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_359
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_360
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_361
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_362
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_363
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_364
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_365
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_366
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_367
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_368
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_369
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_370
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_371
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_372
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_373
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_374
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_375
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_376
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_377
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_378
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_379
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_380
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_381
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_382
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_383
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_384
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_385
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_386
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_387
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_388
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_389
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_390
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_391
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_392
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_393
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_394
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_395
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_396
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_397
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_398
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_399
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_400
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_401
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_402
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_403
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_404
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_405
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_406
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_407
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_408
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_409
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_410
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_411
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_412
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_413
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_414
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_415
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_416
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_417
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_418
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_419
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_420
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_421
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_422
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_423
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_424
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_425
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_426
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_427
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_428
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_429
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_430
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_431
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_432
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_433
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_434
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_435
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_436
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_437
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_438
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_439
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_440
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_441
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_442
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_443
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_444
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_445
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_446
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_447
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_448
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_449
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_450
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_451
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_452
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_453
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_454
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_455
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_456
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_457
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_458
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_459
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_460
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_461
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_462
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_463
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_464
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_465
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_466
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_467
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_468
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_469
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_470
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_471
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_472
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_473
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_474
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_475
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_476
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_477
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_478
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_479
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_480
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_481
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_482
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_483
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_484
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_485
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_486
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_487
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_488
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_489
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_490
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_491
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_492
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_493
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_494
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_495
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_496
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_497
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_498
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_499
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_500
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_501
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_502
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_503
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_504
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_505
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_506
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_507
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_508
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_509
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroPartialProducts2x4_510
+                       ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+
+
+Global Operating Voltage = 0.8  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1nW
+
+
+--------------------------------------------------------------------------------
+                                       Switch   Int      Leak     Total
+Hierarchy                              Power    Power    Power    Power    %
+--------------------------------------------------------------------------------
+SingleMacro                              10.287    0.160 5.12e+03   10.452 100.0
+  g_oc[3].u_fusion (MacroWeightFusion_0)
+                                       3.10e-03 6.52e-03  560.163 1.02e-02   0.1
+  g_oc[3].g_digit[3].g_slice[31].u_pp (MacroPartialProducts2x4_0)
+                                       1.93e-05 2.23e-05    2.390 4.40e-05   0.0
+  g_oc[3].g_digit[3].g_slice[30].u_pp (MacroPartialProducts2x4_1)
+                                       1.81e-05 2.16e-05    2.390 4.20e-05   0.0
+  g_oc[3].g_digit[3].g_slice[29].u_pp (MacroPartialProducts2x4_2)
+                                       1.88e-05 2.25e-05    2.394 4.36e-05   0.0
+  g_oc[3].g_digit[3].g_slice[28].u_pp (MacroPartialProducts2x4_3)
+                                       1.84e-05 2.14e-05    2.389 4.22e-05   0.0
+  g_oc[3].g_digit[3].g_slice[27].u_pp (MacroPartialProducts2x4_4)
+                                       1.84e-05 2.21e-05    2.393 4.29e-05   0.0
+  g_oc[3].g_digit[3].g_slice[26].u_pp (MacroPartialProducts2x4_5)
+                                       1.87e-05 2.24e-05    2.391 4.36e-05   0.0
+  g_oc[3].g_digit[3].g_slice[25].u_pp (MacroPartialProducts2x4_6)
+                                       1.93e-05 2.20e-05    2.392 4.38e-05   0.0
+  g_oc[3].g_digit[3].g_slice[24].u_pp (MacroPartialProducts2x4_7)
+                                       1.84e-05 2.21e-05    2.392 4.29e-05   0.0
+  g_oc[3].g_digit[3].g_slice[23].u_pp (MacroPartialProducts2x4_8)
+                                       1.85e-05 2.13e-05    2.385 4.21e-05   0.0
+  g_oc[3].g_digit[3].g_slice[22].u_pp (MacroPartialProducts2x4_9)
+                                       1.84e-05 2.14e-05    2.389 4.22e-05   0.0
+  g_oc[3].g_digit[3].g_slice[21].u_pp (MacroPartialProducts2x4_10)
+                                       1.89e-05 2.25e-05    2.390 4.38e-05   0.0
+  g_oc[3].g_digit[3].g_slice[20].u_pp (MacroPartialProducts2x4_11)
+                                       1.88e-05 2.16e-05    2.391 4.28e-05   0.0
+  g_oc[3].g_digit[3].g_slice[19].u_pp (MacroPartialProducts2x4_12)
+                                       1.96e-05 2.25e-05    2.392 4.45e-05   0.0
+  g_oc[3].g_digit[3].g_slice[18].u_pp (MacroPartialProducts2x4_13)
+                                       1.95e-05 2.29e-05    2.389 4.48e-05   0.0
+  g_oc[3].g_digit[3].g_slice[17].u_pp (MacroPartialProducts2x4_14)
+                                       1.89e-05 2.17e-05    2.391 4.30e-05   0.0
+  g_oc[3].g_digit[3].g_slice[16].u_pp (MacroPartialProducts2x4_15)
+                                       1.91e-05 2.20e-05    2.389 4.35e-05   0.0
+  g_oc[3].g_digit[3].g_slice[15].u_pp (MacroPartialProducts2x4_16)
+                                       1.80e-05 2.13e-05    2.393 4.17e-05   0.0
+  g_oc[3].g_digit[3].g_slice[14].u_pp (MacroPartialProducts2x4_17)
+                                       1.96e-05 2.26e-05    2.390 4.45e-05   0.0
+  g_oc[3].g_digit[3].g_slice[13].u_pp (MacroPartialProducts2x4_18)
+                                       1.85e-05 2.13e-05    2.391 4.22e-05   0.0
+  g_oc[3].g_digit[3].g_slice[12].u_pp (MacroPartialProducts2x4_19)
+                                       1.82e-05 2.16e-05    2.389 4.21e-05   0.0
+  g_oc[3].g_digit[3].g_slice[11].u_pp (MacroPartialProducts2x4_20)
+                                       1.71e-05 2.10e-05    2.390 4.05e-05   0.0
+  g_oc[3].g_digit[3].g_slice[10].u_pp (MacroPartialProducts2x4_21)
+                                       1.85e-05 2.12e-05    2.390 4.21e-05   0.0
+  g_oc[3].g_digit[3].g_slice[9].u_pp (MacroPartialProducts2x4_22)
+                                       1.81e-05 2.15e-05    2.392 4.20e-05   0.0
+  g_oc[3].g_digit[3].g_slice[8].u_pp (MacroPartialProducts2x4_23)
+                                       1.84e-05 2.18e-05    2.389 4.26e-05   0.0
+  g_oc[3].g_digit[3].g_slice[7].u_pp (MacroPartialProducts2x4_24)
+                                       1.91e-05 2.28e-05    2.391 4.43e-05   0.0
+  g_oc[3].g_digit[3].g_slice[6].u_pp (MacroPartialProducts2x4_25)
+                                       1.85e-05 2.20e-05    2.392 4.29e-05   0.0
+  g_oc[3].g_digit[3].g_slice[5].u_pp (MacroPartialProducts2x4_26)
+                                       1.81e-05 2.10e-05    2.385 4.15e-05   0.0
+  g_oc[3].g_digit[3].g_slice[4].u_pp (MacroPartialProducts2x4_27)
+                                       1.81e-05 2.13e-05    2.387 4.18e-05   0.0
+  g_oc[3].g_digit[3].g_slice[3].u_pp (MacroPartialProducts2x4_28)
+                                       1.89e-05 2.21e-05    2.391 4.35e-05   0.0
+  g_oc[3].g_digit[3].g_slice[2].u_pp (MacroPartialProducts2x4_29)
+                                       1.90e-05 2.19e-05    2.393 4.33e-05   0.0
+  g_oc[3].g_digit[3].g_slice[1].u_pp (MacroPartialProducts2x4_30)
+                                       1.81e-05 2.14e-05    2.391 4.19e-05   0.0
+  g_oc[3].g_digit[3].g_slice[0].u_pp (MacroPartialProducts2x4_31)
+                                       1.80e-05 2.18e-05    2.394 4.22e-05   0.0
+  g_oc[3].g_digit[2].g_slice[31].u_pp (MacroPartialProducts2x4_32)
+                                       1.69e-05 1.94e-05    2.435 3.87e-05   0.0
+  g_oc[3].g_digit[2].g_slice[30].u_pp (MacroPartialProducts2x4_33)
+                                       1.61e-05 1.86e-05    2.434 3.71e-05   0.0
+  g_oc[3].g_digit[2].g_slice[29].u_pp (MacroPartialProducts2x4_34)
+                                       1.58e-05 1.87e-05    2.435 3.69e-05   0.0
+  g_oc[3].g_digit[2].g_slice[28].u_pp (MacroPartialProducts2x4_35)
+                                       1.62e-05 1.87e-05    2.436 3.73e-05   0.0
+  g_oc[3].g_digit[2].g_slice[27].u_pp (MacroPartialProducts2x4_36)
+                                       1.56e-05 1.87e-05    2.433 3.67e-05   0.0
+  g_oc[3].g_digit[2].g_slice[26].u_pp (MacroPartialProducts2x4_37)
+                                       1.53e-05 1.83e-05    2.437 3.61e-05   0.0
+  g_oc[3].g_digit[2].g_slice[25].u_pp (MacroPartialProducts2x4_38)
+                                       1.64e-05 1.84e-05    2.434 3.72e-05   0.0
+  g_oc[3].g_digit[2].g_slice[24].u_pp (MacroPartialProducts2x4_39)
+                                       1.52e-05 1.83e-05    2.433 3.59e-05   0.0
+  g_oc[3].g_digit[2].g_slice[23].u_pp (MacroPartialProducts2x4_40)
+                                       1.59e-05 1.82e-05    2.433 3.65e-05   0.0
+  g_oc[3].g_digit[2].g_slice[22].u_pp (MacroPartialProducts2x4_41)
+                                       1.59e-05 1.84e-05    2.433 3.67e-05   0.0
+  g_oc[3].g_digit[2].g_slice[21].u_pp (MacroPartialProducts2x4_42)
+                                       1.65e-05 1.96e-05    2.435 3.85e-05   0.0
+  g_oc[3].g_digit[2].g_slice[20].u_pp (MacroPartialProducts2x4_43)
+                                       1.57e-05 1.82e-05    2.434 3.64e-05   0.0
+  g_oc[3].g_digit[2].g_slice[19].u_pp (MacroPartialProducts2x4_44)
+                                       1.78e-05 2.05e-05    2.437 4.08e-05   0.0
+  g_oc[3].g_digit[2].g_slice[18].u_pp (MacroPartialProducts2x4_45)
+                                       1.66e-05 1.94e-05    2.438 3.85e-05   0.0
+  g_oc[3].g_digit[2].g_slice[17].u_pp (MacroPartialProducts2x4_46)
+                                       1.63e-05 1.90e-05    2.435 3.77e-05   0.0
+  g_oc[3].g_digit[2].g_slice[16].u_pp (MacroPartialProducts2x4_47)
+                                       1.57e-05 1.81e-05    2.434 3.62e-05   0.0
+  g_oc[3].g_digit[2].g_slice[15].u_pp (MacroPartialProducts2x4_48)
+                                       1.60e-05 1.89e-05    2.435 3.74e-05   0.0
+  g_oc[3].g_digit[2].g_slice[14].u_pp (MacroPartialProducts2x4_49)
+                                       1.71e-05 1.95e-05    2.436 3.90e-05   0.0
+  g_oc[3].g_digit[2].g_slice[13].u_pp (MacroPartialProducts2x4_50)
+                                       1.51e-05 1.79e-05    2.437 3.55e-05   0.0
+  g_oc[3].g_digit[2].g_slice[12].u_pp (MacroPartialProducts2x4_51)
+                                       1.60e-05 1.85e-05    2.432 3.69e-05   0.0
+  g_oc[3].g_digit[2].g_slice[11].u_pp (MacroPartialProducts2x4_52)
+                                       1.52e-05 1.88e-05    2.436 3.64e-05   0.0
+  g_oc[3].g_digit[2].g_slice[10].u_pp (MacroPartialProducts2x4_53)
+                                       1.64e-05 1.86e-05    2.439 3.75e-05   0.0
+  g_oc[3].g_digit[2].g_slice[9].u_pp (MacroPartialProducts2x4_54)
+                                       1.56e-05 1.84e-05    2.433 3.65e-05   0.0
+  g_oc[3].g_digit[2].g_slice[8].u_pp (MacroPartialProducts2x4_55)
+                                       1.64e-05 1.91e-05    2.435 3.80e-05   0.0
+  g_oc[3].g_digit[2].g_slice[7].u_pp (MacroPartialProducts2x4_56)
+                                       1.61e-05 1.86e-05    2.435 3.71e-05   0.0
+  g_oc[3].g_digit[2].g_slice[6].u_pp (MacroPartialProducts2x4_57)
+                                       1.56e-05 1.80e-05    2.434 3.60e-05   0.0
+  g_oc[3].g_digit[2].g_slice[5].u_pp (MacroPartialProducts2x4_58)
+                                       1.68e-05 1.94e-05    2.436 3.86e-05   0.0
+  g_oc[3].g_digit[2].g_slice[4].u_pp (MacroPartialProducts2x4_59)
+                                       1.57e-05 1.83e-05    2.435 3.64e-05   0.0
+  g_oc[3].g_digit[2].g_slice[3].u_pp (MacroPartialProducts2x4_60)
+                                       1.65e-05 1.97e-05    2.436 3.86e-05   0.0
+  g_oc[3].g_digit[2].g_slice[2].u_pp (MacroPartialProducts2x4_61)
+                                       1.69e-05 1.92e-05    2.435 3.85e-05   0.0
+  g_oc[3].g_digit[2].g_slice[1].u_pp (MacroPartialProducts2x4_62)
+                                       1.51e-05 1.79e-05    2.434 3.55e-05   0.0
+  g_oc[3].g_digit[2].g_slice[0].u_pp (MacroPartialProducts2x4_63)
+                                       1.54e-05 1.87e-05    2.436 3.65e-05   0.0
+  g_oc[3].g_digit[1].g_slice[31].u_pp (MacroPartialProducts2x4_64)
+                                       1.77e-05 2.05e-05    2.414 4.06e-05   0.0
+  g_oc[3].g_digit[1].g_slice[30].u_pp (MacroPartialProducts2x4_65)
+                                       1.71e-05 2.04e-05    2.413 3.99e-05   0.0
+  g_oc[3].g_digit[1].g_slice[29].u_pp (MacroPartialProducts2x4_66)
+                                       1.76e-05 2.10e-05    2.415 4.10e-05   0.0
+  g_oc[3].g_digit[1].g_slice[28].u_pp (MacroPartialProducts2x4_67)
+                                       1.73e-05 1.99e-05    2.412 3.96e-05   0.0
+  g_oc[3].g_digit[1].g_slice[27].u_pp (MacroPartialProducts2x4_68)
+                                       1.70e-05 2.05e-05    2.413 3.99e-05   0.0
+  g_oc[3].g_digit[1].g_slice[26].u_pp (MacroPartialProducts2x4_69)
+                                       1.70e-05 2.01e-05    2.414 3.95e-05   0.0
+  g_oc[3].g_digit[1].g_slice[25].u_pp (MacroPartialProducts2x4_70)
+                                       1.71e-05 1.97e-05    2.416 3.92e-05   0.0
+  g_oc[3].g_digit[1].g_slice[24].u_pp (MacroPartialProducts2x4_71)
+                                       1.64e-05 1.99e-05    2.414 3.86e-05   0.0
+  g_oc[3].g_digit[1].g_slice[23].u_pp (MacroPartialProducts2x4_72)
+                                       1.80e-05 2.09e-05    2.415 4.14e-05   0.0
+  g_oc[3].g_digit[1].g_slice[22].u_pp (MacroPartialProducts2x4_73)
+                                       1.73e-05 1.99e-05    2.415 3.96e-05   0.0
+  g_oc[3].g_digit[1].g_slice[21].u_pp (MacroPartialProducts2x4_74)
+                                       1.62e-05 1.90e-05    2.412 3.75e-05   0.0
+  g_oc[3].g_digit[1].g_slice[20].u_pp (MacroPartialProducts2x4_75)
+                                       1.72e-05 1.99e-05    2.417 3.96e-05   0.0
+  g_oc[3].g_digit[1].g_slice[19].u_pp (MacroPartialProducts2x4_76)
+                                       1.84e-05 2.06e-05    2.414 4.14e-05   0.0
+  g_oc[3].g_digit[1].g_slice[18].u_pp (MacroPartialProducts2x4_77)
+                                       1.68e-05 1.97e-05    2.414 3.89e-05   0.0
+  g_oc[3].g_digit[1].g_slice[17].u_pp (MacroPartialProducts2x4_78)
+                                       1.79e-05 2.08e-05    2.416 4.11e-05   0.0
+  g_oc[3].g_digit[1].g_slice[16].u_pp (MacroPartialProducts2x4_79)
+                                       1.75e-05 2.02e-05    2.411 4.01e-05   0.0
+  g_oc[3].g_digit[1].g_slice[15].u_pp (MacroPartialProducts2x4_80)
+                                       1.71e-05 2.02e-05    2.414 3.97e-05   0.0
+  g_oc[3].g_digit[1].g_slice[14].u_pp (MacroPartialProducts2x4_81)
+                                       1.79e-05 2.08e-05    2.414 4.10e-05   0.0
+  g_oc[3].g_digit[1].g_slice[13].u_pp (MacroPartialProducts2x4_82)
+                                       1.72e-05 2.00e-05    2.416 3.96e-05   0.0
+  g_oc[3].g_digit[1].g_slice[12].u_pp (MacroPartialProducts2x4_83)
+                                       1.63e-05 1.94e-05    2.412 3.80e-05   0.0
+  g_oc[3].g_digit[1].g_slice[11].u_pp (MacroPartialProducts2x4_84)
+                                       1.68e-05 2.07e-05    2.417 3.99e-05   0.0
+  g_oc[3].g_digit[1].g_slice[10].u_pp (MacroPartialProducts2x4_85)
+                                       1.70e-05 1.97e-05    2.415 3.91e-05   0.0
+  g_oc[3].g_digit[1].g_slice[9].u_pp (MacroPartialProducts2x4_86)
+                                       1.72e-05 2.05e-05    2.412 4.01e-05   0.0
+  g_oc[3].g_digit[1].g_slice[8].u_pp (MacroPartialProducts2x4_87)
+                                       1.67e-05 1.97e-05    2.414 3.89e-05   0.0
+  g_oc[3].g_digit[1].g_slice[7].u_pp (MacroPartialProducts2x4_88)
+                                       1.80e-05 2.13e-05    2.414 4.17e-05   0.0
+  g_oc[3].g_digit[1].g_slice[6].u_pp (MacroPartialProducts2x4_89)
+                                       1.67e-05 1.95e-05    2.413 3.87e-05   0.0
+  g_oc[3].g_digit[1].g_slice[5].u_pp (MacroPartialProducts2x4_90)
+                                       1.72e-05 1.99e-05    2.411 3.94e-05   0.0
+  g_oc[3].g_digit[1].g_slice[4].u_pp (MacroPartialProducts2x4_91)
+                                       1.68e-05 1.96e-05    2.415 3.88e-05   0.0
+  g_oc[3].g_digit[1].g_slice[3].u_pp (MacroPartialProducts2x4_92)
+                                       1.76e-05 2.04e-05    2.411 4.04e-05   0.0
+  g_oc[3].g_digit[1].g_slice[2].u_pp (MacroPartialProducts2x4_93)
+                                       1.76e-05 2.02e-05    2.415 4.02e-05   0.0
+  g_oc[3].g_digit[1].g_slice[1].u_pp (MacroPartialProducts2x4_94)
+                                       1.67e-05 2.00e-05    2.416 3.91e-05   0.0
+  g_oc[3].g_digit[1].g_slice[0].u_pp (MacroPartialProducts2x4_95)
+                                       1.58e-05 1.92e-05    2.413 3.74e-05   0.0
+  g_oc[3].g_digit[0].g_slice[31].u_pp (MacroPartialProducts2x4_96)
+                                       1.74e-05 2.00e-05    2.438 3.98e-05   0.0
+  g_oc[3].g_digit[0].g_slice[30].u_pp (MacroPartialProducts2x4_97)
+                                       1.68e-05 1.96e-05    2.437 3.88e-05   0.0
+  g_oc[3].g_digit[0].g_slice[29].u_pp (MacroPartialProducts2x4_98)
+                                       1.59e-05 1.87e-05    2.435 3.70e-05   0.0
+  g_oc[3].g_digit[0].g_slice[28].u_pp (MacroPartialProducts2x4_99)
+                                       1.60e-05 1.84e-05    2.436 3.68e-05   0.0
+  g_oc[3].g_digit[0].g_slice[27].u_pp (MacroPartialProducts2x4_100)
+                                       1.56e-05 1.87e-05    2.436 3.66e-05   0.0
+  g_oc[3].g_digit[0].g_slice[26].u_pp (MacroPartialProducts2x4_101)
+                                       1.52e-05 1.81e-05    2.434 3.58e-05   0.0
+  g_oc[3].g_digit[0].g_slice[25].u_pp (MacroPartialProducts2x4_102)
+                                       1.53e-05 1.71e-05    2.432 3.49e-05   0.0
+  g_oc[3].g_digit[0].g_slice[24].u_pp (MacroPartialProducts2x4_103)
+                                       1.56e-05 1.87e-05    2.434 3.67e-05   0.0
+  g_oc[3].g_digit[0].g_slice[23].u_pp (MacroPartialProducts2x4_104)
+                                       1.70e-05 1.98e-05    2.438 3.92e-05   0.0
+  g_oc[3].g_digit[0].g_slice[22].u_pp (MacroPartialProducts2x4_105)
+                                       1.58e-05 1.83e-05    2.432 3.65e-05   0.0
+  g_oc[3].g_digit[0].g_slice[21].u_pp (MacroPartialProducts2x4_106)
+                                       1.53e-05 1.80e-05    2.434 3.57e-05   0.0
+  g_oc[3].g_digit[0].g_slice[20].u_pp (MacroPartialProducts2x4_107)
+                                       1.55e-05 1.76e-05    2.434 3.56e-05   0.0
+  g_oc[3].g_digit[0].g_slice[19].u_pp (MacroPartialProducts2x4_108)
+                                       1.65e-05 1.85e-05    2.434 3.75e-05   0.0
+  g_oc[3].g_digit[0].g_slice[18].u_pp (MacroPartialProducts2x4_109)
+                                       1.66e-05 1.92e-05    2.436 3.82e-05   0.0
+  g_oc[3].g_digit[0].g_slice[17].u_pp (MacroPartialProducts2x4_110)
+                                       1.73e-05 2.02e-05    2.439 3.99e-05   0.0
+  g_oc[3].g_digit[0].g_slice[16].u_pp (MacroPartialProducts2x4_111)
+                                       1.61e-05 1.88e-05    2.435 3.73e-05   0.0
+  g_oc[3].g_digit[0].g_slice[15].u_pp (MacroPartialProducts2x4_112)
+                                       1.58e-05 1.85e-05    2.435 3.67e-05   0.0
+  g_oc[3].g_digit[0].g_slice[14].u_pp (MacroPartialProducts2x4_113)
+                                       1.68e-05 1.96e-05    2.436 3.88e-05   0.0
+  g_oc[3].g_digit[0].g_slice[13].u_pp (MacroPartialProducts2x4_114)
+                                       1.59e-05 1.87e-05    2.438 3.70e-05   0.0
+  g_oc[3].g_digit[0].g_slice[12].u_pp (MacroPartialProducts2x4_115)
+                                       1.54e-05 1.79e-05    2.433 3.58e-05   0.0
+  g_oc[3].g_digit[0].g_slice[11].u_pp (MacroPartialProducts2x4_116)
+                                       1.55e-05 1.87e-05    2.436 3.66e-05   0.0
+  g_oc[3].g_digit[0].g_slice[10].u_pp (MacroPartialProducts2x4_117)
+                                       1.57e-05 1.78e-05    2.436 3.59e-05   0.0
+  g_oc[3].g_digit[0].g_slice[9].u_pp (MacroPartialProducts2x4_118)
+                                       1.59e-05 1.89e-05    2.438 3.73e-05   0.0
+  g_oc[3].g_digit[0].g_slice[8].u_pp (MacroPartialProducts2x4_119)
+                                       1.64e-05 1.94e-05    2.437 3.83e-05   0.0
+  g_oc[3].g_digit[0].g_slice[7].u_pp (MacroPartialProducts2x4_120)
+                                       1.56e-05 1.85e-05    2.434 3.65e-05   0.0
+  g_oc[3].g_digit[0].g_slice[6].u_pp (MacroPartialProducts2x4_121)
+                                       1.58e-05 1.85e-05    2.435 3.67e-05   0.0
+  g_oc[3].g_digit[0].g_slice[5].u_pp (MacroPartialProducts2x4_122)
+                                       1.68e-05 1.94e-05    2.435 3.87e-05   0.0
+  g_oc[3].g_digit[0].g_slice[4].u_pp (MacroPartialProducts2x4_123)
+                                       1.56e-05 1.80e-05    2.432 3.61e-05   0.0
+  g_oc[3].g_digit[0].g_slice[3].u_pp (MacroPartialProducts2x4_124)
+                                       1.65e-05 1.91e-05    2.434 3.80e-05   0.0
+  g_oc[3].g_digit[0].g_slice[2].u_pp (MacroPartialProducts2x4_125)
+                                       1.71e-05 1.94e-05    2.435 3.89e-05   0.0
+  g_oc[3].g_digit[0].g_slice[1].u_pp (MacroPartialProducts2x4_126)
+                                       1.48e-05 1.73e-05    2.433 3.45e-05   0.0
+  g_oc[3].g_digit[0].g_slice[0].u_pp (MacroPartialProducts2x4_127)
+                                       1.50e-05 1.84e-05    2.433 3.59e-05   0.0
+  g_oc[2].u_fusion (MacroWeightFusion_1)
+                                       2.50e-03 5.26e-03  561.494 8.32e-03   0.1
+  g_oc[2].g_digit[3].g_slice[31].u_pp (MacroPartialProducts2x4_128)
+                                       1.78e-05 2.09e-05    2.391 4.11e-05   0.0
+  g_oc[2].g_digit[3].g_slice[30].u_pp (MacroPartialProducts2x4_129)
+                                       1.75e-05 2.13e-05    2.393 4.11e-05   0.0
+  g_oc[2].g_digit[3].g_slice[29].u_pp (MacroPartialProducts2x4_130)
+                                       1.78e-05 2.15e-05    2.393 4.16e-05   0.0
+  g_oc[2].g_digit[3].g_slice[28].u_pp (MacroPartialProducts2x4_131)
+                                       1.76e-05 2.09e-05    2.390 4.09e-05   0.0
+  g_oc[2].g_digit[3].g_slice[27].u_pp (MacroPartialProducts2x4_132)
+                                       1.72e-05 2.10e-05    2.391 4.06e-05   0.0
+  g_oc[2].g_digit[3].g_slice[26].u_pp (MacroPartialProducts2x4_133)
+                                       1.74e-05 2.10e-05    2.391 4.08e-05   0.0
+  g_oc[2].g_digit[3].g_slice[25].u_pp (MacroPartialProducts2x4_134)
+                                       1.79e-05 2.08e-05    2.390 4.11e-05   0.0
+  g_oc[2].g_digit[3].g_slice[24].u_pp (MacroPartialProducts2x4_135)
+                                       1.68e-05 2.07e-05    2.391 3.99e-05   0.0
+  g_oc[2].g_digit[3].g_slice[23].u_pp (MacroPartialProducts2x4_136)
+                                       1.79e-05 2.10e-05    2.388 4.13e-05   0.0
+  g_oc[2].g_digit[3].g_slice[22].u_pp (MacroPartialProducts2x4_137)
+                                       1.78e-05 2.08e-05    2.390 4.10e-05   0.0
+  g_oc[2].g_digit[3].g_slice[21].u_pp (MacroPartialProducts2x4_138)
+                                       1.73e-05 2.07e-05    2.388 4.04e-05   0.0
+  g_oc[2].g_digit[3].g_slice[20].u_pp (MacroPartialProducts2x4_139)
+                                       1.75e-05 2.06e-05    2.389 4.05e-05   0.0
+  g_oc[2].g_digit[3].g_slice[19].u_pp (MacroPartialProducts2x4_140)
+                                       1.83e-05 2.14e-05    2.391 4.21e-05   0.0
+  g_oc[2].g_digit[3].g_slice[18].u_pp (MacroPartialProducts2x4_141)
+                                       1.72e-05 2.05e-05    2.390 4.01e-05   0.0
+  g_oc[2].g_digit[3].g_slice[17].u_pp (MacroPartialProducts2x4_142)
+                                       1.86e-05 2.16e-05    2.390 4.26e-05   0.0
+  g_oc[2].g_digit[3].g_slice[16].u_pp (MacroPartialProducts2x4_143)
+                                       1.74e-05 2.06e-05    2.390 4.04e-05   0.0
+  g_oc[2].g_digit[3].g_slice[15].u_pp (MacroPartialProducts2x4_144)
+                                       1.69e-05 2.06e-05    2.392 3.99e-05   0.0
+  g_oc[2].g_digit[3].g_slice[14].u_pp (MacroPartialProducts2x4_145)
+                                       1.75e-05 2.07e-05    2.390 4.07e-05   0.0
+  g_oc[2].g_digit[3].g_slice[13].u_pp (MacroPartialProducts2x4_146)
+                                       1.73e-05 2.04e-05    2.389 4.01e-05   0.0
+  g_oc[2].g_digit[3].g_slice[12].u_pp (MacroPartialProducts2x4_147)
+                                       1.72e-05 2.06e-05    2.387 4.02e-05   0.0
+  g_oc[2].g_digit[3].g_slice[11].u_pp (MacroPartialProducts2x4_148)
+                                       1.70e-05 2.13e-05    2.392 4.08e-05   0.0
+  g_oc[2].g_digit[3].g_slice[10].u_pp (MacroPartialProducts2x4_149)
+                                       1.80e-05 2.09e-05    2.390 4.13e-05   0.0
+  g_oc[2].g_digit[3].g_slice[9].u_pp (MacroPartialProducts2x4_150)
+                                       1.72e-05 2.08e-05    2.392 4.04e-05   0.0
+  g_oc[2].g_digit[3].g_slice[8].u_pp (MacroPartialProducts2x4_151)
+                                       1.79e-05 2.15e-05    2.393 4.18e-05   0.0
+  g_oc[2].g_digit[3].g_slice[7].u_pp (MacroPartialProducts2x4_152)
+                                       1.77e-05 2.12e-05    2.389 4.13e-05   0.0
+  g_oc[2].g_digit[3].g_slice[6].u_pp (MacroPartialProducts2x4_153)
+                                       1.73e-05 2.11e-05    2.386 4.08e-05   0.0
+  g_oc[2].g_digit[3].g_slice[5].u_pp (MacroPartialProducts2x4_154)
+                                       1.82e-05 2.13e-05    2.393 4.19e-05   0.0
+  g_oc[2].g_digit[3].g_slice[4].u_pp (MacroPartialProducts2x4_155)
+                                       1.71e-05 2.07e-05    2.390 4.02e-05   0.0
+  g_oc[2].g_digit[3].g_slice[3].u_pp (MacroPartialProducts2x4_156)
+                                       1.87e-05 2.22e-05    2.391 4.33e-05   0.0
+  g_oc[2].g_digit[3].g_slice[2].u_pp (MacroPartialProducts2x4_157)
+                                       1.79e-05 2.08e-05    2.388 4.11e-05   0.0
+  g_oc[2].g_digit[3].g_slice[1].u_pp (MacroPartialProducts2x4_158)
+                                       1.74e-05 2.06e-05    2.395 4.04e-05   0.0
+  g_oc[2].g_digit[3].g_slice[0].u_pp (MacroPartialProducts2x4_159)
+                                       1.72e-05 2.14e-05    2.388 4.09e-05   0.0
+  g_oc[2].g_digit[2].g_slice[31].u_pp (MacroPartialProducts2x4_160)
+                                       1.54e-05 1.82e-05    2.434 3.61e-05   0.0
+  g_oc[2].g_digit[2].g_slice[30].u_pp (MacroPartialProducts2x4_161)
+                                       1.46e-05 1.72e-05    2.432 3.43e-05   0.0
+  g_oc[2].g_digit[2].g_slice[29].u_pp (MacroPartialProducts2x4_162)
+                                       1.43e-05 1.72e-05    2.434 3.39e-05   0.0
+  g_oc[2].g_digit[2].g_slice[28].u_pp (MacroPartialProducts2x4_163)
+                                       1.47e-05 1.75e-05    2.433 3.47e-05   0.0
+  g_oc[2].g_digit[2].g_slice[27].u_pp (MacroPartialProducts2x4_164)
+                                       1.49e-05 1.81e-05    2.434 3.54e-05   0.0
+  g_oc[2].g_digit[2].g_slice[26].u_pp (MacroPartialProducts2x4_165)
+                                       1.48e-05 1.77e-05    2.432 3.50e-05   0.0
+  g_oc[2].g_digit[2].g_slice[25].u_pp (MacroPartialProducts2x4_166)
+                                       1.38e-05 1.58e-05    2.432 3.21e-05   0.0
+  g_oc[2].g_digit[2].g_slice[24].u_pp (MacroPartialProducts2x4_167)
+                                       1.44e-05 1.76e-05    2.434 3.44e-05   0.0
+  g_oc[2].g_digit[2].g_slice[23].u_pp (MacroPartialProducts2x4_168)
+                                       1.61e-05 1.90e-05    2.436 3.75e-05   0.0
+  g_oc[2].g_digit[2].g_slice[22].u_pp (MacroPartialProducts2x4_169)
+                                       1.54e-05 1.85e-05    2.433 3.62e-05   0.0
+  g_oc[2].g_digit[2].g_slice[21].u_pp (MacroPartialProducts2x4_170)
+                                       1.59e-05 1.93e-05    2.437 3.76e-05   0.0
+  g_oc[2].g_digit[2].g_slice[20].u_pp (MacroPartialProducts2x4_171)
+                                       1.44e-05 1.69e-05    2.434 3.37e-05   0.0
+  g_oc[2].g_digit[2].g_slice[19].u_pp (MacroPartialProducts2x4_172)
+                                       1.58e-05 1.83e-05    2.432 3.65e-05   0.0
+  g_oc[2].g_digit[2].g_slice[18].u_pp (MacroPartialProducts2x4_173)
+                                       1.47e-05 1.78e-05    2.434 3.49e-05   0.0
+  g_oc[2].g_digit[2].g_slice[17].u_pp (MacroPartialProducts2x4_174)
+                                       1.49e-05 1.74e-05    2.433 3.47e-05   0.0
+  g_oc[2].g_digit[2].g_slice[16].u_pp (MacroPartialProducts2x4_175)
+                                       1.57e-05 1.86e-05    2.433 3.67e-05   0.0
+  g_oc[2].g_digit[2].g_slice[15].u_pp (MacroPartialProducts2x4_176)
+                                       1.50e-05 1.83e-05    2.437 3.57e-05   0.0
+  g_oc[2].g_digit[2].g_slice[14].u_pp (MacroPartialProducts2x4_177)
+                                       1.53e-05 1.79e-05    2.433 3.56e-05   0.0
+  g_oc[2].g_digit[2].g_slice[13].u_pp (MacroPartialProducts2x4_178)
+                                       1.45e-05 1.73e-05    2.432 3.43e-05   0.0
+  g_oc[2].g_digit[2].g_slice[12].u_pp (MacroPartialProducts2x4_179)
+                                       1.48e-05 1.75e-05    2.432 3.48e-05   0.0
+  g_oc[2].g_digit[2].g_slice[11].u_pp (MacroPartialProducts2x4_180)
+                                       1.40e-05 1.75e-05    2.433 3.39e-05   0.0
+  g_oc[2].g_digit[2].g_slice[10].u_pp (MacroPartialProducts2x4_181)
+                                       1.45e-05 1.69e-05    2.433 3.38e-05   0.0
+  g_oc[2].g_digit[2].g_slice[9].u_pp (MacroPartialProducts2x4_182)
+                                       1.39e-05 1.68e-05    2.432 3.31e-05   0.0
+  g_oc[2].g_digit[2].g_slice[8].u_pp (MacroPartialProducts2x4_183)
+                                       1.55e-05 1.85e-05    2.435 3.65e-05   0.0
+  g_oc[2].g_digit[2].g_slice[7].u_pp (MacroPartialProducts2x4_184)
+                                       1.47e-05 1.76e-05    2.434 3.47e-05   0.0
+  g_oc[2].g_digit[2].g_slice[6].u_pp (MacroPartialProducts2x4_185)
+                                       1.44e-05 1.70e-05    2.432 3.38e-05   0.0
+  g_oc[2].g_digit[2].g_slice[5].u_pp (MacroPartialProducts2x4_186)
+                                       1.55e-05 1.82e-05    2.432 3.61e-05   0.0
+  g_oc[2].g_digit[2].g_slice[4].u_pp (MacroPartialProducts2x4_187)
+                                       1.45e-05 1.70e-05    2.433 3.40e-05   0.0
+  g_oc[2].g_digit[2].g_slice[3].u_pp (MacroPartialProducts2x4_188)
+                                       1.57e-05 1.87e-05    2.433 3.68e-05   0.0
+  g_oc[2].g_digit[2].g_slice[2].u_pp (MacroPartialProducts2x4_189)
+                                       1.48e-05 1.72e-05    2.433 3.44e-05   0.0
+  g_oc[2].g_digit[2].g_slice[1].u_pp (MacroPartialProducts2x4_190)
+                                       1.47e-05 1.77e-05    2.434 3.49e-05   0.0
+  g_oc[2].g_digit[2].g_slice[0].u_pp (MacroPartialProducts2x4_191)
+                                       1.47e-05 1.84e-05    2.436 3.55e-05   0.0
+  g_oc[2].g_digit[1].g_slice[31].u_pp (MacroPartialProducts2x4_192)
+                                       1.63e-05 1.90e-05    2.412 3.77e-05   0.0
+  g_oc[2].g_digit[1].g_slice[30].u_pp (MacroPartialProducts2x4_193)
+                                       1.62e-05 1.94e-05    2.412 3.80e-05   0.0
+  g_oc[2].g_digit[1].g_slice[29].u_pp (MacroPartialProducts2x4_194)
+                                       1.63e-05 1.97e-05    2.414 3.84e-05   0.0
+  g_oc[2].g_digit[1].g_slice[28].u_pp (MacroPartialProducts2x4_195)
+                                       1.62e-05 1.91e-05    2.414 3.78e-05   0.0
+  g_oc[2].g_digit[1].g_slice[27].u_pp (MacroPartialProducts2x4_196)
+                                       1.55e-05 1.88e-05    2.413 3.67e-05   0.0
+  g_oc[2].g_digit[1].g_slice[26].u_pp (MacroPartialProducts2x4_197)
+                                       1.66e-05 1.98e-05    2.414 3.87e-05   0.0
+  g_oc[2].g_digit[1].g_slice[25].u_pp (MacroPartialProducts2x4_198)
+                                       1.63e-05 1.86e-05    2.409 3.73e-05   0.0
+  g_oc[2].g_digit[1].g_slice[24].u_pp (MacroPartialProducts2x4_199)
+                                       1.57e-05 1.95e-05    2.411 3.76e-05   0.0
+  g_oc[2].g_digit[1].g_slice[23].u_pp (MacroPartialProducts2x4_200)
+                                       1.67e-05 1.97e-05    2.414 3.88e-05   0.0
+  g_oc[2].g_digit[1].g_slice[22].u_pp (MacroPartialProducts2x4_201)
+                                       1.67e-05 1.96e-05    2.414 3.87e-05   0.0
+  g_oc[2].g_digit[1].g_slice[21].u_pp (MacroPartialProducts2x4_202)
+                                       1.61e-05 1.91e-05    2.410 3.76e-05   0.0
+  g_oc[2].g_digit[1].g_slice[20].u_pp (MacroPartialProducts2x4_203)
+                                       1.64e-05 1.88e-05    2.410 3.76e-05   0.0
+  g_oc[2].g_digit[1].g_slice[19].u_pp (MacroPartialProducts2x4_204)
+                                       1.69e-05 1.95e-05    2.413 3.87e-05   0.0
+  g_oc[2].g_digit[1].g_slice[18].u_pp (MacroPartialProducts2x4_205)
+                                       1.66e-05 1.99e-05    2.416 3.90e-05   0.0
+  g_oc[2].g_digit[1].g_slice[17].u_pp (MacroPartialProducts2x4_206)
+                                       1.68e-05 1.97e-05    2.414 3.89e-05   0.0
+  g_oc[2].g_digit[1].g_slice[16].u_pp (MacroPartialProducts2x4_207)
+                                       1.63e-05 1.90e-05    2.410 3.77e-05   0.0
+  g_oc[2].g_digit[1].g_slice[15].u_pp (MacroPartialProducts2x4_208)
+                                       1.59e-05 1.94e-05    2.416 3.77e-05   0.0
+  g_oc[2].g_digit[1].g_slice[14].u_pp (MacroPartialProducts2x4_209)
+                                       1.61e-05 1.89e-05    2.411 3.74e-05   0.0
+  g_oc[2].g_digit[1].g_slice[13].u_pp (MacroPartialProducts2x4_210)
+                                       1.59e-05 1.88e-05    2.413 3.71e-05   0.0
+  g_oc[2].g_digit[1].g_slice[12].u_pp (MacroPartialProducts2x4_211)
+                                       1.65e-05 1.98e-05    2.414 3.88e-05   0.0
+  g_oc[2].g_digit[1].g_slice[11].u_pp (MacroPartialProducts2x4_212)
+                                       1.58e-05 1.97e-05    2.416 3.79e-05   0.0
+  g_oc[2].g_digit[1].g_slice[10].u_pp (MacroPartialProducts2x4_213)
+                                       1.57e-05 1.81e-05    2.412 3.63e-05   0.0
+  g_oc[2].g_digit[1].g_slice[9].u_pp (MacroPartialProducts2x4_214)
+                                       1.54e-05 1.86e-05    2.411 3.64e-05   0.0
+  g_oc[2].g_digit[1].g_slice[8].u_pp (MacroPartialProducts2x4_215)
+                                       1.60e-05 1.90e-05    2.411 3.74e-05   0.0
+  g_oc[2].g_digit[1].g_slice[7].u_pp (MacroPartialProducts2x4_216)
+                                       1.60e-05 1.89e-05    2.412 3.73e-05   0.0
+  g_oc[2].g_digit[1].g_slice[6].u_pp (MacroPartialProducts2x4_217)
+                                       1.60e-05 1.93e-05    2.412 3.77e-05   0.0
+  g_oc[2].g_digit[1].g_slice[5].u_pp (MacroPartialProducts2x4_218)
+                                       1.64e-05 1.93e-05    2.414 3.81e-05   0.0
+  g_oc[2].g_digit[1].g_slice[4].u_pp (MacroPartialProducts2x4_219)
+                                       1.56e-05 1.84e-05    2.412 3.64e-05   0.0
+  g_oc[2].g_digit[1].g_slice[3].u_pp (MacroPartialProducts2x4_220)
+                                       1.67e-05 2.00e-05    2.413 3.91e-05   0.0
+  g_oc[2].g_digit[1].g_slice[2].u_pp (MacroPartialProducts2x4_221)
+                                       1.68e-05 1.97e-05    2.414 3.89e-05   0.0
+  g_oc[2].g_digit[1].g_slice[1].u_pp (MacroPartialProducts2x4_222)
+                                       1.57e-05 1.89e-05    2.412 3.70e-05   0.0
+  g_oc[2].g_digit[1].g_slice[0].u_pp (MacroPartialProducts2x4_223)
+                                       1.56e-05 1.92e-05    2.413 3.72e-05   0.0
+  g_oc[2].g_digit[0].g_slice[31].u_pp (MacroPartialProducts2x4_224)
+                                       1.57e-05 1.82e-05    2.434 3.63e-05   0.0
+  g_oc[2].g_digit[0].g_slice[30].u_pp (MacroPartialProducts2x4_225)
+                                       1.49e-05 1.78e-05    2.434 3.52e-05   0.0
+  g_oc[2].g_digit[0].g_slice[29].u_pp (MacroPartialProducts2x4_226)
+                                       1.47e-05 1.77e-05    2.432 3.48e-05   0.0
+  g_oc[2].g_digit[0].g_slice[28].u_pp (MacroPartialProducts2x4_227)
+                                       1.48e-05 1.75e-05    2.436 3.48e-05   0.0
+  g_oc[2].g_digit[0].g_slice[27].u_pp (MacroPartialProducts2x4_228)
+                                       1.40e-05 1.68e-05    2.433 3.32e-05   0.0
+  g_oc[2].g_digit[0].g_slice[26].u_pp (MacroPartialProducts2x4_229)
+                                       1.52e-05 1.82e-05    2.436 3.58e-05   0.0
+  g_oc[2].g_digit[0].g_slice[25].u_pp (MacroPartialProducts2x4_230)
+                                       1.46e-05 1.69e-05    2.434 3.39e-05   0.0
+  g_oc[2].g_digit[0].g_slice[24].u_pp (MacroPartialProducts2x4_231)
+                                       1.52e-05 1.89e-05    2.436 3.66e-05   0.0
+  g_oc[2].g_digit[0].g_slice[23].u_pp (MacroPartialProducts2x4_232)
+                                       1.54e-05 1.80e-05    2.435 3.58e-05   0.0
+  g_oc[2].g_digit[0].g_slice[22].u_pp (MacroPartialProducts2x4_233)
+                                       1.50e-05 1.76e-05    2.434 3.50e-05   0.0
+  g_oc[2].g_digit[0].g_slice[21].u_pp (MacroPartialProducts2x4_234)
+                                       1.44e-05 1.73e-05    2.432 3.42e-05   0.0
+  g_oc[2].g_digit[0].g_slice[20].u_pp (MacroPartialProducts2x4_235)
+                                       1.46e-05 1.74e-05    2.433 3.45e-05   0.0
+  g_oc[2].g_digit[0].g_slice[19].u_pp (MacroPartialProducts2x4_236)
+                                       1.53e-05 1.77e-05    2.433 3.54e-05   0.0
+  g_oc[2].g_digit[0].g_slice[18].u_pp (MacroPartialProducts2x4_237)
+                                       1.51e-05 1.81e-05    2.434 3.56e-05   0.0
+  g_oc[2].g_digit[0].g_slice[17].u_pp (MacroPartialProducts2x4_238)
+                                       1.54e-05 1.80e-05    2.433 3.58e-05   0.0
+  g_oc[2].g_digit[0].g_slice[16].u_pp (MacroPartialProducts2x4_239)
+                                       1.59e-05 1.89e-05    2.436 3.73e-05   0.0
+  g_oc[2].g_digit[0].g_slice[15].u_pp (MacroPartialProducts2x4_240)
+                                       1.51e-05 1.81e-05    2.436 3.57e-05   0.0
+  g_oc[2].g_digit[0].g_slice[14].u_pp (MacroPartialProducts2x4_241)
+                                       1.55e-05 1.84e-05    2.436 3.63e-05   0.0
+  g_oc[2].g_digit[0].g_slice[13].u_pp (MacroPartialProducts2x4_242)
+                                       1.36e-05 1.59e-05    2.433 3.19e-05   0.0
+  g_oc[2].g_digit[0].g_slice[12].u_pp (MacroPartialProducts2x4_243)
+                                       1.46e-05 1.74e-05    2.434 3.45e-05   0.0
+  g_oc[2].g_digit[0].g_slice[11].u_pp (MacroPartialProducts2x4_244)
+                                       1.49e-05 1.85e-05    2.435 3.58e-05   0.0
+  g_oc[2].g_digit[0].g_slice[10].u_pp (MacroPartialProducts2x4_245)
+                                       1.43e-05 1.67e-05    2.433 3.34e-05   0.0
+  g_oc[2].g_digit[0].g_slice[9].u_pp (MacroPartialProducts2x4_246)
+                                       1.48e-05 1.79e-05    2.434 3.51e-05   0.0
+  g_oc[2].g_digit[0].g_slice[8].u_pp (MacroPartialProducts2x4_247)
+                                       1.49e-05 1.76e-05    2.434 3.50e-05   0.0
+  g_oc[2].g_digit[0].g_slice[7].u_pp (MacroPartialProducts2x4_248)
+                                       1.50e-05 1.81e-05    2.434 3.56e-05   0.0
+  g_oc[2].g_digit[0].g_slice[6].u_pp (MacroPartialProducts2x4_249)
+                                       1.41e-05 1.68e-05    2.432 3.33e-05   0.0
+  g_oc[2].g_digit[0].g_slice[5].u_pp (MacroPartialProducts2x4_250)
+                                       1.61e-05 1.92e-05    2.436 3.77e-05   0.0
+  g_oc[2].g_digit[0].g_slice[4].u_pp (MacroPartialProducts2x4_251)
+                                       1.54e-05 1.86e-05    2.434 3.64e-05   0.0
+  g_oc[2].g_digit[0].g_slice[3].u_pp (MacroPartialProducts2x4_252)
+                                       1.55e-05 1.86e-05    2.436 3.65e-05   0.0
+  g_oc[2].g_digit[0].g_slice[2].u_pp (MacroPartialProducts2x4_253)
+                                       1.49e-05 1.74e-05    2.434 3.47e-05   0.0
+  g_oc[2].g_digit[0].g_slice[1].u_pp (MacroPartialProducts2x4_254)
+                                       1.50e-05 1.82e-05    2.436 3.56e-05   0.0
+  g_oc[2].g_digit[0].g_slice[0].u_pp (MacroPartialProducts2x4_255)
+                                       1.39e-05 1.74e-05    2.435 3.37e-05   0.0
+  g_oc[1].u_fusion (MacroWeightFusion_2)
+                                       3.33e-03 7.01e-03  559.811 1.09e-02   0.1
+  g_oc[1].g_digit[3].g_slice[31].u_pp (MacroPartialProducts2x4_256)
+                                       1.99e-05 2.27e-05    2.392 4.49e-05   0.0
+  g_oc[1].g_digit[3].g_slice[30].u_pp (MacroPartialProducts2x4_257)
+                                       1.89e-05 2.21e-05    2.394 4.35e-05   0.0
+  g_oc[1].g_digit[3].g_slice[29].u_pp (MacroPartialProducts2x4_258)
+                                       1.89e-05 2.21e-05    2.389 4.34e-05   0.0
+  g_oc[1].g_digit[3].g_slice[28].u_pp (MacroPartialProducts2x4_259)
+                                       1.96e-05 2.26e-05    2.389 4.46e-05   0.0
+  g_oc[1].g_digit[3].g_slice[27].u_pp (MacroPartialProducts2x4_260)
+                                       1.88e-05 2.26e-05    2.390 4.38e-05   0.0
+  g_oc[1].g_digit[3].g_slice[26].u_pp (MacroPartialProducts2x4_261)
+                                       1.88e-05 2.20e-05    2.389 4.33e-05   0.0
+  g_oc[1].g_digit[3].g_slice[25].u_pp (MacroPartialProducts2x4_262)
+                                       1.97e-05 2.21e-05    2.392 4.42e-05   0.0
+  g_oc[1].g_digit[3].g_slice[24].u_pp (MacroPartialProducts2x4_263)
+                                       1.93e-05 2.33e-05    2.391 4.50e-05   0.0
+  g_oc[1].g_digit[3].g_slice[23].u_pp (MacroPartialProducts2x4_264)
+                                       1.97e-05 2.25e-05    2.391 4.46e-05   0.0
+  g_oc[1].g_digit[3].g_slice[22].u_pp (MacroPartialProducts2x4_265)
+                                       1.94e-05 2.23e-05    2.391 4.41e-05   0.0
+  g_oc[1].g_digit[3].g_slice[21].u_pp (MacroPartialProducts2x4_266)
+                                       1.87e-05 2.20e-05    2.389 4.31e-05   0.0
+  g_oc[1].g_digit[3].g_slice[20].u_pp (MacroPartialProducts2x4_267)
+                                       1.93e-05 2.22e-05    2.392 4.39e-05   0.0
+  g_oc[1].g_digit[3].g_slice[19].u_pp (MacroPartialProducts2x4_268)
+                                       2.01e-05 2.27e-05    2.391 4.53e-05   0.0
+  g_oc[1].g_digit[3].g_slice[18].u_pp (MacroPartialProducts2x4_269)
+                                       1.95e-05 2.27e-05    2.392 4.46e-05   0.0
+  g_oc[1].g_digit[3].g_slice[17].u_pp (MacroPartialProducts2x4_270)
+                                       1.95e-05 2.20e-05    2.389 4.39e-05   0.0
+  g_oc[1].g_digit[3].g_slice[16].u_pp (MacroPartialProducts2x4_271)
+                                       1.96e-05 2.22e-05    2.392 4.42e-05   0.0
+  g_oc[1].g_digit[3].g_slice[15].u_pp (MacroPartialProducts2x4_272)
+                                       1.86e-05 2.19e-05    2.390 4.29e-05   0.0
+  g_oc[1].g_digit[3].g_slice[14].u_pp (MacroPartialProducts2x4_273)
+                                       1.99e-05 2.27e-05    2.392 4.50e-05   0.0
+  g_oc[1].g_digit[3].g_slice[13].u_pp (MacroPartialProducts2x4_274)
+                                       1.94e-05 2.22e-05    2.389 4.40e-05   0.0
+  g_oc[1].g_digit[3].g_slice[12].u_pp (MacroPartialProducts2x4_275)
+                                       1.86e-05 2.18e-05    2.391 4.28e-05   0.0
+  g_oc[1].g_digit[3].g_slice[11].u_pp (MacroPartialProducts2x4_276)
+                                       1.76e-05 2.11e-05    2.390 4.11e-05   0.0
+  g_oc[1].g_digit[3].g_slice[10].u_pp (MacroPartialProducts2x4_277)
+                                       1.90e-05 2.12e-05    2.392 4.25e-05   0.0
+  g_oc[1].g_digit[3].g_slice[9].u_pp (MacroPartialProducts2x4_278)
+                                       1.85e-05 2.15e-05    2.392 4.24e-05   0.0
+  g_oc[1].g_digit[3].g_slice[8].u_pp (MacroPartialProducts2x4_279)
+                                       1.84e-05 2.15e-05    2.389 4.23e-05   0.0
+  g_oc[1].g_digit[3].g_slice[7].u_pp (MacroPartialProducts2x4_280)
+                                       1.98e-05 2.30e-05    2.391 4.52e-05   0.0
+  g_oc[1].g_digit[3].g_slice[6].u_pp (MacroPartialProducts2x4_281)
+                                       1.88e-05 2.20e-05    2.387 4.31e-05   0.0
+  g_oc[1].g_digit[3].g_slice[5].u_pp (MacroPartialProducts2x4_282)
+                                       1.95e-05 2.22e-05    2.391 4.41e-05   0.0
+  g_oc[1].g_digit[3].g_slice[4].u_pp (MacroPartialProducts2x4_283)
+                                       1.92e-05 2.22e-05    2.390 4.38e-05   0.0
+  g_oc[1].g_digit[3].g_slice[3].u_pp (MacroPartialProducts2x4_284)
+                                       2.01e-05 2.31e-05    2.390 4.57e-05   0.0
+  g_oc[1].g_digit[3].g_slice[2].u_pp (MacroPartialProducts2x4_285)
+                                       2.05e-05 2.27e-05    2.396 4.56e-05   0.0
+  g_oc[1].g_digit[3].g_slice[1].u_pp (MacroPartialProducts2x4_286)
+                                       1.84e-05 2.17e-05    2.389 4.24e-05   0.0
+  g_oc[1].g_digit[3].g_slice[0].u_pp (MacroPartialProducts2x4_287)
+                                       1.84e-05 2.19e-05    2.390 4.27e-05   0.0
+  g_oc[1].g_digit[2].g_slice[31].u_pp (MacroPartialProducts2x4_288)
+                                       1.66e-05 1.87e-05    2.435 3.78e-05   0.0
+  g_oc[1].g_digit[2].g_slice[30].u_pp (MacroPartialProducts2x4_289)
+                                       1.62e-05 1.90e-05    2.434 3.76e-05   0.0
+  g_oc[1].g_digit[2].g_slice[29].u_pp (MacroPartialProducts2x4_290)
+                                       1.64e-05 1.88e-05    2.435 3.76e-05   0.0
+  g_oc[1].g_digit[2].g_slice[28].u_pp (MacroPartialProducts2x4_291)
+                                       1.66e-05 1.94e-05    2.436 3.85e-05   0.0
+  g_oc[1].g_digit[2].g_slice[27].u_pp (MacroPartialProducts2x4_292)
+                                       1.68e-05 2.02e-05    2.437 3.94e-05   0.0
+  g_oc[1].g_digit[2].g_slice[26].u_pp (MacroPartialProducts2x4_293)
+                                       1.63e-05 1.89e-05    2.434 3.77e-05   0.0
+  g_oc[1].g_digit[2].g_slice[25].u_pp (MacroPartialProducts2x4_294)
+                                       1.65e-05 1.84e-05    2.432 3.73e-05   0.0
+  g_oc[1].g_digit[2].g_slice[24].u_pp (MacroPartialProducts2x4_295)
+                                       1.63e-05 1.98e-05    2.436 3.85e-05   0.0
+  g_oc[1].g_digit[2].g_slice[23].u_pp (MacroPartialProducts2x4_296)
+                                       1.66e-05 1.89e-05    2.435 3.79e-05   0.0
+  g_oc[1].g_digit[2].g_slice[22].u_pp (MacroPartialProducts2x4_297)
+                                       1.63e-05 1.86e-05    2.436 3.73e-05   0.0
+  g_oc[1].g_digit[2].g_slice[21].u_pp (MacroPartialProducts2x4_298)
+                                       1.65e-05 1.89e-05    2.435 3.78e-05   0.0
+  g_oc[1].g_digit[2].g_slice[20].u_pp (MacroPartialProducts2x4_299)
+                                       1.70e-05 1.93e-05    2.435 3.88e-05   0.0
+  g_oc[1].g_digit[2].g_slice[19].u_pp (MacroPartialProducts2x4_300)
+                                       1.76e-05 1.97e-05    2.437 3.98e-05   0.0
+  g_oc[1].g_digit[2].g_slice[18].u_pp (MacroPartialProducts2x4_301)
+                                       1.61e-05 1.84e-05    2.434 3.69e-05   0.0
+  g_oc[1].g_digit[2].g_slice[17].u_pp (MacroPartialProducts2x4_302)
+                                       1.60e-05 1.80e-05    2.432 3.65e-05   0.0
+  g_oc[1].g_digit[2].g_slice[16].u_pp (MacroPartialProducts2x4_303)
+                                       1.76e-05 2.00e-05    2.435 4.00e-05   0.0
+  g_oc[1].g_digit[2].g_slice[15].u_pp (MacroPartialProducts2x4_304)
+                                       1.62e-05 1.88e-05    2.435 3.74e-05   0.0
+  g_oc[1].g_digit[2].g_slice[14].u_pp (MacroPartialProducts2x4_305)
+                                       1.79e-05 2.06e-05    2.437 4.09e-05   0.0
+  g_oc[1].g_digit[2].g_slice[13].u_pp (MacroPartialProducts2x4_306)
+                                       1.68e-05 1.94e-05    2.433 3.87e-05   0.0
+  g_oc[1].g_digit[2].g_slice[12].u_pp (MacroPartialProducts2x4_307)
+                                       1.65e-05 1.95e-05    2.438 3.84e-05   0.0
+  g_oc[1].g_digit[2].g_slice[11].u_pp (MacroPartialProducts2x4_308)
+                                       1.57e-05 1.88e-05    2.436 3.70e-05   0.0
+  g_oc[1].g_digit[2].g_slice[10].u_pp (MacroPartialProducts2x4_309)
+                                       1.62e-05 1.81e-05    2.433 3.67e-05   0.0
+  g_oc[1].g_digit[2].g_slice[9].u_pp (MacroPartialProducts2x4_310)
+                                       1.61e-05 1.89e-05    2.434 3.75e-05   0.0
+  g_oc[1].g_digit[2].g_slice[8].u_pp (MacroPartialProducts2x4_311)
+                                       1.69e-05 1.97e-05    2.436 3.90e-05   0.0
+  g_oc[1].g_digit[2].g_slice[7].u_pp (MacroPartialProducts2x4_312)
+                                       1.67e-05 1.93e-05    2.435 3.84e-05   0.0
+  g_oc[1].g_digit[2].g_slice[6].u_pp (MacroPartialProducts2x4_313)
+                                       1.64e-05 1.89e-05    2.434 3.77e-05   0.0
+  g_oc[1].g_digit[2].g_slice[5].u_pp (MacroPartialProducts2x4_314)
+                                       1.70e-05 1.95e-05    2.436 3.89e-05   0.0
+  g_oc[1].g_digit[2].g_slice[4].u_pp (MacroPartialProducts2x4_315)
+                                       1.67e-05 1.90e-05    2.435 3.81e-05   0.0
+  g_oc[1].g_digit[2].g_slice[3].u_pp (MacroPartialProducts2x4_316)
+                                       1.76e-05 2.00e-05    2.435 4.00e-05   0.0
+  g_oc[1].g_digit[2].g_slice[2].u_pp (MacroPartialProducts2x4_317)
+                                       1.62e-05 1.82e-05    2.435 3.68e-05   0.0
+  g_oc[1].g_digit[2].g_slice[1].u_pp (MacroPartialProducts2x4_318)
+                                       1.67e-05 1.92e-05    2.435 3.83e-05   0.0
+  g_oc[1].g_digit[2].g_slice[0].u_pp (MacroPartialProducts2x4_319)
+                                       1.61e-05 1.93e-05    2.437 3.78e-05   0.0
+  g_oc[1].g_digit[1].g_slice[31].u_pp (MacroPartialProducts2x4_320)
+                                       1.80e-05 2.05e-05    2.415 4.09e-05   0.0
+  g_oc[1].g_digit[1].g_slice[30].u_pp (MacroPartialProducts2x4_321)
+                                       1.74e-05 2.06e-05    2.413 4.04e-05   0.0
+  g_oc[1].g_digit[1].g_slice[29].u_pp (MacroPartialProducts2x4_322)
+                                       1.76e-05 2.05e-05    2.416 4.05e-05   0.0
+  g_oc[1].g_digit[1].g_slice[28].u_pp (MacroPartialProducts2x4_323)
+                                       1.81e-05 2.08e-05    2.414 4.13e-05   0.0
+  g_oc[1].g_digit[1].g_slice[27].u_pp (MacroPartialProducts2x4_324)
+                                       1.66e-05 1.96e-05    2.413 3.86e-05   0.0
+  g_oc[1].g_digit[1].g_slice[26].u_pp (MacroPartialProducts2x4_325)
+                                       1.75e-05 2.06e-05    2.414 4.04e-05   0.0
+  g_oc[1].g_digit[1].g_slice[25].u_pp (MacroPartialProducts2x4_326)
+                                       1.80e-05 1.99e-05    2.411 4.03e-05   0.0
+  g_oc[1].g_digit[1].g_slice[24].u_pp (MacroPartialProducts2x4_327)
+                                       1.74e-05 2.12e-05    2.416 4.10e-05   0.0
+  g_oc[1].g_digit[1].g_slice[23].u_pp (MacroPartialProducts2x4_328)
+                                       1.85e-05 2.13e-05    2.418 4.22e-05   0.0
+  g_oc[1].g_digit[1].g_slice[22].u_pp (MacroPartialProducts2x4_329)
+                                       1.89e-05 2.13e-05    2.416 4.26e-05   0.0
+  g_oc[1].g_digit[1].g_slice[21].u_pp (MacroPartialProducts2x4_330)
+                                       1.74e-05 2.01e-05    2.414 3.99e-05   0.0
+  g_oc[1].g_digit[1].g_slice[20].u_pp (MacroPartialProducts2x4_331)
+                                       1.78e-05 2.01e-05    2.413 4.03e-05   0.0
+  g_oc[1].g_digit[1].g_slice[19].u_pp (MacroPartialProducts2x4_332)
+                                       1.77e-05 1.98e-05    2.413 3.99e-05   0.0
+  g_oc[1].g_digit[1].g_slice[18].u_pp (MacroPartialProducts2x4_333)
+                                       1.75e-05 2.03e-05    2.413 4.02e-05   0.0
+  g_oc[1].g_digit[1].g_slice[17].u_pp (MacroPartialProducts2x4_334)
+                                       1.82e-05 2.05e-05    2.415 4.11e-05   0.0
+  g_oc[1].g_digit[1].g_slice[16].u_pp (MacroPartialProducts2x4_335)
+                                       1.81e-05 2.06e-05    2.415 4.11e-05   0.0
+  g_oc[1].g_digit[1].g_slice[15].u_pp (MacroPartialProducts2x4_336)
+                                       1.75e-05 2.03e-05    2.413 4.01e-05   0.0
+  g_oc[1].g_digit[1].g_slice[14].u_pp (MacroPartialProducts2x4_337)
+                                       1.77e-05 2.04e-05    2.415 4.05e-05   0.0
+  g_oc[1].g_digit[1].g_slice[13].u_pp (MacroPartialProducts2x4_338)
+                                       1.72e-05 1.98e-05    2.414 3.94e-05   0.0
+  g_oc[1].g_digit[1].g_slice[12].u_pp (MacroPartialProducts2x4_339)
+                                       1.75e-05 2.04e-05    2.417 4.03e-05   0.0
+  g_oc[1].g_digit[1].g_slice[11].u_pp (MacroPartialProducts2x4_340)
+                                       1.68e-05 2.03e-05    2.414 3.95e-05   0.0
+  g_oc[1].g_digit[1].g_slice[10].u_pp (MacroPartialProducts2x4_341)
+                                       1.78e-05 2.00e-05    2.415 4.02e-05   0.0
+  g_oc[1].g_digit[1].g_slice[9].u_pp (MacroPartialProducts2x4_342)
+                                       1.75e-05 2.06e-05    2.412 4.05e-05   0.0
+  g_oc[1].g_digit[1].g_slice[8].u_pp (MacroPartialProducts2x4_343)
+                                       1.86e-05 2.16e-05    2.415 4.26e-05   0.0
+  g_oc[1].g_digit[1].g_slice[7].u_pp (MacroPartialProducts2x4_344)
+                                       1.81e-05 2.10e-05    2.416 4.14e-05   0.0
+  g_oc[1].g_digit[1].g_slice[6].u_pp (MacroPartialProducts2x4_345)
+                                       1.71e-05 1.99e-05    2.410 3.94e-05   0.0
+  g_oc[1].g_digit[1].g_slice[5].u_pp (MacroPartialProducts2x4_346)
+                                       1.81e-05 2.07e-05    2.415 4.12e-05   0.0
+  g_oc[1].g_digit[1].g_slice[4].u_pp (MacroPartialProducts2x4_347)
+                                       1.73e-05 1.99e-05    2.412 3.96e-05   0.0
+  g_oc[1].g_digit[1].g_slice[3].u_pp (MacroPartialProducts2x4_348)
+                                       1.83e-05 2.12e-05    2.413 4.19e-05   0.0
+  g_oc[1].g_digit[1].g_slice[2].u_pp (MacroPartialProducts2x4_349)
+                                       1.87e-05 2.13e-05    2.415 4.24e-05   0.0
+  g_oc[1].g_digit[1].g_slice[1].u_pp (MacroPartialProducts2x4_350)
+                                       1.74e-05 2.04e-05    2.416 4.03e-05   0.0
+  g_oc[1].g_digit[1].g_slice[0].u_pp (MacroPartialProducts2x4_351)
+                                       1.65e-05 1.99e-05    2.414 3.88e-05   0.0
+  g_oc[1].g_digit[0].g_slice[31].u_pp (MacroPartialProducts2x4_352)
+                                       1.65e-05 1.89e-05    2.434 3.79e-05   0.0
+  g_oc[1].g_digit[0].g_slice[30].u_pp (MacroPartialProducts2x4_353)
+                                       1.60e-05 1.92e-05    2.435 3.76e-05   0.0
+  g_oc[1].g_digit[0].g_slice[29].u_pp (MacroPartialProducts2x4_354)
+                                       1.61e-05 1.87e-05    2.433 3.73e-05   0.0
+  g_oc[1].g_digit[0].g_slice[28].u_pp (MacroPartialProducts2x4_355)
+                                       1.73e-05 1.95e-05    2.436 3.93e-05   0.0
+  g_oc[1].g_digit[0].g_slice[27].u_pp (MacroPartialProducts2x4_356)
+                                       1.64e-05 1.94e-05    2.436 3.82e-05   0.0
+  g_oc[1].g_digit[0].g_slice[26].u_pp (MacroPartialProducts2x4_357)
+                                       1.71e-05 2.02e-05    2.436 3.98e-05   0.0
+  g_oc[1].g_digit[0].g_slice[25].u_pp (MacroPartialProducts2x4_358)
+                                       1.70e-05 1.90e-05    2.437 3.84e-05   0.0
+  g_oc[1].g_digit[0].g_slice[24].u_pp (MacroPartialProducts2x4_359)
+                                       1.58e-05 1.89e-05    2.436 3.71e-05   0.0
+  g_oc[1].g_digit[0].g_slice[23].u_pp (MacroPartialProducts2x4_360)
+                                       1.67e-05 1.89e-05    2.433 3.80e-05   0.0
+  g_oc[1].g_digit[0].g_slice[22].u_pp (MacroPartialProducts2x4_361)
+                                       1.69e-05 1.94e-05    2.435 3.87e-05   0.0
+  g_oc[1].g_digit[0].g_slice[21].u_pp (MacroPartialProducts2x4_362)
+                                       1.54e-05 1.82e-05    2.436 3.60e-05   0.0
+  g_oc[1].g_digit[0].g_slice[20].u_pp (MacroPartialProducts2x4_363)
+                                       1.66e-05 1.86e-05    2.435 3.76e-05   0.0
+  g_oc[1].g_digit[0].g_slice[19].u_pp (MacroPartialProducts2x4_364)
+                                       1.63e-05 1.79e-05    2.434 3.66e-05   0.0
+  g_oc[1].g_digit[0].g_slice[18].u_pp (MacroPartialProducts2x4_365)
+                                       1.69e-05 1.93e-05    2.435 3.87e-05   0.0
+  g_oc[1].g_digit[0].g_slice[17].u_pp (MacroPartialProducts2x4_366)
+                                       1.66e-05 1.88e-05    2.434 3.79e-05   0.0
+  g_oc[1].g_digit[0].g_slice[16].u_pp (MacroPartialProducts2x4_367)
+                                       1.73e-05 2.01e-05    2.436 3.97e-05   0.0
+  g_oc[1].g_digit[0].g_slice[15].u_pp (MacroPartialProducts2x4_368)
+                                       1.59e-05 1.83e-05    2.432 3.66e-05   0.0
+  g_oc[1].g_digit[0].g_slice[14].u_pp (MacroPartialProducts2x4_369)
+                                       1.71e-05 1.98e-05    2.435 3.93e-05   0.0
+  g_oc[1].g_digit[0].g_slice[13].u_pp (MacroPartialProducts2x4_370)
+                                       1.60e-05 1.84e-05    2.434 3.69e-05   0.0
+  g_oc[1].g_digit[0].g_slice[12].u_pp (MacroPartialProducts2x4_371)
+                                       1.55e-05 1.79e-05    2.435 3.59e-05   0.0
+  g_oc[1].g_digit[0].g_slice[11].u_pp (MacroPartialProducts2x4_372)
+                                       1.60e-05 1.92e-05    2.434 3.76e-05   0.0
+  g_oc[1].g_digit[0].g_slice[10].u_pp (MacroPartialProducts2x4_373)
+                                       1.62e-05 1.81e-05    2.435 3.68e-05   0.0
+  g_oc[1].g_digit[0].g_slice[9].u_pp (MacroPartialProducts2x4_374)
+                                       1.66e-05 1.94e-05    2.437 3.85e-05   0.0
+  g_oc[1].g_digit[0].g_slice[8].u_pp (MacroPartialProducts2x4_375)
+                                       1.62e-05 1.85e-05    2.433 3.71e-05   0.0
+  g_oc[1].g_digit[0].g_slice[7].u_pp (MacroPartialProducts2x4_376)
+                                       1.73e-05 2.02e-05    2.437 3.99e-05   0.0
+  g_oc[1].g_digit[0].g_slice[6].u_pp (MacroPartialProducts2x4_377)
+                                       1.62e-05 1.88e-05    2.435 3.74e-05   0.0
+  g_oc[1].g_digit[0].g_slice[5].u_pp (MacroPartialProducts2x4_378)
+                                       1.62e-05 1.82e-05    2.432 3.68e-05   0.0
+  g_oc[1].g_digit[0].g_slice[4].u_pp (MacroPartialProducts2x4_379)
+                                       1.66e-05 1.93e-05    2.436 3.83e-05   0.0
+  g_oc[1].g_digit[0].g_slice[3].u_pp (MacroPartialProducts2x4_380)
+                                       1.65e-05 1.92e-05    2.434 3.81e-05   0.0
+  g_oc[1].g_digit[0].g_slice[2].u_pp (MacroPartialProducts2x4_381)
+                                       1.73e-05 1.98e-05    2.438 3.95e-05   0.0
+  g_oc[1].g_digit[0].g_slice[1].u_pp (MacroPartialProducts2x4_382)
+                                       1.66e-05 1.95e-05    2.435 3.85e-05   0.0
+  g_oc[1].g_digit[0].g_slice[0].u_pp (MacroPartialProducts2x4_383)
+                                       1.60e-05 1.93e-05    2.436 3.77e-05   0.0
+  g_oc[0].u_fusion (MacroWeightFusion_3)
+                                       2.71e-03 5.69e-03  560.506 8.96e-03   0.1
+  g_oc[0].g_digit[3].g_slice[31].u_pp (MacroPartialProducts2x4_384)
+                                       1.81e-05 2.13e-05    2.390 4.17e-05   0.0
+  g_oc[0].g_digit[3].g_slice[30].u_pp (MacroPartialProducts2x4_385)
+                                       1.80e-05 2.15e-05    2.389 4.19e-05   0.0
+  g_oc[0].g_digit[3].g_slice[29].u_pp (MacroPartialProducts2x4_386)
+                                       1.72e-05 2.05e-05    2.391 4.01e-05   0.0
+  g_oc[0].g_digit[3].g_slice[28].u_pp (MacroPartialProducts2x4_387)
+                                       1.73e-05 2.01e-05    2.394 3.98e-05   0.0
+  g_oc[0].g_digit[3].g_slice[27].u_pp (MacroPartialProducts2x4_388)
+                                       1.79e-05 2.19e-05    2.391 4.22e-05   0.0
+  g_oc[0].g_digit[3].g_slice[26].u_pp (MacroPartialProducts2x4_389)
+                                       1.77e-05 2.13e-05    2.393 4.14e-05   0.0
+  g_oc[0].g_digit[3].g_slice[25].u_pp (MacroPartialProducts2x4_390)
+                                       1.83e-05 2.10e-05    2.392 4.17e-05   0.0
+  g_oc[0].g_digit[3].g_slice[24].u_pp (MacroPartialProducts2x4_391)
+                                       1.78e-05 2.16e-05    2.392 4.18e-05   0.0
+  g_oc[0].g_digit[3].g_slice[23].u_pp (MacroPartialProducts2x4_392)
+                                       1.89e-05 2.22e-05    2.390 4.35e-05   0.0
+  g_oc[0].g_digit[3].g_slice[22].u_pp (MacroPartialProducts2x4_393)
+                                       1.83e-05 2.10e-05    2.393 4.17e-05   0.0
+  g_oc[0].g_digit[3].g_slice[21].u_pp (MacroPartialProducts2x4_394)
+                                       1.75e-05 2.09e-05    2.393 4.08e-05   0.0
+  g_oc[0].g_digit[3].g_slice[20].u_pp (MacroPartialProducts2x4_395)
+                                       1.81e-05 2.09e-05    2.391 4.14e-05   0.0
+  g_oc[0].g_digit[3].g_slice[19].u_pp (MacroPartialProducts2x4_396)
+                                       1.82e-05 2.08e-05    2.398 4.14e-05   0.0
+  g_oc[0].g_digit[3].g_slice[18].u_pp (MacroPartialProducts2x4_397)
+                                       1.80e-05 2.14e-05    2.393 4.17e-05   0.0
+  g_oc[0].g_digit[3].g_slice[17].u_pp (MacroPartialProducts2x4_398)
+                                       1.80e-05 2.06e-05    2.394 4.11e-05   0.0
+  g_oc[0].g_digit[3].g_slice[16].u_pp (MacroPartialProducts2x4_399)
+                                       1.84e-05 2.17e-05    2.390 4.24e-05   0.0
+  g_oc[0].g_digit[3].g_slice[15].u_pp (MacroPartialProducts2x4_400)
+                                       1.74e-05 2.05e-05    2.392 4.03e-05   0.0
+  g_oc[0].g_digit[3].g_slice[14].u_pp (MacroPartialProducts2x4_401)
+                                       1.83e-05 2.14e-05    2.398 4.21e-05   0.0
+  g_oc[0].g_digit[3].g_slice[13].u_pp (MacroPartialProducts2x4_402)
+                                       1.76e-05 2.08e-05    2.395 4.08e-05   0.0
+  g_oc[0].g_digit[3].g_slice[12].u_pp (MacroPartialProducts2x4_403)
+                                       1.70e-05 2.02e-05    2.392 3.96e-05   0.0
+  g_oc[0].g_digit[3].g_slice[11].u_pp (MacroPartialProducts2x4_404)
+                                       1.70e-05 2.09e-05    2.392 4.04e-05   0.0
+  g_oc[0].g_digit[3].g_slice[10].u_pp (MacroPartialProducts2x4_405)
+                                       1.82e-05 2.07e-05    2.394 4.13e-05   0.0
+  g_oc[0].g_digit[3].g_slice[9].u_pp (MacroPartialProducts2x4_406)
+                                       1.76e-05 2.10e-05    2.393 4.10e-05   0.0
+  g_oc[0].g_digit[3].g_slice[8].u_pp (MacroPartialProducts2x4_407)
+                                       1.81e-05 2.13e-05    2.392 4.18e-05   0.0
+  g_oc[0].g_digit[3].g_slice[7].u_pp (MacroPartialProducts2x4_408)
+                                       1.85e-05 2.17e-05    2.393 4.26e-05   0.0
+  g_oc[0].g_digit[3].g_slice[6].u_pp (MacroPartialProducts2x4_409)
+                                       1.75e-05 2.10e-05    2.389 4.09e-05   0.0
+  g_oc[0].g_digit[3].g_slice[5].u_pp (MacroPartialProducts2x4_410)
+                                       1.82e-05 2.14e-05    2.387 4.20e-05   0.0
+  g_oc[0].g_digit[3].g_slice[4].u_pp (MacroPartialProducts2x4_411)
+                                       1.74e-05 2.09e-05    2.391 4.07e-05   0.0
+  g_oc[0].g_digit[3].g_slice[3].u_pp (MacroPartialProducts2x4_412)
+                                       1.84e-05 2.18e-05    2.396 4.26e-05   0.0
+  g_oc[0].g_digit[3].g_slice[2].u_pp (MacroPartialProducts2x4_413)
+                                       1.88e-05 2.17e-05    2.390 4.29e-05   0.0
+  g_oc[0].g_digit[3].g_slice[1].u_pp (MacroPartialProducts2x4_414)
+                                       1.72e-05 2.05e-05    2.388 4.01e-05   0.0
+  g_oc[0].g_digit[3].g_slice[0].u_pp (MacroPartialProducts2x4_415)
+                                       1.72e-05 2.14e-05    2.388 4.10e-05   0.0
+  g_oc[0].g_digit[2].g_slice[31].u_pp (MacroPartialProducts2x4_416)
+                                       1.64e-05 1.94e-05    2.435 3.83e-05   0.0
+  g_oc[0].g_digit[2].g_slice[30].u_pp (MacroPartialProducts2x4_417)
+                                       1.51e-05 1.78e-05    2.434 3.52e-05   0.0
+  g_oc[0].g_digit[2].g_slice[29].u_pp (MacroPartialProducts2x4_418)
+                                       1.46e-05 1.77e-05    2.434 3.47e-05   0.0
+  g_oc[0].g_digit[2].g_slice[28].u_pp (MacroPartialProducts2x4_419)
+                                       1.52e-05 1.78e-05    2.434 3.54e-05   0.0
+  g_oc[0].g_digit[2].g_slice[27].u_pp (MacroPartialProducts2x4_420)
+                                       1.58e-05 1.91e-05    2.434 3.73e-05   0.0
+  g_oc[0].g_digit[2].g_slice[26].u_pp (MacroPartialProducts2x4_421)
+                                       1.64e-05 2.01e-05    2.438 3.89e-05   0.0
+  g_oc[0].g_digit[2].g_slice[25].u_pp (MacroPartialProducts2x4_422)
+                                       1.60e-05 1.85e-05    2.437 3.69e-05   0.0
+  g_oc[0].g_digit[2].g_slice[24].u_pp (MacroPartialProducts2x4_423)
+                                       1.52e-05 1.87e-05    2.438 3.63e-05   0.0
+  g_oc[0].g_digit[2].g_slice[23].u_pp (MacroPartialProducts2x4_424)
+                                       1.52e-05 1.76e-05    2.432 3.52e-05   0.0
+  g_oc[0].g_digit[2].g_slice[22].u_pp (MacroPartialProducts2x4_425)
+                                       1.62e-05 1.87e-05    2.439 3.73e-05   0.0
+  g_oc[0].g_digit[2].g_slice[21].u_pp (MacroPartialProducts2x4_426)
+                                       1.46e-05 1.73e-05    2.434 3.43e-05   0.0
+  g_oc[0].g_digit[2].g_slice[20].u_pp (MacroPartialProducts2x4_427)
+                                       1.48e-05 1.70e-05    2.436 3.43e-05   0.0
+  g_oc[0].g_digit[2].g_slice[19].u_pp (MacroPartialProducts2x4_428)
+                                       1.62e-05 1.90e-05    2.434 3.76e-05   0.0
+  g_oc[0].g_digit[2].g_slice[18].u_pp (MacroPartialProducts2x4_429)
+                                       1.51e-05 1.77e-05    2.433 3.52e-05   0.0
+  g_oc[0].g_digit[2].g_slice[17].u_pp (MacroPartialProducts2x4_430)
+                                       1.53e-05 1.78e-05    2.434 3.55e-05   0.0
+  g_oc[0].g_digit[2].g_slice[16].u_pp (MacroPartialProducts2x4_431)
+                                       1.58e-05 1.82e-05    2.434 3.64e-05   0.0
+  g_oc[0].g_digit[2].g_slice[15].u_pp (MacroPartialProducts2x4_432)
+                                       1.58e-05 1.87e-05    2.435 3.70e-05   0.0
+  g_oc[0].g_digit[2].g_slice[14].u_pp (MacroPartialProducts2x4_433)
+                                       1.58e-05 1.83e-05    2.436 3.65e-05   0.0
+  g_oc[0].g_digit[2].g_slice[13].u_pp (MacroPartialProducts2x4_434)
+                                       1.51e-05 1.76e-05    2.437 3.51e-05   0.0
+  g_oc[0].g_digit[2].g_slice[12].u_pp (MacroPartialProducts2x4_435)
+                                       1.53e-05 1.80e-05    2.435 3.57e-05   0.0
+  g_oc[0].g_digit[2].g_slice[11].u_pp (MacroPartialProducts2x4_436)
+                                       1.39e-05 1.71e-05    2.435 3.34e-05   0.0
+  g_oc[0].g_digit[2].g_slice[10].u_pp (MacroPartialProducts2x4_437)
+                                       1.51e-05 1.72e-05    2.433 3.47e-05   0.0
+  g_oc[0].g_digit[2].g_slice[9].u_pp (MacroPartialProducts2x4_438)
+                                       1.53e-05 1.82e-05    2.434 3.59e-05   0.0
+  g_oc[0].g_digit[2].g_slice[8].u_pp (MacroPartialProducts2x4_439)
+                                       1.57e-05 1.82e-05    2.433 3.63e-05   0.0
+  g_oc[0].g_digit[2].g_slice[7].u_pp (MacroPartialProducts2x4_440)
+                                       1.60e-05 1.89e-05    2.436 3.73e-05   0.0
+  g_oc[0].g_digit[2].g_slice[6].u_pp (MacroPartialProducts2x4_441)
+                                       1.58e-05 1.89e-05    2.436 3.71e-05   0.0
+  g_oc[0].g_digit[2].g_slice[5].u_pp (MacroPartialProducts2x4_442)
+                                       1.58e-05 1.87e-05    2.434 3.69e-05   0.0
+  g_oc[0].g_digit[2].g_slice[4].u_pp (MacroPartialProducts2x4_443)
+                                       1.53e-05 1.78e-05    2.435 3.56e-05   0.0
+  g_oc[0].g_digit[2].g_slice[3].u_pp (MacroPartialProducts2x4_444)
+                                       1.60e-05 1.91e-05    2.436 3.76e-05   0.0
+  g_oc[0].g_digit[2].g_slice[2].u_pp (MacroPartialProducts2x4_445)
+                                       1.63e-05 1.89e-05    2.435 3.76e-05   0.0
+  g_oc[0].g_digit[2].g_slice[1].u_pp (MacroPartialProducts2x4_446)
+                                       1.52e-05 1.80e-05    2.434 3.57e-05   0.0
+  g_oc[0].g_digit[2].g_slice[0].u_pp (MacroPartialProducts2x4_447)
+                                       1.39e-05 1.74e-05    2.431 3.38e-05   0.0
+  g_oc[0].g_digit[1].g_slice[31].u_pp (MacroPartialProducts2x4_448)
+                                       1.71e-05 1.96e-05    2.412 3.91e-05   0.0
+  g_oc[0].g_digit[1].g_slice[30].u_pp (MacroPartialProducts2x4_449)
+                                       1.63e-05 1.92e-05    2.413 3.80e-05   0.0
+  g_oc[0].g_digit[1].g_slice[29].u_pp (MacroPartialProducts2x4_450)
+                                       1.59e-05 1.91e-05    2.413 3.74e-05   0.0
+  g_oc[0].g_digit[1].g_slice[28].u_pp (MacroPartialProducts2x4_451)
+                                       1.67e-05 1.93e-05    2.412 3.84e-05   0.0
+  g_oc[0].g_digit[1].g_slice[27].u_pp (MacroPartialProducts2x4_452)
+                                       1.59e-05 1.92e-05    2.413 3.74e-05   0.0
+  g_oc[0].g_digit[1].g_slice[26].u_pp (MacroPartialProducts2x4_453)
+                                       1.61e-05 1.92e-05    2.413 3.78e-05   0.0
+  g_oc[0].g_digit[1].g_slice[25].u_pp (MacroPartialProducts2x4_454)
+                                       1.68e-05 1.90e-05    2.412 3.81e-05   0.0
+  g_oc[0].g_digit[1].g_slice[24].u_pp (MacroPartialProducts2x4_455)
+                                       1.64e-05 2.02e-05    2.414 3.89e-05   0.0
+  g_oc[0].g_digit[1].g_slice[23].u_pp (MacroPartialProducts2x4_456)
+                                       1.69e-05 1.95e-05    2.416 3.88e-05   0.0
+  g_oc[0].g_digit[1].g_slice[22].u_pp (MacroPartialProducts2x4_457)
+                                       1.70e-05 1.98e-05    2.414 3.92e-05   0.0
+  g_oc[0].g_digit[1].g_slice[21].u_pp (MacroPartialProducts2x4_458)
+                                       1.59e-05 1.89e-05    2.416 3.71e-05   0.0
+  g_oc[0].g_digit[1].g_slice[20].u_pp (MacroPartialProducts2x4_459)
+                                       1.64e-05 1.90e-05    2.410 3.78e-05   0.0
+  g_oc[0].g_digit[1].g_slice[19].u_pp (MacroPartialProducts2x4_460)
+                                       1.62e-05 1.88e-05    2.414 3.74e-05   0.0
+  g_oc[0].g_digit[1].g_slice[18].u_pp (MacroPartialProducts2x4_461)
+                                       1.66e-05 1.94e-05    2.415 3.84e-05   0.0
+  g_oc[0].g_digit[1].g_slice[17].u_pp (MacroPartialProducts2x4_462)
+                                       1.71e-05 1.97e-05    2.417 3.92e-05   0.0
+  g_oc[0].g_digit[1].g_slice[16].u_pp (MacroPartialProducts2x4_463)
+                                       1.70e-05 2.03e-05    2.412 3.97e-05   0.0
+  g_oc[0].g_digit[1].g_slice[15].u_pp (MacroPartialProducts2x4_464)
+                                       1.58e-05 1.87e-05    2.416 3.70e-05   0.0
+  g_oc[0].g_digit[1].g_slice[14].u_pp (MacroPartialProducts2x4_465)
+                                       1.68e-05 1.93e-05    2.413 3.85e-05   0.0
+  g_oc[0].g_digit[1].g_slice[13].u_pp (MacroPartialProducts2x4_466)
+                                       1.59e-05 1.85e-05    2.415 3.68e-05   0.0
+  g_oc[0].g_digit[1].g_slice[12].u_pp (MacroPartialProducts2x4_467)
+                                       1.64e-05 1.94e-05    2.416 3.81e-05   0.0
+  g_oc[0].g_digit[1].g_slice[11].u_pp (MacroPartialProducts2x4_468)
+                                       1.63e-05 1.98e-05    2.416 3.85e-05   0.0
+  g_oc[0].g_digit[1].g_slice[10].u_pp (MacroPartialProducts2x4_469)
+                                       1.57e-05 1.79e-05    2.412 3.61e-05   0.0
+  g_oc[0].g_digit[1].g_slice[9].u_pp (MacroPartialProducts2x4_470)
+                                       1.58e-05 1.87e-05    2.413 3.69e-05   0.0
+  g_oc[0].g_digit[1].g_slice[8].u_pp (MacroPartialProducts2x4_471)
+                                       1.66e-05 1.98e-05    2.414 3.88e-05   0.0
+  g_oc[0].g_digit[1].g_slice[7].u_pp (MacroPartialProducts2x4_472)
+                                       1.67e-05 1.97e-05    2.413 3.87e-05   0.0
+  g_oc[0].g_digit[1].g_slice[6].u_pp (MacroPartialProducts2x4_473)
+                                       1.63e-05 1.93e-05    2.413 3.80e-05   0.0
+  g_oc[0].g_digit[1].g_slice[5].u_pp (MacroPartialProducts2x4_474)
+                                       1.64e-05 1.92e-05    2.412 3.81e-05   0.0
+  g_oc[0].g_digit[1].g_slice[4].u_pp (MacroPartialProducts2x4_475)
+                                       1.65e-05 1.94e-05    2.416 3.83e-05   0.0
+  g_oc[0].g_digit[1].g_slice[3].u_pp (MacroPartialProducts2x4_476)
+                                       1.69e-05 1.98e-05    2.412 3.91e-05   0.0
+  g_oc[0].g_digit[1].g_slice[2].u_pp (MacroPartialProducts2x4_477)
+                                       1.70e-05 1.92e-05    2.417 3.86e-05   0.0
+  g_oc[0].g_digit[1].g_slice[1].u_pp (MacroPartialProducts2x4_478)
+                                       1.58e-05 1.88e-05    2.416 3.70e-05   0.0
+  g_oc[0].g_digit[1].g_slice[0].u_pp (MacroPartialProducts2x4_479)
+                                       1.56e-05 1.93e-05    2.412 3.74e-05   0.0
+  g_oc[0].g_digit[0].g_slice[31].u_pp (MacroPartialProducts2x4_480)
+                                       1.70e-05 1.98e-05    2.436 3.92e-05   0.0
+  g_oc[0].g_digit[0].g_slice[30].u_pp (MacroPartialProducts2x4_481)
+                                       1.55e-05 1.82e-05    2.436 3.61e-05   0.0
+  g_oc[0].g_digit[0].g_slice[29].u_pp (MacroPartialProducts2x4_482)
+                                       1.51e-05 1.79e-05    2.435 3.54e-05   0.0
+  g_oc[0].g_digit[0].g_slice[28].u_pp (MacroPartialProducts2x4_483)
+                                       1.54e-05 1.81e-05    2.433 3.59e-05   0.0
+  g_oc[0].g_digit[0].g_slice[27].u_pp (MacroPartialProducts2x4_484)
+                                       1.48e-05 1.80e-05    2.436 3.53e-05   0.0
+  g_oc[0].g_digit[0].g_slice[26].u_pp (MacroPartialProducts2x4_485)
+                                       1.56e-05 1.86e-05    2.435 3.66e-05   0.0
+  g_oc[0].g_digit[0].g_slice[25].u_pp (MacroPartialProducts2x4_486)
+                                       1.54e-05 1.75e-05    2.436 3.54e-05   0.0
+  g_oc[0].g_digit[0].g_slice[24].u_pp (MacroPartialProducts2x4_487)
+                                       1.46e-05 1.75e-05    2.431 3.46e-05   0.0
+  g_oc[0].g_digit[0].g_slice[23].u_pp (MacroPartialProducts2x4_488)
+                                       1.53e-05 1.79e-05    2.434 3.56e-05   0.0
+  g_oc[0].g_digit[0].g_slice[22].u_pp (MacroPartialProducts2x4_489)
+                                       1.57e-05 1.81e-05    2.436 3.63e-05   0.0
+  g_oc[0].g_digit[0].g_slice[21].u_pp (MacroPartialProducts2x4_490)
+                                       1.53e-05 1.81e-05    2.435 3.58e-05   0.0
+  g_oc[0].g_digit[0].g_slice[20].u_pp (MacroPartialProducts2x4_491)
+                                       1.56e-05 1.81e-05    2.433 3.62e-05   0.0
+  g_oc[0].g_digit[0].g_slice[19].u_pp (MacroPartialProducts2x4_492)
+                                       1.61e-05 1.85e-05    2.438 3.71e-05   0.0
+  g_oc[0].g_digit[0].g_slice[18].u_pp (MacroPartialProducts2x4_493)
+                                       1.51e-05 1.80e-05    2.434 3.55e-05   0.0
+  g_oc[0].g_digit[0].g_slice[17].u_pp (MacroPartialProducts2x4_494)
+                                       1.64e-05 1.92e-05    2.438 3.80e-05   0.0
+  g_oc[0].g_digit[0].g_slice[16].u_pp (MacroPartialProducts2x4_495)
+                                       1.55e-05 1.82e-05    2.434 3.61e-05   0.0
+  g_oc[0].g_digit[0].g_slice[15].u_pp (MacroPartialProducts2x4_496)
+                                       1.53e-05 1.84e-05    2.437 3.61e-05   0.0
+  g_oc[0].g_digit[0].g_slice[14].u_pp (MacroPartialProducts2x4_497)
+                                       1.66e-05 1.90e-05    2.438 3.80e-05   0.0
+  g_oc[0].g_digit[0].g_slice[13].u_pp (MacroPartialProducts2x4_498)
+                                       1.52e-05 1.77e-05    2.438 3.53e-05   0.0
+  g_oc[0].g_digit[0].g_slice[12].u_pp (MacroPartialProducts2x4_499)
+                                       1.55e-05 1.85e-05    2.436 3.64e-05   0.0
+  g_oc[0].g_digit[0].g_slice[11].u_pp (MacroPartialProducts2x4_500)
+                                       1.46e-05 1.78e-05    2.434 3.48e-05   0.0
+  g_oc[0].g_digit[0].g_slice[10].u_pp (MacroPartialProducts2x4_501)
+                                       1.50e-05 1.70e-05    2.432 3.45e-05   0.0
+  g_oc[0].g_digit[0].g_slice[9].u_pp (MacroPartialProducts2x4_502)
+                                       1.46e-05 1.74e-05    2.433 3.44e-05   0.0
+  g_oc[0].g_digit[0].g_slice[8].u_pp (MacroPartialProducts2x4_503)
+                                       1.58e-05 1.84e-05    2.438 3.66e-05   0.0
+  g_oc[0].g_digit[0].g_slice[7].u_pp (MacroPartialProducts2x4_504)
+                                       1.56e-05 1.86e-05    2.436 3.67e-05   0.0
+  g_oc[0].g_digit[0].g_slice[6].u_pp (MacroPartialProducts2x4_505)
+                                       1.49e-05 1.75e-05    2.433 3.48e-05   0.0
+  g_oc[0].g_digit[0].g_slice[5].u_pp (MacroPartialProducts2x4_506)
+                                       1.56e-05 1.81e-05    2.435 3.61e-05   0.0
+  g_oc[0].g_digit[0].g_slice[4].u_pp (MacroPartialProducts2x4_507)
+                                       1.57e-05 1.86e-05    2.435 3.67e-05   0.0
+  g_oc[0].g_digit[0].g_slice[3].u_pp (MacroPartialProducts2x4_508)
+                                       1.55e-05 1.80e-05    2.434 3.60e-05   0.0
+  g_oc[0].g_digit[0].g_slice[2].u_pp (MacroPartialProducts2x4_509)
+                                       1.66e-05 1.91e-05    2.437 3.82e-05   0.0
+  g_oc[0].g_digit[0].g_slice[1].u_pp (MacroPartialProducts2x4_510)
+                                       1.50e-05 1.77e-05    2.435 3.51e-05   0.0
+  g_oc[0].g_digit[0].g_slice[0].u_pp (MacroPartialProducts2x4_511)
+                                       1.49e-05 1.82e-05    2.436 3.56e-05   0.0
+  u_sign_control (MacroSignControl)    1.21e-05 6.06e-06    0.875 1.90e-05   0.0
+1

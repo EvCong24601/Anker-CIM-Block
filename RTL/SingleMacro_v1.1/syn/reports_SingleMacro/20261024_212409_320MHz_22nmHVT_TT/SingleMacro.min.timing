@@ -1,0 +1,51 @@
+Warning: Design 'SingleMacro' has '1' unresolved references. For more detailed information, use the "link" command. (UID-341)
+ 
+****************************************
+Report : timing
+        -path full
+        -delay min
+        -max_paths 1
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Sat Oct 24 21:52:11 2026
+****************************************
+
+ # A fanout number of 1000 was used for high fanout net computations.
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+  Startpoint: phase_in_reg[0]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: cim_odata_phase_reg[0]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: min
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  phase_in_reg[0]/CP (EDFCNQD1BWP30P140HVT)            0.00000 #  0.20000 r
+  phase_in_reg[0]/Q (EDFCNQD1BWP30P140HVT)             0.10356    0.30356 f
+  cim_odata_phase_reg[0]/D (EDFCNQD1BWP30P140HVT)      0.00000    0.30356 f
+  data arrival time                                               0.30356
+
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  clock uncertainty                                    0.05000    0.25000
+  cim_odata_phase_reg[0]/CP (EDFCNQD1BWP30P140HVT)     0.00000    0.25000 r
+  library hold time                                    0.02612    0.27612
+  data required time                                              0.27612
+  --------------------------------------------------------------------------
+  data required time                                              0.27612
+  data arrival time                                              -0.30356
+  --------------------------------------------------------------------------
+  slack (MET)                                                     0.02745
+
+
+1

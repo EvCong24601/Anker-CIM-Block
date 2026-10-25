@@ -1,0 +1,17 @@
+{
+  ".gitignore": "7165d75e5f4215979528629d6aad46fe3481487ebb0e8b82292290b004510d44",
+  "README.md": "0226996e67e41a89c23617a90866926a71100764b7cb43f01ce7b301fd735539",
+  "rtl/filelist.f": "0e9a8536894945ff904d560099b31f48e0337a1ea9e2e6d3eadd4f094be1ca6f",
+  "rtl/MacroClockGate.sv": "6877326952f91d7534b9a234fa428216e0103a41f32a1f81e6b4a33edeea5724",
+  "rtl/MacroMul2x4.sv": "c311f6cd6d17a3696871ade935c8dd1615f3434df1661e4d7a884e0281dd87cb",
+  "rtl/MacroSliceFusion.sv": "3eab81ef35a9393d00a0e0d8f57fad848faca2945e878f7f9d900780ac7cdd0b",
+  "rtl/MacroWeightSRAM.sv": "49fd8e7b3d173f2fb399b6c7b4926c0a5b003248288512c8ec65695e8a0efb05",
+  "rtl/SingleMacro.sv": "ace26396459d9e81179b53faa47b6bf7900af99e505d3b288176e647c4255bd8",
+  "rtl/single_macro_pkg.sv": "fde1a44a18d2a72fa6a8d40a843eba7add76646766cd3a18364ccf99e55cdea6",
+  "scripts/bootstrap_iverilog.ps1": "75af1dec711d1bcd78ab36c18aa1eca587f76605cf4f6bf5a0e9e00da8285120",
+  "scripts/run_tests.py": "f35e9f6883623937bea6fe534848194a0ee47035a607465532ed4c968772b98c",
+  "tb/filelist.f": "04e93afcb459a53cbd727f55eec73693d7a8cfb77fb2e59afcfb689ba0331029",
+  "tb/tb_SingleMacro.sv": "1c50ead892932bdff5d4ca7f94688df9321a8ebb229b5d6cdbc3d55990043523",
+  "verification/v0.1_results.json": "1ddaca43ceef86726018ae268244d94a334ebf4e91db28e879a57595b3218e8c",
+  "verification/v0.2_results.json": "29499d46cbb917b2c733df16314e97ff3a1d4a291d32fdff222f0251af25c885"
+}

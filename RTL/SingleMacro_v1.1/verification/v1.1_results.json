@@ -1,0 +1,204 @@
+{
+  "spec_version": "v1.1",
+  "phase_latency": 1,
+  "baseline_trace_comparison": true,
+  "positive": [
+    {
+      "clock_gating": 0,
+      "seed": 20261013,
+      "counts": {
+        "clock_gating": 0,
+        "primitive": 256,
+        "accepted": 5044,
+        "results": 5043,
+        "cancelled": 1,
+        "bubbles": 3516,
+        "zero_mask": 162
+      },
+      "result": "PASS clock_gating=0 primitive=256 accepted=5044 results=5043 cancelled=1 bubbles=3516 zero_mask=162\ntb/tb_SingleMacro.sv:586: $finish called at 87757000 (1ps)"
+    },
+    {
+      "clock_gating": 0,
+      "seed": 324508639,
+      "counts": {
+        "clock_gating": 0,
+        "primitive": 256,
+        "accepted": 5051,
+        "results": 5050,
+        "cancelled": 1,
+        "bubbles": 3505,
+        "zero_mask": 166
+      },
+      "result": "PASS clock_gating=0 primitive=256 accepted=5051 results=5050 cancelled=1 bubbles=3505 zero_mask=166\ntb/tb_SingleMacro.sv:586: $finish called at 87757000 (1ps)"
+    },
+    {
+      "clock_gating": 1,
+      "seed": 20261013,
+      "counts": {
+        "clock_gating": 1,
+        "primitive": 256,
+        "accepted": 5044,
+        "results": 5043,
+        "cancelled": 1,
+        "bubbles": 3516,
+        "zero_mask": 162
+      },
+      "result": "PASS clock_gating=1 primitive=256 accepted=5044 results=5043 cancelled=1 bubbles=3516 zero_mask=162\ntb/tb_SingleMacro.sv:586: $finish called at 87757000 (1ps)"
+    },
+    {
+      "clock_gating": 1,
+      "seed": 324508639,
+      "counts": {
+        "clock_gating": 1,
+        "primitive": 256,
+        "accepted": 5051,
+        "results": 5050,
+        "cancelled": 1,
+        "bubbles": 3505,
+        "zero_mask": 166
+      },
+      "result": "PASS clock_gating=1 primitive=256 accepted=5051 results=5050 cancelled=1 bubbles=3505 zero_mask=166\ntb/tb_SingleMacro.sv:586: $finish called at 87757000 (1ps)"
+    }
+  ],
+  "negative": [
+    {
+      "case": "hold_address",
+      "diagnostic": "reuse address mismatch",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "hold_address_pending",
+      "diagnostic": "reuse address mismatch",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "hold_after_reset",
+      "diagnostic": "reuse invalid hold",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "hold_after_write",
+      "diagnostic": "reuse invalid hold",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "hold_invalid",
+      "diagnostic": "reuse invalid hold",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "phase",
+      "diagnostic": "illegal precision/phase",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "precision",
+      "diagnostic": "illegal precision/phase",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "read_write",
+      "diagnostic": "simultaneous read/write",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "uninitialized",
+      "diagnostic": "read uninitialized row",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "unknown_activation",
+      "diagnostic": "unknown compute input",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "unknown_control",
+      "diagnostic": "unknown compute input",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "unknown_write",
+      "diagnostic": "unknown write input",
+      "v1_1_checker_observed": true
+    },
+    {
+      "case": "write_busy",
+      "diagnostic": "write before pipeline drain",
+      "v1_1_checker_observed": true
+    }
+  ],
+  "synthesis_elaboration": true,
+  "tool": "Icarus Verilog version 13.0 (stable) (v13_0)",
+  "arithmetic": "PASS arithmetic reduction_vectors=5078 fusion_vectors=4500\ntb/tb_MacroArithmetic.sv:97: $finish called at 9578000 (1ps)",
+  "physical_validation": {
+    "logic_synthesis": false,
+    "gate_level_simulation": false,
+    "sta": false,
+    "ptpx": false,
+    "ppa_improvement_measured": false
+  },
+  "date": "2026-10-19",
+  "rtl_variant": "behavioral_pp_reduction_and_weight_fusion",
+  "totals": {
+    "accepted": 20190,
+    "results": 20186,
+    "cancelled": 4
+  },
+  "coverage": {
+    "primitive_input_signed_combinations_per_run": 256,
+    "post_inversion_isolation": true,
+    "fusion_vectors": 4500,
+    "walking_weight_bit_positions_per_oc_per_weight_mode": 256,
+    "multi_tile": {
+      "K": 512,
+      "weight_bits": 8,
+      "activation_bits": 16,
+      "contexts_per_case": 2,
+      "orders": [
+        "OS",
+        "WS",
+        "AS"
+      ],
+      "numeric_modes": [
+        "UINT",
+        "INT"
+      ],
+      "psums_per_context_oc": 1
+    },
+    "reduction_vectors": 5078,
+    "walking_raw_pp_bits_per_weight_mode": 1024,
+    "arithmetic_reference": "independent integer bit-column weights"
+  },
+  "original_project_source_unchanged": true,
+  "implementation_checks": {
+    "arithmetic_modules_per_oc": 1,
+    "digit_reduction_rtl": "behavioral_weighted_bit_sum",
+    "weight_fusion_rtl": "behavioral_multioperand_sum",
+    "explicit_fa_ha_csa_instances": 0,
+    "digit_sum_carry_module_interface": false,
+    "generated_arithmetic_rtl": false,
+    "new_arithmetic_registers": 0,
+    "sram_icg_and_package_unchanged": true,
+    "mapped_compressor_topology": null,
+    "mapped_final_cpas": null
+  },
+  "source_sha256": {
+    "rtl/filelist.f": "5fc33f52195854f643becc77da25880d2970169101b472d707225bb49fc28eef",
+    "rtl/MacroClockGate.sv": "6877326952f91d7534b9a234fa428216e0103a41f32a1f81e6b4a33edeea5724",
+    "rtl/MacroPartialProducts2x4.sv": "32184e0278b52b92bcb7917a29632ed7fbcb6aafaac1667976f1fd7e17e8a5f6",
+    "rtl/MacroSignControl.sv": "1ea02e27e0989b5b011712daa2997fb268dd7742c50fad4f7fcda4810cc01c5e",
+    "rtl/MacroWeightFusion.sv": "83adf15611780d0e2efbc73ffbe87907bdf623b8f192ffdf30b1fa99d4a259a6",
+    "rtl/MacroWeightSRAM.sv": "49fd8e7b3d173f2fb399b6c7b4926c0a5b003248288512c8ec65695e8a0efb05",
+    "rtl/single_macro_pkg.sv": "fde1a44a18d2a72fa6a8d40a843eba7add76646766cd3a18364ccf99e55cdea6",
+    "rtl/SingleMacro.sv": "5211ea8894d5b7e73ccd399a8055922c569e4c9c1961ad3b6fac33a20d4a6254",
+    "tb/filelist.f": "cafffd5b2899a9d7f2aa10dc9ccf8dc02d7365afd3e43b12ab6442e62007dc58",
+    "tb/reference/filelist.f": "a6cfe4eee0efb4f77bdb26d254ad67c72938ef12f9a270b3dd86f9bcee3da70f",
+    "tb/reference/V02MacroMul2x4.sv": "885b6a6d661abb65376a1b924947926f46a08223f50652dfcc80baac4a4e6cbc",
+    "tb/reference/V02MacroSliceFusion.sv": "18876ac7e1a6faff8f995355be71585269463974c0d18f9b4c511eab842ff687",
+    "tb/reference/V02SingleMacro.sv": "f83ae312eafe0ad318dd890fcf30a720c2020ade3bc57679f8016a64c716c2c0",
+    "tb/tb_MacroArithmetic.sv": "f090e92b1895caee91764271e81568a6607f6eb5800750ef1d09fed87c61144b",
+    "tb/tb_SingleMacro.sv": "77ebb0d61c526b2e023b797836697a366900589fabb55f35589e8941412d6b92",
+    "scripts/bootstrap_iverilog.ps1": "75af1dec711d1bcd78ab36c18aa1eca587f76605cf4f6bf5a0e9e00da8285120",
+    "scripts/run_tests.py": "b5201efd8b59453659364056bc932e97791c8d0a57751edf7284da72faf39b89"
+  }
+}

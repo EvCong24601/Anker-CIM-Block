@@ -1,0 +1,173 @@
+Warning: Design 'SingleMacro' has '1' unresolved references. For more detailed information, use the "link" command. (UID-341)
+ 
+****************************************
+Report : constraint
+        -verbose
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Sat Oct 24 21:52:11 2026
+****************************************
+
+
+  Startpoint: weight_mode_in_reg[1]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: cim_odata_reg[35]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightFusion_3
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightFusion_2
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightFusion_0
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_415
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_287
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_159
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_31
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  weight_mode_in_reg[1]/CP (EDFCNQD1BWP30P140HVT)         0.00 #     0.20 r
+  weight_mode_in_reg[1]/Q (EDFCNQD1BWP30P140HVT)          0.10       0.30 f
+  U1970/ZN (INVD1BWP30P140HVT)                            0.01       0.32 r
+  U1972/ZN (INVD2BWP30P140HVT)                            0.17       0.48 f
+  U2026/ZN (INR2D2BWP30P140HVT)                           0.23       0.71 r
+  U2009/Z (BUFFD3BWP30P140HVT)                            0.21       0.92 r
+  U2143/ZN (AOI22D1BWP30P140HVT)                          0.08       1.00 f
+  U2200/ZN (IOA21D1BWP30P140HVT)                          0.06       1.06 r
+  g_oc[1].g_digit[3].g_slice[0].u_pp/U11/ZN (INVD1BWP30P140HVT)
+                                                          0.02       1.08 f
+  g_oc[1].g_digit[3].g_slice[0].u_pp/U12/ZN (AOI221D1BWP30P140HVT)
+                                                          0.03       1.11 r
+  g_oc[1].g_digit[3].g_slice[0].u_pp/U14/ZN (NR2D1BWP30P140HVT)
+                                                          0.04       1.16 f
+  g_oc[1].u_fusion/U833/CO (FA1D1BWP30P140HVT)            0.07       1.23 f
+  g_oc[1].u_fusion/U766/Z (CKAN2D1BWP30P140HVT)           0.04       1.26 f
+  g_oc[1].u_fusion/U767/ZN (IAO21D1BWP30P140HVT)          0.03       1.29 r
+  g_oc[1].u_fusion/U832/S (FA1D1BWP30P140HVT)             0.10       1.39 f
+  g_oc[1].u_fusion/U867/S (FA1D1BWP30P140HVT)             0.11       1.50 r
+  g_oc[1].u_fusion/U830/S (FA1D1BWP30P140HVT)             0.09       1.59 f
+  g_oc[1].u_fusion/U848/S (FA1D1BWP30P140HVT)             0.11       1.71 r
+  g_oc[1].u_fusion/U967/S (FA1D1BWP30P140HVT)             0.10       1.80 f
+  g_oc[1].u_fusion/U986/CO (FA1D1BWP30P140HVT)            0.07       1.87 f
+  g_oc[1].u_fusion/U974/S (FA1D1BWP30P140HVT)             0.09       1.97 f
+  g_oc[1].u_fusion/U1018/CO (FA1D1BWP30P140HVT)           0.07       2.04 f
+  g_oc[1].u_fusion/U1003/CO (FA1D1BWP30P140HVT)           0.06       2.09 f
+  g_oc[1].u_fusion/U1021/CO (FA1D1BWP30P140HVT)           0.06       2.15 f
+  g_oc[1].u_fusion/U1088/S (FA1D1BWP30P140HVT)            0.09       2.24 f
+  g_oc[1].u_fusion/U1004/ZN (AOI22D1BWP30P140HVT)         0.04       2.27 r
+  g_oc[1].u_fusion/U17/ZN (OAI21D1BWP30P140HVT)           0.04       2.31 f
+  g_oc[1].u_fusion/U1114/S (FA1D1BWP30P140HVT)            0.11       2.43 r
+  g_oc[1].u_fusion/U1117/S (FA1D1BWP30P140HVT)            0.09       2.52 f
+  g_oc[1].u_fusion/U21/CO (FA1D1BWP30P140HVT)             0.07       2.59 f
+  g_oc[1].u_fusion/U1132/CO (FA1D1BWP30P140HVT)           0.06       2.65 f
+  g_oc[1].u_fusion/U11/CO (FA1D1BWP30P140HVT)             0.06       2.70 f
+  g_oc[1].u_fusion/U1131/CO (FA1D1BWP30P140HVT)           0.06       2.76 f
+  g_oc[1].u_fusion/U1130/CO (FA1D1BWP30P140HVT)           0.06       2.81 f
+  g_oc[1].u_fusion/U12/CO (FA1D1BWP30P140HVT)             0.06       2.87 f
+  g_oc[1].u_fusion/U1129/CO (FA1D1BWP30P140HVT)           0.06       2.92 f
+  g_oc[1].u_fusion/U4/CO (FA1D1BWP30P140HVT)              0.06       2.98 f
+  g_oc[1].u_fusion/U1128/CO (FA1D1BWP30P140HVT)           0.05       3.03 f
+  g_oc[1].u_fusion/U13/Z (XOR3D0BWP30P140HVT)             0.09       3.12 r
+  U2960/ZN (INR2D1BWP30P140HVT)                           0.03       3.15 r
+  cim_odata_reg[35]/D (EDFCNQD1BWP30P140HVT)              0.00       3.15 r
+  data arrival time                                                  3.15
+
+  clock clock (rise edge)                                 3.12       3.12
+  clock network delay (ideal)                             0.20       3.33
+  clock uncertainty                                      -0.12       3.20
+  cim_odata_reg[35]/CP (EDFCNQD1BWP30P140HVT)             0.00       3.20 r
+  library setup time                                     -0.04       3.16
+  data required time                                                 3.16
+  --------------------------------------------------------------------------
+  data required time                                                 3.16
+  data arrival time                                                 -3.15
+  --------------------------------------------------------------------------
+  slack (MET)                                                        0.01
+
+
+  Startpoint: phase_in_reg[0]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: cim_odata_phase_reg[0]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: min
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  phase_in_reg[0]/CP (EDFCNQD1BWP30P140HVT)               0.00 #     0.20 r
+  phase_in_reg[0]/Q (EDFCNQD1BWP30P140HVT)                0.10       0.30 f
+  cim_odata_phase_reg[0]/D (EDFCNQD1BWP30P140HVT)         0.00       0.30 f
+  data arrival time                                                  0.30
+
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  clock uncertainty                                       0.05       0.25
+  cim_odata_phase_reg[0]/CP (EDFCNQD1BWP30P140HVT)        0.00       0.25 r
+  library hold time                                       0.03       0.28
+  data required time                                                 0.28
+  --------------------------------------------------------------------------
+  data required time                                                 0.28
+  data arrival time                                                 -0.30
+  --------------------------------------------------------------------------
+  slack (MET)                                                        0.03
+
+
+    Net: n2223
+
+    max_transition         0.40
+  - Transition Time        0.40
+  ------------------------------
+    Slack                  0.00  (MET)
+
+
+    Net: n2206
+
+    max_capacitance        0.06
+  - Capacitance            0.05
+  ------------------------------
+    Slack                  0.00  (MET)
+
+
+    Net: _0_net_
+
+    Capacitance            0.00
+  - min_capacitance        0.00
+  ------------------------------
+    Slack                  0.00  (VIOLATED: increase significant digits)
+
+
+    Design: SingleMacro
+
+    max_area               0.00
+  - Current Area       20394.86
+  ------------------------------
+    Slack              -20394.86  (VIOLATED)
+
+
+Min pulse width constraints
+
+                       Required      Actual
+  Pin                pulse width   pulse width   Slack           Scenario
+--------------------------------------------------------------------------------
+  station_in_reg/CP(low)
+                      0.12          1.44          1.31 (MET)
+
+1

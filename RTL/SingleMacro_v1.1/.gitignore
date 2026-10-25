@@ -1,0 +1,10 @@
+build/
+.tools/
+__pycache__/
+*.vcd
+
+# Design Compiler 库缓存、工作库和会话日志
+syn/alib-52/
+syn/work/
+syn/*.svf
+syn/command.log
