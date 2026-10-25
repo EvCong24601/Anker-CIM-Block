@@ -23,7 +23,7 @@ endfunction
 
 task automatic configure_requant(input int profile);
   expected_requant_cfg = '0;
-  case (profile % 8)
+  unique case (profile % 8)
     0: begin
       expected_requant_cfg.requant_multiplier = 1;
     end
@@ -71,7 +71,7 @@ task automatic configure_requant(input int profile);
     expected_requant_cfg.requant_multiplier = {32'sd0, 32'sd7, -32'sd3, 32'sd1};
     expected_requant_cfg.requant_shift = {10'sd0, -10'sd19, -10'sd15, -10'sd13};
     for (int lane = 0; lane < 4; lane++)
-    case (lane % 4)
+    unique case (lane % 4)
       0: expected_requant_cfg.requant_zp[32*lane+:32] = -32'sd11;
       1: expected_requant_cfg.requant_zp[32*lane+:32] = 32'sd23;
       2: expected_requant_cfg.requant_zp[32*lane+:32] = -32'sd7;

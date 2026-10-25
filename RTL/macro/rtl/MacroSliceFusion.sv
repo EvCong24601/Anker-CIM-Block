@@ -10,10 +10,14 @@ module MacroSliceFusion (
 );
   import single_macro_pkg::*;
   // Extend before shifting: a narrow left shift would discard bits.
-  wire signed [12:0] x0 = {{6{p0[6]}}, p0};
-  wire signed [12:0] x1 = {{6{p1[6]}}, p1};
-  wire signed [12:0] x2 = {{6{p2[6]}}, p2};
-  wire signed [12:0] x3 = {{6{p3[6]}}, p3};
+  wire signed [12:0] x0;
+  wire signed [12:0] x1;
+  wire signed [12:0] x2;
+  wire signed [12:0] x3;
+  assign x0 = {{6{p0[6]}}, p0};
+  assign x1 = {{6{p1[6]}}, p1};
+  assign x2 = {{6{p2[6]}}, p2};
+  assign x3 = {{6{p3[6]}}, p3};
   assign sum = (weight_mode == W_MODE_2) ? (x0 + x1 + x2 + x3)
                : (weight_mode == W_MODE_4) ? (x0 + (x1 <<< 2) + x2 + (x3 <<< 2))
                : (weight_mode == W_MODE_8) ? (x0 + (x1 <<< 2) + (x2 <<< 4) + (x3 <<< 6))

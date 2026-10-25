@@ -58,8 +58,10 @@ module ClusterRequant #(
   for (genvar c = 0; c < 4; c++) begin : g_channel
     logic [31:0] selected_psum;
     bit found;
-    wire [1:0] entry_id = cfg_i.requant_mode ? 2'(c) : 2'd0;
-    wire [4:0] selected_lane = {group_sel_i, 2'(c)};
+    wire [1:0] entry_id;
+    wire [4:0] selected_lane;
+    assign entry_id = cfg_i.requant_mode ? 2'(c) : 2'd0;
+    assign selected_lane = {group_sel_i, 2'(c)};
     always_comb begin
       selected_psum = '0;
       found = 0;
@@ -71,9 +73,12 @@ module ClusterRequant #(
     // Isolate BOTH sources at the channel read endpoint. A held nonzero
     // raw Psum and changing per-tensor scale must not toggle a masked OC.
     // Shared scale remains available to other active OCs.
-    wire [31:0] selected_multiplier = found ? cfg_i.requant_multiplier[32*entry_id+:32] : 32'b0;
-    wire [ 9:0] selected_shift = found ? cfg_i.requant_shift[10*entry_id+:10] : 10'b0;
-    wire [31:0] selected_zp = found ? cfg_i.requant_zp[32*c+:32] : 32'b0;
+    wire [31:0] selected_multiplier;
+    wire [ 9:0] selected_shift;
+    wire [31:0] selected_zp;
+    assign selected_multiplier = found ? cfg_i.requant_multiplier[32*entry_id+:32] : 32'b0;
+    assign selected_shift = found ? cfg_i.requant_shift[10*entry_id+:10] : 10'b0;
+    assign selected_zp = found ? cfg_i.requant_zp[32*c+:32] : 32'b0;
     assign channel_data[c] = quantize(
       $signed(selected_psum), $signed(selected_multiplier), $signed(selected_shift), $signed(selected_zp)
     );

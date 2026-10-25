@@ -1,5 +1,20 @@
 `timescale 1ns / 1ps
 // Simulation reference Cluster, with raw Psum and combinational INT8 Requant.
+//
+// File map. Search for "=====" to jump between the sections below:
+//    1. Parameters and ports
+//    2. Batch decode nets and pipeline declarations
+//    3. Configuration table clock domains and parameter storage
+//    4. Regular SRAM passthrough and protocol checks
+//    5. Pipeline tags and tmp/Psum storage declarations
+//    6. Operation step counters (simulation only)
+//    7. Completion paths, shared views, batch decode
+//    8. Issue scheduling and Requant configuration select
+//    9. Requant unit, output lanes, Macro array, reduction tree
+//   10. Accumulation: buffer enables, tmp/Psum arrays, arithmetic
+//   11. Main pipeline state machine
+//
+// ===== 1. Parameters and ports =====
 module cluster_top #(
   // Unified integration depth. Individual overrides support capacity tests.
   parameter int OUTPUT_PSUM_DEPTH = 16,
@@ -37,6 +52,7 @@ module cluster_top #(
   output logic [31:0] requant_valid_o
 );
   import cluster_pkg::*;
+  // ===== 2. Batch decode nets and pipeline declarations =====
   cluster_ctrl_t command;
   // Batch-invariant combinational decode; no additional configuration DFFs.
   logic [31:0] batch_lane_mask, batch_macro_demand;
@@ -62,7 +78,7 @@ module cluster_top #(
   logic [3:0] act_slice_valid;
   logic [1:0] external_phase;
   logic [CONTEXT_COUNT_W - 1:0] command_count;
-  wire cmd_accept = cmd_valid_i && cmd_ready_o;
+  wire cmd_accept;
   logic [1:0] phase;
   logic [CONTEXT_W - 1:0] context_idx;
   logic [7:0] tile;
@@ -84,63 +100,71 @@ module cluster_top #(
   logic [39:0] requant_context_shift[0:REQUANT_CONTEXT_DEPTH - 1];
   logic [REQUANT_CONTEXT_DEPTH - 1:0] requant_context_valid;
   requant_cfg_t selected_requant_cfg;
-  wire deep_command = cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4;
-  wire deep_batch = batch_is_as && batch_activation_bits > 4;
-  wire a4_packet = batch_is_as && batch_activation_bits == 4;
-  wire storage_active = !reset && cmd_accept && cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) == 4;
-  wire deep_weight_active = !reset && ((batch_active && deep_batch) || (cmd_accept && deep_command));
-  wire deep_requant_active = !reset && ENABLE_REQUANT &&
-      ((batch_active && batch_command.cim_as_cnt > 1) || (cmd_accept && cmd_i.cim_as_cnt > 1));
-  wire channel_scale_active = deep_requant_active &&
-      (batch_active ? batch_requant_cfg.requant_mode : requant_cfg_i.requant_mode);
-  wire batch_cfg_load = !reset && ENABLE_REQUANT && cmd_accept && !batch_active;
+  // Combinational decode of the accepted command. Declarations carry no
+  // initialisers, so every wire has exactly one visible assign driver.
+  wire deep_command;
+  wire deep_batch;
+  wire a4_packet;
+  wire storage_active;
+  wire deep_weight_active;
+  wire deep_requant_active;
+  wire channel_scale_active;
+  wire batch_cfg_load;
   wire entry0_clock, deep_weight_clock, deep_requant_clock;
   wire channel_scale_clock, batch_cfg_clock, batch_channel_clock;
-  wire [31:0] accepted_context = packet_active ? command_count : 0;
-  wire [31:0] write_context_slot = accepted_context;
-  wire write_requant_params = cmd_accept && ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && (!batch_active || tile == 0);
-  MacroClockGate #(
-    .ENABLE_GATING(USE_CLOCK_GATING)
-  ) u_entry0_icg (
-    .clock(clock),
-    .enable(storage_active),
-    .gated_clock(entry0_clock)
-  );
-  MacroClockGate #(
-    .ENABLE_GATING(USE_CLOCK_GATING)
-  ) u_deep_weight_icg (
-    .clock(clock),
-    .enable(deep_weight_active),
-    .gated_clock(deep_weight_clock)
-  );
-  MacroClockGate #(
-    .ENABLE_GATING(USE_CLOCK_GATING)
-  ) u_deep_requant_icg (
-    .clock(clock),
-    .enable(deep_requant_active),
-    .gated_clock(deep_requant_clock)
-  );
-  MacroClockGate #(
-    .ENABLE_GATING(USE_CLOCK_GATING)
-  ) u_channel_scale_icg (
-    .clock(clock),
-    .enable(channel_scale_active),
-    .gated_clock(channel_scale_clock)
-  );
-  MacroClockGate #(
-    .ENABLE_GATING(USE_CLOCK_GATING)
-  ) u_batch_cfg_icg (
-    .clock(clock),
-    .enable(batch_cfg_load),
-    .gated_clock(batch_cfg_clock)
-  );
-  MacroClockGate #(
-    .ENABLE_GATING(USE_CLOCK_GATING)
-  ) u_batch_channel_icg (
-    .clock(clock),
-    .enable(batch_cfg_load && requant_cfg_i.requant_mode),
-    .gated_clock(batch_channel_clock)
-  );
+  wire [31:0] accepted_context;
+  wire [31:0] write_context_slot;
+  // Requant Context slot this command targets. Per-Context zP/Q state is written
+  // and re-checked at this index, so it is a combinational view rather than a
+  // temporary inside the pipeline block.
+  wire [31:0] zp_ctx;
+  wire write_requant_params;
+  assign cmd_accept = cmd_valid_i && cmd_ready_o;
+  assign deep_command = cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4;
+  assign deep_batch = batch_is_as && batch_activation_bits > 4;
+  assign a4_packet = batch_is_as && batch_activation_bits == 4;
+  assign storage_active = !reset && cmd_accept && cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) == 4;
+  assign deep_weight_active = !reset && ((batch_active && deep_batch) || (cmd_accept && deep_command));
+  assign deep_requant_active = !reset && ENABLE_REQUANT &&
+      ((batch_active && batch_command.cim_as_cnt > 1) || (cmd_accept && cmd_i.cim_as_cnt > 1));
+  assign channel_scale_active = deep_requant_active &&
+      (batch_active ? batch_requant_cfg.requant_mode : requant_cfg_i.requant_mode);
+  assign batch_cfg_load = !reset && ENABLE_REQUANT && cmd_accept && !batch_active;
+  assign accepted_context = packet_active ? command_count : 0;
+  assign write_context_slot = accepted_context;
+  assign zp_ctx = write_context_slot;
+  assign write_requant_params = cmd_accept && ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && (!batch_active || tile == 0);
+  // ===== 3. Configuration table clock domains and parameter storage =====
+  // Six configuration tables, one gated-clock domain each. They use the same
+  // cell and flags, so a single loop instantiates them; the individual clock
+  // names stay as aliases because the testbench observes them.
+  // Bit order [5:0]: batch channel, batch config, channel scale, ZP, weight
+  // address, single entry.
+  wire [5:0] table_enable;
+  assign table_enable = {
+    batch_cfg_load && requant_cfg_i.requant_mode,
+    batch_cfg_load,
+    channel_scale_active,
+    deep_requant_active,
+    deep_weight_active,
+    storage_active
+  };
+  wire [5:0] table_clock;
+  for (genvar t = 0; t < 6; t++) begin : g_table_clock
+    MacroClockGate #(
+      .ENABLE_GATING(USE_CLOCK_GATING)
+    ) u_icg (
+      .clock(clock),
+      .enable(table_enable[t]),
+      .gated_clock(table_clock[t])
+    );
+  end
+  assign entry0_clock = table_clock[0];
+  assign deep_weight_clock = table_clock[1];
+  assign deep_requant_clock = table_clock[2];
+  assign channel_scale_clock = table_clock[3];
+  assign batch_cfg_clock = table_clock[4];
+  assign batch_channel_clock = table_clock[5];
 
   // WS/single uses packet_cmd directly. A4 AS uses one bypass register.
   always_ff @(posedge entry0_clock or posedge reset)
@@ -203,12 +227,18 @@ module cluster_top #(
       batch_requant_cfg.requant_shift[39:10] <= requant_cfg_i.requant_shift[39:10];
     end
   end
-  wire [2:0] regular_macro_id = {sram_macro_group, sram_bank_sel};
-  wire regular_access = !reset && sram_cs_en;
-  wire regular_read = regular_access && !sram_wr_en;
-  wire regular_write = regular_access && sram_wr_en && !(&sram_wmask);
-  wire [7:0] memory_wen = regular_write ? (8'd1 << regular_macro_id) : 8'd0;
+  // ===== 4. Regular SRAM passthrough and protocol checks =====
+  wire [2:0] regular_macro_id;
+  wire regular_access;
+  wire regular_read;
+  wire regular_write;
+  wire [7:0] memory_wen;
   wire [8191:0] regular_read_data;
+  assign regular_macro_id = {sram_macro_group, sram_bank_sel};
+  assign regular_access = !reset && sram_cs_en;
+  assign regular_read = regular_access && !sram_wr_en;
+  assign regular_write = regular_access && sram_wr_en && !(&sram_wmask);
+  assign memory_wen = regular_write ? (8'd1 << regular_macro_id) : 8'd0;
   // Request and response selection share the SRAM sampling edge. The
   // next live request must not change an outstanding synchronous response.
   logic [2:0] sram_response_macro;
@@ -238,6 +268,7 @@ module cluster_top #(
         $fatal(1, "CLUSTER_AS_PROTOCOL: A4 AS relies on one phase per Context");
     end
 `endif
+  // ===== 5. Pipeline tags and tmp/Psum storage declarations =====
   typedef struct packed {
     logic valid;
     logic [1:0] ph;
@@ -301,6 +332,7 @@ module cluster_top #(
   logic [31:0] fusion_enable, acc_enable, psum_write, result_done;
   wire [255:0] requant_comb_data;
   wire [ 31:0] requant_comb_valid;
+  // ===== 6. Operation step counters (simulation only) =====
   // Internal operation coverage; no extra external interface. The pipeline
   // block only updates state; step terms are gathered separately so each
   // counter keeps a single non-blocking driver.
@@ -356,6 +388,7 @@ module cluster_top #(
       a4_acc_steps <= a4_acc_steps + a4_acc_inc;
     end
 `endif
+  // ===== 7. Completion paths, shared views, batch decode =====
   // No output backpressure: each fixed-latency path returns Contexts in
   // issue order. The last Context completing a path also drains all earlier
   // Contexts on that path. Per-lane reservation/duplicate checks live in TB.
@@ -457,6 +490,7 @@ module cluster_top #(
       raw_context[l] = int'(raw_path_context[int'(batch_group_path[l/4])]);
     end
   end
+  // ===== 8. Issue scheduling and Requant configuration select =====
   always_comb begin
     packet_cmd = batch_command;
     packet_cmd.cim_weight_raddr = packet_weight_address;
@@ -513,6 +547,7 @@ module cluster_top #(
       end
     end
   end
+  // ===== 9. Requant unit, output lanes, Macro array, reduction tree =====
   ClusterRequant u_requant (
     .cfg_i  (selected_requant_cfg),
     .group_sel_i(batch_requant_group),
@@ -622,6 +657,7 @@ module cluster_top #(
         capture_data[l]  = longint'($signed(tap_data[path][21*l+:21]));
       end
   end
+  // ===== 10. Accumulation: buffer enables, tmp/Psum arrays, arithmetic =====
   always_ff @(posedge clock or posedge reset) begin : advance_buffer_enables
     if (reset) begin
       tmp_input_cg_en <= '0;
@@ -662,8 +698,9 @@ module cluster_top #(
   end
   for (genvar path = 0; path < 3; path++) begin : g_shared_meta
     wire tmp_meta_clock, raw_meta_clock;
-    wire tmp_meta_req = |(tmp_input_cg_en & path_lanes[path]);
-    wire raw_meta_req = |(result_done & path_lanes[path]);
+    wire tmp_meta_req, raw_meta_req;
+    assign tmp_meta_req = |(tmp_input_cg_en & path_lanes[path]);
+    assign raw_meta_req = |(result_done & path_lanes[path]);
     MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_tmp_meta_icg (
       .clock(clock), .enable(!reset && tmp_meta_req), .gated_clock(tmp_meta_clock)
     );
@@ -750,10 +787,23 @@ module cluster_top #(
         tmp_tag[l].kt == batch_last_tile;
     end
   end
+  // ===== 11. Main pipeline state machine =====
+  // Batch close: every required completion path has reported, including the
+  // last-Context publications made by this edge. completion_path_done is
+  // registered, so this reads its pre-edge value like the block below does.
+  wire all_done;
+  assign all_done = batch_input_done &&
+      (((completion_path_done | completion_path_last) & completion_path_required) == completion_path_required);
+`ifndef SYNTHESIS
+  // A channel may be captured by at most one active tap. Union the masks in tap
+  // order; only the assertion inside the pipeline block consumes the conflicts.
+  wire [31:0] tap_claim_0, tap_claim_1, tap_claim_2, tap_conflict;
+  assign tap_claim_0  = tap_valid[0] ? tap_mask[0] : 32'd0;
+  assign tap_claim_1  = tap_valid[1] ? tap_mask[1] : 32'd0;
+  assign tap_claim_2  = tap_valid[2] ? tap_mask[2] : 32'd0;
+  assign tap_conflict = (tap_claim_1 & tap_claim_0) | (tap_claim_2 & (tap_claim_0 | tap_claim_1));
+`endif
   always_ff @(posedge clock or posedge reset) begin : pipeline
-    bit all_done;
-    logic [31:0] captured;
-    int zp_ctx;
     if (reset) begin
       act_buffer <= '0;
       packet_weight_address <= '0;
@@ -796,7 +846,6 @@ module cluster_top #(
           $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded");
 `endif
         if (ENABLE_REQUANT && cmd_i.cim_as_cnt > 1) begin
-          zp_ctx = int'(write_context_slot);
 `ifndef SYNTHESIS
           if(batch_active && (requant_cfg_i.requant_mode!==batch_requant_cfg.requant_mode ||
                              requant_cfg_i.conv_mode!==batch_requant_cfg.conv_mode))
@@ -976,7 +1025,9 @@ module cluster_top #(
         end
       // Independent tree taps capture into per-channel tmp DFFs. There is
       // no additional root-only DFF or full-depth result alignment pipeline.
-      captured = '0;
+`ifndef SYNTHESIS
+      if (|tap_conflict) $fatal(1, "Concurrent tree taps target same channel");
+`endif
       tmp_valid <= '0;
       for (int path = 0; path < 3; path++)
       if (tap_valid[path]) begin
@@ -984,21 +1035,12 @@ module cluster_top #(
         if (!tap_tag[path].valid || ((tap_mask[path] & ~tap_tag[path].mask) != 0))
           $fatal(1, "Terminal tap metadata mismatch path=%0d", path);
 `endif
-        for (int l = 0; l < 32; l++)
-        if (tap_mask[path][l]) begin
-`ifndef SYNTHESIS
-          if (captured[l]) $fatal(1, "Concurrent tree taps target same channel");
-`endif
-          captured[l] = 1;
-          tmp_valid[l] <= 1;
-        end
+        for (int l = 0; l < 32; l++) if (tap_mask[path][l]) tmp_valid[l] <= 1;
       end
       // Include this edge's last-Context publications, preserving the
       // existing batch-close cycle. Empty paths require no completion event.
       completion_path_done <= completion_path_done | completion_path_last;
       if (cmd_accept && !batch_active) completion_path_done <= '0;
-      all_done = batch_input_done &&
-          (((completion_path_done | completion_path_last) & completion_path_required) == completion_path_required);
       if (batch_active && all_done) begin
         batch_active <= 0;
         batch_input_done <= 0;

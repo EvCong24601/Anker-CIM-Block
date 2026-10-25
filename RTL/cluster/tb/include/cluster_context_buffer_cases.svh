@@ -28,7 +28,7 @@ function automatic requant_cfg_t context_buffer_cfg(input int mode, input int cx
   end
   if ($test$plusargs("FULL_SHIFT_TEST")) begin
     for (int c = 0; c < 4; c++) begin
-      case ((cx + c) % 8)
+      unique case ((cx + c) % 8)
         0: cfg.requant_shift[10*c+:10] = 10'(-512);
         1: cfg.requant_shift[10*c+:10] = 10'(-64);
         2: cfg.requant_shift[10*c+:10] = 10'(-63);

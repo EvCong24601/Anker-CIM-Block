@@ -60,7 +60,7 @@ module tb_ClusterRequant;
         default: '0
       };
       for (int lane = 0; lane < 32; lane++) psum_i[32*lane+:32] = 32'(p);
-      case (cases % 4)
+      unique case (cases % 4)
         0: valid_i = 32'h0000000f;
         1: valid_i = 32'h00000000;
         2: valid_i = 32'h05000000;

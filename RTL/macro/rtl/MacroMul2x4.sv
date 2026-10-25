@@ -11,13 +11,20 @@ module MacroMul2x4 (
   input  logic             activation_signed,
   output wire signed [6:0] product
 );
-  wire [5:0] raw_product = weight_bits * activation_bits;
-  wire neg_w = weight_signed && weight_bits[1];
-  wire neg_a = activation_signed && activation_bits[3];
-  wire signed [7:0] raw_extended = $signed({2'b00, raw_product});
-  wire signed [7:0] w_correction = neg_w ? $signed({2'b00, activation_bits, 2'b00}) : 8'sd0;
-  wire signed [7:0] a_correction = neg_a ? $signed({2'b00, weight_bits, 4'b0000}) : 8'sd0;
-  wire signed [7:0] corrected = raw_extended - w_correction - a_correction + ((neg_w && neg_a) ? 8'sd64 : 8'sd0);
+  wire [5:0] raw_product;
+  wire neg_w;
+  wire neg_a;
+  wire signed [7:0] raw_extended;
+  wire signed [7:0] w_correction;
+  wire signed [7:0] a_correction;
+  wire signed [7:0] corrected;
+  assign raw_product = weight_bits * activation_bits;
+  assign neg_w = weight_signed && weight_bits[1];
+  assign neg_a = activation_signed && activation_bits[3];
+  assign raw_extended = $signed({2'b00, raw_product});
+  assign w_correction = neg_w ? $signed({2'b00, activation_bits, 2'b00}) : 8'sd0;
+  assign a_correction = neg_a ? $signed({2'b00, weight_bits, 4'b0000}) : 8'sd0;
+  assign corrected = raw_extended - w_correction - a_correction + ((neg_w && neg_a) ? 8'sd64 : 8'sd0);
   assign product = corrected[6:0];
 endmodule
 `default_nettype wire

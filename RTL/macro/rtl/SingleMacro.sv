@@ -40,12 +40,16 @@ module SingleMacro #(
   logic [  3:0] result_mask_in;  // Registered one edge before result capture.
   logic [  1:0] phase_in;  // ACT digit phase returned with the result.
 
-  wire          issue = !reset && cim_ren && (|cim_oc_mask);
-  wire          write_active = sram_wen && !(&sram_wmask);
+  wire          issue;
+  wire          write_active;
   wire macro_clock, memory_clock;
-  wire memory_active = !reset && (write_active || sram_ren || (issue && cim_station));
+  wire memory_active;
   // Include output valid to preserve the final valid-clearing edge n+2.
-  wire clock_active = !reset && (issue || in_valid || cim_odata_valid);
+  wire clock_active;
+  assign issue = !reset && cim_ren && (|cim_oc_mask);
+  assign write_active = sram_wen && !(&sram_wmask);
+  assign memory_active = !reset && (write_active || sram_ren || (issue && cim_station));
+  assign clock_active = !reset && (issue || in_valid || cim_odata_valid);
   generate
     if (USE_CLOCK_GATING) begin : g_icg
       MacroClockGate u_clock_gate (
@@ -68,12 +72,10 @@ module SingleMacro #(
   // Decode the incoming request, not weight_mode_in from the previous issue.
   // Cluster supplies this request from its registered packet/scheduler state;
   // the ICG captures the enable during the low phase before the input edge.
-  wire [1:0] input_weight_mode = decode_weight_mode(cim_precision);
-  wire [2:0] act_capture_en = {
-    issue && input_weight_mode == W_MODE_2,
-    issue && input_weight_mode != W_MODE_8,
-    issue
-  };
+  wire [1:0] input_weight_mode;
+  wire [2:0] act_capture_en;
+  assign input_weight_mode = decode_weight_mode(cim_precision);
+  assign act_capture_en = {issue && input_weight_mode == W_MODE_2, issue && input_weight_mode != W_MODE_8, issue};
   wire [2:0] act_clock;
   for (genvar bank = 0; bank < 3; bank++) begin : g_act_bank
     localparam int FIRST = bank == 0 ? 0 : bank == 1 ? 128 : 256;
@@ -93,10 +95,12 @@ module SingleMacro #(
   logic [7:0] held_address;
   logic hold_valid;
   wire [1023:0] sram_read_data;
-  wire sram_read_enable = !reset && issue && cim_station;
+  wire sram_read_enable;
+  assign sram_read_enable = !reset && issue && cim_station;
   // Both refresh and reuse consume the SRAM's retained read output.
   // There is no second 1024-bit weight data register after the SRAM.
-  wire [1023:0] compute_weight = in_valid ? sram_read_data : 1024'b0;
+  wire [1023:0] compute_weight;
+  assign compute_weight = in_valid ? sram_read_data : 1024'b0;
   MacroWeightSRAM u_weight_sram (
     .clock(memory_clock),
     .write_enable(!reset && write_active),
@@ -140,7 +144,8 @@ module SingleMacro #(
   generate
     for (genvar c = 0; c < 4; c++) begin : g_oc
       wire result_clock;
-      wire result_enable = !reset && in_valid && mask_in[c] && result_mask_in[c];
+      wire result_enable;
+      assign result_enable = !reset && in_valid && mask_in[c] && result_mask_in[c];
       if (USE_CLOCK_GATING) begin : g_result_icg
         MacroClockGate u_clock_gate (
           .clock(clock),
@@ -159,13 +164,17 @@ module SingleMacro #(
         else if (result_enable) cim_odata[18*c+:18] <= sum_l5[c];
       for (genvar s = 0; s < 32; s++) begin : g_slice
         for (genvar t = 0; t < 4; t++) begin : g_submul
-          wire enabled_oc = in_valid && mask_in[c];
-          wire [1:0] weight_bits = enabled_oc ? compute_weight[256*c+8*s+2*t+:2] : 2'b0;
-          wire [3:0] activation_bits = !enabled_oc ? 4'b0
+          wire enabled_oc;
+          wire [1:0] weight_bits;
+          wire [3:0] activation_bits;
+          wire weight_signed;
+          assign enabled_oc = in_valid && mask_in[c];
+          assign weight_bits = enabled_oc ? compute_weight[256*c+8*s+2*t+:2] : 2'b0;
+          assign activation_bits = !enabled_oc ? 4'b0
                         : (weight_mode_in == W_MODE_2) ? activation_in[4 * (4 * s + t) +: 4]
                         : (weight_mode_in == W_MODE_4) ? activation_in[4 * (2 * s + t / 2) +: 4]
                         : activation_in[4 * s +: 4];
-          wire weight_signed = signed_en_in &&
+          assign weight_signed = signed_en_in &&
                         ((weight_mode_in == W_MODE_2) ||
                          ((weight_mode_in == W_MODE_4) && ((t % 2) == 1)) ||
                          ((weight_mode_in == W_MODE_8) && (t == 3)));
