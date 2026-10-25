@@ -12,7 +12,9 @@
 tb_Cluster.sv
 tb_ClusterReduceTree.sv
 tb_ClusterRequant.sv
+ClusterGemmOs1Ws32.sv
 tb_Cluster_GEMM_OS1_WS32_W8A16.sv
+ClusterGemmOs2As4.sv
 tb_Cluster_GEMM_OS2_AS4_W8A16.sv
 ClusterGemmScenario.sv
 tb_Cluster_GEMM_W4A16_HighGroup.sv

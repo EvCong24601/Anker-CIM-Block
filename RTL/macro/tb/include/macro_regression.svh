@@ -1,6 +1,9 @@
-// 正向场景顺序、随机回归与总账检查；含独立 primitive 穷举和 watchdog。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Positive scenario ordering, random regression and bookkeeping checks; includes an
+// independent primitive sweep and a watchdog.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 initial begin : stimulus
   int w_value, a_value, primitive_expected, ba;
@@ -196,7 +199,8 @@ initial begin : stimulus
   if (expected_valid != 0 || accepted_count != result_count + cancelled_count)
     $fatal(1, "TB: outstanding or lost transactions at finish");
   $display("PASS clock_gating=%0d primitive=%0d accepted=%0d results=%0d cancelled=%0d bubbles=%0d zero_mask=%0d",
-           CLOCK_GATING, primitive_count, accepted_count, result_count, cancelled_count, bubble_count, zero_mask_count);
+           CLOCK_GATING, primitive_count, accepted_count, result_count, cancelled_count, bubble_count,
+           zero_mask_count);
   $finish;
 end
 initial begin

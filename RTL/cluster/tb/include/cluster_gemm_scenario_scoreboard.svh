@@ -23,7 +23,8 @@ always @(posedge clock) begin : edge_scoreboard
         $fatal(1, "GEMM scenario: internal ACT/Context/phase/weight route mismatch");
       for (int macro = first_macro; macro < first_macro + macro_count; macro++) begin
         // One-tile preload readback already retains the first weight row.
-        if (dut.station[macro] !== (issues == 0 && !(active_tile == 0 && n_tiles == 1))) $fatal(1, "GEMM scenario: WS weight hold refresh mismatch");
+        if (dut.station[macro] !== (issues == 0 && !(active_tile == 0 && n_tiles == 1)))
+          $fatal(1, "GEMM scenario: WS weight hold refresh mismatch");
         if (dut.station[macro]) refreshes[macro]++;
       end
       issues++;

@@ -69,7 +69,8 @@ task automatic load_gemm_weights();
       sram_bank_sel = 2'(macro % 4);
       sram_wrdata[0] = weight_rows[8*tile+macro];
       $display(
-        "[WEIGHT_WRITE] time=%0.3f ns description=load-single-cluster-N-tile tile=%0d macro=%0d address=0x%02h k=%0d..%0d",
+        string'({"[WEIGHT_WRITE] time=%0.3f ns description=load-single-cluster-N-tile ",
+                 "tile=%0d macro=%0d address=0x%02h k=%0d..%0d"}),
         $realtime, tile, macro, sram_row_addr, 32 * macro, 32 * macro + 31);
     end
   @(negedge clock);
@@ -119,7 +120,8 @@ task automatic send_gemm_rows(input int tile);
     cmd_valid_i = 1;
     act_data_i  = act_planes[4*m];
     $display(
-      "[CMD_SEND] time=%0.3f ns description=WS-GEMM-row tile=%0d row=%0d address=0x%02h os=1 ws=32 as=1 split=0x00 slots=0xfac688",
+      string'({"[CMD_SEND] time=%0.3f ns description=WS-GEMM-row ",
+               "tile=%0d row=%0d address=0x%02h os=1 ws=32 as=1 split=0x00 slots=0xfac688"}),
       $realtime, tile, m, cmd_i.cim_weight_raddr);
     @(posedge clock);
     if (cmd_ready_o !== 1'b1) $fatal(1, "GEMM: Command was not accepted by the single Cluster");

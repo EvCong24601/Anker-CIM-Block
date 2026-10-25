@@ -72,13 +72,14 @@ task automatic load_as_weights();
       sram_bank_sel = 2'(macro % 4);
       @(posedge clock);
       #1;
-      if (!sram_rd_valid || sram_rd_data !== weight_rows[address*8+macro]) $fatal(1, "AS GEMM: SRAM readback mismatch");
+      if (!sram_rd_valid || sram_rd_data !== weight_rows[address*8+macro])
+        $fatal(1, "AS GEMM: SRAM readback mismatch");
       @(negedge clock);
     end
   sram_cs_en = 0;
 endtask
 
-task automatic select_as_zp(input int tile, cx);
+task automatic select_as_zp(input int tile, input int cx);
   requant_cfg_i = '0;
   requant_cfg_i.requant_multiplier = 32'(multiplier);
   requant_cfg_i.requant_shift = 10'(shift);
@@ -121,7 +122,8 @@ task automatic send_as_row(input int m);
         select_as_zp(tile, t);
         act_data_i = act_planes[(m*2+tile)*4+t];
         $display(
-          "[CMD_SEND] time=%0.3f ns description=AS-address-and-ACT-overlap m=%0d k_tile=%0d ctx=%0d slice=%0d address=0x%02h",
+          string'({"[CMD_SEND] time=%0.3f ns description=AS-address-and-ACT-overlap ",
+                   "m=%0d k_tile=%0d ctx=%0d slice=%0d address=0x%02h"}),
           $realtime, m, tile, t, t, cmd_i.cim_weight_raddr);
       end else begin
         cmd_valid_i = 0;

@@ -6,7 +6,7 @@ import csv
 import hashlib
 import json
 import random
-from gemm_os1_ws32_w8a16_vectors import round_away,clip,write_hex,verify_outputs
+from gemm_os1_ws32_w8a16_vectors import round_away,clip,write_hex
 
 M,K,N=32,512,16
 BASE_ADDR=0x60
@@ -124,6 +124,19 @@ def generate(directory,seed=0x3251216,per_channel=False):
     (out/'vectors.sha256').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n'
         for p in sorted(out.iterdir()) if p.is_file() and p.name!='vectors.sha256' and not p.name.startswith('gemm_observed')),encoding='ascii')
     return meta
+
+
+def verify_outputs(directory):
+    """Compare the simulated OS2/AS4 matrix against this module's own M/N golden."""
+    out=Path(directory)
+    with (out/'matrix_golden.csv').open(encoding='utf-8') as f:
+        expected={(int(r['m']),int(r['n'])):(int(r['raw']),int(r['quant'])) for r in csv.DictReader(f)}
+    with (out/'gemm_observed_matrix.csv').open(encoding='utf-8') as f:
+        rows=list(csv.DictReader(f))
+    assert len(expected)==M*N and len(rows)==M*N,'OS2/AS4 observed matrix is not M*N'
+    actual={(int(r['m']),int(r['n'])):(int(r['raw']),int(r['quant'])) for r in rows}
+    assert actual==expected,'Observed OS2/AS4 GEMM matrix differs from Python integer golden'
+    print(f'PASS Python OS2/AS4 output comparison: {M*N} raw and {M*N} INT8 matrix elements',flush=True)
 
 
 if __name__=='__main__':

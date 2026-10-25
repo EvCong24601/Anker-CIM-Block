@@ -1,8 +1,11 @@
-// 四类并行检查：ACT bank、ICG/保持、逐 phase 算术历史、Command/raw 输出。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Four parallel checkers: ACT bank, ICG/hold, per-phase arithmetic history and
+// Command/raw output.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
-// A. ACT 完整性：未写区域保持；地址-only Command 不重装 A0。
+// A. ACT integrity: untouched regions are held; an address-only Command never reloads A0.
 // Check the whole bank, including slices that are not read this cycle.
 // An AS address-only command must never reload A0; a new ACT packet must
 // wait until the preceding packet's final internal issue has consumed it.
@@ -40,7 +43,8 @@ always @(posedge clock) begin : act_buffer_scoreboard
   end
 end
 
-// B. 时钟/保持：先预测本沿写使能，再检查实际门控时钟与未更新数据。
+// B. Clock/hold: predict this edge's write enables first, then check the real gated
+// clocks and the data that must not change.
 always @(posedge clock) begin : buffer_clock_scoreboard
   longint signed old_p[0:OUTPUT_BUFFER_DEPTH - 1][0:31];
   longint signed old_tmp[0:31], want_tmp[0:31];
@@ -101,7 +105,8 @@ always @(posedge clock) begin : buffer_clock_scoreboard
     end
   end
 end
-// C. 算术历史：按 Context 独立累计 phase，不允许不同 Context 串数据。
+// C. Arithmetic history: accumulate phases independently per Context; data must never
+// bleed between different Contexts.
 // Independent arithmetic history; debug snapshots are TB-only, not DUT state.
 always @(posedge clock) begin : arithmetic_scoreboard
   longint signed running_sum[0:MAX_CONTEXTS - 1][0:31];
@@ -185,7 +190,8 @@ always @(posedge clock) begin : arithmetic_scoreboard
   end
 end
 
-// D. 端到端协议/结果：Command 稳定性、实际发射、lane 周期及数值/重复检查。
+// D. End-to-end protocol/results: Command stability, actual issues, lane cycles and the
+// value/duplicate checks.
 // Capture accepted compute events before NBA, inspect raw result after NBA.
 always @(posedge clock) begin : scoreboard
   int t, c, p, idx, tag, external_ctx, external_ph;

@@ -185,8 +185,11 @@ def check(name, directory):
     if name.startswith('gate_equiv_') and 'PASS cluster_gate_equivalence cycles=' not in log:
         raise SystemExit('FAIL: missing whole-Cluster gate equivalence marker')
     if not c['negative']:
-        if c['generator'] in ('ws32', 'as4'):
-            importlib.import_module('gemm_os1_ws32_w8a16_vectors').verify_outputs(directory/'data')
+        # Each generator owns the M/N its golden was built from, so the OS2/AS4 case
+        # must not be checked by the WS32 verifier just because both are 32x16 today.
+        verifier={'ws32':'gemm_os1_ws32_w8a16_vectors','as4':'gemm_os2_as4_w8a16_vectors'}.get(c['generator'])
+        if verifier:
+            importlib.import_module(verifier).verify_outputs(directory/'data')
         elif c['generator'] and c['generator']!='requant':
             importlib.import_module('gemm_scenario_vectors').verify_outputs(directory/'data')
         if name=='cluster_default':

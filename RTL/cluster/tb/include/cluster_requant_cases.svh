@@ -83,7 +83,7 @@ endtask
 
 // Independent AS2 parameter mapping. Each batch is fully drained before the
 // next one; no buffering or scheduler changes are required for this contract.
-function automatic requant_cfg_t context_test_cfg(input int mode, cx);
+function automatic requant_cfg_t context_test_cfg(input int mode, input int cx);
   requant_cfg_t cfg;
   cfg = '0;
   cfg.conv_mode = 1'(mode);
@@ -107,7 +107,8 @@ task automatic run_requant_context_suite();
   for (int mode = 0; mode < 2; mode++)
     for (int os = 1; os <= 2; os++) begin
       $display(
-        "[CASE_START] time=%0.3f ns suite=requant_context description=independent-AS2-scale-and-zp/serial-batches mode=%0d os=%0d",
+        string'({"[CASE_START] time=%0.3f ns suite=requant_context ",
+                 "description=independent-AS2-scale-and-zp/serial-batches mode=%0d os=%0d"}),
         $realtime, mode, os);
       cmd_i = '0;
       cmd_i.cim_os_cnt = 8'(os);
@@ -205,7 +206,8 @@ task automatic run_requant_boundary_suite();
   cmd_valid_i = 0;
   wait (out_valid_o[0]);
   #1;
-  if (psum_data_o[31:0] !== 32'd128 || requant_valid_o !== 0) $fatal(1, "Boundary first raw or Requant delay mismatch");
+  if (psum_data_o[31:0] !== 32'd128 || requant_valid_o !== 0)
+    $fatal(1, "Boundary first raw or Requant delay mismatch");
   @(negedge clock);
   requant_cfg_i = '{
     requant_mode: 1'b0,
@@ -269,7 +271,9 @@ task automatic run_requant_channel_suite();
       end
     end
   if (count != 1536 || requant_checks == 0) $fatal(1, "Missing four-channel mapping coverage");
-  $display("PASS requant_channel cases=%0d masks=16 groups=7 precisions=7 checks=%0d latency=1", count, requant_checks);
+  $display(string'({"PASS requant_channel cases=%0d masks=16 groups=7 precisions=7 ",
+                    "checks=%0d latency=1"}),
+           count, requant_checks);
 endtask
 
 // Sample raw before the edge; quantization is published AFTER that edge.

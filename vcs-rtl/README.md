@@ -1,73 +1,157 @@
 # VCS RTL 仿真
 
-在 `vcs-rtl/` 目录运行。需要 Linux 环境中的 VCS、Verdi/FSDB 支持、GNU Make 和 Python 3；Python golden 仅使用标准库。以下为 VCS 运行配置，VCS 平台的实际运行结果应以该平台日志为准。
+基于 Synopsys VCS 的 Cluster/Macro 回归入口。所有命令都在 `vcs-rtl/` 目录下运行。
+
+**环境要求**：Linux + VCS + GNU Make + Python 3；只有看波形才需要 Verdi/FSDB。Python 只负责生成 golden 向量和比对结果，仅用标准库。
+
+## 1. 五分钟上手
 
 ```sh
-make list
-make run CASE=gemm_os1_ws32_w8a16_tensor
-make run CASE=gemm_os1_ws32_w8a16_channel
-make run CASE=gemm_os2_as4_w8a16_channel
-make run CASE=gemm_w4a16_n6_tail_channel
-make wave CASE=gemm_w4a16_n6_tail_channel
-make gemm-regression
-make regression
+make list                                    # 列出全部 133 个 case 及一句话说明
+make run CASE=gemm_os1_ws32_w8a16_tensor     # 跑一个正向用例
 ```
 
-`run` 按顺序生成数据、编译、仿真、检查。全部 133 个 case 中，43 个为正向测试，90 个应命中指定 Fatal；`gemm-regression` 包含 11 个正向端到端 GEMM。`cases.py` 是配置来源；修改后执行 `python3 cases.py --write` 更新 `cases.mk`。
+`make run` 串起四个阶段，任一阶段失败即停止：
 
-每个 case 使用独立的 `work/<CASE>/`，包含编译产物、`compile.log`、`sim.log`、退出状态、`data/` 和波形。重复相同 case 会更新该目录；保留多次结果时指定不同 `CASE_TAG`。
+| 阶段 | 单独执行 | 做什么 | 产物（在 `work/<CASE_TAG>/`） |
+|---|---|---|---|
+| 1 | `make prepare` | 生成 golden 数据和 plusarg 向量 | `data/` |
+| 2 | `make com` | VCS 编译 | `compile.log`、可执行文件、`csrc/` |
+| 3 | `make sim` | 跑仿真 | `sim.log`、`sim.exit`、`.fsdb` |
+| 4 | `make check` | 判定通过或失败 | 终端打印 `PASS` / `FAIL:` |
 
-## 参数设置
-
-- `CASE`：选择下文的预设；自动选择 TB、golden 生成器、编译参数、plusargs 和精确检查标志。
-- `CASE_TAG`：结果目录及波形后缀，默认等于 CASE。建议仅使用英文、数字和下划线。
-- `TB`：不指定 CASE 时可选 `cluster / macro / reduce / requant / gemm_os1_ws32_w8a16 / gemm_os2_as4_w8a16 / gemm_w4a16_high_group / gemm_w2a8_high_group / gemm_w4a16_n6_tail / gemm_w4a16_round_clip`，用于自定义实验。指定 CASE 时由预设决定。
-- `PARAMETERS`：追加 VCS 编译期覆盖，例如 `-pvalue+tb_Cluster.OUTPUT_PSUM_DEPTH=16`。计数、容量和精度参数改变后应重新编译。
-- `PVALUE`：追加运行期 plusargs，例如 `+CAPACITY_SIGN=1`；不能用于改变编译期 parameter。
-- `PYTHON`：Python 命令，默认 `python3`。`WORK_DIR`：结果根目录，默认 `work`。
-- `OUTPUT`：可执行文件名，默认 TB 名。`FSDB_FILE`：自定义波形路径，默认 `<TOP>_<CASE_TAG>.fsdb`。
-- `VCS_FLAGS / ALL_DEFINE / LIB_LIST`：编译选项、宏和附加模型。默认打开协议断言及 `CLUSTER_FSDB`。
+每个 case 独占 `work/<CASE_TAG>/`，重跑会覆盖同一目录。要保留多次结果，换一个 `CASE_TAG`：
 
 ```sh
 make run CASE=context_stress CASE_TAG=os1_as16_os2_as8
-make com CASE=requant_channel
-make sim CASE=requant_channel
-make check CASE=requant_channel
-make run CASE=gemm_w4a16_high_group_channel FSDB_FILE=w4_hi_pc.fsdb
 ```
 
-`com/sim/check` 必须使用相同的 CASE、CASE_TAG 和编译参数。`sim` 保留仿真退出状态，`check` 判定最终成功或失败；完整实验使用 `run`。负向测试不能只看进程退出码，检查器要求恰好一个、且匹配预期的 Fatal，其他诊断一律失败。正向 GEMM 除 SV 检查外还逐元素比较 Python golden。
+`cases.py` 是 case 配置的唯一来源。改完必须重新生成 `cases.mk`，否则 `make run` 会报 `Unknown CASE`：
 
-## 文件列表
+```sh
+python3 cases.py --write
+```
 
-- `verilog_file_common.f`：包、Macro 功能模块及 Cluster 功能模块，按依赖顺序编译。
-- `verilog_file_cluster.f`：主 Cluster TB 和时延观察器。
-- `verilog_file_macro.f`：SingleMacro TB。
-- `verilog_file_reduce.f`：归约树单元 TB。
-- `verilog_file_requant.f`：组合 Requant 单元 TB。
-- `verilog_file_gemm_os1_ws32_w8a16.f`：OS1/WS32，M32/K128/N16，四批 N4。
-- `verilog_file_gemm_os2_as4_w8a16.f`：OS2/AS4，M32/K512/N16，逐 Context 参数表深度16。
-- `verilog_file_gemm_w4a16_high_group.f`：`tb_Cluster_GEMM_W4A16_HighGroup.sv`。
-- `verilog_file_gemm_w2a8_high_group.f`：`tb_Cluster_GEMM_W2A8_HighGroup.sv`。
-- `verilog_file_gemm_w4a16_n6_tail.f`：`tb_Cluster_GEMM_W4A16_N6_Tail.sv`。
-- `verilog_file_gemm_w4a16_round_clip.f`：`tb_Cluster_GEMM_W4A16_RoundClip.sv`。
-- `verilog_file_pl.f`：保留的聚合入口；Makefile 使用上述独立入口。
+## 2. 选一个 case
 
-所有 `.f` 路径相对 `vcs-rtl/`；SV include 路径分别指向两个 TB 目录。`.svh` 不单独编译。
+case 分两类，判定方式完全不同：
 
-## 波形与日志
+- **正向（43 个）**：退出码 0、日志含约定的 `PASS ...` 标记、无任何 Fatal/Error；GEMM 类还要逐元素对齐 Python golden。
+- **负向（90 个）**：故意触发协议违规，要求日志里**恰好一条**匹配预期的 Fatal。多一条、少一条、或命中普通 Error 都算失败。
 
-七个 TB 均支持 `+FSDB_FILE=<路径>`。Makefile 自动传入，例如 `tb_Cluster_GEMM_OS2_AS4_W8A16_gemm_os2_as4_w8a16_channel.fsdb`，后缀说明当前实验；直接运行 TB 时默认 `<TOP>_default.fsdb`。FSDB 在仿真开始时记录完整层级，同一 suite 内的各子 case 用英文 `[CASE_START] time=... description=...` 日志区分。`make wave CASE=...` 自动打开相同文件。
+按被测对象分 10 组：
 
-启用Requant的Cluster专项设置ENABLE_REQUANT=1，raw-only回归保持0。默认Psum/Requant深度16、地址表16、元数据64，AS最多16。OS1/AS的A8/A16使用Psum历史，A4仅旁路地址深表。逐通道参数与OC固定对应。
+| TB | case 数 | 覆盖内容 |
+|---|---|---|
+| `cluster` | 98 | Cluster 顶层：默认算术、SRAM 协议、Requant、Context 容量、门控等价性 |
+| `macro` | 17 | SingleMacro：2 个门控正向 + 15 种协议拒绝 |
+| `gemm_os1_ws32_w8a16` | 2 | OS1/WS32，M32 K128 N16，tensor/channel 量化 |
+| `gemm_os2_as4_w8a16` | 7 | OS2/AS4，M32 K512 N16，含 5 个 AS 参数负向 |
+| `gemm_w4a16_high_group` | 2 | W4A16 高组场景 |
+| `gemm_w2a8_high_group` | 2 | W2A8 高组场景 |
+| `gemm_w4a16_n6_tail` | 2 | W4A16 N6 尾块 |
+| `gemm_w4a16_round_clip` | 1 | W4A16 舍入截断（仅 channel） |
+| `reduce` | 1 | 归约树与时钟门控 |
+| `requant` | 1 | Requant 组合逻辑单元 |
 
-## GEMM 场景
+133 条的完整清单见文末折叠块，日常查名字用 `make list` 即可。批量执行：
 
-11 个正向 GEMM 和 5 个 AS 参数负向 case 的矩阵规模、地址布局、量化模式与检查目标见 [GEMM 用例总览](../docs/Cluster_GEMM.md)。
+```sh
+make gemm-regression   # 11 个正向端到端 GEMM
+make regression        # 全部 133 个，负向用例按预期通过
+```
 
-主Cluster和AS4 GEMM的参数深度默认16；AS4容量负向覆盖为1和2。requant_buffers覆盖77例七精度固定Context参数；requant_a4_address_bypass使用地址深度1。
+## 3. 改参数
 
-## Case 说明
+| 变量 | 作用 |
+|---|---|
+| `CASE` | 选预设：自动决定 TB、golden 生成器、编译参数、plusarg 和检查标志 |
+| `CASE_TAG` | 结果目录名与波形后缀，默认等于 `CASE`；建议只用英文、数字、下划线 |
+| `TB` | 不指定 `CASE` 时直接选裸 TB，取值见上表左列 |
+| `PARAMETERS` | 追加**编译期**参数，如 `-pvalue+tb_Cluster.OUTPUT_PSUM_DEPTH=16` |
+| `PVALUE` | 追加**运行期** plusarg，如 `+CAPACITY_SIGN=1`；改不了编译期 parameter |
+| `PYTHON` | Python 命令，默认 `python3` |
+| `WORK_DIR` | 结果根目录，默认 `work` |
+| `OUTPUT` | 可执行文件名，默认 TB 名 |
+| `FSDB_FILE` | 波形路径，默认 `<TOP>_<CASE_TAG>.fsdb` |
+| `VCS_FLAGS` / `ALL_DEFINE` / `LIB_LIST` | 编译选项、宏、附加模型；默认打开协议断言与 `CLUSTER_FSDB` |
+
+分步执行时 `com` / `sim` / `check` 必须用同一组 `CASE`、`CASE_TAG` 和编译参数，否则会走进别的目录或用了别的参数：
+
+```sh
+make com   CASE=requant_channel
+make sim   CASE=requant_channel
+make check CASE=requant_channel
+make run   CASE=gemm_w4a16_high_group_channel FSDB_FILE=w4_hi_pc.fsdb
+```
+
+`sim` 只记录退出状态，`check` 才是最终裁决：指定 `CASE` 时按该 case 的规则判定；不指定 `CASE` 时退化为「`sim.exit` 为 0 + `sim.log` 含 `PASS` + 不含 fatal/Error-」。
+
+### 深度参数怎么联动
+
+集成时只设一个 `OUTPUT_PSUM_DEPTH`（默认 16），下面三个自动跟随：
+
+```
+OUTPUT_PSUM_DEPTH
+  └─ OUTPUT_BUFFER_DEPTH
+       ├─ WGT_RADDR_BUFFER_DEPTH   (权重 CIM 读地址表)
+       └─ REQUANT_CONTEXT_DEPTH    (Requant Context 参数表)
+```
+
+`MAX_CONTEXTS`（默认 64）是独立的调度标签容量，不参与联动。容量负向测试会显式覆盖兼容参数，此时以显式值为准。
+
+每个物理输出 OC 只有一套 acc 和一套 bit-fusion 算术，所有 Context 通过 Psum 索引复用；Context 深度只扩展状态存储，不复制算术单元。
+
+`ENABLE_REQUANT=1` 打开 Requant 专项，raw-only 回归保持 0。OS1/AS 的 A8/A16 走 Psum 历史，A4 只旁路地址深表；逐通道参数与 OC 固定对应。
+
+## 4. 文件列表（.f）
+
+12 个 `.f` 都放在 `vcs-rtl/` 下，里面的路径也相对该目录：
+
+| 清单 | 内容 |
+|---|---|
+| `verilog_file_common.f` | 包 + 6 个 Macro 功能模块 + 4 个 Cluster 功能模块，按依赖顺序 |
+| `verilog_file_cluster.f` | 主 Cluster TB + 时延观察器 |
+| `verilog_file_macro.f` | SingleMacro TB（自包含，不引用 common） |
+| `verilog_file_reduce.f` | 归约树单元 TB |
+| `verilog_file_requant.f` | Requant 组合单元 TB |
+| `verilog_file_gemm_os1_ws32_w8a16.f` | OS1/WS32 TB + 共用主体，M32 K128 N16，四批 N4 |
+| `verilog_file_gemm_os2_as4_w8a16.f` | OS2/AS4 TB + 共用主体，M32 K512 N16，逐 Context 参数表深度 16 |
+| `verilog_file_gemm_w4a16_high_group.f` | `tb_Cluster_GEMM_W4A16_HighGroup.sv` |
+| `verilog_file_gemm_w2a8_high_group.f` | `tb_Cluster_GEMM_W2A8_HighGroup.sv` |
+| `verilog_file_gemm_w4a16_n6_tail.f` | `tb_Cluster_GEMM_W4A16_N6_Tail.sv` |
+| `verilog_file_gemm_w4a16_round_clip.f` | `tb_Cluster_GEMM_W4A16_RoundClip.sv` |
+| `verilog_file_pl.f` | 兼容用聚合入口；Makefile 不使用它 |
+
+**加一个源文件只需改一处**：功能 RTL 进 `verilog_file_common.f`，TB 侧文件进对应的 `verilog_file_<target>.f`。Makefile 的 TB 表和 `cases.py` 的 case 表都不用动，新 TB 只要自带一个 `.f` 就会被自动识别。`.svh` 走 `+incdir+` 搜索（两个 TB 目录），不单独编译。
+
+## 5. 波形与日志
+
+10 个 TB 都支持 `+FSDB_FILE=<路径>`，`make run` 会自动传入：
+
+```sh
+make run  CASE=gemm_os2_as4_w8a16_channel
+make wave CASE=gemm_os2_as4_w8a16_channel   # Verdi 打开同名波形
+make debug CASE=gemm_os2_as4_w8a16_channel  # 打开 Verdi 数据库
+make vcd   CASE=gemm_os2_as4_w8a16_channel  # 导出 VCD
+```
+
+- 默认文件名 `<TOP>_<CASE_TAG>.fsdb`，例如 `tb_Cluster_GEMM_OS2_AS4_W8A16_gemm_os2_as4_w8a16_channel.fsdb`
+- 不经 Makefile 直接跑 TB 时默认 `<TOP>_default.fsdb`
+- FSDB 从 0 时刻记录完整层级；一个 suite 内的多个子 case 用 `[CASE_START] time=... description=...` 分隔
+
+## 6. GEMM 专项
+
+11 个正向 GEMM 和 5 个 AS 参数负向的矩阵规模、地址布局、量化模式与检查目标，见 [GEMM 用例总览](../docs/Cluster_GEMM.md)。
+
+主 Cluster 与 AS4 GEMM 的参数深度默认 16；AS4 容量负向把 `ZP_DEPTH` 覆盖为 1 和 2。`requant_buffers` 覆盖七精度固定 Context 参数的 77 个例子，`requant_a4_address_bypass` 用地址深度 1。
+
+## 7. 完整 case 清单（133 条）
+
+与 `make list` 同序。日常查名字用 `make list` 即可，这里作为离线备查。
+
+<details>
+<summary>展开查看全部 133 条</summary>
 
 - `cluster_default`：Raw arithmetic and standard timing；成功标志 `PASS configurations=`。
 - `sram_rw`：Regular SRAM read write and OC masks；成功标志 `PASS sram_rw`。
@@ -108,6 +192,8 @@ make run CASE=gemm_w4a16_high_group_channel FSDB_FILE=w4_hi_pc.fsdb
 - `mixed_context`：mixed context；成功标志 `PASS mixed_context cases=24`。
 - `input_overlap`：input overlap；成功标志 `PASS input_overlap cases=168`。
 - `context_stress`：context stress；成功标志 `PASS context_stress cases=224`。
+- `requant_full_shift`：Full INT10 AS Context parameters and OC gating；成功标志 `PASS context_buffers cases=77`。
+- `requant_empty_batch`：Seven precisions empty batch to live batch clock hold；成功标志 `PASS empty_batch cases=7`。
 - `requant_buffers`：Seven precisions AS16/AS8 fixed slots and A4 weight bypass；成功标志 `PASS context_buffers cases=77`。
 - `requant_a4_address_bypass`：A4 AS16 with one weight address register；成功标志 `PASS context_buffers cases=22`。
 - `as17_p0_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
@@ -201,13 +287,9 @@ make run CASE=gemm_w4a16_high_group_channel FSDB_FILE=w4_hi_pc.fsdb
 - `sram_response`：Synchronous read valid and sampled Macro response；成功标志 `PASS sram_response reads=32`。
 - `gate_equiv_sram_response`：Read response gated/ungated comparison；成功标志 `PASS sram_response reads=32`。
 
-详见[验证清单](../docs/Cluster_Verification.md)。
+</details>
 
-## 统一 Buffer 深度
+## 8. 延伸阅读
 
-集成使用 `OUTPUT_PSUM_DEPTH`（默认16）统一设置 Psum、权重CIM读地址表及Requant Context参数表深度。兼容参数依赖为 `OUTPUT_BUFFER_DEPTH=OUTPUT_PSUM_DEPTH`，`WGT_RADDR_BUFFER_DEPTH=OUTPUT_BUFFER_DEPTH`，`REQUANT_CONTEXT_DEPTH=OUTPUT_BUFFER_DEPTH`；仅覆盖统一参数即可联动三表。容量负向测试可以显式覆盖兼容参数，显式覆盖会优先于默认联动。MAX_CONTEXTS为独立的调度标签容量，仍须满足其限制。
-
-每个物理输出OC只有一套acc与一套bit-fusion组合算术，全部Context通过Psum索引复用；不同OC之间保持独立，以支持并行输出。Context深度只扩展状态存储，不复制算术单元。
-
-- `requant_full_shift`：完整INT10的AS Context参数、两种scale模式及门控对照；`make run CASE=requant_full_shift`。
-- `requant_empty_batch`：七精度空批次后的最早接收、tmp时钟请求及输出检查；`make run CASE=requant_empty_batch`。
+- [验证清单](../docs/Cluster_Verification.md)：逐项验证目标与覆盖矩阵
+- [GEMM 用例总览](../docs/Cluster_GEMM.md)：GEMM case 的矩阵规模、地址布局、量化模式

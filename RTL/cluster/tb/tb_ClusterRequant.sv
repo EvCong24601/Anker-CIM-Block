@@ -49,7 +49,8 @@ module tb_ClusterRequant;
       status = $fscanf(fd, "%d %d %d %d %d %s\n", p, m, s, z, wanted, description);
       if (status != 6) $fatal(1, "TB: malformed Requant vector row");
       $display(
-        "[CASE_START] time=%0.3f ns suite=requant_unit case=%0d description=%s psum=%0d multiplier=%0d shift=%0d zp=%0d",
+        string'({"[CASE_START] time=%0.3f ns suite=requant_unit case=%0d ",
+                 "description=%s psum=%0d multiplier=%0d shift=%0d zp=%0d"}),
         $realtime, cases, description, p, m, s, z);
       cfg_i = '{
         requant_mode: 1'b0,
@@ -130,7 +131,8 @@ module tb_ClusterRequant;
       // Consume the trailing newline without relying on an extra EOF read.
       status = $fscanf(fd, "\n");
       $display(
-        "[CASE_START] time=%0.3f ns suite=requant_channel_unit description=fixed-OC-order-with-mask-holes case=%0d mode=%0d mask=%x",
+        string'({"[CASE_START] time=%0.3f ns suite=requant_channel_unit ",
+                 "description=fixed-OC-order-with-mask-holes case=%0d mode=%0d mask=%x"}),
         $realtime, channel_cases, mode, mask);
       cfg_i = '0;
       cfg_i.conv_mode = 1;

@@ -1,6 +1,9 @@
-// 常规 SRAM case：独立逐字节镜像、全部掩码、隔离/保持、复位及写后计算。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Regular SRAM cases: independent byte-wise mirror, all masks, isolation/hold, reset and
+// write-to-compute.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 function automatic logic [1023:0] sram_pattern(int m, int a, int salt);
   logic [1023:0] row;
@@ -8,9 +11,11 @@ function automatic logic [1023:0] sram_pattern(int m, int a, int salt);
   return row;
 endfunction
 task automatic sram_write(int m, int a, logic [1023:0] data, logic [3:0] mask, bit selected = 1);
-  // 下降沿驱动，上升沿提交；镜像按字节更新，1-mask 的 32 B 不改动。
+  // Drive on the falling edge and commit on the rising edge; the mirror updates per byte
+  // and the 32 B behind a 1-mask bit stays unchanged.
   $display(
-    "[CASE_START] time=%0.3f ns suite=sram_write case=%0d description=32B-active-high-mask/write-isolation macro=%0d row=%0d mask=%h cs=%0d",
+    string'({"[CASE_START] time=%0.3f ns suite=sram_write case=%0d ",
+             "description=32B-active-high-mask/write-isolation macro=%0d row=%0d mask=%h cs=%0d"}),
     $realtime, sram_write_cases, m, a, mask, selected);
   @(negedge clock);
   sram_cs_en = selected;
@@ -29,10 +34,13 @@ task automatic sram_write(int m, int a, logic [1023:0] data, logic [3:0] mask, b
   sram_write_cases++;
 endtask
 task automatic sram_read_check(int m, int a, logic [3:0] mask = 0);
-  // 同步读：上升沿采样地址，沿后比较完整 128 B。
-  // 不读取 DUT.mem 作为 golden，避免地址译码错误被同源参考掩盖。
+  // Synchronous read: the address is sampled on the rising edge and the full 128 B is
+  // compared after that edge.
+  // DUT.mem is never used as the golden, so address-decode errors cannot be hidden by a
+  // same-source reference.
   $display(
-    "[CASE_START] time=%0.3f ns suite=sram_read case=%0d description=full-row-read/macro-row-isolation/read-ignores-mask macro=%0d row=%0d mask=%h",
+    string'({"[CASE_START] time=%0.3f ns suite=sram_read case=%0d ",
+             "description=full-row-read/macro-row-isolation/read-ignores-mask macro=%0d row=%0d mask=%h"}),
     $realtime, sram_read_checks, m, a, mask);
   @(negedge clock);
   sram_cs_en = 1;
@@ -57,7 +65,8 @@ task automatic sram_read_check(int m, int a, logic [3:0] mask = 0);
   if (sram_rd_valid || sram_rd_data !== 0) $fatal(1, "Read valid did not drain on idle edge");
 endtask
 task automatic sram_compute_check(bit patched);
-  // 用实际 W4A4 结果核对 Hold：被修改的 Macro5.OC1 为 128，其余为 64。
+  // Check Hold against the real W4A4 result: the patched Macro5.OC1 is 128, all others
+  // are 64.
   int received;
   $display("[CASE_START] time=%0.3f ns suite=sram_compute description=write-to-compute/Hold-refresh W4A4 patched=%0d",
            $realtime, patched);
@@ -93,8 +102,9 @@ task automatic sram_compute_check(bit patched);
   repeat (3) @(negedge clock);
 endtask
 task automatic run_sram_cases;
-  // 场景顺序：全地址 -> 全掩码/隔离 -> 片选关闭 -> 连续写 -> 复位保留
-  //           -> 逐 Macro 写入/读回 -> 写后计算/Hold 失效与全屏蔽保持。
+  // Scenario order: all addresses -> all masks/isolation -> CS off -> back-to-back writes
+  // -> reset retention -> per-Macro write/readback -> write-to-compute, Hold invalidation
+  // and all-masked retention.
   int a;
   logic [7:0] saved_hold;
   // Every physical address and Macro has a distinct complete row.
@@ -122,7 +132,8 @@ task automatic run_sram_cases;
   // Back-to-back writes change Macro, group, row and mask on every cycle.
   for (int n = 0; n < 32; n++) begin
     $display(
-      "[CASE_START] time=%0.3f ns suite=sram_back_to_back case=%0d description=consecutive-writes/change-macro-row-mask",
+      string'({"[CASE_START] time=%0.3f ns suite=sram_back_to_back case=%0d ",
+               "description=consecutive-writes/change-macro-row-mask"}),
       $realtime, n);
     @(negedge clock);
     sram_cs_en = 1;

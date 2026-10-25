@@ -83,7 +83,8 @@ task automatic load_scenario_vectors();
         n = n_map[tile][c];
         wanted_weight = 0;
         if (n >= 0 && k0 + j < k_count) wanted_weight = w_q[(k0+j)*n_count+n];
-        if (((weight_rows[8 * tile + macro] >> (256 * c + wb * j)) & 1024'((1 << wb) - 1)) !== 1024'(wanted_weight & 8'((1 << wb) - 1)))
+        if (((weight_rows[8 * tile + macro] >> (256 * c + wb * j)) & 1024'((1 << wb) - 1))
+            !== 1024'(wanted_weight & 8'((1 << wb) - 1)))
           $fatal(1, "GEMM scenario: weight packing mismatch tile=%0d macro=%0d OC=%0d", tile, macro, c);
       end
     end
@@ -115,7 +116,8 @@ task automatic load_scenario_weights();
       sram_bank_sel = 2'(macro % 4);
       @(posedge clock);
       #1;
-      if (!sram_rd_valid || sram_rd_data !== weight_rows[8*tile+macro]) $fatal(1, "GEMM scenario: SRAM readback mismatch");
+      if (!sram_rd_valid || sram_rd_data !== weight_rows[8*tile+macro])
+        $fatal(1, "GEMM scenario: SRAM readback mismatch");
       @(negedge clock);
     end
   sram_cs_en = 0;
@@ -142,7 +144,8 @@ task automatic send_scenario_tile(input int tile);
         requant_cfg_i.requant_shift[10*c+:10] = shift[n];
       end
       $display(
-        "[REQUANT_CONFIG] time=%0.3f ns description=fixed-OC-parameter-map tile=%0d OC=%0d n=%0d multiplier=%0d shift=%0d zp=%0d",
+        string'({"[REQUANT_CONFIG] time=%0.3f ns description=fixed-OC-parameter-map ",
+                 "tile=%0d OC=%0d n=%0d multiplier=%0d shift=%0d zp=%0d"}),
         $realtime, tile, c, n, $signed(multiplier[n]), $signed(shift[n]), $signed(zp[n]));
     end
   end
@@ -163,7 +166,8 @@ task automatic send_scenario_tile(input int tile);
       cmd_valid_i = (ph == 0);
       act_data_i  = act_planes[m*phases+ph];
       $display(
-        "[ACT_SEND] time=%0.3f ns description=edge-GEMM-row-and-slice tile=%0d row=%0d slice=%0d command=%0d address=0x%02h",
+        string'({"[ACT_SEND] time=%0.3f ns description=edge-GEMM-row-and-slice ",
+                 "tile=%0d row=%0d slice=%0d command=%0d address=0x%02h"}),
         $realtime, tile, m, ph, cmd_valid_i, cmd_i.cim_weight_raddr);
       @(posedge clock);
       if (ph == 0 && !cmd_ready_o) $fatal(1, "GEMM scenario: Command not accepted on schedule");

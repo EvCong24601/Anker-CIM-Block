@@ -1,6 +1,9 @@
-// 唯一回归入口：选 suite、初始化/关闭 CSV、检查覆盖率；含 watchdog 与 FSDB。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Single regression entry: pick the suite, open/close the CSVs and check coverage;
+// also hosts the watchdog and the FSDB dump.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 initial begin : regression
   string data_dir;
@@ -104,7 +107,9 @@ initial begin : regression
     cmd_i.cim_macro_en_mask = 8'hff;
     cmd_i.cim_macro_oc_mask = 32'hffffffff;
     $display(
-      "[CASE_START] time=%0.3f ns suite=context_capacity description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=%0d psum_depth=%0d max_contexts=%0d weight_address_depth=%0d",
+      string'({"[CASE_START] time=%0.3f ns suite=context_capacity ",
+               "description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=%0d ",
+               "psum_depth=%0d max_contexts=%0d weight_address_depth=%0d"}),
       $realtime, wbits(capacity_precision), abits(capacity_precision), capacity_sign, capacity_os, capacity_count,
       OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS, WGT_RADDR_BUFFER_DEPTH);
     cmd_valid_i = 1;
@@ -177,10 +182,12 @@ initial begin : regression
             "input_cycle,case,precision,signed_en,tile,command,context,weight_address,act_sample,phase,act_hex");
   $fdisplay(
     operation_trace,
-    "compute_cycle,case,precision,signed_en,tile,context,phase,lane,operation,tmp,fusion_a,fusion_b,acc_a,acc_b,result,done,tmp_stored,fusion_cycle");
+    string'({"compute_cycle,case,precision,signed_en,tile,context,phase,lane,operation,tmp,",
+             "fusion_a,fusion_b,acc_a,acc_b,result,done,tmp_stored,fusion_cycle"}));
   $fdisplay(
     manifest,
-    "precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,group2_K,group3_K,group4_K,group5_K,group6_K,group7_K");
+    string'({"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,",
+             "group2_K,group3_K,group4_K,group5_K,group6_K,group7_K"}));
   repeat (4) @(negedge clock);
   reset = 0;
   repeat (2) @(negedge clock);
@@ -188,7 +195,8 @@ initial begin : regression
     run_sram_response_suite();
     $finish;
   end
-  // 专项 suite 独占一次仿真；默认 suite 另有 CSV、路由和门控覆盖检查。
+  // Each dedicated suite owns a whole simulation; the default suite additionally
+  // checks CSV, routing and gating coverage.
   if ($test$plusargs("CONTEXT_BUFFER_TEST")) begin
     run_context_buffer_suite();
     $finish;

@@ -1,8 +1,12 @@
-// 回归目录：每个 task 只枚举一种 suite；单 case 行为由 compute_cases 实现。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Regression catalog: each task enumerates one suite; the per-case behaviour lives
+// in compute_cases.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
-// 固定最左 OC mask：含不一致 mask、关闭 owner、全屏蔽和连续复用。
+// Fixed leftmost OC mask: unequal masks, disabled owners, fully masked batches and
+// immediate reuse.
 task automatic run_oc_merge_suite();
   // Unequal masks at pair/quad/root/mixed endpoints, disabled owners,
   // completely masked batches, and immediate reuse by the next case.
@@ -18,7 +22,8 @@ task automatic run_oc_merge_suite();
   $display("PASS oc_merge_leftmost cases=%0d", cases_run);
 endtask
 
-// 完整 Plane 占用：七精度、符号、Tile/Context 数和命令空拍。
+// Full plane occupancy: seven precisions, both signs, Tile/Context counts and command
+// bubbles.
 task automatic run_act_buffer_suite();
   int r;
   logic [7:0] standard_en;
@@ -57,7 +62,7 @@ task automatic run_act_buffer_suite();
            max_act_planes, OUTPUT_BUFFER_DEPTH, act_buffer_checks);
 endtask
 
-// W8A16/K256：完整 4096-bit ACT 的 WS/AS/单 Context。
+// W8A16/K256: full 4096-bit ACT with WS/AS/single Context.
 task automatic run_full_act_suite();
   for (int sign_mode = 0; sign_mode < 2; sign_mode++)
     for (int tiles = 1; tiles <= 2; tiles++)
@@ -67,7 +72,8 @@ task automatic run_full_act_suite();
   $display("PASS full_act_4096 cases=%0d", cases_run);
 endtask
 
-// 混合 pair/quad 终点：同拍允许不同 channel 发布不同 Context。
+// Mixed pair/quad endpoints: different channels may publish different Contexts in the
+// same cycle.
 task automatic run_mixed_context_suite();
   for (int p = 2; p <= 4; p++)
     for (int sign_mode = 0; sign_mode < 2; sign_mode++)
@@ -80,9 +86,10 @@ task automatic run_mixed_context_suite();
   $display("PASS mixed_context cases=%0d", cases_run);
 endtask
 
-// 包内重叠专项：七精度、符号、OS1/2、单 Context/WS2/AS2。
-// run_case 必须观察到多 slice 的采样/发射重叠、连续 AS 地址/发射
-// 重叠，以及有空拍时等待未到达地址；数值和时延仍走独立检查器。
+// In-package overlap suite: seven precisions, both signs, OS1/2, single Context/WS2/AS2.
+// run_case must observe multi-slice sample/issue overlap, back-to-back AS address/issue
+// overlap, and waiting for the not-yet-arrived address when bubbles are present; the
+// numbers and latency still come from the independent checkers.
 task automatic run_input_overlap_suite();
   logic [23:0] slots;
   logic [ 7:0] en;
@@ -118,20 +125,21 @@ task automatic run_input_overlap_suite();
   $display("PASS input_overlap cases=%0d registered_input_delay=1", cases_run);
 endtask
 
-// OS255 上限：固定极值权重允许行号回绕后重访相同内容；
-// 验证8-bit最大计数、Tile推进、AS旧调度及累加，避免只测零结果。
+// OS255 limit: constant extreme weights let wrapped row addresses revisit the same
+// content; it checks the 8-bit maximum count, Tile advance, earlier-scheduled AS and
+// accumulation, so the test does not only produce zero results.
 task automatic run_os_count_limit_suite();
   for (int p = 0; p < 2; p++)
     for (int sign_mode = 0; sign_mode < 2; sign_mode++)
       for (int mode = 0; mode < 3; mode++)
-        run_case(p, 1'(sign_mode), 7'h00, 8'h03, 32'hffffffff, 24'h000008, 2, 255, mode == 1 ? 2 : 1, mode == 2 ? 2 : 1,
-                 0);
+        run_case(p, 1'(sign_mode), 7'h00, 8'h03, 32'hffffffff, 24'h000008, 2, 255, mode == 1 ? 2 : 1,
+                 mode == 2 ? 2 : 1, 0);
   if (cases_run != 12) $fatal(1, "Missing OS255 scenario coverage");
   $display("PASS os_count_limit cases=%0d os_max=255 descriptor_bits=%0d", cases_run, $bits(cluster_ctrl_t));
 endtask
 
-// 大 Context 专项：Psum 保持 16 深度，仅标签/地址容量配置为 64。
-// WS 与 AS 分开运行；OS1 AS16 按 Slice/Context 调度。
+// Large-Context suite: Psum stays 16 deep, only the tag/address capacity is set to 64.
+// WS and AS run separately; OS1 AS16 follows the Slice/Context schedule.
 task automatic run_context_stress_suite();
   logic [23:0] slots;
   logic [ 7:0] en;
@@ -178,13 +186,15 @@ task automatic run_context_stress_suite();
   if (cases_run != 224 || mode_count[0] != 56 || mode_count[1] != 56 || mode_count[2] != 56 || mode_count[3] != 56)
     $fatal(1, "TB: missing large-Context scenario coverage");
   $display(
-    "PASS context_stress cases=%0d OS1_WS64=%0d OS1_AS16=%0d OS2_WS8=%0d OS2_AS8=%0d psum_depth=%0d max_contexts=%0d weight_address_depth=%0d weight_address_bits=%0d",
+    string'({"PASS context_stress cases=%0d OS1_WS64=%0d OS1_AS16=%0d OS2_WS8=%0d OS2_AS8=%0d ",
+             "psum_depth=%0d max_contexts=%0d weight_address_depth=%0d weight_address_bits=%0d"}),
     cases_run, mode_count[0], mode_count[1], mode_count[2], mode_count[3], OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS,
     WGT_RADDR_BUFFER_DEPTH, $bits(dut.context_address));
 endtask
 
-// 默认回归：合法 split 穷举 + 六种标准时序 + 多 Context/多 Tile 极值。
-// 各 suite 共用 run_case，避免维护第二套驱动和数值预期。
+// Default regression: exhaustive legal splits + six standard schedules + multi-Context
+// and multi-Tile extremes.
+// Every suite shares run_case, so there is no second driver or set of golden values.
 task automatic run_default_suite();
   int legal_count, n, r;
   logic [23:0] standard_slots;

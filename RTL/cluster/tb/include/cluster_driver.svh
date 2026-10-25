@@ -1,12 +1,18 @@
-// 输入驱动与命令日志：下降沿驱动，上升沿握手；ACT 尾部 Plane 连续提供。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Input drivers and command logging: drive on falling edges, handshake on rising
+// edges; the trailing ACT planes are supplied back-to-back.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 // Log external descriptors, not the later internal Macro compute issues.
 // cases_run and input_commands are zero-based and match the scoreboard.
 task automatic display_command(input string event_name, input cluster_ctrl_t d);
   $display(
-    "[CMD_%s] time=%0.3f ns cycle=%0d case=%0d standard_case=%0d cmd=%0d tile=%0d context=%0d kind=%0s mode=%0s precision=%0d W%0dA%0d signed_en=%0d pattern=%0d bubbles=%0d os_cnt=%0d ws_cnt=%0d as_cnt=%0d reduce_split_mask=0x%02h macro_en_mask=0x%02h macro_oc_mask=0x%08h cim_weight_raddr=0x%02h act_slot_sel=0x%06h depth=%0d seed=0x%08h",
+    string'({"[CMD_%s] time=%0.3f ns cycle=%0d case=%0d standard_case=%0d cmd=%0d tile=%0d ",
+             "context=%0d kind=%0s mode=%0s precision=%0d W%0dA%0d signed_en=%0d pattern=%0d bubbles=%0d ",
+             "os_cnt=%0d ws_cnt=%0d as_cnt=%0d reduce_split_mask=0x%02h macro_en_mask=0x%02h ",
+             "macro_oc_mask=0x%08h cim_weight_raddr=0x%02h act_slot_sel=0x%06h depth=%0d seed=0x%08h"}),
     event_name, $realtime, cycle, cases_run, standard_case, input_commands, input_commands / case_r,
     input_commands % case_r, (d.cim_as_cnt > 1 && input_commands % case_r != 0) ? "ADDRESS" : "ACT",
     d.cim_as_cnt > 1 ? "AS" : d.cim_ws_cnt > 1 ? "WS" : "SINGLE", d.cim_precision, wbits(int'(d.cim_precision)), abits(
@@ -49,8 +55,8 @@ task automatic send_address(input cluster_ctrl_t d, input int gap);
   end
   $fatal(1, "AS descriptor timeout");
 endtask
-task automatic send_act_frame(input cluster_ctrl_t descriptor, input logic [4095:0] data, input int kt, gap,
-                              input bit bubbles);
+task automatic send_act_frame(input cluster_ctrl_t descriptor, input logic [4095:0] data, input int kt,
+                              input int gap, input bit bubbles);
   cluster_ctrl_t d;
   int pcount, rcount;
   d = descriptor;

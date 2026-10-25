@@ -108,12 +108,12 @@ per-channel weight按每个输出列独立校准并量化W，使用该列对应�
 
 ## TB 与数据文件
 
-- `tb_Cluster_GEMM_OS1_WS32_W8A16.sv`：`cluster_gemm_driver/scoreboard/regression.svh`负责WLC加载、WS驱动、Hold/Psum旁路、输出周期及矩阵收集；golden生成器为 `gemm_os1_ws32_w8a16_vectors.py`。
-- `tb_Cluster_GEMM_OS2_AS4_W8A16.sv`：`cluster_gemm_as_driver/scoreboard/regression.svh`负责地址与参数加载、ACT复用、4096次Psum历史及矩阵输出；golden生成器为 `gemm_os2_as4_w8a16_vectors.py`。
+- `tb_Cluster_GEMM_OS1_WS32_W8A16.sv`（薄壳，主体在共用的 `ClusterGemmOs1Ws32.sv`）：`cluster_gemm_driver/scoreboard/regression.svh`负责WLC加载、WS驱动、Hold/Psum旁路、输出周期及矩阵收集；golden生成器为 `gemm_os1_ws32_w8a16_vectors.py`。
+- `tb_Cluster_GEMM_OS2_AS4_W8A16.sv`（薄壳，主体在共用的 `ClusterGemmOs2As4.sv`）：`cluster_gemm_as_driver/scoreboard/regression.svh`负责地址与参数加载、ACT复用、4096次Psum历史及矩阵输出；golden生成器为 `gemm_os2_as4_w8a16_vectors.py`。
 - `tb_Cluster_GEMM_W4A16_HighGroup.sv`、`tb_Cluster_GEMM_W2A8_HighGroup.sv`、`tb_Cluster_GEMM_W4A16_N6_Tail.sv`、`tb_Cluster_GEMM_W4A16_RoundClip.sv`：通过共用的 `ClusterGemmScenario.sv`，`cluster_gemm_scenario_driver/scoreboard/regression.svh`负责高位置物理组、OC空洞、mask/参数索引和舍入饱和；golden生成器为 `gemm_scenario_vectors.py`。
 
 上述include均位于 `RTL/cluster/tb/include/`，Python位于 `RTL/cluster/tb/py/`。`data/gemm_os1_ws32_w8a16[_per_channel]/`、`data/gemm_os2_as4_w8a16[_per_channel]/`及 `data/gemm_scenarios/` 保存矩阵、参数、权重行、ACT Plane、输入计划、golden、观测CSV与SHA256。仿真使用的可写副本由VCS case入口生成。
 
-六个具体TB与六个独立GEMM文件列表对应；四个场景TB实例化共用的`ClusterGemmScenario`，各自固定场景并校验数据尺寸/精度。Tensor/channel模式仍由匹配的数据集决定，OC映射不变。默认FSDB名称包含具体TB，VCS运行时附加完整case名称（包括tensor/channel）。
+六个具体TB与六个独立GEMM文件列表对应；四个场景TB实例化共用的`ClusterGemmScenario`，OS1/OS2两个TB分别实例化共用的`ClusterGemmOs1Ws32`与`ClusterGemmOs2As4`，各自固定场景并校验数据尺寸/精度。Tensor/channel模式仍由匹配的数据集决定，OC映射不变。默认FSDB名称包含具体TB，VCS运行时附加完整case名称（包括tensor/channel）。
 
 当前命名下的11个正向GEMM和5个AS参数负向用例均通过，结果与golden匹配；133个Make入口和全部文件列表路径检查通过。证据见`RTL/cluster/tb/log/concrete_gemm_names_validation.log`、`concrete_gemm_names_audit.log`和`concrete_gemm_names_sources.sha256`。历史全量回归日志保留其当时的文件名和源码哈希，不用于证明当前命名的路径有效性。

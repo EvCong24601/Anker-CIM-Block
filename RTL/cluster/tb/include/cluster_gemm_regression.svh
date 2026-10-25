@@ -2,10 +2,13 @@ initial begin : gemm_regression
   int fd;
   load_gemm_os1_ws32_w8a16_vectors();
   $display(
-    "[CASE_START] time=%0.3f ns suite=gemm_weight_quantization description=per-output-channel-or-tensor-W8-scale per_channel=%0d",
+    string'({"[CASE_START] time=%0.3f ns suite=gemm_weight_quantization ",
+             "description=per-output-channel-or-tensor-W8-scale per_channel=%0d"}),
     $realtime, $test$plusargs("PER_CHANNEL_SCALE"));
   $display(
-    "[CASE_START] time=%0.3f ns suite=cluster_gemm description=single-cluster-four-N4-tiles-asymmetric-A16-symmetric-W8 M=32 K=128 N=16 clusters=1 os=1 ws=32 as=1 multiplier=%0d shift=%0d act_zp=%0d output_zp=%0d",
+    string'({"[CASE_START] time=%0.3f ns suite=cluster_gemm ",
+             "description=single-cluster-four-N4-tiles-asymmetric-A16-symmetric-W8 ",
+             "M=32 K=128 N=16 clusters=1 os=1 ws=32 as=1 multiplier=%0d shift=%0d act_zp=%0d output_zp=%0d"}),
     $realtime, multiplier, shift, act_zp, output_zp);
   for (int n = 0; n < N; n++)
   $display(
@@ -37,7 +40,8 @@ initial begin : gemm_regression
     active_tile = tile;
     monitoring  = 1;
     $display(
-      "[CASE_START] time=%0.3f ns suite=cluster_gemm_N_tile description=WS32-replay-X tile=%0d n_first=%0d n_last=%0d address=0x%02h",
+      string'({"[CASE_START] time=%0.3f ns suite=cluster_gemm_N_tile ",
+               "description=WS32-replay-X tile=%0d n_first=%0d n_last=%0d address=0x%02h"}),
       $realtime, tile, 4 * tile, 4 * tile + 3, WEIGHT_ADDR + 8'(tile));
     send_gemm_rows(tile);
     for (int t = 0; t < 100; t++) begin
@@ -66,7 +70,9 @@ initial begin : gemm_regression
   $fclose(fd);
   $fclose(trace_fd);
   $display(
-    "PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16 clusters=1 n_tiles=4 commands=128 issues=512 raw_checks=%0d quant_checks=%0d first_raw_per_tile=9 last_raw_per_tile=164 first_quant_per_tile=10 last_quant_per_tile=165 refreshes_per_macro_per_tile=1",
+    string'({"PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16 clusters=1 n_tiles=4 commands=128 ",
+             "issues=512 raw_checks=%0d quant_checks=%0d first_raw_per_tile=9 last_raw_per_tile=164 ",
+             "first_quant_per_tile=10 last_quant_per_tile=165 refreshes_per_macro_per_tile=1"}),
     raw_checks, quant_checks);
   $finish;
 end

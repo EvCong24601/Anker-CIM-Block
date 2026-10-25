@@ -1,6 +1,9 @@
-// 独立数据生成与 golden：随机数、精度边界、树分组、OC 有效路径和 lane 时延。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Independent data generation and golden model: random numbers, precision extremes,
+// tree grouping, valid OC paths and lane latency.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 function automatic int unsigned rand32();
   rng = rng ^ (rng << 13);
@@ -9,7 +12,8 @@ function automatic int unsigned rand32();
   return rng;
 endfunction
 
-function automatic int unsigned sample_bits(input int bits, pattern, index, input bit sign_en, is_weight);
+function automatic int unsigned sample_bits(input int bits, input int pattern, input int index,
+                                            input bit sign_en, input bit is_weight);
   int unsigned hi, lo;
   hi = sign_en ? (1 << (bits - 1)) - 1 : (1 << bits) - 1;
   lo = sign_en ? 1 << (bits - 1) : 0;
@@ -23,7 +27,8 @@ function automatic int unsigned sample_bits(input int bits, pattern, index, inpu
   endcase
 endfunction
 // Independent recursive decoder for the numerical scoreboard.
-task automatic decode_groups(input logic [6:0] s, input int node, start, size, inout int group_id);
+task automatic decode_groups(input logic [6:0] s, input int node, input int start, input int size,
+                             inout int group_id);
   if (size == 1 || !s[node]) begin
     for (int m = start; m < start + size; m++) golden_group[m] = group_id;
     group_id++;
@@ -34,7 +39,7 @@ task automatic decode_groups(input logic [6:0] s, input int node, start, size, i
 endtask
 // Independent path walk for the numerical scoreboard. Only traverse
 // merges within this leaf's decoded endpoint, not unrelated split groups.
-function automatic bit golden_oc_path(input int m, c, input logic [31:0] oc);
+function automatic bit golden_oc_path(input int m, input int c, input logic [31:0] oc);
   int first, size;
   first = m;
   size  = 1;

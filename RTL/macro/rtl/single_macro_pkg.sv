@@ -26,7 +26,8 @@ package single_macro_pkg;
   endfunction
 
   // In signed mode, only the highest activation digit is signed.
-  function automatic logic digit_is_signed(input logic [2:0] precision, input logic [1:0] phase, input logic signed_en);
+  function automatic logic digit_is_signed(input logic [2:0] precision, input logic [1:0] phase,
+                                           input logic signed_en);
     case (precision)
       3'd0, 3'd2: digit_is_signed = signed_en;
       3'd1, 3'd3, 3'd5: digit_is_signed = signed_en && phase == 2'd1;

@@ -38,14 +38,16 @@ module ClusterReduceTree #(
   logic [31:0] decode_demand[0:3];
   logic [3:0] decode_forward[0:3][0:6];
   logic [3:0] cg_channel_req[1:6];
-  wire [6:1] reduce_clock;
   wire signed [20:0] forward_q[1:6][0:3];
   logic signed [20:0] left_data[0:6][0:3], right_data[0:6][0:3];
   wire signed  [20:0] node_adder[0:6][0:3];
   logic signed [20:0] node_value[0:6][0:3];
+  // Gating and forwarding monitors are simulation-only observations.
+`ifndef SYNTHESIS
   int unsigned gated_checks[0:6], active_edges[0:6];
   int unsigned terminal_writes[0:2];
   int unsigned downstream_hold_checks[0:2];
+`endif
 
   function automatic int start_of(input int n);
     return n == 0 ? 0 : n < 3 ? (n - 1) * 4 : (n - 3) * 2;
@@ -55,7 +57,7 @@ module ClusterReduceTree #(
   endfunction
   // Every merge inherits the fixed leftmost Macro's OC mask, even when
   // that Macro is disabled. A masked child must not expose stale DFF data.
-  function automatic bit subtree_live(input ctrl_t ctrl, input int first, count, c);
+  function automatic bit subtree_live(input ctrl_t ctrl, input int first, input int count, input int c);
     if (count >= 2 && !ctrl.oc[4*first+c]) return 0;
     for (int m = 0; m < 8; m++)
     if (m >= first && m < first + count && ctrl.en[m] && ctrl.oc[4*m+c]) begin
@@ -65,7 +67,7 @@ module ClusterReduceTree #(
     end
     return 0;
   endfunction
-  function automatic bit side_live(input ctrl_t ctrl, input int n, c, side);
+  function automatic bit side_live(input ctrl_t ctrl, input int n, input int c, input int side);
     int count;
     count = size_of(n) / 2;
     return subtree_live(ctrl, start_of(n) + side * count, count, c);
@@ -191,7 +193,6 @@ module ClusterReduceTree #(
     localparam int W = n < 3 ? 20 : 19;
     logic signed [W - 1:0] result_q[0:3];
     wire [3:0] oc_clock;
-    assign reduce_clock[n] = |oc_clock;
     for (genvar c = 0; c < 4; c++) begin : g_oc_clock
       MacroClockGate #(
         .ENABLE_GATING(USE_CLOCK_GATING)
@@ -205,7 +206,7 @@ module ClusterReduceTree #(
         if (reset) result_q[c] <= '0;
         else if (cg_channel_req[n][c]) result_q[c] <= node_value[n][c];
     end
-    // synthesis translate_off
+`ifndef SYNTHESIS
     initial begin
       gated_checks[n] = 0;
       active_edges[n] = 0;
@@ -220,7 +221,8 @@ module ClusterReduceTree #(
           $fatal(1, "Forward node %0d enable not predicted one cycle ahead", n);
         if (|sampled_req) active_edges[n]++;
         #1;
-        if (!reset && oc_clock !== (USE_CLOCK_GATING ? sampled_req : 4'hf)) $fatal(1, "ICG pulse mismatch node %0d", n);
+        if (!reset && oc_clock !== (USE_CLOCK_GATING ? sampled_req : 4'hf))
+          $fatal(1, "ICG pulse mismatch node %0d", n);
         if (!reset)
           for (int c = 0; c < 4; c++)
           if (!sampled_req[c]) begin
@@ -229,7 +231,7 @@ module ClusterReduceTree #(
           end
       end
     end
-    // synthesis translate_on
+`endif
   end
 
   // Combinational taps BEFORE forwarding DFFs; receiver writes its existing
@@ -267,7 +269,7 @@ module ClusterReduceTree #(
       tap_valid_o[stage] = |tap_mask_o[stage];
     end
   end
-  // synthesis translate_off
+`ifndef SYNTHESIS
   initial begin
     gated_checks[0] = 0;
     active_edges[0] = 0;
@@ -296,5 +298,5 @@ module ClusterReduceTree #(
         end
     end
   end
-  // synthesis translate_on
+`endif
 endmodule

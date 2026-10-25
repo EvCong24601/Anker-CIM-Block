@@ -7,8 +7,9 @@ import shutil
 import subprocess
 from requant_vectors import write_vectors,write_channel_vectors
 from gemm_os1_ws32_w8a16_vectors import generate as generate_gemm, verify_outputs as verify_gemm
-from gemm_os2_as4_w8a16_vectors import generate as generate_as_gemm
+from gemm_os2_as4_w8a16_vectors import generate as generate_as_gemm, verify_outputs as verify_as_gemm
 from gemm_scenario_vectors import generate as generate_scenario_gemm, verify_outputs as verify_scenario_gemm, TOPS as GEMM_TOPS
+import svfiles
 
 
 def summarize_simulation(name, log, expected, returncode, negative=False):
@@ -52,16 +53,12 @@ def main():
     if dest == root or root in dest.parents:
         parser.error('--sim-dir must be outside the Git checkout')
     dest.mkdir(parents=True, exist_ok=True)
-    macro = root / 'RTL/macro'
-    cluster_rtl = root / 'RTL/cluster/rtl'
     cluster_tb = root / 'RTL/cluster/tb'
-    sources = [macro / 'rtl' / name for name in (
-        'single_macro_pkg.sv', 'MacroClockGate.sv', 'MacroWeightSRAM.sv',
-        'MacroMul2x4.sv', 'MacroSliceFusion.sv', 'SingleMacro.sv')]
-    sources += [cluster_rtl / name for name in ('cluster_pkg.sv', 'ClusterRequant.sv', 'ClusterReduceTree.sv',
-                'cluster_top.sv')]
-    sources += [cluster_tb / name for name in ('tb_Cluster.sv', 'tb_ClusterReduceTree.sv', 'tb_ClusterRequant.sv','tb_Cluster_GEMM_OS1_WS32_W8A16.sv','tb_Cluster_GEMM_OS2_AS4_W8A16.sv','ClusterGemmScenario.sv','tb_Cluster_GEMM_W4A16_HighGroup.sv','tb_Cluster_GEMM_W2A8_HighGroup.sv','tb_Cluster_GEMM_W4A16_N6_Tail.sv','tb_Cluster_GEMM_W4A16_RoundClip.sv')]
-    sources += [macro / 'tb/tb_SingleMacro.sv']
+    macro = root / 'RTL/macro'
+    # Every registered target is compiled into one library. The vcs-rtl/verilog_file_*.f
+    # lists are the only place a source file is registered, so a new TB cannot be
+    # silently left out of this snapshot compile.
+    sources = svfiles.compile_union(svfiles.targets())
     manifest = []
     for src in sources:
         shutil.copy2(src, dest / src.name)
@@ -127,7 +124,7 @@ def main():
         print(f'AS GEMM parameters: multiplier={meta["multiplier"]} shift={meta["shift"]} act_zp={meta["act_zp"]} per-channel zp={meta["requant_zp"]}',flush=True)
         simulate('gemm_os2_as4_w8a16_tensor','tb_Cluster_GEMM_OS2_AS4_W8A16',['+GEMM_DATA_DIR='+data.as_posix()],
                  'PASS gemm_os2_as4_w8a16 M=32 K=512 N=16')
-        verify_gemm(data)
+        verify_as_gemm(data)
         for name,options,message in (
             ('as_context_capacity',['-gZP_DEPTH=2'],'AS context zp depth exceeded'),
             ('as_context_capacity_default',['-gZP_DEPTH=1'],'AS context zp depth exceeded'),
@@ -142,7 +139,7 @@ def main():
         simulate('gemm_os2_as4_w8a16_channel','tb_Cluster_GEMM_OS2_AS4_W8A16',
                  ['+PER_CHANNEL_SCALE','+GEMM_DATA_DIR='+data.as_posix()],
                  'PASS gemm_os2_as4_w8a16 M=32 K=512 N=16')
-        verify_gemm(data)
+        verify_as_gemm(data)
         data=dest/'as_context_scale_reload';generate_as_gemm(data,per_channel=True)
         simulate('as_context_scale_reload','tb_Cluster_GEMM_OS2_AS4_W8A16',
                  ['+PER_CHANNEL_SCALE','+NEGATIVE_SCALE_RELOAD','+GEMM_DATA_DIR='+data.as_posix()],

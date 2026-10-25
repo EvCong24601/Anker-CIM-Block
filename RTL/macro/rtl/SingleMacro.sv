@@ -269,7 +269,8 @@ module SingleMacro #(
         initialized_ocs[sram_waddr] <= initialized_ocs[sram_waddr] | ~sram_wmask;
       end
       if (issue) begin
-        if ((^{cim_precision, cim_phase, cim_signed_en, cim_raddr, cim_station, cim_oc_mask, cim_idata}) === 1'bx)
+        if ((^{cim_precision, cim_phase, cim_signed_en, cim_raddr, cim_station, cim_oc_mask,
+               cim_result_mask, cim_idata}) === 1'bx)
           $fatal(1, "SM_PROTOCOL: unknown compute input");
         if (!legal_phase(cim_precision, cim_phase)) $fatal(1, "SM_PROTOCOL: illegal precision/phase");
         if (!cim_station) begin
@@ -278,7 +279,8 @@ module SingleMacro #(
         end
         // A partial write initializes only its unmasked OCs, even
         // when an earlier refresh already captured the whole row.
-        if ((initialized_ocs[cim_raddr] & cim_oc_mask) != cim_oc_mask) $fatal(1, "SM_PROTOCOL: read uninitialized row");
+        if ((initialized_ocs[cim_raddr] & cim_oc_mask) != cim_oc_mask)
+          $fatal(1, "SM_PROTOCOL: read uninitialized row");
       end
     end
   end

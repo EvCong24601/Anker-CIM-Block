@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 `default_nettype none
-// 顶层保持参数、DUT/primitive 实例和共享状态；任务按职责拆到 include/。
+// The top level holds parameters, the DUT/primitive instances and shared state; tasks
+// are split into include/ by responsibility.
 module tb_SingleMacro;
   parameter bit CLOCK_GATING = 1'b1;
   logic clock = 1'b0;

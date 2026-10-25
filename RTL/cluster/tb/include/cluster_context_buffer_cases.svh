@@ -16,7 +16,7 @@ always @(posedge clock) begin : context_table_clock_check
   end
 end
 
-function automatic requant_cfg_t context_buffer_cfg(input int mode, cx, precision);
+function automatic requant_cfg_t context_buffer_cfg(input int mode, input int cx, input int precision);
   requant_cfg_t cfg;
   cfg = '0;
   cfg.conv_mode = 1'(mode);
@@ -68,7 +68,9 @@ task automatic run_context_buffer_suite();
       empty_mask = shape == 3;
       local_mask = empty_mask ? 0 : shape == 4 ? 4'ha : shape == 5 ? 4'h4 : 4'hf;
       $display(
-        "[CASE_START] time=%0.3f ns suite=context_buffers description=fixed-Context-slots/AS-limit16 W%0dA%0d os=%0d as=%0d mode=%0d empty_mask=%0d",
+        string'({"[CASE_START] time=%0.3f ns suite=context_buffers ",
+                 "description=fixed-Context-slots/AS-limit16 W%0dA%0d os=%0d as=%0d ",
+                 "mode=%0d empty_mask=%0d"}),
         $realtime, macro_count, abits(p), os, count, mode, empty_mask);
       for (int context_id = 0; context_id < count; context_id++)
       for (int m = 0; m < macro_count; m++) load_weight_row(m, 8'('h20 + context_id), row);
@@ -156,6 +158,7 @@ task automatic run_context_buffer_suite();
     ) ? 22 : 77) || raw_checks != cases / 11 * 416 || quant_checks != cases / 11 * 416)
     $fatal(1, "A4 bypass coverage mismatch");
   $display(
-    "PASS context_buffers cases=%0d raw_checks=%0d quant_checks=%0d fixed_slots=16 A4_weight_bypass=1 input_issue_overlap=1",
+    string'({"PASS context_buffers cases=%0d raw_checks=%0d quant_checks=%0d fixed_slots=16 ",
+             "A4_weight_bypass=1 input_issue_overlap=1"}),
     cases, raw_checks, quant_checks);
 endtask

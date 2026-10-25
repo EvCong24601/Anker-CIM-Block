@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
-// 顶层只保留参数、接口、DUT 与共享状态；阅读顺序见末尾 include 列表。
+// The top level keeps only parameters, interfaces, the DUT and shared state; see the
+// include list at the end for the reading order.
 module tb_Cluster;
   import cluster_pkg::*;
   parameter logic [7:0] EN_MASK = 8'hff;
@@ -34,7 +35,7 @@ module tb_Cluster;
   wire cmd_ready_o;
   wire [31:0] out_valid_o;
   logic [1023:0] act_data_i = '0;
-  // WLC 常规 SRAM 端口：所有测试均通过该口写入和读回权重。
+  // WLC regular SRAM port: every test writes and reads back weights through it.
   logic sram_cs_en = 0, sram_wr_en = 0, sram_macro_group = 0;
   logic [1:0] sram_bank_sel = 0;
   logic [7:0] sram_row_addr = 0;
@@ -56,7 +57,7 @@ module tb_Cluster;
   // TB-only raw observation; cluster_top exports Requant results only.
   assign psum_data_o = dut.raw_data;
   assign out_valid_o = dut.raw_valid;
-  // 计算参考模型、输出预期及 case/握手计数。
+  // Golden model, expected outputs and case/handshake counters.
   logic [31:0] rng = SEED;
   int unsigned activation[0:255][0:MAX_CONTEXTS - 1][0:255];
   longint signed expected[0:MAX_CONTEXTS - 1][0:31];
@@ -88,8 +89,9 @@ module tb_Cluster;
   logic [1023:0] sram_reference[0:7][0:255];
   int sram_read_checks = 0, sram_write_cases = 0;
 
-  // 先定义参考函数和驱动，再安装检查器，最后定义 case 与启动回归。
-  // include 不增加模块层次，latency_audit 和已有波形路径保持有效。
+  // Define the reference functions and drivers first, then install the checkers, and
+  // finally define the cases and launch the regression.
+  // Includes add no module scope, so latency_audit and existing waveform paths stay valid.
   `include "include/cluster_reference.svh"
   `include "include/cluster_driver.svh"
   `include "include/cluster_requant_cases.svh"

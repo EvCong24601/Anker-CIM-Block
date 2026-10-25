@@ -37,7 +37,9 @@ task automatic run_empty_batch_suite();
       @(negedge clock);
       empty_boundary_frame(6, 0);
       for (int p = 0; p < 7; p++) begin
-        $display("[CASE_START] time=%0.3f ns suite=empty_batch description=empty-to-live-earliest-ready precision=%0d", $realtime, p);
+        $display(string'({"[CASE_START] time=%0.3f ns suite=empty_batch ",
+                          "description=empty-to-live-earliest-ready precision=%0d"}),
+                 $realtime, p);
         empty_boundary_frame(p, 1);
         empty_boundary_frame(6, 0);
       end

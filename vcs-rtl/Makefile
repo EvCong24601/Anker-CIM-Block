@@ -65,10 +65,12 @@ com: prepare
 	vcs $(VCS_FLAGS) $(LIB_LIST) -top $(TOP) -f $(V_FILE) $(ALL_DEFINE) $(CASE_PARAMETERS) $(PARAMETERS) -Mdir=$(RUN_DIR)/csrc -o $(abspath $(RUN_DIR))/$(OUTPUT) -l $(RUN_DIR)/compile.log
 sim: prepare
 	@echo '[RUN] $(CASE_TAG): $(CASE_DESCRIPTION)'
-	@cd $(RUN_DIR) && ./$(OUTPUT) -l sim.log +DATA_DIR=$(abspath $(RUN_DIR))/data $(CASE_ARGS) $(PVALUE) +FSDB_FILE=$(FSDB_FILE); status=$$?; echo $$status > sim.exit; exit 0
+	@cd $(RUN_DIR) && ./$(OUTPUT) -l sim.log +DATA_DIR=$(abspath $(RUN_DIR))/data $(CASE_ARGS) $(PVALUE) +FSDB_FILE=$(FSDB_FILE); status=$$?; echo $$status > sim.exit; exit $$status
 # Keep stages sequential even when invoked with make -j.
+# Expected rejections return a nonzero status on purpose, so the simulator stage is
+# allowed to fail here and the check stage below decides whether that was expected.
 run: com
-	$(MAKE) sim CASE=$(CASE) TB=$(TB)
+	-$(MAKE) sim CASE=$(CASE) TB=$(TB)
 	$(MAKE) check CASE=$(CASE) TB=$(TB)
 check:
 ifneq ($(strip $(CASE)),)

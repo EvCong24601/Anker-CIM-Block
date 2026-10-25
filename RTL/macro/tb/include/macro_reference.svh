@@ -1,6 +1,9 @@
-// 独立 Macro golden：完整整数权重解码后点积，不复制 DUT 内部 digit 融合结构。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Independent Macro golden model: decode the full integer weights and take a dot
+// product; it does not replicate the DUT digit-fusion structure.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 function automatic logic [31:0] random_word();
   random_state = random_state ^ (random_state << 13);

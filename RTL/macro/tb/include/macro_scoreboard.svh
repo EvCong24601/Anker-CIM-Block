@@ -1,6 +1,9 @@
-// 逐 OC 写镜像、Hold 与单拍结果检查；上升沿采样请求，NBA 后核对输出。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Per-OC write mirror, hold tracking and single-cycle result checks; sample the
+// request on the rising edge and compare outputs after NBA.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 always @(posedge clock or posedge reset) begin : scoreboard
   logic [1023:0] row;

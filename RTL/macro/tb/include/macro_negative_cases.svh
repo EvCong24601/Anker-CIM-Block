@@ -1,6 +1,9 @@
-// 协议负向 case：故意提供非法请求，必须由 SM_PROTOCOL 拒绝。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Protocol negative cases: deliberately issue illegal requests, which SM_PROTOCOL
+// must reject.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 task automatic run_negative(input string test_name);
   case_description = $sformatf("negative/%s", test_name);

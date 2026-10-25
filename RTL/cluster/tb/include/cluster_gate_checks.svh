@@ -5,7 +5,7 @@ always @(posedge clock) if (!reset && dut.tmp_input_cg_en !== dut.capture_valid)
 
 // Independent endpoint walk for child output clock demand. Decode the endpoint
 // top-down, then inspect each fixed-leftmost mask on this leaf's merge path.
-function automatic bit expected_result_demand(input cluster_ctrl_t cmd, input int m, c);
+function automatic bit expected_result_demand(input cluster_ctrl_t cmd, input int m, input int c);
   int node, first, size;
   node  = 0;
   first = 0;

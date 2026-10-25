@@ -5,6 +5,9 @@ module cluster_top #(
   parameter int OUTPUT_PSUM_DEPTH = 16,
   parameter int OUTPUT_BUFFER_DEPTH = OUTPUT_PSUM_DEPTH,
   parameter int WGT_RADDR_BUFFER_DEPTH = OUTPUT_BUFFER_DEPTH,
+  // Context tag/completion capacity, independent of the Psum depth. Bounds the
+  // WS/AS context count; for OS1 WS it is the only limit, so up to MAX_CONTEXTS
+  // contexts (e.g. 64) are legal even beyond OUTPUT_BUFFER_DEPTH.
   parameter int MAX_CONTEXTS = 64,
   parameter int REQUANT_CONTEXT_DEPTH = OUTPUT_BUFFER_DEPTH,
   parameter bit USE_CLOCK_GATING = 1,
@@ -140,17 +143,17 @@ module cluster_top #(
   );
 
   // WS/single uses packet_cmd directly. A4 AS uses one bypass register.
-  always @(posedge entry0_clock or posedge reset)
+  always_ff @(posedge entry0_clock or posedge reset)
     if (reset) current_weight_address <= '0;
     else if (storage_active) current_weight_address <= cmd_i.cim_weight_raddr;
-  always @(posedge deep_weight_clock or posedge reset) begin
+  always_ff @(posedge deep_weight_clock or posedge reset) begin
     if (reset) for (int d = 0; d < WGT_RADDR_BUFFER_DEPTH; d++) context_address[d] <= '0;
     else if (cmd_accept && deep_command && write_context_slot < WGT_RADDR_BUFFER_DEPTH)
       context_address[write_context_slot] <= cmd_i.cim_weight_raddr;
   end
   // One table clock for ZP and the shared scale; unused channel scales have
   // a separate group clock. No per-entry clock gates or FIFO pointers.
-  always @(posedge deep_requant_clock or posedge reset) begin
+  always_ff @(posedge deep_requant_clock or posedge reset) begin
     if (reset)
       for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) begin
         requant_context_zp[d] <= '0;
@@ -163,7 +166,7 @@ module cluster_top #(
       requant_context_shift[write_context_slot][9:0] <= requant_cfg_i.requant_shift[9:0];
     end
   end
-  always @(posedge channel_scale_clock or posedge reset) begin
+  always_ff @(posedge channel_scale_clock or posedge reset) begin
     if (reset)
       for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) begin
         requant_context_multiplier[d][127:32] <= '0;
@@ -176,7 +179,7 @@ module cluster_top #(
   end
   // Non-AS uses only this batch configuration. Its payload clocks pulse at
   // configuration load; the combinational Requant reads retained values.
-  always @(posedge batch_cfg_clock or posedge reset) begin
+  always_ff @(posedge batch_cfg_clock or posedge reset) begin
     if (reset) begin
       batch_requant_cfg.conv_mode <= 0;
       batch_requant_cfg.requant_mode <= 0;
@@ -191,7 +194,7 @@ module cluster_top #(
       batch_requant_cfg.requant_shift[9:0] <= requant_cfg_i.requant_shift[9:0];
     end
   end
-  always @(posedge batch_channel_clock or posedge reset) begin
+  always_ff @(posedge batch_channel_clock or posedge reset) begin
     if (reset) begin
       batch_requant_cfg.requant_multiplier[127:32] <= '0;
       batch_requant_cfg.requant_shift[39:10] <= '0;
@@ -204,7 +207,7 @@ module cluster_top #(
   wire regular_access = !reset && sram_cs_en;
   wire regular_read = regular_access && !sram_wr_en;
   wire regular_write = regular_access && sram_wr_en && !(&sram_wmask);
-  wire [7:0] memory_wen = regular_write ? (8'b1 << regular_macro_id) : 8'b0;
+  wire [7:0] memory_wen = regular_write ? (8'd1 << regular_macro_id) : 8'd0;
   wire [8191:0] regular_read_data;
   // Request and response selection share the SRAM sampling edge. The
   // next live request must not change an outstanding synchronous response.
@@ -219,6 +222,7 @@ module cluster_top #(
     end
   end
   assign sram_rd_data = sram_rd_valid ? regular_read_data[1024*sram_response_macro+:1024] : 1024'b0;
+`ifndef SYNTHESIS
   always @(posedge clock)
     if (!reset) begin
       if (sram_cs_en && (batch_active || packet_active || cmd_valid_i || (|macro_valid)))
@@ -227,7 +231,13 @@ module cluster_top #(
         $fatal(1, "CLUSTER_SRAM_PROTOCOL: unknown regular address/control");
       if (sram_cs_en && sram_wr_en && ((^{sram_wmask, sram_wrdata}) === 1'bx))
         $fatal(1, "CLUSTER_SRAM_PROTOCOL: unknown regular write data/mask");
+      // A4 AS keeps one shared weight address instead of a per-Context table.
+      // That bypass is only correct while a Context occupies exactly one phase,
+      // because issue consumes the most recently accepted address.
+      if (batch_active && a4_packet && batch_phase_count != 1)
+        $fatal(1, "CLUSTER_AS_PROTOCOL: A4 AS relies on one phase per Context");
     end
+`endif
   typedef struct packed {
     logic valid;
     logic [1:0] ph;
@@ -291,9 +301,61 @@ module cluster_top #(
   logic [31:0] fusion_enable, acc_enable, psum_write, result_done;
   wire [255:0] requant_comb_data;
   wire [ 31:0] requant_comb_valid;
-  // Internal operation coverage; no extra external interface.
+  // Internal operation coverage; no extra external interface. The pipeline
+  // block only updates state; step terms are gathered separately so each
+  // counter keeps a single non-blocking driver.
+`ifndef SYNTHESIS
+  // Step counters are read only by the testbench scoreboards.
   int tmp_only_steps, as_seed_steps, as_fusion_steps, as_acc_steps;
   int ws_fusion_steps, ws_acc_steps, ws_tile_commits, a4_acc_steps;
+  int tmp_only_inc, as_seed_inc, as_fusion_inc, as_acc_inc;
+  int ws_fusion_inc, ws_acc_inc, ws_tile_commit_inc, a4_acc_inc;
+  always_comb begin : count_step_terms
+    tmp_only_inc = 0;
+    as_seed_inc = 0;
+    as_fusion_inc = 0;
+    as_acc_inc = 0;
+    ws_fusion_inc = 0;
+    ws_acc_inc = 0;
+    ws_tile_commit_inc = 0;
+    a4_acc_inc = 0;
+    for (int l = 0; l < 32; l++) begin
+      if (capture_valid[l] && capture_tag[l].ph > 0 && !batch_is_as) ws_fusion_inc++;
+      if (tmp_valid[l]) begin
+        if (batch_is_as) begin
+          if (tmp_tag[l].ph > 0) as_fusion_inc++;
+          else if (acc_enable[l]) as_acc_inc++;
+          else if (psum_write[l]) as_seed_inc++;
+        end else begin
+          if (tmp_tag[l].cmd.cim_os_cnt == 1) tmp_only_inc++;
+          if (psum_write[l]) ws_tile_commit_inc++;
+          if (acc_enable[l]) ws_acc_inc++;
+        end
+        if (acc_enable[l] && abits(int'(tmp_tag[l].cmd.cim_precision)) == 4) a4_acc_inc++;
+      end
+    end
+  end
+  always_ff @(posedge clock or posedge reset)
+    if (reset) begin
+      tmp_only_steps <= 0;
+      as_seed_steps <= 0;
+      as_fusion_steps <= 0;
+      as_acc_steps <= 0;
+      ws_fusion_steps <= 0;
+      ws_acc_steps <= 0;
+      ws_tile_commits <= 0;
+      a4_acc_steps <= 0;
+    end else begin
+      tmp_only_steps <= tmp_only_steps + tmp_only_inc;
+      as_seed_steps <= as_seed_steps + as_seed_inc;
+      as_fusion_steps <= as_fusion_steps + as_fusion_inc;
+      as_acc_steps <= as_acc_steps + as_acc_inc;
+      ws_fusion_steps <= ws_fusion_steps + ws_fusion_inc;
+      ws_acc_steps <= ws_acc_steps + ws_acc_inc;
+      ws_tile_commits <= ws_tile_commits + ws_tile_commit_inc;
+      a4_acc_steps <= a4_acc_steps + a4_acc_inc;
+    end
+`endif
   // No output backpressure: each fixed-latency path returns Contexts in
   // issue order. The last Context completing a path also drains all earlier
   // Contexts on that path. Per-lane reservation/duplicate checks live in TB.
@@ -304,10 +366,12 @@ module cluster_top #(
   logic [31:0] raw_valid;
   int raw_context[0:31]; // Combinational view of three shared Context registers.
   wire [1023:0] raw_data; // Valid-qualified observation of existing tmp/Psum storage.
+`ifndef SYNTHESIS
   initial begin
     if (MAX_CONTEXTS < 1 || OUTPUT_BUFFER_DEPTH < 1 || WGT_RADDR_BUFFER_DEPTH < 1 || REQUANT_CONTEXT_DEPTH < 1)
       $fatal(1, "Context capacity must be >= 1");
   end
+`endif
   function automatic logic [31:0] mask_for_batch(input cluster_ctrl_t cfg);
     logic [31:0] result;
     result = '0;
@@ -316,13 +380,6 @@ module cluster_top #(
         if (cfg.cim_macro_en_mask[m] && merge_contributes(cfg.cim_reduce_split_mask, cfg.cim_macro_oc_mask, m, c))
           result[4 * group_of(cfg.cim_reduce_split_mask, m) + c] = 1;
     return result;
-  endfunction
-  function automatic int lane_path(input cluster_ctrl_t cfg, input int lane);
-    int count;
-    count = 0;
-    for (int m = 0; m < 8; m++)
-      if (group_of(cfg.cim_reduce_split_mask, m) == lane / 4) count++;
-    return count <= 2 ? 0 : count == 4 ? 1 : 2;
   endfunction
   function automatic tag_t expand_meta(input txn_meta_t meta);
     tag_t result;
@@ -443,7 +500,8 @@ module cluster_top #(
         if (requant_group_valid[c]) begin
           selected_requant_cfg.requant_zp[32*c+:32] = requant_context_zp[requant_read_context][32*c+:32];
           if (batch_requant_cfg.requant_mode) begin
-            selected_requant_cfg.requant_multiplier[32*c+:32] = requant_context_multiplier[requant_read_context][32*c+:32];
+            selected_requant_cfg.requant_multiplier[32*c+:32] =
+                requant_context_multiplier[requant_read_context][32*c+:32];
             selected_requant_cfg.requant_shift[10*c+:10] = requant_context_shift[requant_read_context][10*c+:10];
           end
         end
@@ -478,12 +536,14 @@ module cluster_top #(
     );
     assign raw_data[32 * l +: 32] = batch_uses_psum ?
         psum[raw_context[l]][l] : tmp_result[l];
-    always @(posedge quant_clock or posedge reset) begin
+    always_ff @(posedge quant_clock or posedge reset) begin
       if (reset) requant_data_o[8*l+:8] <= '0;
       else if (requant_comb_valid[l]) begin
+`ifndef SYNTHESIS
         if (batch_command.cim_as_cnt > 1 &&
             (raw_context[l] >= REQUANT_CONTEXT_DEPTH || !requant_context_valid[raw_context[l]]))
           $fatal(1, "CLUSTER_REQUANT_CONFIG: missing AS context zp");
+`endif
         requant_data_o[8*l+:8] <= requant_comb_data[8*l+:8];
       end
     end
@@ -562,7 +622,7 @@ module cluster_top #(
         capture_data[l]  = longint'($signed(tap_data[path][21*l+:21]));
       end
   end
-  always @(posedge clock or posedge reset) begin : advance_buffer_enables
+  always_ff @(posedge clock or posedge reset) begin : advance_buffer_enables
     if (reset) begin
       tmp_input_cg_en <= '0;
       for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++) psum_cg_en[d] <= '0;
@@ -588,9 +648,17 @@ module cluster_top #(
       .enable(tmp_input_cg_en[l]),
       .gated_clock(tmp_input_clock[l])
     );
-    always @(posedge tmp_input_clock[l] or posedge reset)
+    always_ff @(posedge tmp_input_clock[l] or posedge reset)
       if (reset) tmp_result[l] <= 0;
-      else if (tmp_input_cg_en[l]) tmp_result[l] <= tmp_store_data[l];
+      else if (tmp_input_cg_en[l]) begin
+`ifndef SYNTHESIS
+        // Every intermediate store must fit signed32. A final-value-only check
+        // cannot see a history that already wrapped at this write.
+        if (tmp_store_data[l] < -64'sd2147483648 || tmp_store_data[l] > 64'sd2147483647)
+          $fatal(1, "CLUSTER_ARITH: tmp signed32 overflow");
+`endif
+        tmp_result[l] <= tmp_store_data[l];
+      end
   end
   for (genvar path = 0; path < 3; path++) begin : g_shared_meta
     wire tmp_meta_clock, raw_meta_clock;
@@ -618,9 +686,15 @@ module cluster_top #(
         .enable(psum_depth_open[d] && psum_cg_en[d][l]),
         .gated_clock(psum_clock[d][l])
       );
-      always @(posedge psum_clock[d][l] or posedge reset)
+      always_ff @(posedge psum_clock[d][l] or posedge reset)
         if (reset) psum[d][l] <= 0;
-        else if (psum_depth_open[d] && psum_cg_en[d][l]) psum[d][l] <= arithmetic_result[l];
+        else if (psum_depth_open[d] && psum_cg_en[d][l]) begin
+`ifndef SYNTHESIS
+          if (arithmetic_result[l] < -64'sd2147483648 || arithmetic_result[l] > 64'sd2147483647)
+            $fatal(1, "CLUSTER_ARITH: Psum signed32 overflow");
+`endif
+          psum[d][l] <= arithmetic_result[l];
+        end
     end
   end
   // One shared fusion/acc adder per OC, reused by all Contexts.
@@ -676,10 +750,10 @@ module cluster_top #(
         tmp_tag[l].kt == batch_last_tile;
     end
   end
-  always @(posedge clock or posedge reset) begin : pipeline
+  always_ff @(posedge clock or posedge reset) begin : pipeline
     bit all_done;
     logic [31:0] captured;
-    int ctx, zp_ctx;
+    int zp_ctx;
     if (reset) begin
       act_buffer <= '0;
       packet_weight_address <= '0;
@@ -701,18 +775,11 @@ module cluster_top #(
       requant_context_valid <= '0;
       batch_command <= '0;
       psum_depth_open <= '0;
-      tmp_only_steps = 0;
-      as_seed_steps = 0;
-      as_fusion_steps = 0;
-      as_acc_steps = 0;
-      ws_fusion_steps = 0;
-      ws_acc_steps = 0;
-      ws_tile_commits = 0;
-      a4_acc_steps = 0;
       for (int path = 0; path < 4; path++) pipe_meta[path] <= '0;
       completion_path_done <= '0;
     end else begin
       if (cmd_accept) begin
+`ifndef SYNTHESIS
         if (cmd_i.cim_os_cnt == 0 || cmd_i.cim_ws_cnt == 0 || cmd_i.cim_as_cnt == 0)
           $fatal(1, "CLUSTER_COUNT_RANGE: counts must be 1..255");
         // Context tags/AS addresses and Psum entries are separate resources.
@@ -727,28 +794,32 @@ module cluster_top #(
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
         if (ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && cmd_i.cim_as_cnt > REQUANT_CONTEXT_DEPTH)
           $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded");
+`endif
         if (ENABLE_REQUANT && cmd_i.cim_as_cnt > 1) begin
           zp_ctx = int'(write_context_slot);
+`ifndef SYNTHESIS
           if(batch_active && (requant_cfg_i.requant_mode!==batch_requant_cfg.requant_mode ||
                              requant_cfg_i.conv_mode!==batch_requant_cfg.conv_mode))
             $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context mode changed");
-          begin
-            if ($isunknown({requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}))
-              $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context scale");
-
-          end
+          if ($isunknown({requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}))
+            $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context scale");
           if ($isunknown(requant_cfg_i.requant_zp)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context zp");
+`endif
           if (write_requant_params) begin
             if (!batch_active) requant_context_valid <= '0;
             requant_context_valid[zp_ctx] <= 1;
-          end else if (!requant_context_valid[zp_ctx] || requant_cfg_i.requant_zp !== requant_context_zp[zp_ctx])
-            $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles");
-          else if (requant_cfg_i.requant_mode ?
-                  (requant_cfg_i.requant_multiplier !== requant_context_multiplier[zp_ctx] ||
-                   requant_cfg_i.requant_shift !== requant_context_shift[zp_ctx]) :
-                  (requant_cfg_i.requant_multiplier[31:0] !== requant_context_multiplier[zp_ctx][31:0] ||
-                   requant_cfg_i.requant_shift[9:0] !== requant_context_shift[zp_ctx][9:0]))
-            $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles");
+          end else begin
+`ifndef SYNTHESIS
+            if (!requant_context_valid[zp_ctx] || requant_cfg_i.requant_zp !== requant_context_zp[zp_ctx])
+              $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles");
+            else if (requant_cfg_i.requant_mode ?
+                    (requant_cfg_i.requant_multiplier !== requant_context_multiplier[zp_ctx] ||
+                     requant_cfg_i.requant_shift !== requant_context_shift[zp_ctx]) :
+                    (requant_cfg_i.requant_multiplier[31:0] !== requant_context_multiplier[zp_ctx][31:0] ||
+                     requant_cfg_i.requant_shift[9:0] !== requant_context_shift[zp_ctx][9:0]))
+              $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles");
+`endif
+          end
         end
         if (!packet_active) begin
           packet_weight_address <= cmd_i.cim_weight_raddr;
@@ -760,15 +831,19 @@ module cluster_top #(
           act_loading <= abits(int'(cmd_i.cim_precision)) > 4;
           act_complete <= abits(int'(cmd_i.cim_precision)) == 4;
         end else begin
+`ifndef SYNTHESIS
           if (deep_command && command_count >= WGT_RADDR_BUFFER_DEPTH) $fatal(1, "AS address capacity exceeded");
+`endif
           command_count <= command_count + 1;
         end
         if (!batch_active) begin
+`ifndef SYNTHESIS
           if (ENABLE_REQUANT && $isunknown(requant_cfg_i)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown configuration");
           if (ENABLE_REQUANT && requant_cfg_i.requant_mode && !requant_cfg_i.conv_mode)
             $fatal(1, "CLUSTER_REQUANT_CONFIG: per-channel scale requires conv_mode");
           if (ENABLE_REQUANT && !conv_group_legal(cmd_i))
             $fatal(1, "CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group");
+`endif
 
           batch_active   <= 1;
           batch_command  <= cmd_i;
@@ -777,15 +852,19 @@ module cluster_top #(
           for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++)
           psum_depth_open[d] <= (cmd_i.cim_os_cnt > 1 || cmd_i.cim_as_cnt > 1) &&
               d < int'(cmd_i.cim_ws_cnt > 1 ? cmd_i.cim_ws_cnt : cmd_i.cim_as_cnt);
-        end else if (cmd_i.cim_os_cnt != batch_command.cim_os_cnt ||
-          cmd_i.cim_ws_cnt != batch_command.cim_ws_cnt || cmd_i.cim_as_cnt != batch_command.cim_as_cnt ||
-          cmd_i.cim_precision != batch_command.cim_precision ||
-          cmd_i.cim_signed_en != batch_command.cim_signed_en ||
-          cmd_i.cim_reduce_split_mask != batch_command.cim_reduce_split_mask ||
-          cmd_i.cim_macro_en_mask != batch_command.cim_macro_en_mask ||
-          cmd_i.cim_macro_oc_mask != batch_command.cim_macro_oc_mask ||
-          cmd_i.cim_act_slot_sel != batch_command.cim_act_slot_sel)
-          $fatal(1, "Batch descriptor fields changed before completion");
+        end else begin
+`ifndef SYNTHESIS
+          if (cmd_i.cim_os_cnt != batch_command.cim_os_cnt ||
+            cmd_i.cim_ws_cnt != batch_command.cim_ws_cnt || cmd_i.cim_as_cnt != batch_command.cim_as_cnt ||
+            cmd_i.cim_precision != batch_command.cim_precision ||
+            cmd_i.cim_signed_en != batch_command.cim_signed_en ||
+            cmd_i.cim_reduce_split_mask != batch_command.cim_reduce_split_mask ||
+            cmd_i.cim_macro_en_mask != batch_command.cim_macro_en_mask ||
+            cmd_i.cim_macro_oc_mask != batch_command.cim_macro_oc_mask ||
+            cmd_i.cim_act_slot_sel != batch_command.cim_act_slot_sel)
+            $fatal(1, "Batch descriptor fields changed before completion");
+`endif
+        end
       end
       if (act_loading) begin
         act_buffer[1024*external_phase+:1024] <= act_data_i;
@@ -810,13 +889,16 @@ module cluster_top #(
       // batch's shared mask after ready reopens. Input scheduling is unchanged.
       pipe_meta[0].valid <= issue && (|issue_mask);
       if (issue) begin
+`ifndef SYNTHESIS
         if (!act_slice_valid[phase]) $fatal(1, "Internal issue before ACT slice loaded");
+`endif
         if (phase == phases - 1 && (command.cim_as_cnt <= 1 || context_idx == contexts - 1)) begin
           packet_active <= 0;
           act_complete <= 0;
           command_count <= 0;
           act_slice_valid <= '0;
         end
+`ifndef SYNTHESIS
         if (command.cim_precision > 6 || !canonical(
             command.cim_reduce_split_mask
           ) || command.cim_os_cnt < 1 || command.cim_ws_cnt < 1 || command.cim_as_cnt < 1 ||
@@ -838,6 +920,7 @@ module cluster_top #(
             ) && command.cim_act_slot_sel[3*m+:3] == command.cim_act_slot_sel[3*n+:3])
             $fatal(1, "Repeated K slot in one reduction group");
         end
+`endif
         pipe_meta[0].ph <= 2'(phase);
         pipe_meta[0].ctx <= CONTEXT_W'(context_idx);
         pipe_meta[0].kt <= 8'(tile);
@@ -863,6 +946,7 @@ module cluster_top #(
       pipe_meta[1] <= pipe_meta[0];
       pipe_meta[2] <= pipe_meta[1];
       if (macro_tag.valid) begin
+`ifndef SYNTHESIS
         for (int m = 0; m < 8; m++) begin
           if (macro_valid[m] !== (macro_tag.cmd.cim_macro_en_mask[m] && (|macro_tag.cmd.cim_macro_oc_mask[4*m+:4])))
             $fatal(1, "Macro valid not aligned with 1T result");
@@ -870,51 +954,41 @@ module cluster_top #(
               macro_mask[4 * m +: 4]!==macro_tag.cmd.cim_macro_oc_mask[4 * m +: 4]))
             $fatal(1, "Macro metadata mismatch");
         end
+`endif
       end
       pipe_meta[3] <= pipe_meta[2];
       raw_valid <= '0;
       // Consume the PREVIOUS tmp DFF contents. NBA state writes preserve
       // consecutive-phase feedback and prevent zero-time procedural cascades.
       for (int l = 0; l < 32; l++)
-      if (capture_valid[l] && capture_tag[l].ph > 0 && !batch_is_as) begin
-        ws_fusion_steps++;
-      end
-      for (int l = 0; l < 32; l++)
-      if (tmp_valid[l]) begin
-        if (batch_is_as) begin
-          if (tmp_tag[l].ph > 0) as_fusion_steps++;
-          else if (acc_enable[l]) as_acc_steps++;
-          else if (psum_write[l]) as_seed_steps++;
-        end else begin
-          if (tmp_tag[l].cmd.cim_os_cnt == 1) tmp_only_steps++;
-          if (psum_write[l]) ws_tile_commits++;
-          if (acc_enable[l]) ws_acc_steps++;
-        end
-        if (acc_enable[l] && abits(int'(tmp_tag[l].cmd.cim_precision)) == 4) a4_acc_steps++;
-        if (result_done[l]) begin
+      if (tmp_valid[l] && result_done[l]) begin
+`ifndef SYNTHESIS
           // This checks the current widened operation only. Earlier signed32
           // tmp/Psum truncation may already have wrapped an oversized history
           // back into range; this is not end-to-end overflow detection.
           if(arithmetic_result[l] < -64'sd2147483648 || arithmetic_result[l]>64'sd2147483647 ||
              (!tmp_tag[l].cmd.cim_signed_en && arithmetic_result[l]<0))
             $fatal(1, "Psum signed32 overflow (policy TBD)");
-          ctx = tmp_tag[l].ctx;
+`endif
           // Publish this lane for one cycle. The observation reads existing
           // tmp/Psum storage and has no holding contract while valid is low.
           raw_valid[l] <= 1;
         end
-      end
       // Independent tree taps capture into per-channel tmp DFFs. There is
       // no additional root-only DFF or full-depth result alignment pipeline.
       captured = '0;
       tmp_valid <= '0;
       for (int path = 0; path < 3; path++)
       if (tap_valid[path]) begin
+`ifndef SYNTHESIS
         if (!tap_tag[path].valid || ((tap_mask[path] & ~tap_tag[path].mask) != 0))
           $fatal(1, "Terminal tap metadata mismatch path=%0d", path);
+`endif
         for (int l = 0; l < 32; l++)
         if (tap_mask[path][l]) begin
+`ifndef SYNTHESIS
           if (captured[l]) $fatal(1, "Concurrent tree taps target same channel");
+`endif
           captured[l] = 1;
           tmp_valid[l] <= 1;
         end

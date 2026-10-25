@@ -1,6 +1,9 @@
-// 日志与驱动：下降沿驱动写/计算，提供空拍、排空和异步复位任务。
-// 本文件在父 TB 的 module 作用域内 include，不作为独立编译单元。
-// 共享信号/计数器在父 TB 声明；不要添加 module 或额外 begin/end 层次。
+// Logging and drivers: drive writes/computes on falling edges, and provide idle,
+// drain and asynchronous-reset tasks.
+// This file is included inside the parent TB module scope and is not a stand-alone
+// compilation unit.
+// Shared signals/counters are declared in the parent TB; do not add a module or any
+// extra begin/end scope.
 
 task automatic display_case(input string description);
   $display("[CASE_START] time=%0.3f ns suite=single_macro case=%0d description=%s clock_gating=%0d seed=%08h",

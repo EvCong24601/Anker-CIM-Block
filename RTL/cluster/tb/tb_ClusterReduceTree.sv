@@ -2,7 +2,8 @@
 // Independent per-tap check: all 26 trees, 8 EN patterns, changing every cycle.
 module tb_ClusterReduceTree;
   import cluster_pkg::*;
-  // 1. 接口和按流水深度对齐的预期状态（独立于 Cluster ACT/Context 调度）。
+  // 1. Interface and expected state aligned per pipeline depth (independent of the
+  // Cluster ACT/Context scheduling).
   logic clock = 0, reset = 1;
   always #5 clock = ~clock;
   logic early_valid_i = 0, valid_i = 0;
@@ -26,7 +27,7 @@ module tb_ClusterReduceTree;
   longint signed expected[0:207][0:31];
   // Independent recursive reference: each internal merge takes the mask
   // of its fixed leftmost leaf. Invalid child data contributes zero.
-  function automatic bit reference_live(input int id, first, size, c);
+  function automatic bit reference_live(input int id, input int first, input int size, input int c);
     if (size == 1) return case_en[id][first] && case_oc[id][4*first+c];
     return case_oc[id][4*first+c] && (reference_live(
       id, first, size / 2, c
@@ -35,18 +36,18 @@ module tb_ClusterReduceTree;
     ));
   endfunction
   // Consumer path is independent of the RTL merge_contributes helper.
-  function automatic bit reference_needed(input int id, first, size, c);
+  function automatic bit reference_needed(input int id, input int first, input int size, input int c);
     if (!reference_live(id, first, size, c)) return 0;
     for (int parent_size = size * 2; parent_size <= case_width[id][first]; parent_size *= 2)
     if (!case_oc[id][4*((first/parent_size)*parent_size)+c]) return 0;
     return 1;
   endfunction
-  function automatic longint signed reference_sum(input int id, first, size, c);
+  function automatic longint signed reference_sum(input int id, input int first, input int size, input int c);
     if (!reference_live(id, first, size, c)) return 0;
     if (size == 1) return leaf_data[id][4*first+c];
     return reference_sum(id, first, size / 2, c) + reference_sum(id, first + size / 2, size / 2, c);
   endfunction
-  task automatic decode(input int node, first, size, input logic [6:0] s, inout int g);
+  task automatic decode(input int node, input int first, input int size, input logic [6:0] s, inout int g);
     if (size == 1 || !s[node]) begin
       for (int m = first; m < first + size; m++) begin
         owners[m] = g;
@@ -59,7 +60,8 @@ module tb_ClusterReduceTree;
       decode(node * 2 + 2, first + size / 2, size / 2, s, g);
     end
   endtask
-  // 2. 驱动对齐：early 输入先寄存，case ID/valid 与各深度 tap 同步推进。
+  // 2. Driver alignment: register the early inputs first, then advance the case
+  // ID/valid together with each tap depth.
   always_ff @(posedge clock or posedge reset) begin
     if (reset) begin
       valid_i <= 0;
@@ -85,7 +87,8 @@ module tb_ClusterReduceTree;
       valids[2] <= valids[1];
     end
   end
-  // 3. 采样在 NBA 后：核对终点数据/有效位，以及转发级门控请求。
+  // 3. Sample after NBA: check the terminal data/valid bits and the forwarding-stage
+  // gate requests.
   always @(posedge clock) begin : check
     logic [31:0] mask;
     logic [ 3:0] expected_gate;
@@ -122,7 +125,8 @@ module tb_ClusterReduceTree;
           $fatal(1, "Incorrect forwarding gate at terminal/nonterminal node t%0d", n);
       end
   end
-  // 4. 场景目录：8 种 Macro 使能 × 26 种规范树；每拍一例，共 208 例。
+  // 4. Scenario catalog: 8 Macro enable patterns x 26 canonical trees; one case per
+  // cycle, 208 cases in total.
   initial begin : run
     int g, l, case_count;
     logic [7:0] test_en;
@@ -157,7 +161,8 @@ module tb_ClusterReduceTree;
         g = 0;
         decode(0, 0, 8, early_split_i, g);
         $display(
-          "[CASE_START] time=%0.3f ns suite=reduce_tree case=%0d description=recursive-golden/terminal-tap/clock-gating split=%02h en=%02h oc=%08h",
+          string'({"[CASE_START] time=%0.3f ns suite=reduce_tree case=%0d ",
+                   "description=recursive-golden/terminal-tap/clock-gating split=%02h en=%02h oc=%08h"}),
           $realtime, index, early_split_i, early_en_i, early_oc_i);
         case_en[index] = early_en_i;
         case_oc[index] = early_oc_i;
