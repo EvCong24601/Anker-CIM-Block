@@ -1,0 +1,160 @@
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Mon Oct 26 19:56:21 2026
+****************************************
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+  Startpoint: weight_mode_in_reg[1]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: cim_odata_reg[53]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  SNPS_CLOCK_GATE_HIGH_SingleMacro_18
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightFusion_1
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroSignControl   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_135
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_400
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_393
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_386
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_388
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_389
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_390
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_391
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_259
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_258
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_257
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_256
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_159
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_158
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_157
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_156
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_155
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_154
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_263
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_260
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_280
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_278
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_276
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_275
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_272
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_145
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_387
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_286
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroPartialProducts2x4_397
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  weight_mode_in_reg[1]/CP (DFCNQD4BWP30P140HVT)       0.00000    0.20000 r
+  weight_mode_in_reg[1]/Q (DFCNQD4BWP30P140HVT)        0.15004    0.35004 r
+  u_sign_control/weight_mode[1] (MacroSignControl)     0.00000    0.35004 r
+  u_sign_control/U5/ZN (IND2D4BWP30P140HVT)            0.04429    0.39433 r
+  u_sign_control/U8/ZN (ND2OPTIBD1BWP30P140HVT)        0.15893    0.55326 f
+  u_sign_control/weight_signed[3] (MacroSignControl)   0.00000    0.55326 f
+  U2992/ZN (INVD1BWP30P140HVT)                         0.11494    0.66820 r
+  U2985/ZN (INVD1BWP30P140HVT)                         0.26655    0.93475 f
+  g_oc[2].g_digit[3].g_slice[0].u_pp/weight_signed (MacroPartialProducts2x4_159)
+                                                       0.00000    0.93475 f
+  g_oc[2].g_digit[3].g_slice[0].u_pp/U7/ZN (INR2D1BWP30P140HVT)
+                                                       0.13901    1.07377 f
+  g_oc[2].g_digit[3].g_slice[0].u_pp/U18/ZN (AOI221D1BWP30P140HVT)
+                                                       0.04641    1.12018 r
+  g_oc[2].g_digit[3].g_slice[0].u_pp/U19/ZN (NR2D1BWP30P140HVT)
+                                                       0.03634    1.15652 f
+  g_oc[2].g_digit[3].g_slice[0].u_pp/pp[4] (MacroPartialProducts2x4_159)
+                                                       0.00000    1.15652 f
+  g_oc[2].u_fusion/partial_products[772] (MacroWeightFusion_1)
+                                                       0.00000    1.15652 f
+  g_oc[2].u_fusion/U13/Z (CKAN2D1BWP30P140HVT)         0.03855    1.19507 f
+  g_oc[2].u_fusion/U21/CO (FA1D1BWP30P140HVT)          0.05281    1.24788 f
+  g_oc[2].u_fusion/U40/CO (FA1D1BWP30P140HVT)          0.05323    1.30111 f
+  g_oc[2].u_fusion/U41/Z (CKAN2D1BWP30P140HVT)         0.03780    1.33891 f
+  g_oc[2].u_fusion/U42/ZN (IAO21D1BWP30P140HVT)        0.02965    1.36856 r
+  g_oc[2].u_fusion/U56/S (FA1D1BWP30P140HVT)           0.10010    1.46866 f
+  g_oc[2].u_fusion/U94/S (FA1D1BWP30P140HVT)           0.10898    1.57764 r
+  g_oc[2].u_fusion/U144/S (FA1D1BWP30P140HVT)          0.09338    1.67102 f
+  g_oc[2].u_fusion/U201/S (FA1D1BWP30P140HVT)          0.11146    1.78248 r
+  g_oc[2].u_fusion/U233/S (FA1D1BWP30P140HVT)          0.09819    1.88067 f
+  g_oc[2].u_fusion/U252/CO (FA1D1BWP30P140HVT)         0.07013    1.95081 f
+  g_oc[2].u_fusion/U240/S (FA1D1BWP30P140HVT)          0.09305    2.04386 f
+  g_oc[2].u_fusion/U768/CO (FA1D1BWP30P140HVT)         0.07013    2.11399 f
+  g_oc[2].u_fusion/U772/CO (FA1D1BWP30P140HVT)         0.05510    2.16909 f
+  g_oc[2].u_fusion/U260/CO (FA1D1BWP30P140HVT)         0.05510    2.22419 f
+  g_oc[2].u_fusion/U256/S (FA1D1BWP30P140HVT)          0.09044    2.31463 f
+  g_oc[2].u_fusion/U1050/ZN (AOI22D1BWP30P140HVT)      0.03633    2.35095 r
+  g_oc[2].u_fusion/U1051/ZN (OAI21D1BWP30P140HVT)      0.04069    2.39164 f
+  g_oc[2].u_fusion/U1062/S (FA1D1BWP30P140HVT)         0.11422    2.50586 r
+  g_oc[2].u_fusion/U1063/S (FA1D1BWP30P140HVT)         0.09371    2.59957 f
+  g_oc[2].u_fusion/U1130/CO (FA1D1BWP30P140HVT)        0.07013    2.66970 f
+  g_oc[2].u_fusion/U1129/CO (FA1D1BWP30P140HVT)        0.05510    2.72480 f
+  g_oc[2].u_fusion/U1128/CO (FA1D1BWP30P140HVT)        0.05510    2.77989 f
+  g_oc[2].u_fusion/U1127/CO (FA1D1BWP30P140HVT)        0.05510    2.83499 f
+  g_oc[2].u_fusion/U1126/CO (FA1D1BWP30P140HVT)        0.05510    2.89009 f
+  g_oc[2].u_fusion/U1125/CO (FA1D1BWP30P140HVT)        0.05510    2.94518 f
+  g_oc[2].u_fusion/U1124/CO (FA1D1BWP30P140HVT)        0.05510    3.00028 f
+  g_oc[2].u_fusion/U1123/CO (FA1D1BWP30P140HVT)        0.05510    3.05538 f
+  g_oc[2].u_fusion/U1122/CO (FA1D1BWP30P140HVT)        0.05443    3.10981 f
+  g_oc[2].u_fusion/U1121/Z (XOR3D1BWP30P140HVT)        0.07389    3.18370 r
+  g_oc[2].u_fusion/result[17] (MacroWeightFusion_1)    0.00000    3.18370 r
+  cim_odata_reg[53]/D (DFCNQD1BWP30P140HVT)            0.00000    3.18370 r
+  data arrival time                                               3.18370
+
+  clock clock (rise edge)                              3.12500    3.12500
+  clock network delay (ideal)                          0.20000    3.32500
+  clock uncertainty                                   -0.12500    3.20000
+  cim_odata_reg[53]/CP (DFCNQD1BWP30P140HVT)           0.00000    3.20000 r
+  library setup time                                  -0.01306    3.18694
+  data required time                                              3.18694
+  --------------------------------------------------------------------------
+  data required time                                              3.18694
+  data arrival time                                              -3.18370
+  --------------------------------------------------------------------------
+  slack (MET)                                                     0.00324
+
+
+1

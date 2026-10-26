@@ -41,7 +41,7 @@ module V02SingleMacro #(
     wire clock_active = !reset && (issue || cim_wen || in_valid || cim_odata_valid);
     generate
         if (USE_CLOCK_GATING) begin : g_icg
-            MacroClockGate u_clock_gate (
+            V02MacroClockGate u_clock_gate (
                 .clock(clock), .enable(clock_active), .gated_clock(macro_clock)
             );
         end else begin : g_no_icg
@@ -57,7 +57,7 @@ module V02SingleMacro #(
     // Refresh uses the current SRAM data directly, never an extra weight stage.
     wire [1023:0] compute_weight = !in_valid ? 1024'b0
                                 : station_in ? sram_read_data : held_weight;
-    MacroWeightSRAM u_weight_sram (
+    V02MacroWeightSRAM u_weight_sram (
         .clock(macro_clock), .write_enable(!reset && cim_wen),
         .write_address(cim_waddr), .write_data(cim_wdata),
         .read_enable(sram_read_enable), .read_address(read_address_in),

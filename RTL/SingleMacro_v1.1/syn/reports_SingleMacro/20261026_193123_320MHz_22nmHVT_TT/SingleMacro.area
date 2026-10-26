@@ -1,0 +1,1097 @@
+ 
+****************************************
+Report : area
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Mon Oct 26 19:56:21 2026
+****************************************
+
+Library(s) Used:
+
+    tcbn22ullbwp30p140hvttt0p8v25c (File: /lamport/shared/hzzhu/techlib/tn22ull/stdcell/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tcbn22ullbwp30p140hvt_110b/tcbn22ullbwp30p140hvttt0p8v25c.db)
+
+Number of ports:                        15770
+Number of nets:                         40335
+Number of cells:                        21074
+Number of combinational cells:          19857
+Number of sequential cells:               639
+Number of macros/black boxes:               0
+Number of buf/inv:                       3758
+Number of references:                     571
+
+Combinational area:              16138.709799
+Buf/Inv area:                      955.458014
+Noncombinational area:            1430.225931
+Macro/Black Box area:                0.000000
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:                 17568.935730
+Total area:                 undefined
+
+Hierarchical area distribution
+------------------------------
+
+                                  Global cell area            Local cell area
+                                  -------------------  ----------------------------- 
+Hierarchical cell                 Absolute    Percent  Combi-      Noncombi-  Black-
+                                  Total       Total    national    national   boxes   Design
+--------------------------------  ----------  -------  ----------  ---------  ------  -----------------------------------
+SingleMacro                       17568.9357    100.0   1584.0720  1384.8659  0.0000  SingleMacro
+clk_gate_activation_in_reg            1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_0
+clk_gate_activation_in_reg_0          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_21
+clk_gate_activation_in_reg_1          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_20
+clk_gate_activation_in_reg_10         1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_9
+clk_gate_activation_in_reg_11         1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_8
+clk_gate_activation_in_reg_12         1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_7
+clk_gate_activation_in_reg_13         1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_6
+clk_gate_activation_in_reg_14         1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_5
+clk_gate_activation_in_reg_2          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_19
+clk_gate_activation_in_reg_3          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_16
+clk_gate_activation_in_reg_4          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_15
+clk_gate_activation_in_reg_5          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_14
+clk_gate_activation_in_reg_6          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_13
+clk_gate_activation_in_reg_7          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_12
+clk_gate_activation_in_reg_8          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_11
+clk_gate_activation_in_reg_9          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_10
+clk_gate_cim_odata_phase_reg          1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_17
+clk_gate_cim_odata_reg                1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_4
+clk_gate_cim_odata_reg_0              1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_3
+clk_gate_cim_odata_reg_1              1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_2
+clk_gate_cim_odata_reg_2              1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_1
+clk_gate_weight_mode_in_reg           1.8900      0.0      0.0000     1.8900  0.0000  SNPS_CLOCK_GATE_HIGH_SingleMacro_18
+g_act_bank[0].u_clock_gate            1.7640      0.0      0.5040     1.2600  0.0000  MacroClockGate_1_2
+g_act_bank[1].u_clock_gate            1.7640      0.0      0.5040     1.2600  0.0000  MacroClockGate_1_1
+g_act_bank[2].u_clock_gate            1.7640      0.0      0.5040     1.2600  0.0000  MacroClockGate_1_0
+g_oc[0].g_digit[0].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_511
+g_oc[0].g_digit[0].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_501
+g_oc[0].g_digit[0].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_500
+g_oc[0].g_digit[0].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_499
+g_oc[0].g_digit[0].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_498
+g_oc[0].g_digit[0].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_497
+g_oc[0].g_digit[0].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_496
+g_oc[0].g_digit[0].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_495
+g_oc[0].g_digit[0].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_494
+g_oc[0].g_digit[0].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_493
+g_oc[0].g_digit[0].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_492
+g_oc[0].g_digit[0].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_510
+g_oc[0].g_digit[0].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_491
+g_oc[0].g_digit[0].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_490
+g_oc[0].g_digit[0].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_489
+g_oc[0].g_digit[0].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_488
+g_oc[0].g_digit[0].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_487
+g_oc[0].g_digit[0].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_486
+g_oc[0].g_digit[0].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_485
+g_oc[0].g_digit[0].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_484
+g_oc[0].g_digit[0].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_483
+g_oc[0].g_digit[0].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_482
+g_oc[0].g_digit[0].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_509
+g_oc[0].g_digit[0].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_481
+g_oc[0].g_digit[0].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_480
+g_oc[0].g_digit[0].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_508
+g_oc[0].g_digit[0].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_507
+g_oc[0].g_digit[0].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_506
+g_oc[0].g_digit[0].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_505
+g_oc[0].g_digit[0].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_504
+g_oc[0].g_digit[0].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_503
+g_oc[0].g_digit[0].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_502
+g_oc[0].g_digit[1].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_479
+g_oc[0].g_digit[1].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_469
+g_oc[0].g_digit[1].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_468
+g_oc[0].g_digit[1].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_467
+g_oc[0].g_digit[1].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_466
+g_oc[0].g_digit[1].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_465
+g_oc[0].g_digit[1].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_464
+g_oc[0].g_digit[1].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_463
+g_oc[0].g_digit[1].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_462
+g_oc[0].g_digit[1].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_461
+g_oc[0].g_digit[1].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_460
+g_oc[0].g_digit[1].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_478
+g_oc[0].g_digit[1].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_459
+g_oc[0].g_digit[1].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_458
+g_oc[0].g_digit[1].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_457
+g_oc[0].g_digit[1].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_456
+g_oc[0].g_digit[1].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_455
+g_oc[0].g_digit[1].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_454
+g_oc[0].g_digit[1].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_453
+g_oc[0].g_digit[1].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_452
+g_oc[0].g_digit[1].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_451
+g_oc[0].g_digit[1].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_450
+g_oc[0].g_digit[1].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_477
+g_oc[0].g_digit[1].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_449
+g_oc[0].g_digit[1].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_448
+g_oc[0].g_digit[1].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_476
+g_oc[0].g_digit[1].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_475
+g_oc[0].g_digit[1].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_474
+g_oc[0].g_digit[1].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_473
+g_oc[0].g_digit[1].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_472
+g_oc[0].g_digit[1].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_471
+g_oc[0].g_digit[1].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_470
+g_oc[0].g_digit[2].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_447
+g_oc[0].g_digit[2].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_437
+g_oc[0].g_digit[2].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_436
+g_oc[0].g_digit[2].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_435
+g_oc[0].g_digit[2].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_434
+g_oc[0].g_digit[2].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_433
+g_oc[0].g_digit[2].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_432
+g_oc[0].g_digit[2].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_431
+g_oc[0].g_digit[2].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_430
+g_oc[0].g_digit[2].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_429
+g_oc[0].g_digit[2].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_428
+g_oc[0].g_digit[2].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_446
+g_oc[0].g_digit[2].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_427
+g_oc[0].g_digit[2].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_426
+g_oc[0].g_digit[2].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_425
+g_oc[0].g_digit[2].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_424
+g_oc[0].g_digit[2].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_423
+g_oc[0].g_digit[2].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_422
+g_oc[0].g_digit[2].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_421
+g_oc[0].g_digit[2].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_420
+g_oc[0].g_digit[2].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_419
+g_oc[0].g_digit[2].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_418
+g_oc[0].g_digit[2].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_445
+g_oc[0].g_digit[2].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_417
+g_oc[0].g_digit[2].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_416
+g_oc[0].g_digit[2].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_444
+g_oc[0].g_digit[2].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_443
+g_oc[0].g_digit[2].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_442
+g_oc[0].g_digit[2].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_441
+g_oc[0].g_digit[2].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_440
+g_oc[0].g_digit[2].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_439
+g_oc[0].g_digit[2].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_438
+g_oc[0].g_digit[3].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_415
+g_oc[0].g_digit[3].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_405
+g_oc[0].g_digit[3].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_404
+g_oc[0].g_digit[3].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_403
+g_oc[0].g_digit[3].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_402
+g_oc[0].g_digit[3].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_401
+g_oc[0].g_digit[3].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_400
+g_oc[0].g_digit[3].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_399
+g_oc[0].g_digit[3].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_398
+g_oc[0].g_digit[3].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_397
+g_oc[0].g_digit[3].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_396
+g_oc[0].g_digit[3].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_414
+g_oc[0].g_digit[3].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_395
+g_oc[0].g_digit[3].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_394
+g_oc[0].g_digit[3].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_393
+g_oc[0].g_digit[3].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_392
+g_oc[0].g_digit[3].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_391
+g_oc[0].g_digit[3].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_390
+g_oc[0].g_digit[3].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_389
+g_oc[0].g_digit[3].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_388
+g_oc[0].g_digit[3].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_387
+g_oc[0].g_digit[3].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_386
+g_oc[0].g_digit[3].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_413
+g_oc[0].g_digit[3].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_385
+g_oc[0].g_digit[3].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_384
+g_oc[0].g_digit[3].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_412
+g_oc[0].g_digit[3].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_411
+g_oc[0].g_digit[3].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_410
+g_oc[0].g_digit[3].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_409
+g_oc[0].g_digit[3].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_408
+g_oc[0].g_digit[3].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_407
+g_oc[0].g_digit[3].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_406
+g_oc[0].u_fusion                   2282.4900     13.0   2282.4900     0.0000  0.0000  MacroWeightFusion_3
+g_oc[1].g_digit[0].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_383
+g_oc[1].g_digit[0].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_373
+g_oc[1].g_digit[0].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_372
+g_oc[1].g_digit[0].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_371
+g_oc[1].g_digit[0].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_370
+g_oc[1].g_digit[0].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_369
+g_oc[1].g_digit[0].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_368
+g_oc[1].g_digit[0].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_367
+g_oc[1].g_digit[0].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_366
+g_oc[1].g_digit[0].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_365
+g_oc[1].g_digit[0].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_364
+g_oc[1].g_digit[0].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_382
+g_oc[1].g_digit[0].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_363
+g_oc[1].g_digit[0].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_362
+g_oc[1].g_digit[0].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_361
+g_oc[1].g_digit[0].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_360
+g_oc[1].g_digit[0].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_359
+g_oc[1].g_digit[0].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_358
+g_oc[1].g_digit[0].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_357
+g_oc[1].g_digit[0].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_356
+g_oc[1].g_digit[0].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_355
+g_oc[1].g_digit[0].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_354
+g_oc[1].g_digit[0].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_381
+g_oc[1].g_digit[0].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_353
+g_oc[1].g_digit[0].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_352
+g_oc[1].g_digit[0].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_380
+g_oc[1].g_digit[0].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_379
+g_oc[1].g_digit[0].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_378
+g_oc[1].g_digit[0].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_377
+g_oc[1].g_digit[0].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_376
+g_oc[1].g_digit[0].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_375
+g_oc[1].g_digit[0].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_374
+g_oc[1].g_digit[1].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_351
+g_oc[1].g_digit[1].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_341
+g_oc[1].g_digit[1].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_340
+g_oc[1].g_digit[1].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_339
+g_oc[1].g_digit[1].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_338
+g_oc[1].g_digit[1].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_337
+g_oc[1].g_digit[1].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_336
+g_oc[1].g_digit[1].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_335
+g_oc[1].g_digit[1].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_334
+g_oc[1].g_digit[1].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_333
+g_oc[1].g_digit[1].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_332
+g_oc[1].g_digit[1].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_350
+g_oc[1].g_digit[1].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_331
+g_oc[1].g_digit[1].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_330
+g_oc[1].g_digit[1].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_329
+g_oc[1].g_digit[1].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_328
+g_oc[1].g_digit[1].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_327
+g_oc[1].g_digit[1].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_326
+g_oc[1].g_digit[1].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_325
+g_oc[1].g_digit[1].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_324
+g_oc[1].g_digit[1].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_323
+g_oc[1].g_digit[1].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_322
+g_oc[1].g_digit[1].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_349
+g_oc[1].g_digit[1].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_321
+g_oc[1].g_digit[1].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_320
+g_oc[1].g_digit[1].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_348
+g_oc[1].g_digit[1].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_347
+g_oc[1].g_digit[1].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_346
+g_oc[1].g_digit[1].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_345
+g_oc[1].g_digit[1].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_344
+g_oc[1].g_digit[1].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_343
+g_oc[1].g_digit[1].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_342
+g_oc[1].g_digit[2].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_319
+g_oc[1].g_digit[2].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_309
+g_oc[1].g_digit[2].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_308
+g_oc[1].g_digit[2].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_307
+g_oc[1].g_digit[2].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_306
+g_oc[1].g_digit[2].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_305
+g_oc[1].g_digit[2].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_304
+g_oc[1].g_digit[2].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_303
+g_oc[1].g_digit[2].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_302
+g_oc[1].g_digit[2].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_301
+g_oc[1].g_digit[2].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_300
+g_oc[1].g_digit[2].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_318
+g_oc[1].g_digit[2].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_299
+g_oc[1].g_digit[2].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_298
+g_oc[1].g_digit[2].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_297
+g_oc[1].g_digit[2].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_296
+g_oc[1].g_digit[2].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_295
+g_oc[1].g_digit[2].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_294
+g_oc[1].g_digit[2].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_293
+g_oc[1].g_digit[2].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_292
+g_oc[1].g_digit[2].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_291
+g_oc[1].g_digit[2].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_290
+g_oc[1].g_digit[2].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_317
+g_oc[1].g_digit[2].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_289
+g_oc[1].g_digit[2].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_288
+g_oc[1].g_digit[2].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_316
+g_oc[1].g_digit[2].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_315
+g_oc[1].g_digit[2].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_314
+g_oc[1].g_digit[2].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_313
+g_oc[1].g_digit[2].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_312
+g_oc[1].g_digit[2].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_311
+g_oc[1].g_digit[2].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_310
+g_oc[1].g_digit[3].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_287
+g_oc[1].g_digit[3].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_277
+g_oc[1].g_digit[3].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_276
+g_oc[1].g_digit[3].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_275
+g_oc[1].g_digit[3].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_274
+g_oc[1].g_digit[3].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_273
+g_oc[1].g_digit[3].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_272
+g_oc[1].g_digit[3].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_271
+g_oc[1].g_digit[3].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_270
+g_oc[1].g_digit[3].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_269
+g_oc[1].g_digit[3].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_268
+g_oc[1].g_digit[3].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_286
+g_oc[1].g_digit[3].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_267
+g_oc[1].g_digit[3].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_266
+g_oc[1].g_digit[3].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_265
+g_oc[1].g_digit[3].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_264
+g_oc[1].g_digit[3].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_263
+g_oc[1].g_digit[3].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_262
+g_oc[1].g_digit[3].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_261
+g_oc[1].g_digit[3].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_260
+g_oc[1].g_digit[3].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_259
+g_oc[1].g_digit[3].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_258
+g_oc[1].g_digit[3].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_285
+g_oc[1].g_digit[3].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_257
+g_oc[1].g_digit[3].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_256
+g_oc[1].g_digit[3].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_284
+g_oc[1].g_digit[3].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_283
+g_oc[1].g_digit[3].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_282
+g_oc[1].g_digit[3].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_281
+g_oc[1].g_digit[3].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_280
+g_oc[1].g_digit[3].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_279
+g_oc[1].g_digit[3].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_278
+g_oc[1].u_fusion                   2282.4900     13.0   2282.4900     0.0000  0.0000  MacroWeightFusion_2
+g_oc[2].g_digit[0].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_255
+g_oc[2].g_digit[0].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_245
+g_oc[2].g_digit[0].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_244
+g_oc[2].g_digit[0].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_243
+g_oc[2].g_digit[0].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_242
+g_oc[2].g_digit[0].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_241
+g_oc[2].g_digit[0].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_240
+g_oc[2].g_digit[0].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_239
+g_oc[2].g_digit[0].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_238
+g_oc[2].g_digit[0].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_237
+g_oc[2].g_digit[0].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_236
+g_oc[2].g_digit[0].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_254
+g_oc[2].g_digit[0].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_235
+g_oc[2].g_digit[0].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_234
+g_oc[2].g_digit[0].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_233
+g_oc[2].g_digit[0].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_232
+g_oc[2].g_digit[0].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_231
+g_oc[2].g_digit[0].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_230
+g_oc[2].g_digit[0].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_229
+g_oc[2].g_digit[0].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_228
+g_oc[2].g_digit[0].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_227
+g_oc[2].g_digit[0].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_226
+g_oc[2].g_digit[0].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_253
+g_oc[2].g_digit[0].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_225
+g_oc[2].g_digit[0].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_224
+g_oc[2].g_digit[0].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_252
+g_oc[2].g_digit[0].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_251
+g_oc[2].g_digit[0].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_250
+g_oc[2].g_digit[0].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_249
+g_oc[2].g_digit[0].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_248
+g_oc[2].g_digit[0].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_247
+g_oc[2].g_digit[0].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_246
+g_oc[2].g_digit[1].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_223
+g_oc[2].g_digit[1].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_213
+g_oc[2].g_digit[1].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_212
+g_oc[2].g_digit[1].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_211
+g_oc[2].g_digit[1].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_210
+g_oc[2].g_digit[1].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_209
+g_oc[2].g_digit[1].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_208
+g_oc[2].g_digit[1].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_207
+g_oc[2].g_digit[1].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_206
+g_oc[2].g_digit[1].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_205
+g_oc[2].g_digit[1].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_204
+g_oc[2].g_digit[1].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_222
+g_oc[2].g_digit[1].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_203
+g_oc[2].g_digit[1].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_202
+g_oc[2].g_digit[1].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_201
+g_oc[2].g_digit[1].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_200
+g_oc[2].g_digit[1].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_199
+g_oc[2].g_digit[1].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_198
+g_oc[2].g_digit[1].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_197
+g_oc[2].g_digit[1].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_196
+g_oc[2].g_digit[1].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_195
+g_oc[2].g_digit[1].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_194
+g_oc[2].g_digit[1].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_221
+g_oc[2].g_digit[1].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_193
+g_oc[2].g_digit[1].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_192
+g_oc[2].g_digit[1].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_220
+g_oc[2].g_digit[1].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_219
+g_oc[2].g_digit[1].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_218
+g_oc[2].g_digit[1].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_217
+g_oc[2].g_digit[1].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_216
+g_oc[2].g_digit[1].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_215
+g_oc[2].g_digit[1].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_214
+g_oc[2].g_digit[2].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_191
+g_oc[2].g_digit[2].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_181
+g_oc[2].g_digit[2].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_180
+g_oc[2].g_digit[2].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_179
+g_oc[2].g_digit[2].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_178
+g_oc[2].g_digit[2].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_177
+g_oc[2].g_digit[2].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_176
+g_oc[2].g_digit[2].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_175
+g_oc[2].g_digit[2].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_174
+g_oc[2].g_digit[2].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_173
+g_oc[2].g_digit[2].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_172
+g_oc[2].g_digit[2].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_190
+g_oc[2].g_digit[2].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_171
+g_oc[2].g_digit[2].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_170
+g_oc[2].g_digit[2].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_169
+g_oc[2].g_digit[2].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_168
+g_oc[2].g_digit[2].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_167
+g_oc[2].g_digit[2].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_166
+g_oc[2].g_digit[2].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_165
+g_oc[2].g_digit[2].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_164
+g_oc[2].g_digit[2].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_163
+g_oc[2].g_digit[2].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_162
+g_oc[2].g_digit[2].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_189
+g_oc[2].g_digit[2].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_161
+g_oc[2].g_digit[2].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_160
+g_oc[2].g_digit[2].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_188
+g_oc[2].g_digit[2].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_187
+g_oc[2].g_digit[2].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_186
+g_oc[2].g_digit[2].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_185
+g_oc[2].g_digit[2].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_184
+g_oc[2].g_digit[2].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_183
+g_oc[2].g_digit[2].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_182
+g_oc[2].g_digit[3].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_159
+g_oc[2].g_digit[3].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_149
+g_oc[2].g_digit[3].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_148
+g_oc[2].g_digit[3].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_147
+g_oc[2].g_digit[3].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_146
+g_oc[2].g_digit[3].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_145
+g_oc[2].g_digit[3].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_144
+g_oc[2].g_digit[3].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_143
+g_oc[2].g_digit[3].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_142
+g_oc[2].g_digit[3].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_141
+g_oc[2].g_digit[3].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_140
+g_oc[2].g_digit[3].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_158
+g_oc[2].g_digit[3].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_139
+g_oc[2].g_digit[3].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_138
+g_oc[2].g_digit[3].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_137
+g_oc[2].g_digit[3].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_136
+g_oc[2].g_digit[3].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_135
+g_oc[2].g_digit[3].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_134
+g_oc[2].g_digit[3].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_133
+g_oc[2].g_digit[3].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_132
+g_oc[2].g_digit[3].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_131
+g_oc[2].g_digit[3].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_130
+g_oc[2].g_digit[3].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_157
+g_oc[2].g_digit[3].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_129
+g_oc[2].g_digit[3].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_128
+g_oc[2].g_digit[3].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_156
+g_oc[2].g_digit[3].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_155
+g_oc[2].g_digit[3].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_154
+g_oc[2].g_digit[3].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_153
+g_oc[2].g_digit[3].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_152
+g_oc[2].g_digit[3].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_151
+g_oc[2].g_digit[3].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_150
+g_oc[2].u_fusion                   2281.7340     13.0   2281.7340     0.0000  0.0000  MacroWeightFusion_1
+g_oc[3].g_digit[0].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_127
+g_oc[3].g_digit[0].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_117
+g_oc[3].g_digit[0].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_116
+g_oc[3].g_digit[0].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_115
+g_oc[3].g_digit[0].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_114
+g_oc[3].g_digit[0].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_113
+g_oc[3].g_digit[0].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_112
+g_oc[3].g_digit[0].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_111
+g_oc[3].g_digit[0].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_110
+g_oc[3].g_digit[0].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_109
+g_oc[3].g_digit[0].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_108
+g_oc[3].g_digit[0].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_126
+g_oc[3].g_digit[0].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_107
+g_oc[3].g_digit[0].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_106
+g_oc[3].g_digit[0].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_105
+g_oc[3].g_digit[0].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_104
+g_oc[3].g_digit[0].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_103
+g_oc[3].g_digit[0].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_102
+g_oc[3].g_digit[0].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_101
+g_oc[3].g_digit[0].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_100
+g_oc[3].g_digit[0].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_99
+g_oc[3].g_digit[0].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_98
+g_oc[3].g_digit[0].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_125
+g_oc[3].g_digit[0].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_97
+g_oc[3].g_digit[0].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_96
+g_oc[3].g_digit[0].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_124
+g_oc[3].g_digit[0].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_123
+g_oc[3].g_digit[0].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_122
+g_oc[3].g_digit[0].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_121
+g_oc[3].g_digit[0].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_120
+g_oc[3].g_digit[0].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_119
+g_oc[3].g_digit[0].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_118
+g_oc[3].g_digit[1].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_95
+g_oc[3].g_digit[1].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_85
+g_oc[3].g_digit[1].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_84
+g_oc[3].g_digit[1].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_83
+g_oc[3].g_digit[1].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_82
+g_oc[3].g_digit[1].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_81
+g_oc[3].g_digit[1].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_80
+g_oc[3].g_digit[1].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_79
+g_oc[3].g_digit[1].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_78
+g_oc[3].g_digit[1].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_77
+g_oc[3].g_digit[1].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_76
+g_oc[3].g_digit[1].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_94
+g_oc[3].g_digit[1].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_75
+g_oc[3].g_digit[1].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_74
+g_oc[3].g_digit[1].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_73
+g_oc[3].g_digit[1].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_72
+g_oc[3].g_digit[1].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_71
+g_oc[3].g_digit[1].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_70
+g_oc[3].g_digit[1].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_69
+g_oc[3].g_digit[1].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_68
+g_oc[3].g_digit[1].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_67
+g_oc[3].g_digit[1].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_66
+g_oc[3].g_digit[1].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_93
+g_oc[3].g_digit[1].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_65
+g_oc[3].g_digit[1].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_64
+g_oc[3].g_digit[1].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_92
+g_oc[3].g_digit[1].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_91
+g_oc[3].g_digit[1].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_90
+g_oc[3].g_digit[1].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_89
+g_oc[3].g_digit[1].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_88
+g_oc[3].g_digit[1].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_87
+g_oc[3].g_digit[1].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_86
+g_oc[3].g_digit[2].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_63
+g_oc[3].g_digit[2].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_53
+g_oc[3].g_digit[2].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_52
+g_oc[3].g_digit[2].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_51
+g_oc[3].g_digit[2].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_50
+g_oc[3].g_digit[2].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_49
+g_oc[3].g_digit[2].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_48
+g_oc[3].g_digit[2].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_47
+g_oc[3].g_digit[2].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_46
+g_oc[3].g_digit[2].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_45
+g_oc[3].g_digit[2].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_44
+g_oc[3].g_digit[2].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_62
+g_oc[3].g_digit[2].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_43
+g_oc[3].g_digit[2].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_42
+g_oc[3].g_digit[2].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_41
+g_oc[3].g_digit[2].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_40
+g_oc[3].g_digit[2].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_39
+g_oc[3].g_digit[2].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_38
+g_oc[3].g_digit[2].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_37
+g_oc[3].g_digit[2].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_36
+g_oc[3].g_digit[2].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_35
+g_oc[3].g_digit[2].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_34
+g_oc[3].g_digit[2].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_61
+g_oc[3].g_digit[2].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_33
+g_oc[3].g_digit[2].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_32
+g_oc[3].g_digit[2].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_60
+g_oc[3].g_digit[2].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_59
+g_oc[3].g_digit[2].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_58
+g_oc[3].g_digit[2].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_57
+g_oc[3].g_digit[2].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_56
+g_oc[3].g_digit[2].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_55
+g_oc[3].g_digit[2].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_54
+g_oc[3].g_digit[3].g_slice[0].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_31
+g_oc[3].g_digit[3].g_slice[10].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_21
+g_oc[3].g_digit[3].g_slice[11].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_20
+g_oc[3].g_digit[3].g_slice[12].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_19
+g_oc[3].g_digit[3].g_slice[13].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_18
+g_oc[3].g_digit[3].g_slice[14].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_17
+g_oc[3].g_digit[3].g_slice[15].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_16
+g_oc[3].g_digit[3].g_slice[16].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_15
+g_oc[3].g_digit[3].g_slice[17].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_14
+g_oc[3].g_digit[3].g_slice[18].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_13
+g_oc[3].g_digit[3].g_slice[19].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_12
+g_oc[3].g_digit[3].g_slice[1].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_30
+g_oc[3].g_digit[3].g_slice[20].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_11
+g_oc[3].g_digit[3].g_slice[21].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_10
+g_oc[3].g_digit[3].g_slice[22].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_9
+g_oc[3].g_digit[3].g_slice[23].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_8
+g_oc[3].g_digit[3].g_slice[24].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_7
+g_oc[3].g_digit[3].g_slice[25].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_6
+g_oc[3].g_digit[3].g_slice[26].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_5
+g_oc[3].g_digit[3].g_slice[27].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_4
+g_oc[3].g_digit[3].g_slice[28].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_3
+g_oc[3].g_digit[3].g_slice[29].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_2
+g_oc[3].g_digit[3].g_slice[2].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_29
+g_oc[3].g_digit[3].g_slice[30].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_1
+g_oc[3].g_digit[3].g_slice[31].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_0
+g_oc[3].g_digit[3].g_slice[3].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_28
+g_oc[3].g_digit[3].g_slice[4].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_27
+g_oc[3].g_digit[3].g_slice[5].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_26
+g_oc[3].g_digit[3].g_slice[6].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_25
+g_oc[3].g_digit[3].g_slice[7].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_24
+g_oc[3].g_digit[3].g_slice[8].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_23
+g_oc[3].g_digit[3].g_slice[9].u_pp
+                                     10.5840      0.1     10.5840     0.0000  0.0000  MacroPartialProducts2x4_22
+g_oc[3].u_fusion                   2282.4900     13.0   2282.4900     0.0000  0.0000  MacroWeightFusion_0
+u_sign_control                        4.9140      0.0      4.9140     0.0000  0.0000  MacroSignControl
+--------------------------------  ----------  -------  ----------  ---------  ------  -----------------------------------
+Total                                                  16138.7098  1430.2259  0.0000
+
+1

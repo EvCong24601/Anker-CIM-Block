@@ -1,0 +1,169 @@
+ 
+****************************************
+check_design summary:
+Version:     P-2019.03-SP5
+Date:        Mon Oct 26 19:56:21 2026
+****************************************
+
+                   Name                                            Total
+--------------------------------------------------------------------------------
+Inputs/Outputs                                                     59
+    Unconnected ports (LINT-28)                                    59
+
+Cells                                                              44
+    Connected to power or ground (LINT-32)                         36
+    Nets connected to multiple pins on same cell (LINT-33)          8
+
+Designs                                                             1
+    Black box (LINT-55)                                             1
+--------------------------------------------------------------------------------
+
+Warning: In design 'MacroSignControl', port 'weight_signed[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction_g[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[17]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[16]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[15]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[14]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[13]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[11]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroSignControl', port 'correction[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[11]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_3', port 'correction[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[11]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_0', port 'correction[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[11]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_1', port 'correction[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[11]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroWeightFusion_2', port 'correction[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[11]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[7]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[6]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[5]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[4]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[3]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[2]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[1]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[0].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[0]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[11]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[7]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[6]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[5]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[4]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[3]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[2]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[1]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[1].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[0]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[11]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[7]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[6]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[5]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[4]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[3]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[2]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[1]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[2].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[0]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[11]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[7]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[6]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[5]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[4]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[3]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[2]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[1]' is connected to logic 0. 
+Warning: In design 'SingleMacro', a pin on submodule 'g_oc[3].u_fusion' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[0]' is connected to logic 0. 
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[0].u_fusion'. (LINT-33)
+   Net 'g_oc[0].oc_correction[17]' is connected to pins 'correction[17]', 'correction[16]''.
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[0].u_fusion'. (LINT-33)
+   Net 'g_oc[0].oc_correction[15]' is connected to pins 'correction[15]', 'correction[14]'', 'correction[13]'.
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[1].u_fusion'. (LINT-33)
+   Net 'g_oc[1].oc_correction[17]' is connected to pins 'correction[17]', 'correction[16]''.
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[1].u_fusion'. (LINT-33)
+   Net 'g_oc[1].oc_correction[15]' is connected to pins 'correction[15]', 'correction[14]'', 'correction[13]'.
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[2].u_fusion'. (LINT-33)
+   Net 'g_oc[2].oc_correction[17]' is connected to pins 'correction[17]', 'correction[16]''.
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[2].u_fusion'. (LINT-33)
+   Net 'g_oc[2].oc_correction[15]' is connected to pins 'correction[15]', 'correction[14]'', 'correction[13]'.
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[3].u_fusion'. (LINT-33)
+   Net 'g_oc[3].oc_correction[17]' is connected to pins 'correction[17]', 'correction[16]''.
+Warning: In design 'SingleMacro', the same net is connected to more than one pin on submodule 'g_oc[3].u_fusion'. (LINT-33)
+   Net 'g_oc[3].oc_correction[15]' is connected to pins 'correction[15]', 'correction[14]'', 'correction[13]'.
+Information: Design 'MacroWeightSRAM' does not contain any cells or nets. (LINT-55)
+1

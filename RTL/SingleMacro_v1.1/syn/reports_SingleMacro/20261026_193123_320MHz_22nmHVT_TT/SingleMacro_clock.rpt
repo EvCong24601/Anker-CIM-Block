@@ -1,0 +1,20 @@
+ 
+****************************************
+Report : clocks
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Mon Oct 26 19:56:21 2026
+****************************************
+
+Attributes:
+    d - dont_touch_network
+    f - fix_hold
+    p - propagated_clock
+    G - generated_clock
+    g - lib_generated_clock
+
+Clock          Period   Waveform            Attrs     Sources
+--------------------------------------------------------------------------------
+clock            3.12   {0 1.5625}          f         {clock}
+--------------------------------------------------------------------------------
+1

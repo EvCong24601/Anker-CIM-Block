@@ -1,0 +1,315 @@
+ 
+****************************************
+Report : clock_gating
+        -gating_elements
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Mon Oct 26 19:56:23 2026
+****************************************
+
+--------------------------------------------------------------------------------
+                             Clock Gating Cell Report
+--------------------------------------------------------------------------------
+
+ Clock Gating Bank : clk_gate_activation_in_reg
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg/CLK = act_clock[0] 
+         clk_gate_activation_in_reg/EN = act_capture_en[0] 
+         clk_gate_activation_in_reg/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg/ENCLK = net8083 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_0
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_0/CLK = act_clock[0] 
+         clk_gate_activation_in_reg_0/EN = act_capture_en[0] 
+         clk_gate_activation_in_reg_0/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_0/ENCLK = net8085 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_1
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_1/CLK = act_clock[0] 
+         clk_gate_activation_in_reg_1/EN = act_capture_en[0] 
+         clk_gate_activation_in_reg_1/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_1/ENCLK = net8087 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_2
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_2/CLK = act_clock[0] 
+         clk_gate_activation_in_reg_2/EN = act_capture_en[0] 
+         clk_gate_activation_in_reg_2/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_2/ENCLK = net8089 
+
+ Clock Gating Bank : clk_gate_weight_mode_in_reg
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_weight_mode_in_reg/CLK = macro_clock 
+         clk_gate_weight_mode_in_reg/EN = act_capture_en[0] 
+         clk_gate_weight_mode_in_reg/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_weight_mode_in_reg/ENCLK = net8091 
+
+ Clock Gating Bank : clk_gate_cim_odata_phase_reg
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_cim_odata_phase_reg/CLK = macro_clock 
+         clk_gate_cim_odata_phase_reg/EN = n847 
+         clk_gate_cim_odata_phase_reg/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_cim_odata_phase_reg/ENCLK = net8125 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_3
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_3/CLK = act_clock[1] 
+         clk_gate_activation_in_reg_3/EN = act_capture_en[1] 
+         clk_gate_activation_in_reg_3/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_3/ENCLK = net8093 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_4
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_4/CLK = act_clock[1] 
+         clk_gate_activation_in_reg_4/EN = act_capture_en[1] 
+         clk_gate_activation_in_reg_4/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_4/ENCLK = net8095 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_5
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_5/CLK = act_clock[1] 
+         clk_gate_activation_in_reg_5/EN = act_capture_en[1] 
+         clk_gate_activation_in_reg_5/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_5/ENCLK = net8097 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_6
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_6/CLK = act_clock[1] 
+         clk_gate_activation_in_reg_6/EN = act_capture_en[1] 
+         clk_gate_activation_in_reg_6/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_6/ENCLK = net8099 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_7
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_7/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_7/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_7/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_7/ENCLK = net8101 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_8
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_8/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_8/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_8/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_8/ENCLK = net8103 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_9
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_9/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_9/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_9/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_9/ENCLK = net8105 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_10
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_10/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_10/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_10/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_10/ENCLK = net8107 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_11
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_11/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_11/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_11/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_11/ENCLK = net8109 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_12
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_12/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_12/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_12/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_12/ENCLK = net8111 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_13
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_13/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_13/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_13/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_13/ENCLK = net8113 
+
+ Clock Gating Bank : clk_gate_activation_in_reg_14
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_activation_in_reg_14/CLK = act_clock[2] 
+         clk_gate_activation_in_reg_14/EN = act_capture_en[2] 
+         clk_gate_activation_in_reg_14/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_activation_in_reg_14/ENCLK = net8115 
+
+ Clock Gating Bank : clk_gate_cim_odata_reg
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_cim_odata_reg/CLK = g_oc[0].result_clock 
+         clk_gate_cim_odata_reg/EN = g_oc[0].result_enable 
+         clk_gate_cim_odata_reg/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_cim_odata_reg/ENCLK = net8117 
+
+ Clock Gating Bank : clk_gate_cim_odata_reg_0
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_cim_odata_reg_0/CLK = g_oc[1].result_clock 
+         clk_gate_cim_odata_reg_0/EN = g_oc[1].result_enable 
+         clk_gate_cim_odata_reg_0/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_cim_odata_reg_0/ENCLK = net8119 
+
+ Clock Gating Bank : clk_gate_cim_odata_reg_1
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_cim_odata_reg_1/CLK = g_oc[2].result_clock 
+         clk_gate_cim_odata_reg_1/EN = g_oc[2].result_enable 
+         clk_gate_cim_odata_reg_1/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_cim_odata_reg_1/ENCLK = net8121 
+
+ Clock Gating Bank : clk_gate_cim_odata_reg_2
+-------------------
+
+     STYLE = latch, MIN = 4, MAX = 32, OBS_DEPTH = 5 
+
+     INPUTS :
+         clk_gate_cim_odata_reg_2/CLK = g_oc[3].result_clock 
+         clk_gate_cim_odata_reg_2/EN = g_oc[3].result_enable 
+         clk_gate_cim_odata_reg_2/TE = net7954 
+
+     OUTPUTS :
+         clk_gate_cim_odata_reg_2/ENCLK = net8123 
+--------------------------------------------------------------------------------
+
+
+                             Clock Gating Summary
+          ------------------------------------------------------------
+          |    Number of Clock gating elements    |       22         |
+          |                                       |                  |
+          |    Number of Gated registers          |   604 (99.51%)   |
+          |                                       |                  |
+          |    Number of Ungated registers        |     3 (0.49%)    |
+          |                                       |                  |
+          |    Total number of registers          |      607         |
+          ------------------------------------------------------------
+
+
+
+1

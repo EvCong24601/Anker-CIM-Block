@@ -5,28 +5,51 @@ module tb_SingleMacro;
     logic clock = 1'b0;
     always #5 clock = ~clock;
     logic reset = 1'b0;
-    logic cim_ren = 0, cim_station = 1, cim_signed_en = 0, cim_wen = 0;
+    logic cim_ren = 0, cim_station = 1, cim_signed_en = 0, sram_wen = 0;
     logic [511:0] cim_idata = '0;
-    logic [7:0] cim_raddr = '0, cim_waddr = '0;
+    logic [7:0] cim_raddr = '0, sram_waddr = '0;
     logic [3:0] cim_oc_mask = '0;
     logic [2:0] cim_precision = '0;
     logic [1:0] cim_phase = '0;
-    logic [1023:0] cim_wdata = '0;
+    logic [1023:0] sram_wdata = '0;
     wire [71:0] cim_odata;
     wire cim_odata_valid;
     wire [3:0] cim_odata_oc_mask;
     wire [1:0] cim_odata_phase;
+    logic [3:0] sram_wmask = 0, cim_result_mask = 15;
+    logic sram_ren = 0;
+    logic [7:0] sram_raddr = 0;
+    wire [1023:0] sram_rdata;
+    logic legacy_compare = 1;
+    logic negative_mode = 0;
     SingleMacro #(.USE_CLOCK_GATING(CLOCK_GATING)) dut (.*);
+    wire [71:0] github_data;
+    wire github_valid;
+    wire [3:0] github_mask;
+    wire [1:0] github_phase;
+    wire [1023:0] github_rdata;
+    // Opposite gating setting checks arithmetic AND gating/bypass equivalence.
+    GithubSingleMacro #(.USE_CLOCK_GATING(!CLOCK_GATING)) github_baseline (
+        .clock(clock), .reset(reset), .cim_ren(cim_ren && !negative_mode), .cim_station(cim_station),
+        .cim_signed_en(cim_signed_en), .cim_idata(cim_idata), .cim_raddr(cim_raddr),
+        .cim_oc_mask(cim_oc_mask), .cim_result_mask(cim_result_mask),
+        .cim_precision(cim_precision), .cim_phase(cim_phase),
+        .sram_wen(sram_wen && !negative_mode), .sram_waddr(sram_waddr), .sram_wdata(sram_wdata),
+        .sram_wmask(sram_wmask), .sram_ren(sram_ren && !negative_mode), .sram_raddr(sram_raddr),
+        .sram_rdata(github_rdata), .cim_odata(github_data),
+        .cim_odata_valid(github_valid), .cim_odata_oc_mask(github_mask),
+        .cim_odata_phase(github_phase)
+    );
 
-    // Self-contained V0.2 reference snapshot: compare the COMPLETE output trace.
+    // Frozen V0.2: compare tags and active OC arithmetic on legacy traffic.
     wire [71:0] baseline_data;
     wire baseline_valid;
     wire [3:0] baseline_mask;
     wire [1:0] baseline_phase;
     V02SingleMacro #(.USE_CLOCK_GATING(CLOCK_GATING)) baseline (
-        .clock(clock), .reset(reset), .cim_ren(cim_ren), .cim_station(cim_station),
-        .cim_signed_en(cim_signed_en), .cim_wen(cim_wen), .cim_idata(cim_idata),
-        .cim_raddr(cim_raddr), .cim_waddr(cim_waddr), .cim_wdata(cim_wdata),
+        .clock(clock), .reset(reset), .cim_ren(cim_ren && legacy_compare && !negative_mode), .cim_station(cim_station),
+        .cim_signed_en(cim_signed_en), .cim_wen(sram_wen && legacy_compare && !negative_mode), .cim_idata(cim_idata),
+        .cim_raddr(cim_raddr), .cim_waddr(sram_waddr), .cim_wdata(sram_wdata),
         .cim_oc_mask(cim_oc_mask), .cim_precision(cim_precision), .cim_phase(cim_phase),
         .cim_odata(baseline_data), .cim_odata_valid(baseline_valid),
         .cim_odata_oc_mask(baseline_mask), .cim_odata_phase(baseline_phase)
@@ -54,15 +77,15 @@ module tb_SingleMacro;
     logic [71:0] expected_data [0:EXPECTED_LATENCY];
     logic [3:0] expected_mask [0:EXPECTED_LATENCY];
     logic [1:0] expected_phase [0:EXPECTED_LATENCY];
-    logic pending_refresh = 0;
-    logic [1023:0] pending_hold_row;
-    logic [7:0] pending_hold_address;
+    logic [3:0] expected_result_mask [0:EXPECTED_LATENCY];
+    logic [511:0] expected_act = 0;
+    logic [1023:0] expected_read = 0;
+    integer ordinary_reads = 0, partial_writes = 0, suppressed_results = 0;
     logic [71:0] last_data = 0;
     logic [3:0] last_mask = 0;
     logic [1:0] last_phase = 0;
     integer cycle_count = 0, accepted_count = 0, result_count = 0, cancelled_count = 0;
     integer bubble_count = 0, zero_mask_count = 0, primitive_count = 0;
-    logic negative_mode = 0;
     string negative_case;
     logic [31:0] random_state = 32'h13579bdf;
     logic collect_context = 0;
@@ -78,10 +101,20 @@ module tb_SingleMacro;
 
     always @(posedge clock or posedge reset) begin
         #1;
-        if (!negative_mode &&
-            {cim_odata, cim_odata_valid, cim_odata_oc_mask, cim_odata_phase} !==
-            {baseline_data, baseline_valid, baseline_mask, baseline_phase})
-            $fatal(1, "TB: V0.2/V1.1 output trace mismatch");
+        if (!negative_mode) begin
+            if ({cim_odata, cim_odata_valid, cim_odata_oc_mask, cim_odata_phase, sram_rdata} !==
+                {github_data, github_valid, github_mask, github_phase, github_rdata})
+                $fatal(1, "TB: GitHub/V1.1 complete output trace mismatch");
+            if (legacy_compare) begin
+                if ({cim_odata_valid, cim_odata_oc_mask, cim_odata_phase} !==
+                    {baseline_valid, baseline_mask, baseline_phase})
+                    $fatal(1, "TB: legacy valid/tag mismatch");
+                for (int c = 0; c < 4; c++)
+                    if (cim_odata_valid && cim_odata_oc_mask[c] &&
+                        cim_odata[18*c+:18] !== baseline_data[18*c+:18])
+                        $fatal(1, "TB: legacy active OC arithmetic mismatch");
+            end
+        end
     end
 
     function automatic logic [31:0] random_word();
@@ -165,7 +198,8 @@ module tb_SingleMacro;
     task automatic idle_cycle();
         @(negedge clock);
         cim_ren = 0;
-        cim_wen = 0;
+        sram_wen = 0;
+        sram_ren = 0;
     endtask
     task automatic drain();
         repeat (3) idle_cycle();
@@ -173,9 +207,11 @@ module tb_SingleMacro;
     task automatic write_row(input logic [7:0] address, input logic [1023:0] data);
         @(negedge clock);
         cim_ren = 0;
-        cim_wen = 1;
-        cim_waddr = address;
-        cim_wdata = data;
+        sram_wen = 1;
+        sram_ren = 0;
+        sram_wmask = 0;
+        sram_waddr = address;
+        sram_wdata = data;
     endtask
     task automatic send_phase(
         input logic [2:0] precision,
@@ -188,19 +224,29 @@ module tb_SingleMacro;
     );
         @(negedge clock);
         cim_ren = 1;
-        cim_wen = 0;
+        sram_wen = 0;
+        sram_ren = 0;
         cim_precision = precision;
         cim_phase = phase;
         cim_signed_en = signed_en;
         cim_oc_mask = mask;
+        cim_result_mask = 15;
         cim_raddr = address;
         cim_station = station;
         cim_idata = data;
     endtask
+    task automatic read_row(input logic [7:0] address);
+        @(negedge clock);
+        cim_ren = 0;
+        sram_wen = 0;
+        sram_ren = 1;
+        sram_raddr = address;
+    endtask
     task automatic async_reset();
         @(negedge clock);
         cim_ren = 0;
-        cim_wen = 0;
+        sram_wen = 0;
+        sram_ren = 0;
         #2 reset = 1;
         #1;
         if (cim_odata_valid !== 0 || cim_odata !== 0 ||
@@ -219,24 +265,18 @@ module tb_SingleMacro;
             for (int i = 0; i <= EXPECTED_LATENCY; i++) begin
                 expected_data[i] = '0;
                 expected_mask[i] = '0;
+                expected_result_mask[i] = '0;
                 expected_phase[i] = '0;
             end
             last_data = 0;
             last_mask = 0;
             last_phase = 0;
             reference_hold_valid = 0;
-            pending_refresh = 0;
+            expected_act = 0;
+            expected_read = 0;
             context_valid = 0;
         end else if (!negative_mode) begin
             cycle_count++;
-            // Commit a previous refresh at its completion edge, BEFORE checking
-            // this edge's new reuse. Reset cancels a pending refresh above.
-            if (pending_refresh) begin
-                reference_hold = pending_hold_row;
-                reference_hold_address = pending_hold_address;
-                reference_hold_valid = 1;
-            end
-            pending_refresh = 0;
             context_valid[1] = context_valid[0];
             context_id_pipe[1] = context_id_pipe[0];
             context_valid[0] = collect_context && cim_ren && (|cim_oc_mask);
@@ -245,20 +285,31 @@ module tb_SingleMacro;
                 expected_valid[i] = expected_valid[i-1];
                 expected_data[i] = expected_data[i-1];
                 expected_mask[i] = expected_mask[i-1];
+                expected_result_mask[i] = expected_result_mask[i-1];
                 expected_phase[i] = expected_phase[i-1];
             end
             expected_valid[0] = cim_ren && (|cim_oc_mask);
-            if (cim_wen) begin
-                reference_memory[cim_waddr] = cim_wdata;
+            if (sram_wen && sram_wmask != 15) begin
+                for (int c = 0; c < 4; c++)
+                    if (!sram_wmask[c]) reference_memory[sram_waddr][256*c+:256] = sram_wdata[256*c+:256];
                 reference_hold_valid = 0;
+                if (sram_wmask != 0) partial_writes++;
+            end
+            expected_read = 0;
+            if (sram_ren) begin
+                expected_read = reference_memory[sram_raddr];
+                reference_hold = expected_read;
+                reference_hold_address = sram_raddr;
+                reference_hold_valid = 1;
+                ordinary_reads++;
             end
             if (expected_valid[0]) begin
                 accepted_count++;
                 if (cim_station) begin
                     row = reference_memory[cim_raddr];
-                    pending_hold_row = row;
-                    pending_hold_address = cim_raddr;
-                    pending_refresh = 1;
+                    reference_hold = row;
+                    reference_hold_address = cim_raddr;
+                    reference_hold_valid = 1;
                 end else begin
                     if (!reference_hold_valid || cim_raddr != reference_hold_address)
                         $fatal(1, "TB: legal stimulus reused invalid reference hold");
@@ -267,16 +318,27 @@ module tb_SingleMacro;
                 expected_data[0] = golden_phase(row, cim_idata, cim_precision,
                                                cim_signed_en, cim_phase, cim_oc_mask);
                 expected_mask[0] = cim_oc_mask;
+                expected_result_mask[0] = cim_result_mask;
+                if ((cim_oc_mask & ~cim_result_mask) != 0) suppressed_results++;
+                expected_act[127:0] = cim_idata[127:0];
+                if (weight_bits(int'(cim_precision)) != 8) expected_act[255:128] = cim_idata[255:128];
+                if (weight_bits(int'(cim_precision)) == 2) expected_act[511:256] = cim_idata[511:256];
                 expected_phase[0] = cim_phase;
             end else if (cim_ren) zero_mask_count++;
             else bubble_count++;
             #1;
+            if (dut.activation_in !== expected_act)
+                $fatal(1, "TB: ACT bank capture/hold mismatch");
+            if (sram_rdata !== expected_read)
+                $fatal(1, "TB: ordinary SRAM read/qualification mismatch");
             if (cim_odata_valid !== expected_valid[EXPECTED_LATENCY])
                 $fatal(1, "TB: latency/valid mismatch cycle=%0d expected=%b got=%b",
                        cycle_count, expected_valid[EXPECTED_LATENCY], cim_odata_valid);
             if (expected_valid[EXPECTED_LATENCY]) begin
                 result_count++;
-                last_data = expected_data[EXPECTED_LATENCY];
+                for (int c = 0; c < 4; c++)
+                    if (expected_mask[EXPECTED_LATENCY][c] && expected_result_mask[EXPECTED_LATENCY][c])
+                        last_data[18*c+:18] = expected_data[EXPECTED_LATENCY][18*c+:18];
                 last_mask = expected_mask[EXPECTED_LATENCY];
                 last_phase = expected_phase[EXPECTED_LATENCY];
                 if (context_valid[1])
@@ -353,12 +415,12 @@ module tb_SingleMacro;
                 write_row(8'd1, {128{8'h12}});
                 send_phase(0,0,0,15,0,1,'0);
                 send_phase(0,0,0,15,1,1,'0);
-                // Old Hold is Row0 before this edge, but Row1 commits now.
+                // Row1 was captured at the preceding input edge; Row0 is stale.
                 send_phase(0,0,0,15,0,0,'0);
             end
         else if (test_name == "unknown_write") begin
                 write_row(0,'0);
-                cim_wdata[1000] = 1'bx;
+                sram_wdata[1000] = 1'bx;
             end
         else if (test_name == "unknown_activation") begin
                 send_phase(0,0,0,15,0,1,'0);
@@ -370,7 +432,7 @@ module tb_SingleMacro;
             end
         else if (test_name == "read_write") begin
                 send_phase(0,0,0,15,0,1,'0);
-                cim_wen = 1;
+                sram_wen = 1;
             end
         else if (test_name == "write_busy") begin
                 send_phase(0,0,0,15,0,1,'0);
@@ -387,6 +449,34 @@ module tb_SingleMacro;
                 drain();
                 async_reset();
                 send_phase(0,0,0,15,0,0,'0);
+            end
+        else if (test_name == "unknown_wmask") begin
+                write_row(0, '0); sram_wmask[0] = 1'bx;
+            end
+        else if (test_name == "unknown_result_mask") begin
+                send_phase(0,0,0,15,0,1,'0); cim_result_mask[1] = 1'bx;
+            end
+        else if (test_name == "regular_compute") begin
+                send_phase(0,0,0,15,0,1,'0); sram_ren = 1;
+            end
+        else if (test_name == "regular_busy") begin
+                send_phase(0,0,0,15,0,1,'0); read_row(0);
+            end
+        else if (test_name == "regular_write") begin
+                write_row(0,'0); sram_ren = 1;
+            end
+        else if (test_name == "partial_uninitialized" || test_name == "partial_reuse_uninitialized") begin
+                write_row(254, '1); sram_wmask = 4'b1110;
+                if (test_name == "partial_reuse_uninitialized") read_row(254);
+                send_phase(0,0,0,2,254,test_name == "partial_uninitialized",'1);
+            end
+        else if (test_name == "full_mask_write_busy") begin
+                send_phase(0,0,0,15,0,1,'0); write_row(0,'0); sram_wmask = 15;
+            end
+        else if (test_name == "hold_after_partial_write") begin
+                send_phase(0,0,0,15,0,1,'0); drain();
+                write_row(0,'0); sram_wmask = 14;
+                send_phase(0,0,0,1,0,0,'0);
             end
         else $fatal(1, "TB: unknown negative case");
         drain();
@@ -435,6 +525,20 @@ module tb_SingleMacro;
         @(negedge clock);
         reset = 0;
         if (negative_mode) run_negative(negative_case);
+
+        // Fresh SRAM: a partial write initializes only the selected OC. Each
+        // prefix can compute immediately, even while other OC sectors are X.
+        legacy_compare = 0;
+        for (int c = 0; c < 4; c++) begin
+            write_row(240, random_row()); sram_wmask = ~(4'b0001 << c);
+            send_phase(0,0,1,4'((1 << (c+1))-1),240,1,random_activation());
+            drain();
+            read_row(240);
+            send_phase(5,1,1,4'((1 << (c+1))-1),240,0,random_activation());
+            drain();
+        end
+        async_reset();
+        legacy_compare = 1;
 
         // All 256 rows, including boundary addresses, with consecutive writes.
         for (int i = 0; i < 256; i++) begin
@@ -543,11 +647,9 @@ module tb_SingleMacro;
                 precision = 3'(random_control % 7);
                 ba = activation_bits(int'(precision));
                 phase = 2'((random_control >> 8) % (ba/4));
-                station = random_control[12] || !(reference_hold_valid || pending_refresh);
-                // At the next acceptance edge the pending refresh, if any,
-                // commits and supersedes the old Hold address.
-                address = station ? random_control[23:16]
-                        : pending_refresh ? pending_hold_address : reference_hold_address;
+                station = random_control[12] || !(reference_hold_valid);
+                // The most recent accepted SRAM read already established Hold.
+                address = station ? random_control[23:16] : reference_hold_address;
                 activation = padded_activation(random_activation(), int'(precision));
                 send_phase(precision, phase, random_control[13], random_control[7:4],
                            address, station, activation);
@@ -576,10 +678,53 @@ module tb_SingleMacro;
         async_reset();
         send_phase(0,0,0,15,0,1,'1);
         drain();
+        legacy_compare = 0;
+        // Ordinary reads: back-to-back addresses, output qualification, read->reuse.
+        read_row(255);
+        read_row(254);
+        send_phase(5,0,0,15,254,0,'1);
+        idle_cycle();
+        // Earliest ordinary read is n+2, while the old result is already valid.
+        read_row(254);
+        idle_cycle();
+        // Full-mask writes leave both memory and the retained-read tag intact.
+        write_row(254,'0); sram_wmask = 15;
+        send_phase(5,1,1,15,254,0,'1);
+        drain();
+        // All write masks: independently verify preserved sectors through reads.
+        for (int wm = 0; wm < 16; wm++) begin
+            write_row(240, random_row()); sram_wmask = 4'(wm);
+            read_row(240);
+            send_phase(3,1,1,15,240,0,random_activation());
+            drain();
+        end
+        // All compute/result-mask combinations, precision transitions and poison
+        // upper ACT bits; masks are sampled per request, not used live at output.
+        for (int p = 0; p < 7; p++)
+            for (int sg = 0; sg < 2; sg++)
+                for (int ph = 0; ph < activation_bits(p)/4; ph++)
+                    for (int cm = 0; cm < 16; cm++)
+                        for (int rm = 0; rm < 16; rm++) begin
+                            send_phase(3'(p),2'(ph),sg != 0,4'(cm),240,0,random_activation());
+                            cim_result_mask = 4'(rm);
+                        end
+        drain();
+        // Unneeded results still issue, refresh Hold, return valid/mask/phase.
+        send_phase(5,0,0,15,255,1,'1); cim_result_mask = 0;
+        send_phase(0,0,1,15,255,0,random_activation());
+        drain();
+        // Reset suppresses ordinary-read qualification and invalidates Hold;
+        // a post-reset ordinary read can re-establish Hold without a CIM refresh.
+        read_row(240);
+        async_reset();
+        read_row(240);
+        send_phase(6,3,1,15,240,0,'1);
+        drain();
         @(posedge clock);
         #2;
         if (expected_valid != 0 || accepted_count != result_count + cancelled_count)
             $fatal(1, "TB: outstanding or lost transactions at finish");
+        $display("PASS reads=%0d partial_writes=%0d suppressed_results=%0d", ordinary_reads, partial_writes, suppressed_results);
         $display("PASS clock_gating=%0d primitive=%0d accepted=%0d results=%0d cancelled=%0d bubbles=%0d zero_mask=%0d",
                  CLOCK_GATING, primitive_count, accepted_count, result_count,
                  cancelled_count, bubble_count, zero_mask_count);
