@@ -28,8 +28,8 @@ requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×I
 
 - requant_multiplier[32*c+:32]：OC c的signed INT32乘数，四项共128bit。
 - requant_shift[10*c+:10]：OC c的signed INT10移位，四项共40bit；当前有效配置为−512～511。
-- requant_zp[32*c+:32]：OC c的signed INT32有效偏置，四项共128bit。
-- requant_mode=0：四个OC共用multiplier/shift的第0项，其余三项不参与算术；zp仍分别使用四项。
+- requant_zp[32*c+:32]：OC c的signed INT32有效偏置，四项共128bit，仅mode=1使用。mode=0保留兼容字段，但忽略其值（包括X）、不加载ZP存储、不检查跨Tile的ZP一致性。
+- requant_mode=0：四个OC共用multiplier/shift的第0项，其余三项不参与算术；不加载或消费zp，输出为未加ZP的饱和INT8。逐channel ZP仅由TB在输出之后修正。
 - requant_mode=1：四个OC分别使用自己的multiplier/shift，要求conv_mode=1。conv_mode表示普通卷积模式；统一的单组/4OC限制也适用于mode=0。
 
 不需要OC选择字段。组位置由descriptor给出，OC c使用组最左Macro的cim_macro_oc_mask[4*first+c]决定有效性，现有各层merge mask继续影响贡献。参数c始终对应本地OC c，不按有效位数量重新编号。
@@ -38,19 +38,43 @@ requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×I
 
 ## 合并后的zero-point
 
-输入offset补偿已由参数生成端合入有效zp。合并后的zp仍是per-weight-output-channel，即使weight使用per-tensor scale，zp也不能因此退化成一个公共值。Cluster只接收这四个zp，没有独立psum_correction字段、加法或缓存。
+输入offset补偿由参数生成端合入有效ZP，ZP_n仍逐输出channel生成。两种模式的计算边界不同：
 
-数值公式为q[n]=clip_INT8(round(raw[n]×multiplier[c]×2^shift[c])+zp[c])；per-tensor时multiplier/shift均选择第0项。multiplier没有隐含Q31除法。最近整数舍入，半整数远离零；zp在round后、最终clip前加入，只在最后饱和到−128～127。
+- **per-tensor / mode=0，CIM输出**：`r[n]=clip_INT8(round(raw[n]×multiplier[0]×2^shift[0]))`。
+- **per-tensor，TB修正**：`q[n]=clip_INT8(signed(r[n])+ZP_n)`。TB先扩位再加signed INT32 ZP，最后饱和，不能用8bit加法导致回绕。
+- **per-channel / mode=1，保持原逻辑**：`q[n]=clip_INT8(round(raw[n]×multiplier[c]×2^shift[c])+zp[c])`，ZP仍在CIM内、饱和前相加。
 
-参数生成示例：zp[n]=output_zp_reference[n]+round((-ACT_zp×sum(Wq[:,n]))×effective_scale[n])。Python分别保存raw整数接口golden、中心化数学参考和实数参考，并记录融合zp时的舍入差异；RTL须与接口golden逐元素完全一致。
+multiplier没有隐含Q31除法。舍入采用最近整数、半整数远离零。两种模式均保持原INT8端口、valid和raw后1T输出时序。
+
+参数生成示例：`ZP_n=output_zp_reference[n]+round((-ACT_zp×sum(Wq[:,n]))×effective_scale[n])`。per-tensor GEMM驱动不将该ZP传入CIM，只在TB按逻辑列n修正；高位置归约组、N尾块、OC mask空洞和AS Context均按实际channel映射。
+
+per-tensor接受两次饱和导致的算法差异。例如未饱和值200、ZP=-100：CIM先输出127，TB修正为27；原来只在加ZP后饱和的算法得到100。不能要求新流程与原参考仅相差1 LSB。
+
+Python独立生成`cim_golden.hex`（CIM端口值）、`quant_golden.hex`（TB修正后的值）和`original_quant_reference.hex`（原单次饱和算法）。TB先精确检查CIM值，再检查修正结果；CSV中的quant为修正结果。metadata的`original_algorithm_max_difference`记录与原算法的最大差异，原参考不作为新流程的通过条件。per-channel的新旧golden应完全一致。
+
+## 已舍入 INT32 ZP 与当前计算合同
+
+令`R(x)`为最近整数舍入、半整数远离零，`C(x)=min(127,max(-128,x))`。最终raw为全部Slice及OS Tile完成后的signed32整数；`S_hat=multiplier×2^shift`，没有隐含Q31除法，shift覆盖signed INT10的−512～511。
+
+对输出channel n，`C_n=sum_k(Wq[k,n])`，当前GEMM参数生成示例为`ZP_n=Z_y_reference[n]+R((-ACT_zp×C_n)×S_hat_n)`。**per-tensor TB使用的ZP_n与per-channel RTL使用的ZP_c都已在生成端round，并保存为signed INT32整数**；它们属于输出量化域，不是未舍入小数，也不是累加器域`D_n=-ACT_zp×C_n`。ZP不提前clip到INT8。per-tensor即使共享scale，ZP仍因各列weight sum不同而逐channel生成。
+
+- per-tensor RTL：`CIM_out[n]=C(R(raw[n]×multiplier[0]×2^shift[0]))`，不加ZP。整个AS Context和批次ZP buffer关钟，scale第0项仍正常工作；异步reset有效。
+- per-tensor TB：`TB_out[n]=C(signed(CIM_out[n])+ZP_n)`，用longint signed符号扩位后相加，再饱和；**此步不再round**。这是CIM先饱和、TB修正后再饱和的两阶段流程。
+- per-channel RTL：`CIM_out[n]=C(R(raw[n]×multiplier[c]×2^shift[c])+ZP_c)`，先round，再加INT32 ZP，最后饱和。TB直接比较该输出，不重复加ZP。
+
+当前保留ZP在round外。半整数远离零并不对所有整数平移保持一致，例如`R(-0.5)+1=0`而`R(-0.5+1)=1`；不能以ZP为整数为由改写运算顺序并宣称逐bit等价。将尚未round的小数补偿移入round、或先计算`raw+D`再缩放，属于另外的数值合同，当前未采用。
+
+参数选择随输出Context对齐，参数c固定对应本地OC c；TB按实际逻辑列n修正，覆盖高位置组、AS、N尾部和mask空洞。输出INT8与valid仍比raw晚1T，TB补偿不增加RTL流水级。
+
+参考C++的`FixedPointMultiplier`采用`scale=M×2^(e−31)`，而当前RTL采用`scale=M×2^h`；适配必须使用`h=e−31`，不能直接复制参考shift。代码中的Q0.31归一化、极小值归零及指数钳制仅是参考参数生成策略，不限制当前RTL完整INT10编码。详细数学展开及原始代码参考已合入[Block Spec](CIM_Block_Spec.docx)第6.2节。
 
 ## 锁存和AS Context
 
 `REQUANT_CONTEXT_DEPTH=OUTPUT_BUFFER_DEPTH`，默认16。非AS使用一组批次配置，两个Context深表均关闭；WS在整批内复用同一配置。所有多Context AS，包括A4，使用固定Context参数槽位，cim_as_cnt不得大于16；表项在批次内不回收，没有FIFO。
 
-首K Tile各Context命令加载参数，后续K Tile重复并校验有效参数一致，mode/conv_mode整批不变。地址、参数和ACT接收可与已有输入的发射重叠，不等待所有参数收齐。raw的Context标签选择对应参数，量化消费不会释放表项。
+首K Tile各Context命令加载有效参数，后续K Tile重复并校验有效参数一致（mode0仅scale，mode1为scale及ZP），mode/conv_mode整批不变。地址、参数和ACT接收可与已有输入的发射重叠，不等待所有参数收齐。raw的Context标签选择对应参数，量化消费不会释放表项。
 
-每项完整配置为4×INT32 multiplier、4×INT10 shift、4×INT32 zp，共296bit；16项为4736bit/592B，不含valid及公共控制。mode0每个Context只更新第0项scale并广播，另外三项scale/shift关闭时钟；不同Context仍可有不同的共享scale。mode1更新四组scale。两种模式都保存四个逐通道zp。
+每项完整配置为4×INT32 multiplier、4×INT10 shift、4×INT32 zp，共296bit；16项为4736bit/592B，不含valid及公共控制。mode0每个Context只更新第0项scale并广播，另外三项scale/shift关闭时钟；不同Context仍可有不同的共享scale。mode1更新四组scale。仅mode1保存四个逐通道zp；mode0不更新这些寄存器，不使用上一个per-channel批次留下的值。兼容存储容量仍保留，不能将运行时禁用等同于物理移除寄存器。
 
 参数深表整批门控，不做逐地址ICG；非AS批次配置仅在加载时打开时钟。tmp/Psum和INT8输出数据按lane有效事件独立门控，valid保持主时钟清零。测试可将参数深度覆盖为1或2，AS4必须报告容量错误。
 
@@ -106,13 +130,13 @@ raw 数据直接选择对应 Context 的 Psum 或单 Context/WS 的 tmp，不另
 
 ClusterRequant的内部输入group_sel_i为3bit物理归约组编号，由Cluster的批次配置解码生成。valid_i只能标记该组的有效OC；四个通道按4×group_sel_i+c直接选取原始物理lane，不分别扫描优先级链。OC c始终对应参数c，mask不压紧编号。OC0被mask以及全部OC被mask时，组编号仍由配置确定。
 
-AS四通道共享该组归约路径的raw Context指针，统一寻址Requant Context表。各OC按自身valid选取ZP及per-channel scale，per-tensor的scale始终读取当前Context的OC参数槽0，不依赖OC0 valid。每个算术通道入口的Psum、multiplier、INT10 shift及ZP隔离和输出寄存器门控保持独立。
+AS四通道共享该组归约路径的raw Context指针，统一寻址Requant Context表。per-channel各OC按自身valid选取ZP及scale；per-tensor各OC的ZP读操作数固定为0，per-tensor的scale始终读取当前Context的OC参数槽0，不依赖OC0 valid。每个算术通道入口的Psum、multiplier、INT10 shift及ZP隔离和输出寄存器门控保持独立。
 
 该共享仅用于合法单组Requant。raw-only多组归约仍保留32lane存储及三个不同延迟路径；当前Psum计算读地址和上一Context的Requant读取地址不能合并。INT10接口及存储位宽保持；完整INT10移位运算范围的修复不属于组合共享改动。
 
 ## INT10 运算与边界测试
 
-全部 signed INT10 编码 −512～511 均有效；寄存位宽仍为10 bit。乘积为完整 signed64，普通范围内在扩展位宽后移位，ZP在舍入之后、最终饱和之前相加。
+全部 signed INT10 编码 −512～511 均有效；寄存位宽仍为10 bit。乘积为完整 signed64，普通范围内在扩展位宽后移位，以下ZP相加及相消边界仅适用于per-channel；per-tensor在CIM内将ZP操作数固定为0，TB于INT8饱和后修正。
 
 - 左移0～31：保留扩展乘积及ZP相消能力，包括 shift=31、ZP=INT32_MIN 的相消边界。
 - 左移32～511：非零整数乘积无法被任何INT32 ZP抵消到INT8范围，直接按乘积符号饱和；乘积为0时仍按ZP输出。
@@ -122,3 +146,5 @@ AS四通道共享该组归约路径的raw Context指针，统一寻址Requant Co
 这些范围判定保持公式的精确整数结果，不扩展移位寄存器，不改变一级组合逻辑及INT8输出寄存器的1T延迟。Python任意精度golden覆盖全部1024种shift编码、正负及零乘积、极值ZP和半值边界；SV集成参考模型使用576位整数，与RTL的范围分支实现独立。
 
 `requant_full_shift`检查七种精度、OS1/OS2、两种scale模式、AS Context独立参数和屏蔽OC；`requant_empty_batch`检查七精度空批次与有效批次的最早连续接收。VCS入口和FSDB名称由相同case目录管理。
+
+Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。

@@ -1,8 +1,10 @@
+`include "include/requant_tb_helpers.svh"
 // Check physical lane positions, mask holes, exact timing and dense GEMM order.
 always @(posedge clock) begin : edge_scoreboard
   logic [ 31:0] previous_valid;
   logic [255:0] previous_quant;
   int row, phase, n, index;
+  logic [7:0] corrected_quant;
   cycle++;
   previous_valid = out_valid_o;
   previous_quant = requant_data_o;
@@ -57,10 +59,14 @@ always @(posedge clock) begin : edge_scoreboard
       if (requant_valid_o[lane_base+c]) begin
         row   = quant_next[c];
         index = row * n_count + n;
+        if (requant_data_o[8*(lane_base+c)+:8] !== cim_golden[index])
+          $fatal(1, "GEMM: CIM INT8 before TB correction mismatch");
+        corrected_quant = per_channel ? requant_data_o[8*(lane_base+c)+:8] :
+            tb_correct_tensor($signed(requant_data_o[8*(lane_base+c)+:8]), $signed(zp[n]));
         if (n < 0 || row >= m_count || cycle != first_accept + row * (phases + 1) + first_raw + 1 ||
-          requant_data_o[8 * (lane_base + c) +: 8] !== quant_golden[index])
+          corrected_quant !== quant_golden[index])
           $fatal(1, "GEMM scenario: INT8 matrix/OC-parameter/timing mismatch row=%0d n=%0d OC=%0d", row, n, c);
-        observed_quant[index] = requant_data_o[8*(lane_base+c)+:8];
+        observed_quant[index] = corrected_quant;
         quant_next[c]++;
         quant_checks++;
         $fdisplay(trace_fd, "%0d,quant,%0d,%0d,%0d,%0d,%0d", cycle, active_tile, row, n, lane_base + c,

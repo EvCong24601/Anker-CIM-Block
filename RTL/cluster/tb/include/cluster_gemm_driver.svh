@@ -15,6 +15,7 @@ task automatic load_gemm_os1_ws32_w8a16_vectors();
   $readmemh({data_dir, "/raw_golden.hex"}, raw_golden);
   $readmemh({data_dir, "/centered_golden.hex"}, centered_golden);
   $readmemh({data_dir, "/quant_golden.hex"}, quant_golden);
+  $readmemh({data_dir, "/cim_golden.hex"}, cim_golden);
   $readmemh({data_dir, "/requant_zp.hex"}, zp);
   if ($test$plusargs("PER_CHANNEL_SCALE")) begin
     $readmemh({data_dir, "/requant_multiplier.hex"}, channel_multiplier);
@@ -102,7 +103,7 @@ task automatic send_gemm_rows(input int tile);
     end
   end
   for (int lane = 0; lane < 4; lane++) begin
-    requant_cfg_i[0].requant_zp[32*lane+:32] = zp[4*tile+lane];
+    requant_cfg_i[0].requant_zp[32*lane+:32] = $test$plusargs("PER_CHANNEL_SCALE") ? zp[4*tile+lane] : 32'd0;
   end
   cmd_i = '0;
   cmd_i.cim_os_cnt = 1;

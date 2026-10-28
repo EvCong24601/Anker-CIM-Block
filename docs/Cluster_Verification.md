@@ -15,7 +15,7 @@
 - [x] `requant_context`：OS1/2、两种scale模式；不同Context的multiplier、shift、ZP均不同，32个INT8值与独立整数预期比对。
 - [x] `requant_buffers`：七精度、AS8/AS16、OS1/2，两种scale模式，77个case及2912个raw、2912个INT8比对。Context shift按编号变化，首Tile加载、后续Tile校验、最终结果按Context取参数。
 - [x] `requant_channel`与GEMM：16种OC mask、七种对齐组、高位置物理lane、N尾部；参数c固定对应OC c。
-- [x] Per-tensor在OC0被屏蔽时仍取当前Context的第0项scale；未使用的三组scale/shift寄存器保持，四项ZP按本地OC索引。
+- [x] Per-tensor在OC0被屏蔽时仍取当前Context的第0项scale；未使用的三组scale/shift寄存器保持。per-tensor不加载/消费ZP，TB修正；per-channel四项ZP仍按本地OC索引。
 
 ## A4地址旁路与接收发射重叠
 
@@ -113,3 +113,15 @@ MacroSliceFusion及SingleMacro与组合共享前版本逐字节一致。Requant�
 - `requant_empty_batch`：七精度空批次后最早加载下一批次，8次有效输出，逐捕获沿检查tmp开钟请求与消费相等。独立专项覆盖父节点屏蔽的七组空批次；将事务valid恢复为无条件issue时，检查器准确拒绝误开钟。
 
 输出仍为raw后1T的寄存INT8；没有增加流水级或DFF。时序模型、SYNTHESIS条件编译/展开和VCS文件列表/Make入口审计见`fix_empty_int10_audit.log`，并不代替工艺综合或STA。Psum中间溢出策略和未知result mask断言缺口仍待处理。
+
+## Per-tensor ZP外移与整个ZP buffer关钟（2026-10-28）
+
+当前版本通过ModelSim完整133组用例（90组准确匹配的预期拒绝），最终全量运行无失败。11个正向GEMM逐元素检查CIM INT8值和TB修正结果；per-channel六个矩阵场景的原数值/输入文件与修改前逐字节一致。
+
+per-tensor AS Context和批次ZP的实际门控时钟必须为0，全部ZP槽位保持；异步复位仍有效。共享scale照常更新，per-channel仍按原公式工作。Context专项覆盖mode切换、后续Tile将未使用ZP改为X以及门控/旁路逐拍等价。量化单元17908个标量向量分别检查两种模式，512个四通道向量，共145312次数值检查，另检查TB修正的扩位加法和再次饱和。
+
+隔离副本将两组ZP时钟故意接回仍活动的共享时钟，实际时钟检查器准确触发`Per-tensor zero-point buffer clock is not fully gated`，证明仅禁止写入无法通过该检查。
+
+`gemm_w4a16_high_group_tensor`与原单次饱和算法最大差值为9，已接受并记录于metadata；原算法参考不作为新流程的通过条件。其余已有GEMM示例中的差值见各自metadata。
+
+证据：[本轮验证记录](../RTL/cluster/tb/log/per_tensor_zp_validation.log)与`per_tensor_zp_sources.sha256`。10个顶层普通及SYNTHESIS条件编译通过；未执行实际VCS、工艺综合或STA。

@@ -1,9 +1,11 @@
+`include "include/requant_tb_helpers.svh"
 always @(posedge clock) begin : as_gemm_scoreboard
   logic [31:0] previous_raw_valid;
   logic [255:0] previous_quant;
   bit check_history[4];
   logic [31:0] wanted_history[4];
   int hc[4], tile, cx, ph, index, n;
+  logic [7:0] corrected_quant;
   cycle++;
   previous_raw_valid = out_valid_o;
   previous_quant = requant_data_o;
@@ -77,9 +79,13 @@ always @(posedge clock) begin : as_gemm_scoreboard
       if (requant_valid_o[l]) begin
         cx = quant_next[l];
         n  = 4 * cx + l;
-        if (cx >= 4 || cycle != first_accept + 36 + cx || requant_data_o[8*l+:8] !== quant_golden[active_m*N+n])
+        if (requant_data_o[8*l+:8] !== cim_golden[active_m*N+n])
+          $fatal(1, "GEMM: CIM INT8 before TB correction mismatch");
+        corrected_quant = $test$plusargs("PER_CHANNEL_SCALE") ? requant_data_o[8*l+:8] :
+            tb_correct_tensor($signed(requant_data_o[8*l+:8]), $signed(zp[n]));
+        if (cx >= 4 || cycle != first_accept + 36 + cx || corrected_quant !== quant_golden[active_m*N+n])
           $fatal(1, "AS GEMM: INT8 matrix/Context-zp/timing mismatch m=%0d ctx=%0d lane=%0d", active_m, cx, l);
-        observed_quant[active_m*N+n] = requant_data_o[8*l+:8];
+        observed_quant[active_m*N+n] = corrected_quant;
         $fdisplay(trace_fd, "%0d,%0d,quant,%0d,1,%0d,%0d,%0d,%0d", cycle, cycle - first_accept, active_m, cx, l, n,
                   $signed(observed_quant[active_m*N+n]));
         quant_next[l]++;

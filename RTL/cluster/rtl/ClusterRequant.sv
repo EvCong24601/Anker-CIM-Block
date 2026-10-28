@@ -78,7 +78,8 @@ module ClusterRequant #(
     wire [31:0] selected_zp;
     assign selected_multiplier = found ? cfg_i.requant_multiplier[32*entry_id+:32] : 32'b0;
     assign selected_shift = found ? cfg_i.requant_shift[10*entry_id+:10] : 10'b0;
-    assign selected_zp = found ? cfg_i.requant_zp[32*c+:32] : 32'b0;
+    // Per-tensor ends at saturated INT8; channel correction belongs to TB.
+    assign selected_zp = found && cfg_i.requant_mode ? cfg_i.requant_zp[32*c+:32] : 32'b0;
     assign channel_data[c] = quantize(
       $signed(selected_psum), $signed(selected_multiplier), $signed(selected_shift), $signed(selected_zp)
     );

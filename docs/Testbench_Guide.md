@@ -61,3 +61,19 @@ cluster_completion_checks.svh独立维护逐Context/lane预留与完成状态，
 cluster_gate_checks.svh检查每OC共享加法器的fusion/acc请求互斥及空闲操作数隔离。tb_ClusterRequant.sv明确驱动内部group_sel_i，覆盖高位置组、OC0屏蔽、空mask和per-tensor/per-channel参数顺序。归约树独立测试及门控镜像仍核对提前一拍的OC请求。
 
 `cluster_empty_batch_cases.svh`负责零输出批次与有效批次连续切换，捕获沿的门控请求由`cluster_gate_checks.svh`与实际消费逐lane比对。`requant_full_shift`复用Context参数测试，参考计算采用TB专用576位整数；独立Python向量覆盖全部INT10编码。
+
+## Per-tensor外部ZP修正
+
+`requant_tb_helpers.svh`提供TB专用signed扩位加ZP及INT8饱和。三个GEMM scoreboard先逐元素核对`cim_golden.hex`，仅per-tensor再按真实输出列n取`zp[n]`修正，与`quant_golden.hex`对比。observed矩阵与quant事件记录的是TB修正值，CIM输出保持检查仍直接读取DUT。per-channel直接比较DUT输出，数值流程不变。
+
+`tb_ClusterRequant.sv`对每个原始整数向量分别验证per-channel原公式、忽略X ZP的per-tensor输出，以及TB外部修正结果；四通道向量仍覆盖稀疏mask及高位置组。AS Context测试在per-tensor后续K Tile把未使用ZP改为X，验证不会误拒绝或串入数据；per-channel继续检查跨Tile ZP一致性。
+
+Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。
+
+## Requant 补偿参数的整数定义和检查顺序
+
+两种模式的merged ZP均为生成端已round的signed INT32输出域补偿：`ZP_n=Z_y_reference[n]+R((-ACT_zp×sum(Wq[:,n]))×S_hat_n)`。per-tensor TB在CIM饱和INT8输出之后，按逻辑channel取ZP，符号扩位至longint signed相加、再次clip；没有额外round。per-channel由RTL在缩放round后加ZP并clip，TB不重复补偿。
+
+检查顺序为raw对raw_golden、CIM端口对cim_golden、per-tensor TB修正结果对quant_golden；per-channel直接对quant_golden。保留original_quant_reference作算法差异统计，不将原算法差异当作新接口的容差。DUT的valid、时序、复位和保持始终直接检查硬件信号，observed矩阵及quant事件中的per-tensor值为TB修正值。
+
+INT32 ZP不先clip成INT8，TB加法先扩位以避免回绕；不能将ZP移入round改变半值跨零语义，也不能把累加器域D误作输出域ZP。完整数学推导及参考C++的指数到RTL shift转换见Block Spec第6.2节与[Requant说明](Cluster_Requant.md)。

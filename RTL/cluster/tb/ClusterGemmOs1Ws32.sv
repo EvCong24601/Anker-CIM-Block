@@ -66,7 +66,7 @@ module ClusterGemmOs1Ws32;
 
   // External Python golden is indexed in ordinary row-major GEMM order.
   logic [15:0] x_q[0:M * K - 1];
-  logic [7:0] w_q[0:K * N - 1], quant_golden[0:M * N - 1];
+  logic [7:0] w_q[0:K * N - 1], quant_golden[0:M * N - 1], cim_golden[0:M * N - 1];
   logic [31:0] raw_golden[0:M * N - 1], centered_golden[0:M * N - 1], zp[0:N - 1];
   logic [31:0] channel_multiplier[0:N - 1];
   logic [9:0] channel_shift[0:N - 1];

@@ -155,5 +155,8 @@
   "raw_min": -50681061,
   "raw_max": 44503935,
   "quant_min": -128,
-  "quant_max": 127
+  "quant_max": 127,
+  "tensor_zp_in_tb": true,
+  "tensor_double_saturation": true,
+  "original_algorithm_max_difference": 0
 }

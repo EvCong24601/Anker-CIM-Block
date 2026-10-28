@@ -78,6 +78,13 @@ def generate(directory,case,per_channel=True):
     centered=[[v-zx*sums[n] for n,v in enumerate(row)] for row in raw]
     before_clip=[[rounded(v,multipliers[n],shifts[n])+zp[n] for n,v in enumerate(row)] for row in raw]
     quant=[[clip(v) for v in row] for row in before_clip]
+    original_quant=quant
+    cim_quant=quant if per_channel else [[clip(rounded(v,multipliers[n],shifts[n])) for n,v in enumerate(row)] for row in raw]
+    if not per_channel:
+        quant=[[clip(cim_quant[m][n]+zp[n]) for n in range(N)] for m in range(M)]
+    write_hex(out/'cim_golden.hex',(v for row in cim_quant for v in row),8)
+    write_hex(out/'original_quant_reference.hex',(v for row in original_quant for v in row),8)
+
     real=matmul(x_real,w_real)
     ideal=[[clip(round_away(v/sy[n])+output_zp[n]) for n,v in enumerate(row)] for row in real]
     assert zx!=0 and all(-(1<<31)<=v<(1<<31) for row in raw for v in row)
@@ -145,6 +152,8 @@ def generate(directory,case,per_channel=True):
               channel_map=maps,raw_lane_base=lane_base,first_raw=first_raw,first_quant=first_raw+1,
               os_cnt=1,ws_cnt=M,as_cnt=1,coverage=coverage,
               ideal_quant_max_error=max(abs(ideal[m][n]-quant[m][n]) for m in range(M) for n in range(N)))
+    meta.update(tensor_zp_in_tb=not per_channel,tensor_double_saturation=not per_channel,
+                original_algorithm_max_difference=max(abs(quant[m][n]-original_quant[m][n]) for m in range(M) for n in range(N)))
     (out/'gemm_metadata.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
     (out/'vectors.sha256').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n'
         for p in sorted(out.iterdir()) if p.is_file() and p.name!='vectors.sha256' and not p.name.startswith('gemm_observed')),encoding='ascii')

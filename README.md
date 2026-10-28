@@ -17,7 +17,7 @@
 
 OUTPUT_PSUM_DEPTH默认16，统一控制Psum、权重地址表及Requant Context表深度；兼容参数可由容量专项单独覆盖。默认权重行地址表16×8bit；仅AS A8/A16使用深表，A4使用当前地址寄存器。Requant参数表默认16项，与OUTPUT_BUFFER_DEPTH一致，所有AS精度均使用固定槽位，不回收、不覆盖。所有精度cim_as_cnt≤16。
 
-非AS关闭地址和量化参数深表，使用当前地址及批次参数。Per-tensor每Context仅使用第0组multiplier/shift并广播，另外三组关钟；ZP始终保留四项逐通道参数。参数c固定对应本地OC c，不按mask压缩。
+非AS关闭地址和量化参数深表，使用当前地址及批次参数。Per-tensor每Context仅使用第0组multiplier/shift并广播，另外三组关钟；per-tensor不加载或消费ZP，逐channel修正仅在TB执行；per-channel仍保留四项ZP。参数c固定对应本地OC c，不按mask压缩。
 
 Psum使用条件：`cim_os_cnt>1 || cim_as_cnt>1`。WS/单Context在tmp中融合Slice；所有AS多Context在Psum中保存各Context结果及融合历史；OS>1还累加K Tile。OS1 WS64合法，OS1 AS16合法，AS17/AS64拒绝。三个count均为8bit、1～255，WS/AS不能同时大于1。
 
@@ -25,7 +25,7 @@ Psum使用条件：`cim_os_cnt>1 || cim_as_cnt>1`。WS/单Context在tmp中融合
 
 SRAM上升沿采样读写。同步读响应带sram_rd_valid，Macro编号随请求锁存；下一请求不改变当前响应。Macro在输入接受沿读权重，下一沿寄存计算结果，II=1。控制、SRAM访问及ACT分区时钟独立；权重由SRAM输出保持，行号/valid随访问更新；归约转发按节点/OC门控，tmp/Psum及INT8数据按对齐有效事件门控，valid保留清零尾沿。Context表采用整批门控。工艺ICG/SRAM映射及STA需由集成实现确认。
 
-Requant使用一级组合算术及输出寄存器，INT8 valid比raw晚1T，没有输出反压。公式：`clip_INT8(round(raw × multiplier × 2^shift) + zp)`，半整数远离零，shift范围−512～511。merged ZP逐通道，scale支持per-tensor/per-channel。组编号由批次配置统一解码，四通道共享AS Context选择，各OC保留独立隔离和输出门控。
+Requant使用一级组合算术及输出寄存器，INT8 valid比raw晚1T，没有输出反压。per-tensor输出`r=clip_INT8(round(raw × multiplier[0] × 2^shift[0]))`，TB再按channel执行`clip_INT8(r+ZP_n)`；per-channel公式保持`clip_INT8(round(raw × multiplier × 2^shift) + zp)`。半整数远离零，shift范围−512～511。merged ZP逐通道，scale支持per-tensor/per-channel。组编号由批次配置统一解码，四通道共享AS Context选择，各OC保留独立隔离和输出门控。
 
 启用量化时每拍只允许一组、最多四个OC：W8八Macro归约，W4对齐四Macro组，W2对齐两Macro组。raw归约单测可关闭量化。中间tmp/Psum必须符合signed32范围；最终clip不修复历史回绕。
 
@@ -1136,3 +1136,5 @@ Ctx0：末内部发射 C16，raw 完成 C21；Ctx1：末内部发射 C17，raw �
 以下按 bit6..bit0 给出26种规范编码，K 限制还需结合 precision、EN 和 OC：
 
 `0000000`、`0000001`、`0000011`、`0000101`、`0000111`、`0001011`、`0001111`、`0010011`、`0010111`、`0011011`、`0011111`、`0100101`、`0100111`、`0101111`、`0110111`、`0111111`、`1000101`、`1000111`、`1001111`、`1010111`、`1011111`、`1100101`、`1100111`、`1101111`、`1110111`、`1111111`
+
+Requant的ZP参数均为生成端已round的signed INT32输出域补偿。per-tensor在CIM饱和INT8输出后仅由TB按channel扩位加ZP并再次clip，不再round；per-channel在RTL内先round、加ZP、再clip，TB不重复补偿。完整公式和参考代码转换见[Requant说明](docs/Cluster_Requant.md)及[Block Spec第6.2节](docs/CIM_Block_Spec.docx)。

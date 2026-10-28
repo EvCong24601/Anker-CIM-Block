@@ -97,3 +97,9 @@ packet_cmd是组合视图，复用107bit batch_command，只另存8bit packet_we
 phase/external_phase各2bit，context_idx为C bit，command_count/batch_contexts各L bit，tile为8bit。默认六个状态合计32bit，相对六个int32减少160bit；数量64需要7bit，索引0～63需要6bit。phases/contexts为组合解码。
 
 相对共享事务标签后的37838bit版本：完成跟踪减少4093bit，描述符减少99bit，计数器减少160bit，合计4352bit，默认33486bit。shift接口及存储仍为INT10，没有进行shift压缩；完整INT10运算通过组合范围判定支持，不增加寄存器。Psum仍为32个物理lane，本次未实施四通道压缩。
+
+## Per-tensor ZP外移后的资源口径
+
+mode=0不加载批次或AS Context的ZP存储，也不消费ZP操作数；ZP逐channel修正仅在TB执行。mode=1继续使用原四通道ZP结构，因此共享RTL仍保留298bit配置接口和原ZP数组容量。此修改不能按per-tensor禁用推断全模块物理DFF减少，也未重新完成工艺综合/STA。
+
+Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。

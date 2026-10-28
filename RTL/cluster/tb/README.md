@@ -21,3 +21,7 @@
 每个物理输出OC只有一套acc与一套bit-fusion组合算术，全部Context通过Psum索引复用；不同OC之间保持独立，以支持并行输出。Context深度只扩展状态存储，不复制算术单元。
 
 `include/cluster_completion_checks.svh`独立检查逐Context/lane的预留、唯一发布和完整批次结束；检查表属于TB，不进入RTL。
+
+## Per-tensor ZP修正
+
+per-tensor DUT输出为不加ZP、已饱和的INT8；TB使用`requant_tb_helpers.svh`按逻辑channel加signed INT32 ZP并再次饱和。先检查`cim_golden.hex`，再检查修正后的`quant_golden.hex`；输出周期及保持仍直接检查DUT。必须重新生成数据，原算法参考另存`original_quant_reference.hex`。per-channel直接比较原DUT量化输出，不做TB二次修正。

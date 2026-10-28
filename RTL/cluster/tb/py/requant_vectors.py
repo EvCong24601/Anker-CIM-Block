@@ -56,7 +56,7 @@ def write_vectors(path):
         cases.append((rng.randrange(-4096, 4096), rng.randrange(-32, 33),
                       rng.randrange(-16, 1), rng.randrange(-100, 101), 'small-result-random'))
     path = Path(path)
-    path.write_text(''.join(f'{p} {m} {s} {z} {golden(p,m,s,z)} {name}\n'
+    path.write_text(''.join(f'{p} {m} {s} {z} {golden(p,m,s,z)} {golden(p,m,s,0)} {min(127,max(-128,golden(p,m,s,0)+z))} {name}\n'
                             for p,m,s,z,name in cases), encoding='ascii')
     return len(cases)
 
@@ -72,7 +72,7 @@ def write_channel_vectors(path):
         mul=[rng.randrange(-64,65) for _ in range(4)]
         shift=[rng.randrange(-512,512) if index%3 else rng.randrange(-17,2) for _ in range(4)]
         zp=[rng.randrange(-127,128) for _ in range(4)]
-        wanted=[golden(p[c],mul[c if mode else 0],shift[c if mode else 0],zp[c]) for c in range(4)]
+        wanted=[golden(p[c],mul[c if mode else 0],shift[c if mode else 0],zp[c] if mode else 0) for c in range(4)]
         rows.append(' '.join(map(str,[mode,valid,*p,*mul,*shift,*zp,*wanted])))
     Path(path).write_text('\n'.join(rows)+'\n',encoding='ascii')
     return len(rows)

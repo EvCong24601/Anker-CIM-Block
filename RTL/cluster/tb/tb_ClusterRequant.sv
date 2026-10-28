@@ -10,6 +10,7 @@ module tb_ClusterRequant;
   wire [255:0] data_o;
   wire [31:0] valid_o;
   ClusterRequant dut (.*);
+  `include "include/requant_tb_helpers.svh"
   task automatic check_isolated_channels();
     if(!(valid_i & (32'h11111111 << 0)) &&
        (dut.g_channel[0].selected_psum !== 0 || dut.g_channel[0].selected_multiplier !== 0 ||
@@ -30,7 +31,7 @@ module tb_ClusterRequant;
   endtask
   initial begin
     string path, description;
-    int fd, status, p, m, s, z, wanted, cases, checks, numeric_checks;
+    int fd, status, p, m, s, z, wanted, tensor_wanted, corrected_wanted, cases, checks, numeric_checks;
     logic [31:0] vector_mask;
     int mode, mask, cp[4], cm[4], cs[4], cz[4], cq[4], channel_cases;
     cases = 0;
@@ -46,16 +47,17 @@ module tb_ClusterRequant;
     while (!$feof(
       fd
     )) begin
-      status = $fscanf(fd, "%d %d %d %d %d %s\n", p, m, s, z, wanted, description);
-      if (status != 6) $fatal(1, "TB: malformed Requant vector row");
+      status = $fscanf(fd, "%d %d %d %d %d %d %d %s\n", p, m, s, z, wanted, tensor_wanted, corrected_wanted, description);
+      if (status != 8) $fatal(1, "TB: malformed Requant vector row");
       $display(
         string'({"[CASE_START] time=%0.3f ns suite=requant_unit case=%0d ",
                  "description=%s psum=%0d multiplier=%0d shift=%0d zp=%0d"}),
         $realtime, cases, description, p, m, s, z);
       cfg_i = '{
-        requant_mode: 1'b0,
-        requant_multiplier: 32'(m),
-        requant_shift: 10'(s),
+        conv_mode: 1'b1,
+        requant_mode: 1'b1,
+        requant_multiplier: {4{32'(m)}},
+        requant_shift: {4{10'(s)}},
         requant_zp: {4{32'(z)}},
         default: '0
       };
@@ -94,6 +96,19 @@ module tb_ClusterRequant;
             wanted
           );
         checks++;
+      end
+      // Same full INT10 vector in tensor mode: nonzero/X ZP must be ignored.
+      cfg_i.requant_mode = 0;
+      cfg_i.requant_zp = 'x;
+      valid_i = 32'hf;
+      group_sel_i = 0;
+      #0.001;
+      for (int c = 0; c < 4; c++) begin
+        if (data_o[8*c+:8] !== 8'(tensor_wanted) || dut.g_channel[0].selected_zp !== 0)
+          $fatal(1, "Per-tensor must ignore ZP and saturate before external correction");
+        if (tb_correct_tensor($signed(data_o[8*c+:8]), 32'(z)) !== 8'(corrected_wanted))
+          $fatal(1, "TB external channel correction/double saturation mismatch");
+        numeric_checks++;
       end
       cases++;
     end

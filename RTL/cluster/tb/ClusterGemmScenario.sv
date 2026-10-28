@@ -49,7 +49,7 @@ module ClusterGemmScenario #(
   int lane_base, first_raw, n_tiles, per_channel, act_zp, phases;
   int n_map[0:1][0:3];
   logic [15:0] x_q[0:4095];
-  logic [7:0] w_q[0:2047], quant_golden[0:127];
+  logic [7:0] w_q[0:2047], quant_golden[0:127], cim_golden[0:127];
   logic [31:0] raw_golden[0:127], zp[0:7], multiplier[0:7];
   logic [9:0] shift[0:7];
   logic [1023:0] weight_rows[0:15], act_planes[0:63];

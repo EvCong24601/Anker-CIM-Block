@@ -193,5 +193,8 @@
   "compensation_rounding_max_difference": 1,
   "ideal_quant_max_error": 1,
   "raw_min": -81271012,
-  "raw_max": 82228610
+  "raw_max": 82228610,
+  "tensor_zp_in_tb": true,
+  "tensor_double_saturation": true,
+  "original_algorithm_max_difference": 0
 }

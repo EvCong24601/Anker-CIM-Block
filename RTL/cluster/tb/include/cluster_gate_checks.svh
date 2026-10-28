@@ -219,3 +219,32 @@ always @(posedge clock) begin : check_shared_adder
         $fatal(1, "SHARED_ADDER: inactive operands not isolated lane=%0d", l);
     end
 end
+
+// A tensor command must not load either batch or AS Context ZP storage.
+always @(posedge clock) begin : check_tensor_zp_not_loaded
+  logic [127:0] saved_batch_zp;
+  logic [127:0] saved_context_zp[0:REQUANT_CONTEXT_DEPTH-1];
+  if (!reset && ENABLE_REQUANT && dut.cmd_accept && !requant_cfg_i.requant_mode) begin
+    saved_batch_zp = dut.batch_requant_cfg.requant_zp;
+    for (int cx = 0; cx < REQUANT_CONTEXT_DEPTH; cx++) saved_context_zp[cx] = dut.requant_context_zp[cx];
+    #0.003;
+    if (!reset) begin
+      if (dut.batch_requant_cfg.requant_zp !== saved_batch_zp)
+        $fatal(1, "Tensor command loaded unused batch ZP");
+      for (int cx = 0; cx < REQUANT_CONTEXT_DEPTH; cx++)
+        if (dut.requant_context_zp[cx] !== saved_context_zp[cx])
+          $fatal(1, "Tensor command loaded unused Context ZP");
+    end
+  end
+end
+
+// Check actual gated-clock levels on every tensor capture edge, not just CE.
+always @(posedge clock) begin : check_tensor_zp_clocks_closed
+  bit tensor_edge;
+  tensor_edge = !reset && ENABLE_REQUANT &&
+      ((dut.batch_active && !dut.batch_requant_cfg.requant_mode) ||
+       (dut.cmd_accept && !requant_cfg_i.requant_mode));
+  #0.003;
+  if (!reset && tensor_edge && (dut.deep_zp_clock !== 0 || dut.batch_zp_clock !== 0))
+    $fatal(1, "Per-tensor zero-point buffer clock is not fully gated");
+end

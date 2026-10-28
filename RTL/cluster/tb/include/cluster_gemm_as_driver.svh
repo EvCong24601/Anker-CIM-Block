@@ -12,6 +12,7 @@ task automatic load_as_gemm_os1_ws32_w8a16_vectors();
   $readmemh({data_dir, "/raw_golden.hex"}, raw_golden);
   $readmemh({data_dir, "/centered_golden.hex"}, centered_golden);
   $readmemh({data_dir, "/quant_golden.hex"}, quant_golden);
+  $readmemh({data_dir, "/cim_golden.hex"}, cim_golden);
   $readmemh({data_dir, "/requant_zp.hex"}, zp);
   if ($test$plusargs("PER_CHANNEL_SCALE")) begin
     $readmemh({data_dir, "/requant_multiplier.hex"}, channel_multiplier);
@@ -94,7 +95,7 @@ task automatic select_as_zp(input int tile, input int cx);
   if ($test$plusargs("NEGATIVE_SCALE_RELOAD") && tile == 1 && cx == 1)
     requant_cfg_i.requant_multiplier[0] = ~requant_cfg_i.requant_multiplier[0];
   for (int oc = 0; oc < 4; oc++) begin
-    requant_cfg_i.requant_zp[32*oc+:32] = zp[4*cx+oc];
+    requant_cfg_i.requant_zp[32*oc+:32] = $test$plusargs("PER_CHANNEL_SCALE") ? zp[4*cx+oc] : 32'd0;
   end
   if ($test$plusargs("NEGATIVE_ZP_RELOAD") && tile == 1 && cx == 1)
     requant_cfg_i.requant_zp[0] = ~requant_cfg_i.requant_zp[0];

@@ -1,9 +1,11 @@
+`include "include/requant_tb_helpers.svh"
 // Output rows are reconstructed by lane order, independently of DUT Context
 // tags. Exact due cycles distinguish missing/duplicated/reordered Contexts.
 always @(posedge clock) begin : gemm_scoreboard
   logic [31:0] previous_raw_valid[CLUSTERS];
   logic [255:0] previous_quant[CLUSTERS];
   int row, n, ph;
+  logic [7:0] corrected_quant;
   cycle++;
   for (int c = 0; c < CLUSTERS; c++) begin
     previous_raw_valid[c] = out_valid_o[c];
@@ -74,20 +76,24 @@ always @(posedge clock) begin : gemm_scoreboard
           row = quant_rows[active_tile][lane];
           if (row >= M || cycle != first_accept[active_tile] + 5 * row + 10)
             $fatal(1, "GEMM: INT8 row/order/latency mismatch cluster=%0d lane=%0d row=%0d", c, lane, row);
-          if (requant_data_o[c][8*lane+:8] !== quant_golden[row*N+n])
+          if (requant_data_o[c][8*lane+:8] !== cim_golden[row*N+n])
+            $fatal(1, "GEMM: CIM INT8 before TB correction mismatch");
+          corrected_quant = $test$plusargs("PER_CHANNEL_SCALE") ? requant_data_o[c][8*lane+:8] :
+              tb_correct_tensor($signed(requant_data_o[c][8*lane+:8]), $signed(zp[n]));
+          if (corrected_quant !== quant_golden[row*N+n])
             $fatal(
               1,
               "GEMM: INT8 matrix mismatch m=%0d n=%0d got=%0d expected=%0d",
               row,
               n,
               $signed(
-                requant_data_o[c][8*lane+:8]
+                corrected_quant
               ),
               $signed(
                 quant_golden[row*N+n]
               )
             );
-          observed_quant[row*N+n] = requant_data_o[c][8*lane+:8];
+          observed_quant[row*N+n] = corrected_quant;
           $fdisplay(trace_fd, "%0d,%0d,quant,%0d,%0d,%0d,%0d,%0d,%0d", cycle, cycle - first_accept[active_tile],
                     active_tile, row, c, lane, n, $signed(observed_quant[row*N+n]));
           quant_rows[active_tile][lane]++;

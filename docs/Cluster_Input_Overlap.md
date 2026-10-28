@@ -55,7 +55,7 @@ Macro 启用 ICG，控制、SRAM读写和ACT分区使用独立时钟；权重由
 
 归约树 t1～t6 每节点、每 OC 独立门控，共24个转发数据时钟；终点无需转发时关闭。tmp 按 OC、Psum 按深度和 OC门控。raw 数据/Context 和 INT8 数据按对齐后的结果有效事件门控；valid/control继续由主时钟推进，不直接使用当前命令的 OC mask。
 
-Context 深表使用整批时钟。Per-tensor 时仅共享的第0组 multiplier/shift更新，另外三组关闭时钟；四个逐通道 ZP始终保留。参数保持时通过组合路径读取，无需为读取持续写寄存器。
+Context 深表使用整批时钟。Per-tensor 时仅共享的第0组 multiplier/shift更新，另外三组关闭时钟；per-tensor不更新或读取四项ZP，修正在TB执行；per-channel仍保存四项逐通道ZP。参数保持时通过组合路径读取，无需为读取持续写寄存器。
 
 ICG 为低电平锁存功能模型，工艺实现需映射时钟门控单元并完成 STA。
 
@@ -102,3 +102,5 @@ raw 数据直接选择对应 Context 的 Psum 或单 Context/WS 的 tmp，不另
 内部issue保留原输入接收、计数和批次结束时序；当有效输出lane mask为0时，`pipe_meta[0].valid`保持0，不向归约与tmp路径传播有效事务。空批次的旧valid不会在下一批次更新共享mask后被重新解释。
 
 tmp门控请求在捕获沿必须与真实`capture_valid`一致。`requant_empty_batch`在ready最早恢复时发送下一批次，检查全OC屏蔽批次没有多余输出、误开钟或无消费写入；父节点mask形成零输出的情况由同一有效mask条件处理。非空批次的流水延迟保持原定义。
+
+Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。

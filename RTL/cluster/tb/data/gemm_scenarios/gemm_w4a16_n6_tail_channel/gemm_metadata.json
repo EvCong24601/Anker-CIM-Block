@@ -81,5 +81,8 @@
     "exact_low": 0,
     "exact_high": 1
   },
-  "ideal_quant_max_error": 8
+  "ideal_quant_max_error": 8,
+  "tensor_zp_in_tb": false,
+  "tensor_double_saturation": false,
+  "original_algorithm_max_difference": 0
 }

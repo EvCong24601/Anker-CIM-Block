@@ -15,7 +15,8 @@ function automatic logic signed [7:0] requant_expected(input longint signed psum
     if (remainder >= divisor / 2) quotient++;
     value = value < 0 ? -quotient : quotient;
   end
-  value += longint'($signed(expected_requant_cfg.requant_zp[32*(lane%4)+:32]));
+  if (expected_requant_cfg.requant_mode)
+    value += longint'($signed(expected_requant_cfg.requant_zp[32*(lane%4)+:32]));
   if (value > 127) return 8'sd127;
   if (value < -128) return -8'sd128;
   return 8'(value);
@@ -63,7 +64,7 @@ task automatic configure_requant(input int profile);
     end
   endcase
   // Existing profiles use a common zp; GEMM independently exercises unequal
-  // zero points across lanes while retaining one per-tensor multiplier/shift.
+  // TB-only corrections across lanes while retaining shared tensor scale.
   expected_requant_cfg.requant_zp = {4{expected_requant_cfg.requant_zp[31:0]}};
   if ($test$plusargs("REQUANT_CHANNEL_TEST")) begin
     expected_requant_cfg.conv_mode = 1;
@@ -127,6 +128,7 @@ task automatic run_requant_context_suite();
             @(negedge clock);
             cmd_i.cim_weight_raddr = 8'('h20 + context_id);
             requant_cfg_i = context_test_cfg(mode, context_id);
+            if (!mode && tile > 0) requant_cfg_i.requant_zp = 'x;
             cmd_valid_i = 1;
             do @(posedge clock); while (!cmd_ready_o);
             @(negedge clock);
@@ -144,7 +146,7 @@ task automatic run_requant_context_suite();
                 mult = mode ? 1 + 4 * cx + c : 1 + 2 * cx;
                 shift_bits = mode ? 5 + cx : 4 + cx;
                 // Two Macros, each with 128 unit weights and unit ACT values.
-                wanted = ((256 * os * mult) >> shift_bits) + 1 + 10 * cx + c;
+                wanted = ((256 * os * mult) >> shift_bits) + (mode ? 1 + 10 * cx + c : 0);
                 if ($signed(requant_data_o[8*c+:8]) != wanted)
                   $fatal(
                     1,
@@ -299,7 +301,8 @@ always @(posedge clock) begin : requant_protocol_scoreboard
   if (ENABLE_REQUANT && monitoring && dut.batch_active) begin
     if (dut.batch_requant_cfg.conv_mode !== expected_requant_cfg.conv_mode ||
         dut.batch_requant_cfg.requant_mode !== expected_requant_cfg.requant_mode ||
-        dut.batch_requant_cfg.requant_zp !== expected_requant_cfg.requant_zp ||
+        (expected_requant_cfg.requant_mode &&
+         dut.batch_requant_cfg.requant_zp !== expected_requant_cfg.requant_zp) ||
         dut.batch_requant_cfg.requant_multiplier[31:0] !== expected_requant_cfg.requant_multiplier[31:0] ||
         dut.batch_requant_cfg.requant_shift[9:0] !== expected_requant_cfg.requant_shift[9:0] ||
         (expected_requant_cfg.requant_mode &&

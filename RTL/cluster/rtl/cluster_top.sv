@@ -94,7 +94,8 @@ module cluster_top #(
   logic batch_active, batch_input_done;
   requant_cfg_t batch_requant_cfg;
   // Fixed Context slots: AS never recycles an entry within a batch.
-  // A4 bypasses only the weight-address table; all AS modes retain Q params.
+  // A4 bypasses only the weight-address table; all AS modes retain scale.
+  // Only per-channel loads or consumes ZP; tensor correction belongs to TB.
   logic [127:0] requant_context_zp[0:REQUANT_CONTEXT_DEPTH - 1];
   logic [127:0] requant_context_multiplier[0:REQUANT_CONTEXT_DEPTH - 1];
   logic [39:0] requant_context_shift[0:REQUANT_CONTEXT_DEPTH - 1];
@@ -112,6 +113,8 @@ module cluster_top #(
   wire batch_cfg_load;
   wire entry0_clock, deep_weight_clock, deep_requant_clock;
   wire channel_scale_clock, batch_cfg_clock, batch_channel_clock;
+  // ZP belongs to channel-only clock domains. Both clocks stop in tensor mode.
+  wire deep_zp_clock, batch_zp_clock;
   wire [31:0] accepted_context;
   wire [31:0] write_context_slot;
   // Requant Context slot this command targets. Per-Context zP/Q state is written
@@ -135,11 +138,11 @@ module cluster_top #(
   assign zp_ctx = write_context_slot;
   assign write_requant_params = cmd_accept && ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && (!batch_active || tile == 0);
   // ===== 3. Configuration table clock domains and parameter storage =====
-  // Six configuration tables, one gated-clock domain each. They use the same
+  // Six configuration groups, one gated-clock domain each. They use the same
   // cell and flags, so a single loop instantiates them; the individual clock
   // names stay as aliases because the testbench observes them.
-  // Bit order [5:0]: batch channel, batch config, channel scale, ZP, weight
-  // address, single entry.
+  // Bit order [5:0]: batch extra scales/ZP, batch shared config, AS extra
+  // scales/ZP, AS shared scale, weight address, single entry.
   wire [5:0] table_enable;
   assign table_enable = {
     batch_cfg_load && requant_cfg_i.requant_mode,
@@ -165,6 +168,8 @@ module cluster_top #(
   assign channel_scale_clock = table_clock[3];
   assign batch_cfg_clock = table_clock[4];
   assign batch_channel_clock = table_clock[5];
+  assign deep_zp_clock = channel_scale_clock;
+  assign batch_zp_clock = batch_channel_clock;
 
   // WS/single uses packet_cmd directly. A4 AS uses one bypass register.
   always_ff @(posedge entry0_clock or posedge reset)
@@ -175,17 +180,16 @@ module cluster_top #(
     else if (cmd_accept && deep_command && write_context_slot < WGT_RADDR_BUFFER_DEPTH)
       context_address[write_context_slot] <= cmd_i.cim_weight_raddr;
   end
-  // One table clock for ZP and the shared scale; unused channel scales have
-  // a separate group clock. No per-entry clock gates or FIFO pointers.
+  // Shared scale has its own table clock. ZP and unused channel scales use
+  // channel-only clocks, so every ZP storage bit is clock-gated in tensor mode.
+  // No additional ICGs, per-entry clock gates or FIFO pointers.
   always_ff @(posedge deep_requant_clock or posedge reset) begin
     if (reset)
       for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) begin
-        requant_context_zp[d] <= '0;
         requant_context_multiplier[d][31:0] <= '0;
         requant_context_shift[d][9:0] <= '0;
       end
     else if (write_requant_params && write_context_slot < REQUANT_CONTEXT_DEPTH) begin
-      requant_context_zp[write_context_slot] <= requant_cfg_i.requant_zp;
       requant_context_multiplier[write_context_slot][31:0] <= requant_cfg_i.requant_multiplier[31:0];
       requant_context_shift[write_context_slot][9:0] <= requant_cfg_i.requant_shift[9:0];
     end
@@ -207,13 +211,11 @@ module cluster_top #(
     if (reset) begin
       batch_requant_cfg.conv_mode <= 0;
       batch_requant_cfg.requant_mode <= 0;
-      batch_requant_cfg.requant_zp <= '0;
       batch_requant_cfg.requant_multiplier[31:0] <= 1;
       batch_requant_cfg.requant_shift[9:0] <= '0;
     end else if (batch_cfg_load) begin
       batch_requant_cfg.conv_mode <= requant_cfg_i.conv_mode;
       batch_requant_cfg.requant_mode <= requant_cfg_i.requant_mode;
-      batch_requant_cfg.requant_zp <= requant_cfg_i.requant_zp;
       batch_requant_cfg.requant_multiplier[31:0] <= requant_cfg_i.requant_multiplier[31:0];
       batch_requant_cfg.requant_shift[9:0] <= requant_cfg_i.requant_shift[9:0];
     end
@@ -226,6 +228,19 @@ module cluster_top #(
       batch_requant_cfg.requant_multiplier[127:32] <= requant_cfg_i.requant_multiplier[127:32];
       batch_requant_cfg.requant_shift[39:10] <= requant_cfg_i.requant_shift[39:10];
     end
+  end
+  // Separate ZP register processes use existing channel-only gated clocks.
+  // Async reset remains effective even when all tensor-mode ZP clocks stop.
+  always_ff @(posedge deep_zp_clock or posedge reset) begin
+    if (reset)
+      for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) requant_context_zp[d] <= '0;
+    else if (write_requant_params && requant_cfg_i.requant_mode && write_context_slot < REQUANT_CONTEXT_DEPTH)
+      requant_context_zp[write_context_slot] <= requant_cfg_i.requant_zp;
+  end
+  always_ff @(posedge batch_zp_clock or posedge reset) begin
+    if (reset) batch_requant_cfg.requant_zp <= '0;
+    else if (batch_cfg_load && requant_cfg_i.requant_mode)
+      batch_requant_cfg.requant_zp <= requant_cfg_i.requant_zp;
   end
   // ===== 4. Regular SRAM passthrough and protocol checks =====
   wire [2:0] regular_macro_id;
@@ -528,10 +543,11 @@ module cluster_top #(
     requant_read_context = raw_path_context[batch_group_path[batch_requant_group]];
     requant_group_valid = raw_valid[4*batch_requant_group+:4];
     selected_requant_cfg = batch_requant_cfg;
+    if (!batch_requant_cfg.requant_mode) selected_requant_cfg.requant_zp = '0;
     if (batch_is_as && (|requant_group_valid) && int'(requant_read_context) < REQUANT_CONTEXT_DEPTH) begin
       for (int c = 0; c < 4; c++) begin
         // Preserve per-OC isolation while sharing the Context address.
-        if (requant_group_valid[c]) begin
+        if (requant_group_valid[c] && batch_requant_cfg.requant_mode) begin
           selected_requant_cfg.requant_zp[32*c+:32] = requant_context_zp[requant_read_context][32*c+:32];
           if (batch_requant_cfg.requant_mode) begin
             selected_requant_cfg.requant_multiplier[32*c+:32] =
@@ -852,14 +868,15 @@ module cluster_top #(
             $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context mode changed");
           if ($isunknown({requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}))
             $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context scale");
-          if ($isunknown(requant_cfg_i.requant_zp)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context zp");
+          if (requant_cfg_i.requant_mode && $isunknown(requant_cfg_i.requant_zp)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context zp");
 `endif
           if (write_requant_params) begin
             if (!batch_active) requant_context_valid <= '0;
             requant_context_valid[zp_ctx] <= 1;
           end else begin
 `ifndef SYNTHESIS
-            if (!requant_context_valid[zp_ctx] || requant_cfg_i.requant_zp !== requant_context_zp[zp_ctx])
+            if (!requant_context_valid[zp_ctx] ||
+                (requant_cfg_i.requant_mode && requant_cfg_i.requant_zp !== requant_context_zp[zp_ctx]))
               $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles");
             else if (requant_cfg_i.requant_mode ?
                     (requant_cfg_i.requant_multiplier !== requant_context_multiplier[zp_ctx] ||
@@ -887,7 +904,10 @@ module cluster_top #(
         end
         if (!batch_active) begin
 `ifndef SYNTHESIS
-          if (ENABLE_REQUANT && $isunknown(requant_cfg_i)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown configuration");
+          if (ENABLE_REQUANT &&
+              ($isunknown({requant_cfg_i.conv_mode, requant_cfg_i.requant_mode,
+                           requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}) ||
+               (requant_cfg_i.requant_mode && $isunknown(requant_cfg_i.requant_zp)))) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown configuration");
           if (ENABLE_REQUANT && requant_cfg_i.requant_mode && !requant_cfg_i.conv_mode)
             $fatal(1, "CLUSTER_REQUANT_CONFIG: per-channel scale requires conv_mode");
           if (ENABLE_REQUANT && !conv_group_legal(cmd_i))

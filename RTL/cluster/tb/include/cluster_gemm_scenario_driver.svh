@@ -63,6 +63,7 @@ task automatic load_scenario_vectors();
   $readmemh({data_dir, "/w_q.hex"}, w_q, 0, k_count * n_count - 1);
   $readmemh({data_dir, "/raw_golden.hex"}, raw_golden, 0, m_count * n_count - 1);
   $readmemh({data_dir, "/quant_golden.hex"}, quant_golden, 0, m_count * n_count - 1);
+  $readmemh({data_dir, "/cim_golden.hex"}, cim_golden, 0, m_count * n_count - 1);
   $readmemh({data_dir, "/requant_multiplier.hex"}, multiplier, 0, n_count - 1);
   $readmemh({data_dir, "/requant_shift.hex"}, shift, 0, n_count - 1);
   $readmemh({data_dir, "/requant_zp.hex"}, zp, 0, n_count - 1);
@@ -138,7 +139,7 @@ task automatic send_scenario_tile(input int tile);
     if (n >= 0) begin
       oc[c] = 1;
       active_mask[lane_base+c] = 1;
-      requant_cfg_i.requant_zp[32*c+:32] = zp[n];
+      requant_cfg_i.requant_zp[32*c+:32] = per_channel ? zp[n] : 32'd0;
       if (per_channel) begin
         requant_cfg_i.requant_multiplier[32*c+:32] = multiplier[n];
         requant_cfg_i.requant_shift[10*c+:10] = shift[n];

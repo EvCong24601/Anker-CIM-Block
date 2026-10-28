@@ -100,7 +100,7 @@ for mode in ('tensor', 'channel'):
 for name, params, args, message, channel in (
         ('as_context_capacity', 'ZP_DEPTH=2', '', 'AS context zp depth exceeded', False),
         ('as_context_capacity_default', 'ZP_DEPTH=1', '', 'AS context zp depth exceeded', False),
-        ('as_context_zp_reload', '', '+NEGATIVE_ZP_RELOAD', 'AS context zp changed across K Tiles', False),
+        ('as_context_zp_reload', '', '+NEGATIVE_ZP_RELOAD', 'AS context zp changed across K Tiles', True),
         ('as_context_scale_reload', '', '+NEGATIVE_SCALE_RELOAD', 'AS context scale changed across K Tiles', True),
         ('as_context_tensor_scale_reload', '', '+NEGATIVE_SCALE_RELOAD', 'AS context scale changed across K Tiles', False)):
     add(name, 'gemm_os2_as4_w8a16', 'Reject '+name.replace('_', ' '), 'CLUSTER_REQUANT_CONFIG: '+message,

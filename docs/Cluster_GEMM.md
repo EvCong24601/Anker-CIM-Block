@@ -6,9 +6,15 @@ GEMM 验证由三个 TB 执行，包含 11 个正向 case 和 5 个 AS 参数负
 
 - `M/K/N` 对应 `X[M,K] × W[K,N]`。启用 Requant 时，每个归约组最多输出 4 个 OC，N 方向由批次或 AS Context 覆盖。
 - ACT 使用 per-tensor 非对称量化，weight 使用对称量化。WS32、AS4、高位置组和 N 尾部场景分别具有 per-tensor weight 与 per-channel weight 配置；舍入/饱和场景使用定向 per-channel 参数。
-- 合并输入补偿后的 `zp` 始终逐通道。per-tensor scale 使用当前Context的参数项 0；per-channel scale 使用 OC 对应项。参数项 c 固定对应 OC c，mask 空洞不压缩索引。
+- 合并输入补偿后的 `zp` 始终逐通道；per-tensor仅TB保存并在CIM饱和INT8输出后相加、再次饱和，per-channel保持CIM内饱和前相加。per-tensor scale 使用当前Context的参数项 0；per-channel scale 使用 OC 对应项。参数项 c 固定对应 OC c，mask 空洞不压缩索引。
 - Python 生成实数参考、整数矩阵、量化参数、权重行、ACT Plane 和整数 golden。SV 检查真实 Macro 乘法及归约路径，输出矩阵与整数 golden 精确比较。
 - raw 经组合 Requant 后，在下一时钟沿写入 INT8 输出寄存器，量化 valid 比 raw 晚 1T。输出为 valid-only 接口，下游须在有效周期接收。
+
+## 已舍入 ZP 与 TB 修正
+
+生成端按`ZP_n=Z_y_reference[n]+R((-ACT_zp×sum(Wq[:,n]))×S_hat_n)`生成signed INT32整数补偿，两种模式均已完成该round。per-tensor的TB只做`clip_INT8(signed(CIM_INT8)+ZP_n)`，不再round；per-channel的TB直接比较RTL已完成round、加ZP及clip的INT8结果。
+
+先分别检查CIM端口golden与最终golden，再记录原单次饱和算法差异。per-tensor两次饱和不能还原已丢失的数值；per-channel原顺序保持不变。数学展开、位宽与舍入规则见[Requant说明](Cluster_Requant.md)。
 
 ## W8A16：OS1 / WS32
 
@@ -28,7 +34,7 @@ TB 为 `tb_Cluster_GEMM_OS1_WS32_W8A16.sv`，文件列表为 `verilog_file_gemm_
 - `gemm_os2_as4_w8a16_tensor`：per-tensor weight 与共享 multiplier/shift。
 - `gemm_os2_as4_w8a16_channel`：per-channel weight 与逐 Context、逐 OC multiplier/shift。
 
-每项检查 512 个 raw、512 个 INT8 和 4096 次 Psum 更新。每行相对首命令的 raw 为 C35～C38，INT8 为 C36～C39。默认 `ZP_DEPTH=16`，四个 Context 使用其中四项：有效参数为512 bit zp和672 bit scale，共1184 bit；整表容量为4736 bit。
+每项检查 512 个 raw、512 个 INT8 和 4096 次 Psum 更新。每行相对首命令的 raw 为 C35～C38，INT8 为 C36～C39。默认 `ZP_DEPTH=16`（兼容名称，同时限制scale表），四个 Context 使用其中四项；以下ZP位数仅为per-channel有效参数，per-tensor不加载ZP：有效参数为512 bit zp和672 bit scale，共1184 bit；整表容量为4736 bit。
 
 TB 为 `tb_Cluster_GEMM_OS2_AS4_W8A16.sv`，文件列表为 `verilog_file_gemm_os2_as4_w8a16.f`。
 
@@ -64,7 +70,7 @@ TB 为 `tb_Cluster_GEMM_OS2_AS4_W8A16.sv`，文件列表为 `verilog_file_gemm_o
 
 - `as_context_capacity`：`ZP_DEPTH=2` 请求 AS4，预期 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
 - `as_context_capacity_default`：`ZP_DEPTH=1` 请求AS4，预期 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
-- `as_context_zp_reload`：同一 Context 跨 K Tile 改变 zp，预期 `CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles`。
+- `as_context_zp_reload`：per-channel下同一 Context 跨 K Tile 改变 zp，预期 `CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles`。
 - `as_context_scale_reload`：per-channel 配置跨 K Tile 改变 scale，预期 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
 - `as_context_tensor_scale_reload`：mode=0下同一Context跨K Tile改变第0项scale，预期 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
 
@@ -100,7 +106,7 @@ W4高位置组使用split=0x01、EN=0xf0；W2高位置组使用split=0x07、EN=0
 
 ## Golden 与量化参数
 
-Python先生成实数矩阵参考，再校准ACT、weight及输出scale。整数golden使用任意精度整数与Fraction，舍入为半整数远离零；RTL必须精确匹配接口golden。实数或中心化数学参考用于记录量化及合并zp的舍入差异，不作为硬件容差。通用公式和参数索引见 [Requant](Cluster_Requant.md)。
+Python先生成实数矩阵参考，再校准ACT、weight及输出scale。整数golden使用任意精度整数与Fraction，舍入为半整数远离零；RTL必须精确匹配`cim_golden.hex`。per-tensor的TB再按channel加ZP、饱和，与`quant_golden.hex`精确比较；per-channel两份golden相同。`original_quant_reference.hex`保留原单次饱和算法供差异统计。实数或中心化数学参考用于记录量化及合并zp的舍入差异，不作为硬件容差。通用公式和参数索引见 [Requant](Cluster_Requant.md)。
 
 WS32种子为0x3212816；per-tensor配置ACT_zp=−9264、multiplier=4649、shift=−31。AS4种子为0x3251216；per-tensor配置ACT_zp=−9243、multiplier=2080、shift=−31。两者weight_zp均为0，合并zp逐通道。
 

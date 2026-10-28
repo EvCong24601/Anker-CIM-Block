@@ -293,3 +293,9 @@ make vcd   CASE=gemm_os2_as4_w8a16_channel  # 导出 VCD
 
 - [验证清单](../docs/Cluster_Verification.md)：逐项验证目标与覆盖矩阵
 - [GEMM 用例总览](../docs/Cluster_GEMM.md)：GEMM case 的矩阵规模、地址布局、量化模式
+
+## Per-tensor ZP外移后的数据
+
+运行前须用`make prepare CASE=<case>`重新生成匹配的数据。GEMM TB新增读取`cim_golden.hex`，先检查CIM未加ZP的饱和INT8，再在TB按channel加ZP并饱和，比较`quant_golden.hex`。原算法保存为`original_quant_reference.hex`，差异写入metadata；per-channel仍执行原CIM内加ZP逻辑。
+
+`as_context_zp_reload`现在明确在per-channel运行，继续验证ZP重载拒绝。per-tensor后续Tile的未使用ZP变化由Context正向测试覆盖。接口结构及容量诊断名称保持兼容。

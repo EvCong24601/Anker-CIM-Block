@@ -608,6 +608,7 @@ CASE_TB := gemm_os2_as4_w8a16
 CASE_DESCRIPTION := Reject as context zp reload
 CASE_ARGS = +NEGATIVE_ZP_RELOAD
 CASE_PARAMS :=
+CASE_ARGS += +PER_CHANNEL_SCALE
 CASE_ARGS += +GEMM_DATA_DIR=$(abspath $(RUN_DIR))/data
 endif
 ifeq ($(CASE),as_context_scale_reload)

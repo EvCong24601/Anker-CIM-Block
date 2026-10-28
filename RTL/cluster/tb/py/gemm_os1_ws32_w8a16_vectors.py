@@ -63,18 +63,26 @@ def generate(directory, seed=0x3212816, per_channel=False):
     sums = [sum(w[k][n] for k in range(K)) for n in range(N)]
     correction = [-zx*v for v in sums]
     # Final interface contract: the producer folds input-offset compensation
-    # into the per-channel INT32 zp. RTL consumes only raw, scale and this zp.
+    # into per-channel INT32 ZP: tensor applies it in TB after CIM saturation;
+    # channel retains the original RTL addition before saturation.
     zp = [zy+round_away(v*effective_scales[n]) for n,v in enumerate(correction)]
     raw = matmul(x,w)
     centered = [[raw[m][n]+correction[n] for n in range(N)] for m in range(M)]
     q = [[clip(round_away(v*effective_scales[n])+zp[n]) for n,v in enumerate(row)] for row in raw]
+    original_q = q
+    cim_q = q if per_channel else [[clip(round_away(v*effective_scales[n])) for n,v in enumerate(row)] for row in raw]
+    if not per_channel:
+        q = [[clip(cim_q[m][n]+zp[n]) for n in range(N)] for m in range(M)]
+    write_hex(out/'cim_golden.hex',(v for row in cim_q for v in row),8)
+    write_hex(out/'original_quant_reference.hex',(v for row in original_q for v in row),8)
+
     centered_q = [[clip(round_away(v*effective_scales[n])+zy) for n,v in enumerate(row)] for row in centered]
     ideal_q = [[clip(round_away(Fraction(v,1024*2048)/sy)+zy) for v in row] for row in y_src]
     differences = [abs(q[m][n]-centered_q[m][n]) for m in range(M) for n in range(N)]
     errors = [abs(q[m][n]-ideal_q[m][n]) for m in range(M) for n in range(N)]
     assert zx != 0 and any(v<0 for row in x for v in row) and any(v>0 for row in x for v in row)
     assert len(set(correction))>1 and all(v != 0 for v in sums)
-    assert max(differences)<=1
+    assert not per_channel or max(differences)<=1
     assert all(-(1<<31)<=v<(1<<31) for matrix in (raw,centered) for row in matrix for v in row)
     assert min(map(min,q))<0<max(map(max,q))
     write_hex(out/'x_q.hex',(v for row in x for v in row),16)
@@ -131,6 +139,8 @@ def generate(directory, seed=0x3212816, per_channel=False):
               weight_column_sums=sums,input_offset_reference=correction,compensation_rounding_max_difference=max(differences),
               ideal_quant_max_error=max(errors),ideal_quant_differences=sum(v!=0 for v in errors),
               raw_min=min(map(min,raw)),raw_max=max(map(max,raw)),quant_min=min(map(min,q)),quant_max=max(map(max,q)))
+    meta.update(tensor_zp_in_tb=not per_channel, tensor_double_saturation=not per_channel,
+                original_algorithm_max_difference=max(abs(q[m][n]-original_q[m][n]) for m in range(M) for n in range(N)))
     (out/'gemm_metadata.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
     (out/'vectors.sha256').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n'
                                        for p in sorted(out.iterdir()) if p.is_file() and p.name!='vectors.sha256'

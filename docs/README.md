@@ -14,3 +14,5 @@
 - [十轮检查与问题记录](Cluster_Bug_Review.md)：完整 INT10、空批次门控、Psum 溢出与未知控制检查的复现及验证范围。
 
 - [Macro ACT分区门控](Cluster_ACT_Gating.md)：W2/W4/W8的512/256/128bit捕获、输入精度切换与门控验证。
+
+Per-tensor当前采用CIM先饱和到INT8、TB按channel加ZP后再次饱和的边界；per-channel保留CIM内加ZP。公式、兼容字段和golden分工见[Requant](Cluster_Requant.md)。

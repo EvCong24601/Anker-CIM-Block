@@ -1,0 +1,166 @@
+Per-tensor ZP external correction and complete ZP-buffer clock gating
+Date: 2026-10-28 (Asia/Shanghai)
+Simulator: ModelSim SE 2020.4; actual VCS and physical synthesis/STA were not run.
+Final RTL: tensor output = clip_INT8(round(raw * multiplier0 * 2^shift0)).
+TB tensor result = clip_INT8(signed(CIM_INT8) + signed(channel_ZP)).
+Per-channel retains its original in-CIM ZP addition before saturation.
+AS Context ZP and batch ZP reuse existing channel-only clock domains.
+Per-tensor actual ZP-clock levels and no-load/hold are checked in Cluster TB.
+Unknown unused tensor ZP and cross-Tile changes are accepted; scale checks remain.
+All 10 TBs compile normally and under SYNTHESIS conditions.
+Final catalogue: 133 PASS, 0 FAIL; 90 expected protocol rejections.
+Unit vectors: 17908 full-range scalar cases checked in BOTH modes,
+512 four-channel cases, 145312 numeric output checks plus TB correction checks.
+All 11 positive GEMM cases check both CIM_INT8 and corrected golden.
+Six per-channel matrix/stimulus baselines remain byte-identical numerically.
+Negative mutation PASS: reconnecting ZP to active shared clocks is rejected
+by the actual-clock checker, despite unchanged no-write enables.
+{"case": "gemm_os1_ws32_w8a16_tensor", "original_reference_preserved": true, "max_difference": 0}
+{"case": "gemm_os2_as4_w8a16_tensor", "original_reference_preserved": true, "max_difference": 0}
+{"case": "gemm_os1_ws32_w8a16_channel", "per_channel_unchanged": true, "files": 18}
+{"case": "gemm_os2_as4_w8a16_channel", "per_channel_unchanged": true, "files": 19}
+{"case": "gemm_w4a16_high_group_tensor", "original_reference_preserved": true, "max_difference": 9}
+{"case": "gemm_w4a16_high_group_channel", "per_channel_unchanged": true, "files": 17}
+{"case": "gemm_w2a8_high_group_tensor", "original_reference_preserved": true, "max_difference": 0}
+{"case": "gemm_w2a8_high_group_channel", "per_channel_unchanged": true, "files": 17}
+{"case": "gemm_w4a16_n6_tail_tensor", "original_reference_preserved": true, "max_difference": 0}
+{"case": "gemm_w4a16_n6_tail_channel", "per_channel_unchanged": true, "files": 17}
+{"case": "gemm_w4a16_round_clip_channel", "per_channel_unchanged": true, "files": 17}
+
+Final ModelSim case results (same cases.py diagnostics/golden checks as VCS entry):
+PASS cluster_default
+PASS sram_rw
+PASS sram_write_compute_conflict (expected rejection)
+PASS sram_compute_conflict (expected rejection)
+PASS macro_gate0
+PASS macro_gate1
+PASS macro_negative_precision (expected rejection)
+PASS macro_negative_phase (expected rejection)
+PASS macro_negative_hold_invalid (expected rejection)
+PASS macro_negative_uninitialized (expected rejection)
+PASS macro_negative_masked_uninitialized (expected rejection)
+PASS macro_negative_masked_uninitialized_reuse (expected rejection)
+PASS macro_negative_hold_address (expected rejection)
+PASS macro_negative_hold_address_pending (expected rejection)
+PASS macro_negative_unknown_write (expected rejection)
+PASS macro_negative_unknown_activation (expected rejection)
+PASS macro_negative_unknown_control (expected rejection)
+PASS macro_negative_read_write (expected rejection)
+PASS macro_negative_write_busy (expected rejection)
+PASS macro_negative_hold_after_write (expected rejection)
+PASS macro_negative_hold_after_reset (expected rejection)
+PASS requant_unit
+PASS requant_negative_as17_capacity (expected rejection)
+PASS requant_negative_mode (expected rejection)
+PASS requant_negative_unknown (expected rejection)
+PASS requant_negative_conv_group (expected rejection)
+PASS requant_negative_zp_group (expected rejection)
+PASS requant_integration
+PASS requant_channel
+PASS requant_context
+PASS requant_reset
+PASS requant_boundary
+PASS os_count_limit
+PASS oc_merge
+PASS act_buffer
+PASS full_act
+PASS mixed_context
+PASS input_overlap
+PASS context_stress
+PASS requant_full_shift
+PASS requant_empty_batch
+PASS requant_buffers
+PASS requant_a4_address_bypass
+PASS as17_p0_s0_os1 (expected rejection)
+PASS as17_p0_s0_os2 (expected rejection)
+PASS as17_p0_s1_os1 (expected rejection)
+PASS as17_p0_s1_os2 (expected rejection)
+PASS as17_p1_s0_os1 (expected rejection)
+PASS as17_p1_s0_os2 (expected rejection)
+PASS as17_p1_s1_os1 (expected rejection)
+PASS as17_p1_s1_os2 (expected rejection)
+PASS as17_p2_s0_os1 (expected rejection)
+PASS as17_p2_s0_os2 (expected rejection)
+PASS as17_p2_s1_os1 (expected rejection)
+PASS as17_p2_s1_os2 (expected rejection)
+PASS as17_p3_s0_os1 (expected rejection)
+PASS as17_p3_s0_os2 (expected rejection)
+PASS as17_p3_s1_os1 (expected rejection)
+PASS as17_p3_s1_os2 (expected rejection)
+PASS as17_p4_s0_os1 (expected rejection)
+PASS as17_p4_s0_os2 (expected rejection)
+PASS as17_p4_s1_os1 (expected rejection)
+PASS as17_p4_s1_os2 (expected rejection)
+PASS as17_p5_s0_os1 (expected rejection)
+PASS as17_p5_s0_os2 (expected rejection)
+PASS as17_p5_s1_os1 (expected rejection)
+PASS as17_p5_s1_os2 (expected rejection)
+PASS as17_p6_s0_os1 (expected rejection)
+PASS as17_p6_s0_os2 (expected rejection)
+PASS as17_p6_s1_os1 (expected rejection)
+PASS as17_p6_s1_os2 (expected rejection)
+PASS reduce_tree
+PASS zero_count_0 (expected rejection)
+PASS zero_count_1 (expected rejection)
+PASS zero_count_2 (expected rejection)
+PASS context_capacity_p0_s0 (expected rejection)
+PASS context_capacity_p0_s1 (expected rejection)
+PASS context_capacity_p1_s0 (expected rejection)
+PASS context_capacity_p1_s1 (expected rejection)
+PASS context_capacity_p2_s0 (expected rejection)
+PASS context_capacity_p2_s1 (expected rejection)
+PASS context_capacity_p3_s0 (expected rejection)
+PASS context_capacity_p3_s1 (expected rejection)
+PASS context_capacity_p4_s0 (expected rejection)
+PASS context_capacity_p4_s1 (expected rejection)
+PASS context_capacity_p5_s0 (expected rejection)
+PASS context_capacity_p5_s1 (expected rejection)
+PASS context_capacity_p6_s0 (expected rejection)
+PASS context_capacity_p6_s1 (expected rejection)
+PASS address_capacity_s0 (expected rejection)
+PASS address_capacity_s1 (expected rejection)
+PASS metadata_capacity_s0 (expected rejection)
+PASS metadata_capacity_s1 (expected rejection)
+PASS gemm_os1_ws32_w8a16_tensor
+PASS gemm_os2_as4_w8a16_tensor
+PASS gemm_os1_ws32_w8a16_channel
+PASS gemm_os2_as4_w8a16_channel
+PASS as_context_capacity (expected rejection)
+PASS as_context_capacity_default (expected rejection)
+PASS as_context_zp_reload (expected rejection)
+PASS as_context_scale_reload (expected rejection)
+PASS as_context_tensor_scale_reload (expected rejection)
+PASS gemm_w4a16_high_group_tensor
+PASS gemm_w4a16_high_group_channel
+PASS gemm_w2a8_high_group_tensor
+PASS gemm_w2a8_high_group_channel
+PASS gemm_w4a16_n6_tail_tensor
+PASS gemm_w4a16_n6_tail_channel
+PASS gemm_w4a16_round_clip_channel
+PASS gate_equiv_default
+PASS gate_equiv_requant_buffers
+PASS gate_equiv_requant_channel
+PASS gate_equiv_context_stress
+PASS gate_equiv_input_overlap
+PASS gate_equiv_sram
+PASS gate_equiv_requant_reset
+PASS gate_equiv_requant_boundary
+PASS as64_p0_s0_os1 (expected rejection)
+PASS as64_p0_s1_os1 (expected rejection)
+PASS as64_p1_s0_os1 (expected rejection)
+PASS as64_p1_s1_os1 (expected rejection)
+PASS as64_p2_s0_os1 (expected rejection)
+PASS as64_p2_s1_os1 (expected rejection)
+PASS as64_p3_s0_os1 (expected rejection)
+PASS as64_p3_s1_os1 (expected rejection)
+PASS as64_p4_s0_os1 (expected rejection)
+PASS as64_p4_s1_os1 (expected rejection)
+PASS as64_p5_s0_os1 (expected rejection)
+PASS as64_p5_s1_os1 (expected rejection)
+PASS as64_p6_s0_os1 (expected rejection)
+PASS as64_p6_s1_os1 (expected rejection)
+PASS sram_response
+PASS gate_equiv_sram_response
+
+The earlier full run had a runner DATA_DIR path error for cluster_default;
+the final full run includes the fixed path and passes all cases without retries.

@@ -7,7 +7,8 @@ package cluster_pkg;
     logic [127:0] requant_multiplier;  // INT32 entry c: [32*c+:32]
     logic [39:0] requant_shift;  // INT10 entry c: [10*c+:10], -512..511
     // Per-channel INT32 effective zero point supplied by the parameter
-    // producer, including input-offset compensation. mode controls scale only.
+    // producer, including input-offset compensation. Used only in mode=1;
+    // mode=0 ignores this compatibility field and applies channel ZP in TB.
     logic [127:0] requant_zp;  // OC c: [32*c+:32], never compact masked OCs
   } requant_cfg_t;
   // Cluster descriptor: three eight-bit counts, total packed width 107 bits.

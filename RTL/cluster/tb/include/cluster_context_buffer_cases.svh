@@ -97,6 +97,7 @@ task automatic run_context_buffer_suite();
               @(negedge clock);
               cmd_i.cim_weight_raddr = 8'('h20 + context_id);
               requant_cfg_i = context_buffer_cfg(mode, context_id, p);
+              if (!mode && tile > 0) requant_cfg_i.requant_zp = 'x;
               cmd_valid_i = 1;
               do @(posedge clock); while (!cmd_ready_o);
               @(negedge clock);
