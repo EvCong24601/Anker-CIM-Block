@@ -130,8 +130,7 @@ task automatic send_scenario_tile(input int tile);
   oc = 0;
   requant_cfg_i = '0;
   active_mask = 0;
-  requant_cfg_i.conv_mode = 1;
-  requant_cfg_i.requant_mode = 1'(per_channel);
+  requant_cfg_i.conv_mode = 1'(per_channel);
   requant_cfg_i.requant_multiplier[0+:32] = multiplier[0];
   requant_cfg_i.requant_shift[0+:10] = shift[0];
   for (int c = 0; c < 4; c++) begin

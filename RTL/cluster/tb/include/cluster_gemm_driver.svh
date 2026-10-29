@@ -96,7 +96,6 @@ task automatic send_gemm_rows(input int tile);
   requant_cfg_i[0].requant_shift = 10'(shift);
   if ($test$plusargs("PER_CHANNEL_SCALE")) begin
     requant_cfg_i[0].conv_mode = 1;
-    requant_cfg_i[0].requant_mode = 1;
     for (int oc = 0; oc < 4; oc++) begin
       requant_cfg_i[0].requant_multiplier[32*oc+:32] = channel_multiplier[4*tile+oc];
       requant_cfg_i[0].requant_shift[10*oc+:10] = channel_shift[4*tile+oc];

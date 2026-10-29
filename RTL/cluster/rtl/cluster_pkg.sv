@@ -2,8 +2,9 @@
 package cluster_pkg;
   // Independent batch configuration; not part of the compute descriptor.
   typedef struct packed {
-    logic conv_mode;  // Convolution: one enabled 4-OC reduction group
-    logic requant_mode;  // 0: shared entry 0; 1: entry c corresponds to OC c
+    // Weight quantization: 0 = per-tensor, shared entry 0 and ZP in TB;
+    // 1 = per-channel, entry c for OC c and ZP in RTL before saturation.
+    logic conv_mode;
     logic [127:0] requant_multiplier;  // INT32 entry c: [32*c+:32]
     logic [39:0] requant_shift;  // INT10 entry c: [10*c+:10], -512..511
     // Per-channel INT32 effective zero point supplied by the parameter

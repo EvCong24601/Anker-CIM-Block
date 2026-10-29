@@ -21,7 +21,7 @@ module tb_Cluster;
   logic reset = 1;
   cluster_ctrl_t cmd_i = '0;
   requant_cfg_t requant_cfg_i = '{
-    requant_mode: 1'b0,
+    conv_mode: 1'b0,
     requant_multiplier: 32'sd1,
     requant_shift: 10'sd0,
     requant_zp: 32'sd0,

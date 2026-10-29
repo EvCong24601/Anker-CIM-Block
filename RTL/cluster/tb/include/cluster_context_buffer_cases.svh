@@ -20,7 +20,6 @@ function automatic requant_cfg_t context_buffer_cfg(input int mode, input int cx
   requant_cfg_t cfg;
   cfg = '0;
   cfg.conv_mode = 1'(mode);
-  cfg.requant_mode = 1'(mode);
   for (int c = 0; c < 4; c++) begin
     cfg.requant_multiplier[32*c+:32] = 32'(1 + cx % 3 + (mode ? c : 0));
     cfg.requant_shift[10*c+:10] = 10'(-(abits(precision) + 3 + cx % 3));

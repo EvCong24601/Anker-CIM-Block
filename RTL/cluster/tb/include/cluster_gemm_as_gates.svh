@@ -15,7 +15,7 @@ generate if (CHECK_SWITCH) begin : g_as_switch_checks
     if (!reset) begin
       accept = cmd_valid_i && cmd_ready_o;
       active = dut.batch_active || accept;
-      channel = dut.batch_active ? dut.batch_requant_cfg.requant_mode : requant_cfg_i.requant_mode;
+      channel = dut.batch_active ? dut.batch_requant_cfg.conv_mode : requant_cfg_i.conv_mode;
       load_cfg = accept && !dut.batch_active;
       expected_clocks = {load_cfg && channel, load_cfg, active && channel, active, active, 1'b0};
       slot = dut.write_context_slot;

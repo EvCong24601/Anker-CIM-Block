@@ -13,7 +13,7 @@ initial begin : regression
     repeat (4) @(negedge clock); reset = 0;
     run_empty_batch_suite(); $finish;
   end
-  if ($bits(requant_cfg_t) != 298) $fatal(1, "TB: Requant config must be 298 bits");
+  if ($bits(requant_cfg_t) != 297) $fatal(1, "TB: Requant config must be 297 bits");
   if ($value$plusargs("REQUANT_NEGATIVE=%s", requant_negative)) begin
     repeat (4) @(negedge clock);
     reset = 0;
@@ -28,7 +28,7 @@ initial begin : regression
     cmd_i.cim_macro_en_mask = 8'hff;
     case (requant_negative)
       "as17_capacity": cmd_i.cim_as_cnt = 17;
-      "mode": requant_cfg_i.requant_mode = 1;
+      "mode": requant_cfg_i.conv_mode = 'x;
       "unknown": requant_cfg_i.requant_multiplier = 'x;
       "conv_group": begin
         requant_cfg_i.conv_mode = 1;

@@ -131,7 +131,7 @@ module cluster_top #(
   assign deep_requant_active = !reset && ENABLE_REQUANT &&
       ((batch_active && batch_command.cim_as_cnt > 1) || (cmd_accept && cmd_i.cim_as_cnt > 1));
   assign channel_scale_active = deep_requant_active &&
-      (batch_active ? batch_requant_cfg.requant_mode : requant_cfg_i.requant_mode);
+      (batch_active ? batch_requant_cfg.conv_mode : requant_cfg_i.conv_mode);
   assign batch_cfg_load = !reset && ENABLE_REQUANT && cmd_accept && !batch_active;
   assign accepted_context = packet_active ? command_count : 0;
   assign write_context_slot = accepted_context;
@@ -145,7 +145,7 @@ module cluster_top #(
   // scales/ZP, AS shared scale, weight address, single entry.
   wire [5:0] table_enable;
   assign table_enable = {
-    batch_cfg_load && requant_cfg_i.requant_mode,
+    batch_cfg_load && requant_cfg_i.conv_mode,
     batch_cfg_load,
     channel_scale_active,
     deep_requant_active,
@@ -200,7 +200,7 @@ module cluster_top #(
         requant_context_multiplier[d][127:32] <= '0;
         requant_context_shift[d][39:10] <= '0;
       end
-    else if (write_requant_params && requant_cfg_i.requant_mode && write_context_slot < REQUANT_CONTEXT_DEPTH) begin
+    else if (write_requant_params && requant_cfg_i.conv_mode && write_context_slot < REQUANT_CONTEXT_DEPTH) begin
       requant_context_multiplier[write_context_slot][127:32] <= requant_cfg_i.requant_multiplier[127:32];
       requant_context_shift[write_context_slot][39:10] <= requant_cfg_i.requant_shift[39:10];
     end
@@ -210,12 +210,10 @@ module cluster_top #(
   always_ff @(posedge batch_cfg_clock or posedge reset) begin
     if (reset) begin
       batch_requant_cfg.conv_mode <= 0;
-      batch_requant_cfg.requant_mode <= 0;
       batch_requant_cfg.requant_multiplier[31:0] <= 1;
       batch_requant_cfg.requant_shift[9:0] <= '0;
     end else if (batch_cfg_load) begin
       batch_requant_cfg.conv_mode <= requant_cfg_i.conv_mode;
-      batch_requant_cfg.requant_mode <= requant_cfg_i.requant_mode;
       batch_requant_cfg.requant_multiplier[31:0] <= requant_cfg_i.requant_multiplier[31:0];
       batch_requant_cfg.requant_shift[9:0] <= requant_cfg_i.requant_shift[9:0];
     end
@@ -224,7 +222,7 @@ module cluster_top #(
     if (reset) begin
       batch_requant_cfg.requant_multiplier[127:32] <= '0;
       batch_requant_cfg.requant_shift[39:10] <= '0;
-    end else if (batch_cfg_load && requant_cfg_i.requant_mode) begin
+    end else if (batch_cfg_load && requant_cfg_i.conv_mode) begin
       batch_requant_cfg.requant_multiplier[127:32] <= requant_cfg_i.requant_multiplier[127:32];
       batch_requant_cfg.requant_shift[39:10] <= requant_cfg_i.requant_shift[39:10];
     end
@@ -234,12 +232,12 @@ module cluster_top #(
   always_ff @(posedge deep_zp_clock or posedge reset) begin
     if (reset)
       for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) requant_context_zp[d] <= '0;
-    else if (write_requant_params && requant_cfg_i.requant_mode && write_context_slot < REQUANT_CONTEXT_DEPTH)
+    else if (write_requant_params && requant_cfg_i.conv_mode && write_context_slot < REQUANT_CONTEXT_DEPTH)
       requant_context_zp[write_context_slot] <= requant_cfg_i.requant_zp;
   end
   always_ff @(posedge batch_zp_clock or posedge reset) begin
     if (reset) batch_requant_cfg.requant_zp <= '0;
-    else if (batch_cfg_load && requant_cfg_i.requant_mode)
+    else if (batch_cfg_load && requant_cfg_i.conv_mode)
       batch_requant_cfg.requant_zp <= requant_cfg_i.requant_zp;
   end
   // ===== 4. Regular SRAM passthrough and protocol checks =====
@@ -543,13 +541,13 @@ module cluster_top #(
     requant_read_context = raw_path_context[batch_group_path[batch_requant_group]];
     requant_group_valid = raw_valid[4*batch_requant_group+:4];
     selected_requant_cfg = batch_requant_cfg;
-    if (!batch_requant_cfg.requant_mode) selected_requant_cfg.requant_zp = '0;
+    if (!batch_requant_cfg.conv_mode) selected_requant_cfg.requant_zp = '0;
     if (batch_is_as && (|requant_group_valid) && int'(requant_read_context) < REQUANT_CONTEXT_DEPTH) begin
       for (int c = 0; c < 4; c++) begin
         // Preserve per-OC isolation while sharing the Context address.
-        if (requant_group_valid[c] && batch_requant_cfg.requant_mode) begin
+        if (requant_group_valid[c] && batch_requant_cfg.conv_mode) begin
           selected_requant_cfg.requant_zp[32*c+:32] = requant_context_zp[requant_read_context][32*c+:32];
-          if (batch_requant_cfg.requant_mode) begin
+          if (batch_requant_cfg.conv_mode) begin
             selected_requant_cfg.requant_multiplier[32*c+:32] =
                 requant_context_multiplier[requant_read_context][32*c+:32];
             selected_requant_cfg.requant_shift[10*c+:10] = requant_context_shift[requant_read_context][10*c+:10];
@@ -557,7 +555,7 @@ module cluster_top #(
         end
       end
       // Tensor entry zero is shared even when OC0 itself is masked.
-      if (!batch_requant_cfg.requant_mode) begin
+      if (!batch_requant_cfg.conv_mode) begin
         selected_requant_cfg.requant_multiplier[31:0] = requant_context_multiplier[requant_read_context][31:0];
         selected_requant_cfg.requant_shift[9:0] = requant_context_shift[requant_read_context][9:0];
       end
@@ -863,12 +861,11 @@ module cluster_top #(
 `endif
         if (ENABLE_REQUANT && cmd_i.cim_as_cnt > 1) begin
 `ifndef SYNTHESIS
-          if(batch_active && (requant_cfg_i.requant_mode!==batch_requant_cfg.requant_mode ||
-                             requant_cfg_i.conv_mode!==batch_requant_cfg.conv_mode))
+          if (batch_active && requant_cfg_i.conv_mode !== batch_requant_cfg.conv_mode)
             $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context mode changed");
           if ($isunknown({requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}))
             $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context scale");
-          if (requant_cfg_i.requant_mode && $isunknown(requant_cfg_i.requant_zp)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context zp");
+          if (requant_cfg_i.conv_mode && $isunknown(requant_cfg_i.requant_zp)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context zp");
 `endif
           if (write_requant_params) begin
             if (!batch_active) requant_context_valid <= '0;
@@ -876,9 +873,9 @@ module cluster_top #(
           end else begin
 `ifndef SYNTHESIS
             if (!requant_context_valid[zp_ctx] ||
-                (requant_cfg_i.requant_mode && requant_cfg_i.requant_zp !== requant_context_zp[zp_ctx]))
+                (requant_cfg_i.conv_mode && requant_cfg_i.requant_zp !== requant_context_zp[zp_ctx]))
               $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles");
-            else if (requant_cfg_i.requant_mode ?
+            else if (requant_cfg_i.conv_mode ?
                     (requant_cfg_i.requant_multiplier !== requant_context_multiplier[zp_ctx] ||
                      requant_cfg_i.requant_shift !== requant_context_shift[zp_ctx]) :
                     (requant_cfg_i.requant_multiplier[31:0] !== requant_context_multiplier[zp_ctx][31:0] ||
@@ -905,11 +902,9 @@ module cluster_top #(
         if (!batch_active) begin
 `ifndef SYNTHESIS
           if (ENABLE_REQUANT &&
-              ($isunknown({requant_cfg_i.conv_mode, requant_cfg_i.requant_mode,
+              ($isunknown({requant_cfg_i.conv_mode,
                            requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}) ||
-               (requant_cfg_i.requant_mode && $isunknown(requant_cfg_i.requant_zp)))) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown configuration");
-          if (ENABLE_REQUANT && requant_cfg_i.requant_mode && !requant_cfg_i.conv_mode)
-            $fatal(1, "CLUSTER_REQUANT_CONFIG: per-channel scale requires conv_mode");
+               (requant_cfg_i.conv_mode && $isunknown(requant_cfg_i.requant_zp)))) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown configuration");
           if (ENABLE_REQUANT && !conv_group_legal(cmd_i))
             $fatal(1, "CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group");
 `endif

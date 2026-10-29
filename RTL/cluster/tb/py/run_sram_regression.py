@@ -222,7 +222,7 @@ def main():
                  f'PASS requant_unit cases={vector_count}')
         for scenario, message in (
             ('as17_capacity','AS count exceeds output depth'),
-            ('mode','per-channel scale requires conv_mode'),
+            ('mode','unknown configuration'),
             ('unknown','unknown configuration'),
             ('conv_group','Requant requires one aligned reduction group'),
             ('zp_group','Requant requires one aligned reduction group'),

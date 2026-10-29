@@ -7,6 +7,7 @@ GEMM 验证由七个具体 TB、三套共用驱动执行，包含 13 个正向 c
 - 正向 case 统一命名为 `gemm_os{OS}_ws{WS}_as{AS}_{精度}[_{场景}]_{tensor|channel}`，三个 count 均显式标出，包括值为 1 的字段。运行时使用完整新名称；TB、文件列表、数据生成器及 TB 的 PASS 标志沿用现有名称。
 - `M/K/N` 对应 `X[M,K] × W[K,N]`。启用 Requant 时，每个归约组最多输出 4 个 OC，N 方向由批次或 AS Context 覆盖。
 - ACT 使用 per-tensor 非对称量化，weight 使用对称量化。WS32、AS4、高位置组和 N 尾部场景分别具有 per-tensor weight 与 per-channel weight 配置；舍入/饱和场景使用定向 per-channel 参数。
+- `conv_mode`为唯一1bit模式控制：1表示weight per-channel，0表示weight per-tensor。
 - 合并输入补偿后的 `zp` 始终逐通道；per-tensor仅TB保存并在CIM饱和INT8输出后相加、再次饱和，per-channel保持CIM内饱和前相加。per-tensor scale 使用当前Context的参数项 0；per-channel scale 使用 OC 对应项。参数项 c 固定对应 OC c，mask 空洞不压缩索引。
 - Python 生成实数参考、整数矩阵、量化参数、权重行、ACT Plane 和整数 golden。SV 检查真实 Macro 乘法及归约路径，输出矩阵与整数 golden 精确比较。
 - raw 经组合 Requant 后，在下一时钟沿写入 INT8 输出寄存器，量化 valid 比 raw 晚 1T。输出为 valid-only 接口，下游须在有效周期接收。

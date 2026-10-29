@@ -180,7 +180,7 @@ make vcd   CASE=gemm_os2_ws1_as4_w8a16_channel  # 导出 VCD
 - `macro_negative_hold_after_reset`：Reject hold after reset；预期拒绝，匹配 `SM_PROTOCOL: reuse invalid hold`。
 - `requant_unit`：Integer quantization arithmetic and four OC mapping；成功标志 `PASS requant_unit`。
 - `requant_negative_as17_capacity`：Reject Requant as17 capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `requant_negative_mode`：Reject Requant mode；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: per-channel scale requires conv_mode`。
+- `requant_negative_mode`：Reject Requant mode；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: unknown configuration`。
 - `requant_negative_unknown`：Reject Requant unknown；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: unknown configuration`。
 - `requant_negative_conv_group`：Reject Requant conv group；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group`。
 - `requant_negative_zp_group`：Reject Requant zp group；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group`。

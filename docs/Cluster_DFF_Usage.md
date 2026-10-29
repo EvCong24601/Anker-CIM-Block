@@ -1,8 +1,10 @@
 # Cluster 主要 DFF 使用统计
 
-统计对象：当前SRAM输出复用与ACT分区门控RTL，基线提交`3be03e0`。默认 `OUTPUT_BUFFER_DEPTH=16`、`REQUANT_CONTEXT_DEPTH=16`、`WGT_RADDR_BUFFER_DEPTH=16`、`MAX_CONTEXTS=64`，8个Macro，`ENABLE_REQUANT=1`、`USE_CLOCK_GATING=1`。
+统计对象：SRAM输出复用与ACT分区门控RTL，历史统计基线提交`3be03e0`。默认 `OUTPUT_BUFFER_DEPTH=16`、`REQUANT_CONTEXT_DEPTH=16`、`WGT_RADDR_BUFFER_DEPTH=16`、`MAX_CONTEXTS=64`，8个Macro，`ENABLE_REQUANT=1`、`USE_CLOCK_GATING=1`。
 
 这是按当前RTL时序存储声明展开的位数，由独立TB的`$bits`核对数组及结构体宽度。它不是综合后的DFF单元数或面积：未使用字段、整数高位、常量及重复状态可能被删除、缩位或合并；Psum/参数表也可能映射成其他存储。不能将所有logic、int、longint或乘加中间线网都计成DFF。
+
+2026-10-29：模式控制合并为唯一1bit `conv_mode` 后，批次Requant参数由298bit变为297bit，声明级总量较下列基线减少1bit（默认33,485bit）。下列明细、公式、CSV及展开日志保留历史基线口径；ZP表容量不变。
 
 ## 默认规模
 
@@ -100,6 +102,6 @@ phase/external_phase各2bit，context_idx为C bit，command_count/batch_contexts
 
 ## Per-tensor ZP外移后的资源口径
 
-mode=0不加载批次或AS Context的ZP存储，也不消费ZP操作数；ZP逐channel修正仅在TB执行。mode=1继续使用原四通道ZP结构，因此共享RTL仍保留298bit配置接口和原ZP数组容量。此修改不能按per-tensor禁用推断全模块物理DFF减少，也未重新完成工艺综合/STA。
+mode=0不加载批次或AS Context的ZP存储，也不消费ZP操作数；ZP逐channel修正仅在TB执行。mode=1继续使用原四通道ZP结构，因此共享RTL采用297bit配置接口（唯一模式位conv_mode）并保留原ZP数组容量。此修改不能按per-tensor禁用推断全模块物理DFF减少，也未重新完成工艺综合/STA。
 
 Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。

@@ -29,7 +29,7 @@ rtl/ 中的 cluster_top 仍是当前功能参考实现，目录名称不代表�
 
 当前支持同一包内 ACT/AS 地址接收与内部发射重叠，发射只等待当前 Plane 和 Context 地址就绪。调度规则、无空拍公式与 168 例专项说明见 [Cluster 输入重叠说明](../../docs/Cluster_Input_Overlap.md)。
 
-Requant配置为298bit：conv_mode、requant_mode、4×INT32 multiplier、4×INT10 shift、4×INT32 zp；compute descriptor 为107 bit。scale和合并后的zp均按OC0～3固定对应oc_mask，所有启用Requant的计算仅允许一组、最多4OC。per-channel AS4保存512bit zp和672bit scale，每拍选4项。per-tensor每Context仅加载第0组scale、不加载ZP，CIM先输出饱和INT8，TB按channel加ZP再饱和。兼容参数结构和输出端口位宽不变。原始多组归约仅在ENABLE_REQUANT=0的raw-only验证中运行。详见 [Requant说明](../../docs/Cluster_Requant.md)、[GEMM用例](../../docs/Cluster_GEMM.md)。
+Requant配置为297bit：conv_mode（1=weight per-channel，0=weight per-tensor）、4×INT32 multiplier、4×INT10 shift、4×INT32 zp；compute descriptor 为107 bit。scale和合并后的zp均按OC0～3固定对应oc_mask，所有启用Requant的计算仅允许一组、最多4OC。per-channel AS4保存512bit zp和672bit scale，每拍选4项。per-tensor每Context仅加载第0组scale、不加载ZP，CIM先输出饱和INT8，TB按channel加ZP再饱和。删除requant_mode后配置结构由298bit缩为297bit，输出端口位宽不变。原始多组归约仅在ENABLE_REQUANT=0的raw-only验证中运行。详见 [Requant说明](../../docs/Cluster_Requant.md)、[GEMM用例](../../docs/Cluster_GEMM.md)。
 
 ## 编译路径
 

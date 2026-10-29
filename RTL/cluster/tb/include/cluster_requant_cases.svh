@@ -3,7 +3,7 @@
 function automatic logic signed [7:0] requant_expected(input longint signed psum, input int lane = 0);
   logic signed [575:0] value, magnitude, divisor, quotient, remainder;
   int shift_amount, entry_id;
-  entry_id = expected_requant_cfg.requant_mode ? lane % 4 : 0;
+  entry_id = expected_requant_cfg.conv_mode ? lane % 4 : 0;
   value = psum * longint'($signed(expected_requant_cfg.requant_multiplier[32*entry_id+:32]));
   shift_amount = int'($signed(expected_requant_cfg.requant_shift[10*entry_id+:10]));
   if (shift_amount >= 0) value *= 576'sd1 << shift_amount;
@@ -15,7 +15,7 @@ function automatic logic signed [7:0] requant_expected(input longint signed psum
     if (remainder >= divisor / 2) quotient++;
     value = value < 0 ? -quotient : quotient;
   end
-  if (expected_requant_cfg.requant_mode)
+  if (expected_requant_cfg.conv_mode)
     value += longint'($signed(expected_requant_cfg.requant_zp[32*(lane%4)+:32]));
   if (value > 127) return 8'sd127;
   if (value < -128) return -8'sd128;
@@ -68,7 +68,6 @@ task automatic configure_requant(input int profile);
   expected_requant_cfg.requant_zp = {4{expected_requant_cfg.requant_zp[31:0]}};
   if ($test$plusargs("REQUANT_CHANNEL_TEST")) begin
     expected_requant_cfg.conv_mode = 1;
-    expected_requant_cfg.requant_mode = 1;
     expected_requant_cfg.requant_multiplier = {32'sd0, 32'sd7, -32'sd3, 32'sd1};
     expected_requant_cfg.requant_shift = {10'sd0, -10'sd19, -10'sd15, -10'sd13};
     for (int lane = 0; lane < 4; lane++)
@@ -88,7 +87,6 @@ function automatic requant_cfg_t context_test_cfg(input int mode, input int cx);
   requant_cfg_t cfg;
   cfg = '0;
   cfg.conv_mode = 1'(mode);
-  cfg.requant_mode = 1'(mode);
   for (int c = 0; c < 4; c++) begin
     cfg.requant_multiplier[32*c+:32] = mode ? 32'(1 + 4 * cx + c) : 32'(1 + 2 * cx);
     cfg.requant_shift[10*c+:10] = mode ? 10'(-5 - cx) : 10'(-4 - cx);
@@ -195,7 +193,7 @@ task automatic run_requant_boundary_suite();
   act_data_i = '0;
   for (int k = 0; k < 128; k++) act_data_i[4*k+:4] = 4'd1;
   requant_cfg_i = '{
-    requant_mode: 1'b0,
+    conv_mode: 1'b0,
     requant_multiplier: 32'sd1,
     requant_shift: -10'sd1,
     requant_zp: 32'sd0,
@@ -212,7 +210,7 @@ task automatic run_requant_boundary_suite();
     $fatal(1, "Boundary first raw or Requant delay mismatch");
   @(negedge clock);
   requant_cfg_i = '{
-    requant_mode: 1'b0,
+    conv_mode: 1'b0,
     requant_multiplier: 32'sd3,
     requant_shift: -10'sd2,
     requant_zp: 32'sd0,
@@ -243,7 +241,7 @@ endtask
 always @(negedge clock)
   if (!reset && monitoring && dut.batch_active && dut.batch_command.cim_as_cnt <= 1)
     requant_cfg_i = '{
-      requant_mode: 1'b1,
+      conv_mode: 1'b1,
       requant_multiplier: 32'sd7,
       requant_shift: 10'sd1,
       requant_zp: 32'sd99,
@@ -300,12 +298,11 @@ always @(posedge clock) begin : requant_protocol_scoreboard
       $fatal(1, "Requant output register changed without lane valid lane=%0d", lane);
   if (ENABLE_REQUANT && monitoring && dut.batch_active) begin
     if (dut.batch_requant_cfg.conv_mode !== expected_requant_cfg.conv_mode ||
-        dut.batch_requant_cfg.requant_mode !== expected_requant_cfg.requant_mode ||
-        (expected_requant_cfg.requant_mode &&
+        (expected_requant_cfg.conv_mode &&
          dut.batch_requant_cfg.requant_zp !== expected_requant_cfg.requant_zp) ||
         dut.batch_requant_cfg.requant_multiplier[31:0] !== expected_requant_cfg.requant_multiplier[31:0] ||
         dut.batch_requant_cfg.requant_shift[9:0] !== expected_requant_cfg.requant_shift[9:0] ||
-        (expected_requant_cfg.requant_mode &&
+        (expected_requant_cfg.conv_mode &&
          (dut.batch_requant_cfg.requant_multiplier !== expected_requant_cfg.requant_multiplier ||
           dut.batch_requant_cfg.requant_shift !== expected_requant_cfg.requant_shift)))
       $fatal(1, "Requant configuration changed within a batch");

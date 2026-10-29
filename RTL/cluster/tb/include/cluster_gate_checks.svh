@@ -128,9 +128,9 @@ always @(posedge clock) begin : scale_group_gate_check
   if (!reset) begin
     shared_req = ENABLE_REQUANT && ((dut.batch_active && dut.batch_command.cim_as_cnt > 1) ||
                                   (dut.cmd_accept && cmd_i.cim_as_cnt > 1));
-    extra_req = shared_req && (dut.batch_active ? dut.batch_requant_cfg.requant_mode : requant_cfg_i.requant_mode);
+    extra_req = shared_req && (dut.batch_active ? dut.batch_requant_cfg.conv_mode : requant_cfg_i.conv_mode);
     batch_req = ENABLE_REQUANT && dut.cmd_accept && !dut.batch_active;
-    batch_extra_req = batch_req && requant_cfg_i.requant_mode;
+    batch_extra_req = batch_req && requant_cfg_i.conv_mode;
     for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) begin
       saved_multiplier[d] = dut.requant_context_multiplier[d][127:32];
       saved_shift[d] = dut.requant_context_shift[d][39:10];
@@ -224,7 +224,7 @@ end
 always @(posedge clock) begin : check_tensor_zp_not_loaded
   logic [127:0] saved_batch_zp;
   logic [127:0] saved_context_zp[0:REQUANT_CONTEXT_DEPTH-1];
-  if (!reset && ENABLE_REQUANT && dut.cmd_accept && !requant_cfg_i.requant_mode) begin
+  if (!reset && ENABLE_REQUANT && dut.cmd_accept && !requant_cfg_i.conv_mode) begin
     saved_batch_zp = dut.batch_requant_cfg.requant_zp;
     for (int cx = 0; cx < REQUANT_CONTEXT_DEPTH; cx++) saved_context_zp[cx] = dut.requant_context_zp[cx];
     #0.003;
@@ -242,8 +242,8 @@ end
 always @(posedge clock) begin : check_tensor_zp_clocks_closed
   bit tensor_edge;
   tensor_edge = !reset && ENABLE_REQUANT &&
-      ((dut.batch_active && !dut.batch_requant_cfg.requant_mode) ||
-       (dut.cmd_accept && !requant_cfg_i.requant_mode));
+      ((dut.batch_active && !dut.batch_requant_cfg.conv_mode) ||
+       (dut.cmd_accept && !requant_cfg_i.conv_mode));
   #0.003;
   if (!reset && tensor_edge && (dut.deep_zp_clock !== 0 || dut.batch_zp_clock !== 0))
     $fatal(1, "Per-tensor zero-point buffer clock is not fully gated");

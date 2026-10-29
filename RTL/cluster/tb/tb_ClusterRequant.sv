@@ -55,7 +55,6 @@ module tb_ClusterRequant;
         $realtime, cases, description, p, m, s, z);
       cfg_i = '{
         conv_mode: 1'b1,
-        requant_mode: 1'b1,
         requant_multiplier: {4{32'(m)}},
         requant_shift: {4{10'(s)}},
         requant_zp: {4{32'(z)}},
@@ -98,7 +97,7 @@ module tb_ClusterRequant;
         checks++;
       end
       // Same full INT10 vector in tensor mode: nonzero/X ZP must be ignored.
-      cfg_i.requant_mode = 0;
+      cfg_i.conv_mode = 0;
       cfg_i.requant_zp = 'x;
       valid_i = 32'hf;
       group_sel_i = 0;
@@ -150,8 +149,7 @@ module tb_ClusterRequant;
                  "description=fixed-OC-order-with-mask-holes case=%0d mode=%0d mask=%x"}),
         $realtime, channel_cases, mode, mask);
       cfg_i = '0;
-      cfg_i.conv_mode = 1;
-      cfg_i.requant_mode = 1'(mode);
+      cfg_i.conv_mode = 1'(mode);
       for (int c = 0; c < 4; c++) begin
         cfg_i.requant_multiplier[32*c+:32] = 32'(cm[c]);
         cfg_i.requant_shift[10*c+:10] = 10'(cs[c]);

@@ -87,7 +87,6 @@ task automatic select_as_zp(input int tile, input int cx);
   requant_cfg_i.requant_shift = 10'(shift);
   if ($test$plusargs("PER_CHANNEL_SCALE")) begin
     requant_cfg_i.conv_mode = 1;
-    requant_cfg_i.requant_mode = 1;
     for (int oc = 0; oc < 4; oc++) begin
       requant_cfg_i.requant_multiplier[32*oc+:32] = channel_multiplier[4*cx+oc];
       requant_cfg_i.requant_shift[10*oc+:10] = channel_shift[4*cx+oc];

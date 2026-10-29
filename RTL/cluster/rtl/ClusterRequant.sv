@@ -60,7 +60,7 @@ module ClusterRequant #(
     bit found;
     wire [1:0] entry_id;
     wire [4:0] selected_lane;
-    assign entry_id = cfg_i.requant_mode ? 2'(c) : 2'd0;
+    assign entry_id = cfg_i.conv_mode ? 2'(c) : 2'd0;
     assign selected_lane = {group_sel_i, 2'(c)};
     always_comb begin
       selected_psum = '0;
@@ -79,7 +79,7 @@ module ClusterRequant #(
     assign selected_multiplier = found ? cfg_i.requant_multiplier[32*entry_id+:32] : 32'b0;
     assign selected_shift = found ? cfg_i.requant_shift[10*entry_id+:10] : 10'b0;
     // Per-tensor ends at saturated INT8; channel correction belongs to TB.
-    assign selected_zp = found && cfg_i.requant_mode ? cfg_i.requant_zp[32*c+:32] : 32'b0;
+    assign selected_zp = found && cfg_i.conv_mode ? cfg_i.requant_zp[32*c+:32] : 32'b0;
     assign channel_data[c] = quantize(
       $signed(selected_psum), $signed(selected_multiplier), $signed(selected_shift), $signed(selected_zp)
     );

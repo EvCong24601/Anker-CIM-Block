@@ -24,13 +24,13 @@ cim_reduce_split_mask必须使所选组完整归约；不属于该组的Macro不
 
 ## 参数与固定OC顺序
 
-requant_cfg_t共298bit：conv_mode1 + requant_mode1 + 4×INT32 multiplier + 4×INT10 shift + 4×INT32 zp。compute descriptor 为107 bit。
+requant_cfg_t共297bit：conv_mode1 + 4×INT32 multiplier + 4×INT10 shift + 4×INT32 zp。compute descriptor 为107 bit。
 
 - requant_multiplier[32*c+:32]：OC c的signed INT32乘数，四项共128bit。
 - requant_shift[10*c+:10]：OC c的signed INT10移位，四项共40bit；当前有效配置为−512～511。
 - requant_zp[32*c+:32]：OC c的signed INT32有效偏置，四项共128bit，仅mode=1使用。mode=0保留兼容字段，但忽略其值（包括X）、不加载ZP存储、不检查跨Tile的ZP一致性。
-- requant_mode=0：四个OC共用multiplier/shift的第0项，其余三项不参与算术；不加载或消费zp，输出为未加ZP的饱和INT8。逐channel ZP仅由TB在输出之后修正。
-- requant_mode=1：四个OC分别使用自己的multiplier/shift，要求conv_mode=1。conv_mode表示普通卷积模式；统一的单组/4OC限制也适用于mode=0。
+- conv_mode=0：weight采用per-tensor量化，四个OC共用multiplier/shift的第0项，其余三项不参与算术；不加载或消费zp，输出为未加ZP的饱和INT8。逐channel ZP仅由TB在输出之后修正。
+- conv_mode=1：weight采用per-channel量化，四个OC分别使用自己的multiplier/shift，ZP在RTL内、饱和前相加。conv_mode仅选择weight量化模式；统一的单组/4OC限制也适用于mode=0。
 
 不需要OC选择字段。组位置由descriptor给出，OC c使用组最左Macro的cim_macro_oc_mask[4*first+c]决定有效性，现有各层merge mask继续影响贡献。参数c始终对应本地OC c，不按有效位数量重新编号。
 
@@ -72,7 +72,7 @@ Python独立生成`cim_golden.hex`（CIM端口值）、`quant_golden.hex`（TB�
 
 `REQUANT_CONTEXT_DEPTH=OUTPUT_BUFFER_DEPTH`，默认16。非AS使用一组批次配置，两个Context深表均关闭；WS在整批内复用同一配置。所有多Context AS，包括A4，使用固定Context参数槽位，cim_as_cnt不得大于16；表项在批次内不回收，没有FIFO。
 
-首K Tile各Context命令加载有效参数，后续K Tile重复并校验有效参数一致（mode0仅scale，mode1为scale及ZP），mode/conv_mode整批不变。地址、参数和ACT接收可与已有输入的发射重叠，不等待所有参数收齐。raw的Context标签选择对应参数，量化消费不会释放表项。
+首K Tile各Context命令加载有效参数，后续K Tile重复并校验有效参数一致（mode0仅scale，mode1为scale及ZP），conv_mode整批不变。地址、参数和ACT接收可与已有输入的发射重叠，不等待所有参数收齐。raw的Context标签选择对应参数，量化消费不会释放表项。
 
 每项完整配置为4×INT32 multiplier、4×INT10 shift、4×INT32 zp，共296bit；16项为4736bit/592B，不含valid及公共控制。mode0每个Context只更新第0项scale并广播，另外三项scale/shift关闭时钟；不同Context仍可有不同的共享scale。mode1更新四组scale。仅mode1保存四个逐通道zp；mode0不更新这些寄存器，不使用上一个per-channel批次留下的值。兼容存储容量仍保留，不能将运行时禁用等同于物理移除寄存器。
 
@@ -100,7 +100,7 @@ TBD：逐次写入的检测位置、溢出后的拒绝或终止、饱和或扩�
 - +REQUANT_CONTEXT_TEST：OS1/OS2与两种scale模式，4个串行批次、32个输出，检查不同Context的独立multiplier/shift/zp映射。
 - 独立验证量化valid晚1T、数据保持、复位取消、无时钟边沿的短异步复位和最早批次配置切换。
 - 两个GEMM TB均运行per-tensor weight与per-channel weight版本，每版精确检查512个raw和512个INT8；OS2/AS4另查4096次Psum历史。
-- 所有case开始打印英文时间戳和描述；负向检查包括非conv的per-channel配置、单组限制、未知值、AS参数深度及跨Tile scale/zp变化。
+- 所有case开始打印英文时间戳和描述；负向检查包括未知conv_mode配置、单组限制、未知值、AS参数深度及跨Tile scale/zp变化。
 
 仿真使用 [VCS case 入口](../vcs-rtl/README.md)，支持独立编译、数据生成、运行及结果检查。
 

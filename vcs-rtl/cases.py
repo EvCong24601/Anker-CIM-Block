@@ -37,7 +37,7 @@ for name, message in dict(precision='illegal precision/phase', phase='illegal pr
         'SM_PROTOCOL: '+message, '+NEGATIVE='+name, negative=True)
 add('requant_unit', 'requant', 'Integer quantization arithmetic and four OC mapping',
     'PASS requant_unit', generator='requant')
-for name, message in dict(as17_capacity='AS count exceeds output depth', mode='per-channel scale requires conv_mode',
+for name, message in dict(as17_capacity='AS count exceeds output depth', mode='unknown configuration',
         unknown='unknown configuration',
         conv_group='Requant requires one aligned reduction group',
         zp_group='Requant requires one aligned reduction group').items():
