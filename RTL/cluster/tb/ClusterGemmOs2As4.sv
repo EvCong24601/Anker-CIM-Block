@@ -1,12 +1,15 @@
 `timescale 1ns / 1ps
-// Shared driver and checking for tb_Cluster_GEMM_OS2_AS4_W8A16.
-// One Cluster: eight Macros reduce K256, OS2 covers K512, AS4 covers N16.
-// Each of the 32 X rows is one independent OS2/AS4 batch.
+// Shared W8A16 AS driver/checker for OS2/AS4 and OS1/AS8 concrete tops.
+// Eight Macros cover K256/N4; each X row is an independent batch.
 module ClusterGemmOs2As4;
   import cluster_pkg::*;
   parameter int ZP_DEPTH = 16;
-  localparam int M = 32, K = 512, N = 16;
-  localparam logic [7:0] BASE_ADDR = 8'h60;
+  parameter int M = 32, OS = 2, AS = 4;
+  parameter logic [7:0] BASE_ADDR = 8'h60;
+  parameter bit CHECK_SWITCH = 0;
+  localparam int K = 256 * OS, N = 4 * AS;
+  localparam int TILE_CYCLES = 4 * AS + 1;
+  localparam int FIRST_RAW = (OS - 1) * TILE_CYCLES + 3 * AS + 6;
   logic clock = 0, reset = 1;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
@@ -54,8 +57,8 @@ module ClusterGemmOs2As4;
   logic [31:0] raw_golden[0:M * N - 1], centered_golden[0:M * N - 1], zp[0:N - 1];
   logic [31:0] channel_multiplier[0:N - 1];
   logic [9:0] channel_shift[0:N - 1];
-  logic [31:0] history_golden[0:M * 2 * 4 * 4 * 4 - 1];
-  logic [1023:0] weight_rows[0:63], act_planes[0:M * 2 * 4 - 1];
+  logic [31:0] history_golden[0:M * OS * 4 * AS * 4 - 1];
+  logic [1023:0] weight_rows[0:OS * AS * 8 - 1], act_planes[0:M * OS * 4 - 1];
   logic [31:0] observed_raw  [0:M * N - 1];
   logic [ 7:0] observed_quant[0:M * N - 1];
   int multiplier, shift, output_zp, act_zp;
@@ -66,7 +69,11 @@ module ClusterGemmOs2As4;
   int raw_next[4], quant_next[4], refreshes[8];
   bit monitoring = 0;
   int trace_fd;
+  function automatic int logical_context(input int m, input int cx);
+    return CHECK_SWITCH ? (cx + m) % AS : cx;
+  endfunction
   `include "include/cluster_gemm_as_driver.svh"
+  `include "include/cluster_gemm_as_gates.svh"
   `include "include/cluster_gemm_as_scoreboard.svh"
   `include "include/cluster_gemm_as_regression.svh"
 endmodule

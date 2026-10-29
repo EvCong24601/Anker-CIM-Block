@@ -16,6 +16,7 @@ ClusterGemmOs1Ws32.sv
 tb_Cluster_GEMM_OS1_WS32_W8A16.sv
 ClusterGemmOs2As4.sv
 tb_Cluster_GEMM_OS2_AS4_W8A16.sv
+tb_Cluster_GEMM_OS1_WS1_AS8_W8A16.sv
 ClusterGemmScenario.sv
 tb_Cluster_GEMM_W4A16_HighGroup.sv
 tb_Cluster_GEMM_W2A8_HighGroup.sv

@@ -32,26 +32,26 @@ task automatic load_as_gemm_os1_ws32_w8a16_vectors();
       if (raw_golden[m*N+n] !== 32'(dot) || centered_golden[m*N+n] !== 32'(dot - longint'(act_zp) * weight_sum))
         $fatal(1, "AS GEMM: unpacked matrix golden mismatch m=%0d n=%0d", m, n);
     end
-  for (int tile = 0; tile < 2; tile++)
-    for (int cx = 0; cx < 4; cx++)
+  for (int tile = 0; tile < OS; tile++)
+    for (int cx = 0; cx < AS; cx++)
       for (int macro = 0; macro < 8; macro++) begin
         k0 = tile * 256 + macro * 32;
         n0 = cx * 4;
         for (int oc = 0; oc < 4; oc++)
         for (int j = 0; j < 32; j++)
-        if (weight_rows[(tile*4+cx)*8+macro][256*oc+8*j+:8] !== w_q[(k0+j)*N+n0+oc])
+        if (weight_rows[(tile*AS+cx)*8+macro][256*oc+8*j+:8] !== w_q[(k0+j)*N+n0+oc])
           $fatal(1, "AS GEMM: weight packing mismatch tile=%0d ctx=%0d macro=%0d", tile, cx, macro);
       end
   for (int m = 0; m < M; m++)
-    for (int tile = 0; tile < 2; tile++)
+    for (int tile = 0; tile < OS; tile++)
       for (int ph = 0; ph < 4; ph++)
         for (int j = 0; j < 256; j++)
-          if (act_planes[(m*2+tile)*4+ph][4*j+:4] !== x_q[m*K+tile*256+j][4*ph+:4])
+          if (act_planes[(m*OS+tile)*4+ph][4*j+:4] !== x_q[m*K+tile*256+j][4*ph+:4])
             $fatal(1, "AS GEMM: ACT packing mismatch m=%0d tile=%0d slice=%0d", m, tile, ph);
 endtask
 
 task automatic load_as_weights();
-  for (int address = 0; address < 8; address++)
+  for (int address = 0; address < OS * AS; address++)
     for (int macro = 0; macro < 8; macro++) begin
       @(negedge clock);
       sram_cs_en = 1;
@@ -62,11 +62,11 @@ task automatic load_as_weights();
       sram_wrdata = weight_rows[address*8+macro];
       $display(
         "[WEIGHT_WRITE] time=%0.3f ns description=OS2-AS4-weight-layout k_tile=%0d ctx=%0d macro=%0d address=0x%02h",
-        $realtime, address / 4, address % 4, macro, sram_row_addr);
+        $realtime, address / AS, address % AS, macro, sram_row_addr);
     end
   @(negedge clock);
   sram_wr_en = 0;
-  for (int address = 0; address < 8; address++)
+  for (int address = 0; address < OS * AS; address++)
     for (int macro = 0; macro < 8; macro++) begin
       sram_row_addr = BASE_ADDR + 8'(address);
       sram_macro_group = 1'(macro / 4);
@@ -81,6 +81,7 @@ task automatic load_as_weights();
 endtask
 
 task automatic select_as_zp(input int tile, input int cx);
+  cx = logical_context(active_m, cx);
   requant_cfg_i = '0;
   requant_cfg_i.requant_multiplier = 32'(multiplier);
   requant_cfg_i.requant_shift = 10'(shift);
@@ -103,8 +104,8 @@ endtask
 
 task automatic send_as_row(input int m);
   cmd_i = '0;
-  cmd_i.cim_os_cnt = 2;
-  cmd_i.cim_as_cnt = 4;
+  cmd_i.cim_os_cnt = 8'(OS);
+  cmd_i.cim_as_cnt = 8'(AS);
   cmd_i.cim_ws_cnt = 1;
   cmd_i.cim_precision = 6;
   cmd_i.cim_signed_en = 1;
@@ -112,26 +113,31 @@ task automatic send_as_row(input int m);
   cmd_i.cim_macro_en_mask = 8'hff;
   cmd_i.cim_macro_oc_mask = 32'hffffffff;
   cmd_i.cim_act_slot_sel = 24'hfac688;
-  for (int tile = 0; tile < 2; tile++) begin
-    // 17 external edges per K Tile: four Commands+Planes, then thirteen
-    // idle input cycles while the saved ACT is replayed across Contexts.
-    for (int t = 0; t < 17; t++) begin
+  for (int tile = 0; tile < OS; tile++) begin
+    // One command per Context; ACT Planes A0..A3 always arrive on the first
+    // four edges. Replay saved ACT while accepting the remaining AS8 commands.
+    for (int t = 0; t < TILE_CYCLES; t++) begin
       @(negedge clock);
-      if (t < 4) begin
+      if (t < AS) begin
         cmd_valid_i = 1;
-        cmd_i.cim_weight_raddr = BASE_ADDR + 8'(4 * tile + t);
+        cmd_i.cim_weight_raddr = BASE_ADDR + 8'(AS * tile + logical_context(m, t));
         select_as_zp(tile, t);
-        act_data_i = act_planes[(m*2+tile)*4+t];
+        act_data_i = t < 4 ? act_planes[(m*OS+tile)*4+t] : '1;
         $display(
           string'({"[CMD_SEND] time=%0.3f ns description=AS-address-and-ACT-overlap ",
                    "m=%0d k_tile=%0d ctx=%0d slice=%0d address=0x%02h"}),
-          $realtime, m, tile, t, t, cmd_i.cim_weight_raddr);
+          $realtime, m, tile, t, t < 4 ? t : -1, cmd_i.cim_weight_raddr);
       end else begin
         cmd_valid_i = 0;
         act_data_i  = '1;
+        if (CHECK_SWITCH) begin
+          cmd_i = '1;
+          cmd_i.cim_weight_raddr = 8'(cycle);
+          requant_cfg_i = ~requant_cfg_i;
+        end
       end
       @(posedge clock);
-      if (t < 4 && !cmd_ready_o) $fatal(1, "AS GEMM: Command not accepted at its planned edge");
+      if (t < AS && !cmd_ready_o) $fatal(1, "AS GEMM: Command not accepted at its planned edge");
       #1;
     end
   end

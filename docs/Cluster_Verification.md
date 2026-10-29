@@ -46,9 +46,11 @@
 
 ## 复现与证据
 
-从`vcs-rtl/`运行`make run CASE=<用例名>`；`make regression`包含133个suite，43个正向、90个预期拒绝。用例定义在`cases.py`，`cases.mk`由其生成；波形文件带case名称后缀。
+从`vcs-rtl/`运行`make run CASE=<用例名>`；`make regression`包含135个suite，45个正向、90个预期拒绝。用例定义在`cases.py`，`cases.mk`由其生成；波形文件带case名称后缀。
 
-本地完整回归134个suite通过，其中93个为预期拒绝。九组整Cluster对照共比较292950个周期。量化单元完成40492次有效算术检查，并核对无效通道的四个操作数全部为0。
+此前本地完整回归134个suite通过，其中93个为预期拒绝。九组整Cluster对照共比较292950个周期。量化单元完成40492次有效算术检查，并核对无效通道的四个操作数全部为0。
+
+2026-10-29 新增OS1/WS1/AS8 GEMM的tensor/channel模式并统一case count命名；本轮ModelSim全量135组通过（45正向、90预期拒绝），含13个正向矩阵和九组整Cluster门控对照。AS8另检查真实表时钟、无写入保持、连续Command/计算重叠、无效Command扰动与跨行地址/参数重载；五项门控或陈旧表项故障注入均被拒绝。135个Make入口dry-run、文件列表一致性和原AS4数据逐字节检查通过。证据为 `RTL/cluster/tb/log/gemm_as8_counts_validation.log` 和 `gemm_as8_counts_sources.sha256`。
 
 证据：`RTL/cluster/tb/log/child_consumer_validation.log`、`child_consumer_sources.sha256`、`child_consumer_unit.log`和`child_consumer_gate_equivalence.log`对应子节点消费需求门控版本；`child_consumer_audit.log`保存时序、文件列表和编译审计。源码哈希对应本轮受测RTL/TB。
 
@@ -106,7 +108,7 @@ MacroSliceFusion及SingleMacro与组合共享前版本逐字节一致。Requant�
 
 ## 当前空批次与完整 INT10 验证
 
-当前完整回归为133组，包含90组准确匹配的预期拒绝。源码哈希和结果见`fix_empty_int10_sources.sha256`、`fix_empty_int10_validation.log`；前文其他文件名对应各专项的源码快照。
+此前完整回归为133组，包含90组准确匹配的预期拒绝。源码哈希和结果见`fix_empty_int10_sources.sha256`、`fix_empty_int10_validation.log`；前文其他文件名对应各专项的源码快照。
 
 - `requant_unit`：17908个整数向量、512个四通道向量，共73680次数值核对；覆盖全部1024种INT10编码、零乘积、极值ZP和右移63位半值。
 - `requant_full_shift`：77组七精度Context测试，2912个raw和2912个INT8比对，包含OS1/OS2、稀疏OC、两种scale模式及接收/发射重叠。
@@ -116,12 +118,12 @@ MacroSliceFusion及SingleMacro与组合共享前版本逐字节一致。Requant�
 
 ## Per-tensor ZP外移与整个ZP buffer关钟（2026-10-28）
 
-当前版本通过ModelSim完整133组用例（90组准确匹配的预期拒绝），最终全量运行无失败。11个正向GEMM逐元素检查CIM INT8值和TB修正结果；per-channel六个矩阵场景的原数值/输入文件与修改前逐字节一致。
+此前版本通过ModelSim完整133组用例（90组准确匹配的预期拒绝），最终全量运行无失败。11个正向GEMM逐元素检查CIM INT8值和TB修正结果；per-channel六个矩阵场景的原数值/输入文件与修改前逐字节一致。
 
 per-tensor AS Context和批次ZP的实际门控时钟必须为0，全部ZP槽位保持；异步复位仍有效。共享scale照常更新，per-channel仍按原公式工作。Context专项覆盖mode切换、后续Tile将未使用ZP改为X以及门控/旁路逐拍等价。量化单元17908个标量向量分别检查两种模式，512个四通道向量，共145312次数值检查，另检查TB修正的扩位加法和再次饱和。
 
 隔离副本将两组ZP时钟故意接回仍活动的共享时钟，实际时钟检查器准确触发`Per-tensor zero-point buffer clock is not fully gated`，证明仅禁止写入无法通过该检查。
 
-`gemm_w4a16_high_group_tensor`与原单次饱和算法最大差值为9，已接受并记录于metadata；原算法参考不作为新流程的通过条件。其余已有GEMM示例中的差值见各自metadata。
+`gemm_os1_ws8_as1_w4a16_high_group_tensor`与原单次饱和算法最大差值为9，已接受并记录于metadata；原算法参考不作为新流程的通过条件。其余已有GEMM示例中的差值见各自metadata。
 
 证据：[本轮验证记录](../RTL/cluster/tb/log/per_tensor_zp_validation.log)与`per_tensor_zp_sources.sha256`。10个顶层普通及SYNTHESIS条件编译通过；未执行实际VCS、工艺综合或STA。

@@ -11,7 +11,7 @@ raw Psum属于内部计算状态。RTL端口表中的 `psum_data_o/out_valid_o` 
 - `tb_Cluster.sv`：共享连接、参数和状态；raw-only suite设置ENABLE_REQUANT=0，量化专项覆盖为1。
 - `tb_ClusterReduceTree.sv`：208个归约树、mask和转发ICG检查；独立消费路径模型覆盖父节点屏蔽时的子节点关钟。
 - `tb_ClusterRequant.sv`：17908个整数向量与512个四通道映射向量。
-- 三个GEMM TB：11个正向矩阵case与5个AS参数负向case，配置和源文件分工见 [GEMM](Cluster_GEMM.md)。
+- 七个具体GEMM TB（三套共用驱动）：13个正向矩阵case与5个AS参数负向case，配置和源文件分工见 [GEMM](Cluster_GEMM.md)。
 
 ## Cluster include
 
@@ -42,7 +42,7 @@ raw Psum属于内部计算状态。RTL端口表中的 `psum_data_o/out_valid_o` 
 
 驱动在下降沿更新输入；上升沿前预测握手和运算，NBA后检查寄存器。TB中的短延迟用于避开采样竞争，不代表硬件流水。每个case输出英文 `[CASE_START] time=... ns suite=... description=...`；CMD_SEND和CMD_ACCEPT分别记录驱动时间与真正接受时间。
 
-从 `vcs-rtl/` 执行 `make run CASE=...`，或用 `make regression` 运行133项，其中90项为预期拒绝。`requant_context`覆盖OS1/OS2、两种scale模式和串行批次之间的独立Context参数。完整变量、文件列表、精确检查规则和FSDB命名由 [VCS说明](../vcs-rtl/README.md) 统一定义。
+从 `vcs-rtl/` 执行 `make run CASE=...`，或用 `make regression` 运行135项，其中90项为预期拒绝。`requant_context`覆盖OS1/OS2、两种scale模式和串行批次之间的独立Context参数。完整变量、文件列表、精确检查规则和FSDB命名由 [VCS说明](../vcs-rtl/README.md) 统一定义。
 
 协议与容量见 [输入时序](Cluster_Input_Overlap.md)，常规读写见 [SRAM接口](Cluster_Weight_SRAM_Interface.md)，量化参数及输出寄存规则见 [Requant](Cluster_Requant.md)。
 

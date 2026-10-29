@@ -12,8 +12,8 @@ BODY = r"""# CIM Cluster 输入与计算说明
 
 - `RTL/macro/rtl/`：SingleMacro、同步读写SRAM、算术和功能ICG。
 - `RTL/cluster/rtl/`：共享package、调度/存储、归约树和四通道Requant。
-- `RTL/cluster/tb/`：Cluster、归约、量化和三个GEMM顶层；include拆分驱动、参考模型、检查器和case。
-- `vcs-rtl/`：七类顶层的编译列表、Makefile和用例目录；FSDB自动使用case说明后缀。
+- `RTL/cluster/tb/`：Cluster、归约、量化和七个具体GEMM顶层；include拆分驱动、参考模型、检查器和case。
+- `vcs-rtl/`：各顶层的编译列表、Makefile和用例目录；FSDB自动使用case说明后缀。
 
 从 `vcs-rtl/` 执行 `make run CASE=cluster_default` 或 `make regression`。完整配置和用例说明见 [VCS入口](vcs-rtl/README.md)。
 
@@ -40,7 +40,7 @@ Requant使用一级组合算术及输出寄存器，INT8 valid比raw晚1T，没�
 - [调度、逐拍时序及容量](docs/Cluster_Input_Overlap.md)
 - [常规SRAM接口](docs/Cluster_Weight_SRAM_Interface.md)
 - [Requant参数、门控及数值范围](docs/Cluster_Requant.md)
-- [全部GEMM用例](docs/Cluster_GEMM.md)：11个正向矩阵、5个AS参数负向。
+- [全部GEMM用例](docs/Cluster_GEMM.md)：13个正向矩阵、5个AS参数负向，包含OS1/WS1/AS8门控与Command切换检查。
 - [TB结构和检查职责](docs/Testbench_Guide.md)
 
 `context_stress`覆盖224个OS1/WS64、OS1/AS16、OS2/WS8、OS2/AS8 case。`requant_buffers`覆盖77个固定Context场景、2912个raw和2912个INT8比对，检查参数接收与发射重叠。A4旁路、AS17/64拒绝、异步复位、mask和门控由独立专项检查。所有case开始打印英文时间戳和描述。

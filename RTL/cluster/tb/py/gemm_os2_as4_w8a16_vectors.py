@@ -1,4 +1,4 @@
-"""Exact matrix golden and physical vectors for one-Cluster W8A16 OS2/AS4."""
+"""Exact W8A16 AS matrix golden; defaults preserve the OS2/AS4 dataset."""
 from fractions import Fraction
 from pathlib import Path
 import argparse
@@ -13,10 +13,13 @@ BASE_ADDR=0x60
 
 
 def matmul(a,b):
-    return [[sum(a[m][k]*b[k][n] for k in range(K)) for n in range(N)] for m in range(M)]
+    return [[sum(a[m][k]*b[k][n] for k in range(len(b))) for n in range(len(b[0]))] for m in range(len(a))]
 
 
-def generate(directory,seed=0x3251216,per_channel=False):
+def generate(directory,seed=0x3251216,per_channel=False,*,rows=M,os_tiles=2,as_contexts=4,base_address=BASE_ADDR):
+    M,K,N=rows,256*os_tiles,4*as_contexts
+    BASE_ADDR=base_address
+    assert rows > 0 and os_tiles in (1, 2) and as_contexts in (4, 8)
     out=Path(directory);out.mkdir(parents=True,exist_ok=True)
     rng=random.Random(seed)
     x_src=[[rng.randrange(-1400,2501) for _ in range(K)] for _ in range(M)]
@@ -76,16 +79,16 @@ def generate(directory,seed=0x3251216,per_channel=False):
     weight_rows=[]
     with (out/'weight_layout.csv').open('w',newline='',encoding='utf-8') as f:
         wr=csv.writer(f);wr.writerow(['k_tile','as_context','macro','row_address','k_start','k_end','n_start','n_end'])
-        for tile in range(2):
-            for cx in range(4):
+        for tile in range(os_tiles):
+            for cx in range(as_contexts):
                 for macro in range(8):
                     k0=tile*256+macro*32;n0=cx*4
                     weight_rows.append(sum((w[k0+j][n0+oc]&255)<<(256*oc+8*j) for oc in range(4) for j in range(32)))
-                    wr.writerow([tile,cx,macro,f'0x{BASE_ADDR+tile*4+cx:02x}',k0,k0+31,n0,n0+3])
+                    wr.writerow([tile,cx,macro,f'0x{BASE_ADDR+tile*as_contexts+cx:02x}',k0,k0+31,n0,n0+3])
     write_hex(out/'weight_rows.hex',weight_rows,1024)
     planes=[]
     for m in range(M):
-        for tile in range(2):
+        for tile in range(os_tiles):
             for ph in range(4):
                 planes.append(sum(((x[m][tile*256+j]&65535)>>(4*ph)&15)<<(4*j) for j in range(256)))
     write_hex(out/'act_planes.hex',planes,1024)
@@ -93,10 +96,10 @@ def generate(directory,seed=0x3251216,per_channel=False):
     # of the controller/tree/Context addressing in RTL.
     histories=[]
     for m in range(M):
-        running=[[0]*4 for _ in range(4)]
-        for tile in range(2):
+        running=[[0]*4 for _ in range(as_contexts)]
+        for tile in range(os_tiles):
             for ph in range(4):
-                for cx in range(4):
+                for cx in range(as_contexts):
                     for oc in range(4):
                         n=4*cx+oc;s=0
                         for j in range(256):
@@ -110,22 +113,22 @@ def generate(directory,seed=0x3251216,per_channel=False):
     with (out/'input_schedule.csv').open('w',newline='',encoding='utf-8') as f:
         wr=csv.writer(f);wr.writerow(['row_m','row_relative_cycle','k_tile','command_context','weight_address','act_slice','issue_context','issue_slice'])
         for m in range(M):
-            for tile in range(2):
-                for t in range(17):
-                    wr.writerow([m,tile*17+t,tile,t if t<4 else '',f'0x{BASE_ADDR+4*tile+t:02x}' if t<4 else '',t if t<4 else '',(t-1)%4 if t else '',(t-1)//4 if t else ''])
+            for tile in range(os_tiles):
+                for t in range(4*as_contexts+1):
+                    wr.writerow([m,tile*(4*as_contexts+1)+t,tile,t if t<as_contexts else '',f'0x{BASE_ADDR+as_contexts*tile+t:02x}' if t<as_contexts else '',t if t<4 else '',(t-1)%as_contexts if t else '',(t-1)//as_contexts if t else ''])
     with (out/'matrix_golden.csv').open('w',newline='',encoding='utf-8') as f:
         wr=csv.writer(f);wr.writerow(['m','n','raw','weight_sum','input_correction','centered_psum','requant_zp','quant','centered_quant','ideal_float_quant'])
         for m in range(M):
             for n in range(N):wr.writerow([m,n,raw[m][n],sums[n],correction[n],centered[m][n],zp[n],q[m][n],centered_q[m][n],ideal[m][n]])
-    meta=dict(M=M,K=K,N=N,seed=seed,clusters=1,os_cnt=2,as_cnt=4,ws_cnt=1,precision='W8A16',
-              weight_addresses=list(range(BASE_ADDR,BASE_ADDR+8)),weight_bytes=8192,
+    meta=dict(M=M,K=K,N=N,seed=seed,clusters=1,os_cnt=os_tiles,as_cnt=as_contexts,ws_cnt=1,precision='W8A16',
+              weight_addresses=list(range(BASE_ADDR,BASE_ADDR+os_tiles*as_contexts)),weight_bytes=1024*os_tiles*as_contexts,
               split_mask=0,act_slots=list(range(8)),act_zp=zx,weight_zp=0,output_zp_reference=output_zp,base_output_zp=zy,
               act_scale=str(sx),weight_scale=str(sw),output_scale=str(sy),requant_scale=str(scale),
               multiplier=multiplier,shift=shift,effective_scale=str(effective),requant_zp=zp,
               per_channel_scale=per_channel,channel_multipliers=multipliers,channel_shifts=shifts,
               weight_quantization='per-channel' if per_channel else 'per-tensor',weight_channel_scales=[str(v) for v in sw_channels],
-              channel_output_scales=[str(v) for v in output_scales],scale_context_bits=672,
-              weight_column_sums=sums,input_offset_reference=correction,zp_context_depth=4,zp_lanes=4,zp_bits=512,
+              channel_output_scales=[str(v) for v in output_scales],scale_context_bits=168*as_contexts,
+              weight_column_sums=sums,input_offset_reference=correction,zp_context_depth=as_contexts,zp_lanes=4,zp_bits=128*as_contexts,
               compensation_rounding_max_difference=rounding_error,ideal_quant_max_error=ideal_error,
               raw_min=min(map(min,raw)),raw_max=max(map(max,raw)))
     meta.update(tensor_zp_in_tb=not per_channel, tensor_double_saturation=not per_channel,
@@ -136,17 +139,18 @@ def generate(directory,seed=0x3251216,per_channel=False):
     return meta
 
 
-def verify_outputs(directory):
-    """Compare the simulated OS2/AS4 matrix against this module's own M/N golden."""
+def verify_outputs(directory,expected_shape=(M,K,N)):
+    """Compare a complete simulated matrix against independently generated golden."""
     out=Path(directory)
+    M,K,N=expected_shape
     with (out/'matrix_golden.csv').open(encoding='utf-8') as f:
         expected={(int(r['m']),int(r['n'])):(int(r['raw']),int(r['quant'])) for r in csv.DictReader(f)}
     with (out/'gemm_observed_matrix.csv').open(encoding='utf-8') as f:
         rows=list(csv.DictReader(f))
-    assert len(expected)==M*N and len(rows)==M*N,'OS2/AS4 observed matrix is not M*N'
+    assert len(expected)==M*N and len(rows)==M*N,'AS observed matrix is not M*N'
     actual={(int(r['m']),int(r['n'])):(int(r['raw']),int(r['quant'])) for r in rows}
-    assert actual==expected,'Observed OS2/AS4 GEMM matrix differs from Python integer golden'
-    print(f'PASS Python OS2/AS4 output comparison: {M*N} raw and {M*N} INT8 matrix elements',flush=True)
+    assert actual==expected,'Observed AS GEMM matrix differs from Python integer golden'
+    print(f'PASS Python AS output comparison: {M*N} raw and {M*N} INT8 matrix elements',flush=True)
 
 
 if __name__=='__main__':

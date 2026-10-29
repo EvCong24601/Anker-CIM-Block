@@ -8,7 +8,7 @@
 
 Requant支持完整signed INT10范围−512～511。大正shift按非零乘积的符号精确饱和，零乘积仍加入ZP；右移64位及以上舍入为0，右移63位的半值保留。公式、输出寄存器及1T量化延迟不变。范围依据及测试见[Requant](Cluster_Requant.md)。
 
-当前全量回归为133个suite（43正向、90预期拒绝），包含17908个Python整数向量、512个四通道向量和77组完整shift Context测试。详细范围见[验证清单](Cluster_Verification.md)。功能仿真不等同于综合/STA或对所有输入的形式证明。
+Make完整目录为135个suite（45正向、90预期拒绝），包含17908个Python整数向量、512个四通道向量和77组完整shift Context测试。详细范围见[验证清单](Cluster_Verification.md)。功能仿真不等同于综合/STA或对所有输入的形式证明。
 
 ## 仍待处理
 

@@ -13,21 +13,21 @@ always @(posedge clock) begin : as_gemm_scoreboard
   if (!reset && monitoring) begin
     if (cmd_valid_i && cmd_ready_o) begin
       if (first_accept < 0) first_accept = cycle;
-      tile = row_commands / 4;
-      cx   = row_commands % 4;
-      if (cycle != first_accept + 17 * tile + cx || cmd_i.cim_weight_raddr !== BASE_ADDR + 8'(4 * tile + cx))
+      tile = row_commands / AS;
+      cx   = row_commands % AS;
+      if (cycle != first_accept + TILE_CYCLES * tile + cx || cmd_i.cim_weight_raddr !== BASE_ADDR + 8'(AS * tile + logical_context(active_m, cx)))
         $fatal(1, "AS GEMM: external Command schedule/address mismatch");
       $fdisplay(trace_fd, "%0d,%0d,command,%0d,%0d,%0d,-1,-1,0", cycle, cycle - first_accept, active_m, tile, cx);
       row_commands++;
       total_commands++;
     end
     if (dut.issue) begin
-      tile = row_issues / 16;
-      ph   = (row_issues % 16) / 4;
-      cx   = row_issues % 4;
-      if (cycle != first_accept + 17 * tile + 1 + 4 * ph + cx || dut.tile != tile || dut.phase != ph ||
-          dut.context_idx != cx || dut.command.cim_weight_raddr !== BASE_ADDR + 8'(4 * tile + cx) ||
-          dut.plane !== act_planes[(active_m * 2 + tile) * 4 + ph])
+      tile = row_issues / (4 * AS);
+      ph   = (row_issues % (4 * AS)) / AS;
+      cx   = row_issues % AS;
+      if (cycle != first_accept + TILE_CYCLES * tile + 1 + AS * ph + cx || dut.tile != tile || dut.phase != ph ||
+          dut.context_idx != cx || dut.command.cim_weight_raddr !== BASE_ADDR + 8'(AS * tile + logical_context(active_m, cx)) ||
+          dut.plane !== act_planes[(active_m * OS + tile) * 4 + ph])
         $fatal(1, "AS GEMM: internal issue order/data/address mismatch");
       if (dut.ren !== 8'hff || dut.station !== 8'hff)
         $fatal(1, "AS GEMM: each Context switch must refresh all eight weights");
@@ -41,7 +41,7 @@ always @(posedge clock) begin : as_gemm_scoreboard
       ph   = dut.tmp_tag[l].ph;
       cx   = dut.tmp_tag[l].ctx;
       if (!dut.psum_write[l]) $fatal(1, "AS GEMM: missing AS partial-sum update");
-      index = ((((active_m * 2 + tile) * 4 + ph) * 4 + cx) * 4 + l);
+      index = ((((active_m * OS + tile) * 4 + ph) * AS + logical_context(active_m, cx)) * 4 + l);
       wanted_history[l] = history_golden[index];
       check_history[l] = 1;
       hc[l] = cx;
@@ -49,8 +49,8 @@ always @(posedge clock) begin : as_gemm_scoreboard
   end
   #1;
   if (!reset && monitoring) begin
-    if (dut.batch_active && dut.psum_depth_open !== 16'h000f)
-      $fatal(1, "AS GEMM: exactly four Psum Context entries must be enabled");
+    if (dut.batch_active && dut.psum_depth_open !== 16'((1 << AS) - 1))
+      $fatal(1, "AS GEMM: incorrect Psum Context enable mask");
     for (int l = 0; l < 4; l++)
     if (check_history[l]) begin
       if (dut.psum[hc[l]][l] !== wanted_history[l])
@@ -66,8 +66,8 @@ always @(posedge clock) begin : as_gemm_scoreboard
     for (int l = 0; l < 4; l++) begin
       if (out_valid_o[l]) begin
         cx = raw_next[l];
-        n  = 4 * cx + l;
-        if (cx >= 4 || cycle != first_accept + 35 + cx || psum_data_o[32*l+:32] !== raw_golden[active_m*N+n])
+        n  = 4 * logical_context(active_m, cx) + l;
+        if (cx >= AS || cycle != first_accept + FIRST_RAW + cx || psum_data_o[32*l+:32] !== raw_golden[active_m*N+n])
           $fatal(1, "AS GEMM: raw matrix/order/timing mismatch m=%0d ctx=%0d lane=%0d", active_m, cx, l);
         observed_raw[active_m*N+n] = psum_data_o[32*l+:32];
         $fdisplay(trace_fd, "%0d,%0d,raw,%0d,1,%0d,%0d,%0d,%0d", cycle, cycle - first_accept, active_m, cx, l, n,
@@ -78,12 +78,12 @@ always @(posedge clock) begin : as_gemm_scoreboard
       end
       if (requant_valid_o[l]) begin
         cx = quant_next[l];
-        n  = 4 * cx + l;
+        n  = 4 * logical_context(active_m, cx) + l;
         if (requant_data_o[8*l+:8] !== cim_golden[active_m*N+n])
           $fatal(1, "GEMM: CIM INT8 before TB correction mismatch");
         corrected_quant = $test$plusargs("PER_CHANNEL_SCALE") ? requant_data_o[8*l+:8] :
             tb_correct_tensor($signed(requant_data_o[8*l+:8]), $signed(zp[n]));
-        if (cx >= 4 || cycle != first_accept + 36 + cx || corrected_quant !== quant_golden[active_m*N+n])
+        if (cx >= AS || cycle != first_accept + FIRST_RAW + 1 + cx || corrected_quant !== quant_golden[active_m*N+n])
           $fatal(1, "AS GEMM: INT8 matrix/Context-zp/timing mismatch m=%0d ctx=%0d lane=%0d", active_m, cx, l);
         observed_quant[active_m*N+n] = corrected_quant;
         $fdisplay(trace_fd, "%0d,%0d,quant,%0d,1,%0d,%0d,%0d,%0d", cycle, cycle - first_accept, active_m, cx, l, n,

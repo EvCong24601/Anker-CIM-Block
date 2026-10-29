@@ -8,6 +8,7 @@
 ../RTL/cluster/tb/tb_Cluster_GEMM_OS1_WS32_W8A16.sv
 ../RTL/cluster/tb/ClusterGemmOs2As4.sv
 ../RTL/cluster/tb/tb_Cluster_GEMM_OS2_AS4_W8A16.sv
+../RTL/cluster/tb/tb_Cluster_GEMM_OS1_WS1_AS8_W8A16.sv
 ../RTL/cluster/tb/ClusterGemmScenario.sv
 ../RTL/cluster/tb/tb_Cluster_GEMM_W4A16_HighGroup.sv
 ../RTL/cluster/tb/tb_Cluster_GEMM_W2A8_HighGroup.sv

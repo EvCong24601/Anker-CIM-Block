@@ -1,4 +1,4 @@
-# Run from vcs-rtl: make run CASE=gemm_os1_ws32_w8a16_channel
+# Run from vcs-rtl: make run CASE=gemm_os1_ws32_as1_w8a16_channel
 .DEFAULT_GOAL := help
 CASE ?=
 TB ?= cluster
@@ -18,6 +18,7 @@ TOP_reduce := tb_ClusterReduceTree
 TOP_requant := tb_ClusterRequant
 TOP_gemm_os1_ws32_w8a16 := tb_Cluster_GEMM_OS1_WS32_W8A16
 TOP_gemm_os2_as4_w8a16 := tb_Cluster_GEMM_OS2_AS4_W8A16
+TOP_gemm_os1_ws1_as8_w8a16 := tb_Cluster_GEMM_OS1_WS1_AS8_W8A16
 TOP_gemm_w4a16_high_group := tb_Cluster_GEMM_W4A16_HighGroup
 TOP_gemm_w2a8_high_group := tb_Cluster_GEMM_W2A8_HighGroup
 TOP_gemm_w4a16_n6_tail := tb_Cluster_GEMM_W4A16_N6_Tail
@@ -32,6 +33,7 @@ FILE_reduce := verilog_file_reduce.f
 FILE_requant := verilog_file_requant.f
 FILE_gemm_os1_ws32_w8a16 := verilog_file_gemm_os1_ws32_w8a16.f
 FILE_gemm_os2_as4_w8a16 := verilog_file_gemm_os2_as4_w8a16.f
+FILE_gemm_os1_ws1_as8_w8a16 := verilog_file_gemm_os1_ws1_as8_w8a16.f
 FILE_gemm_w4a16_high_group := verilog_file_gemm_w4a16_high_group.f
 FILE_gemm_w2a8_high_group := verilog_file_gemm_w2a8_high_group.f
 FILE_gemm_w4a16_n6_tail := verilog_file_gemm_w4a16_n6_tail.f
@@ -49,10 +51,10 @@ VCS_FLAGS ?= -sverilog +v2k +libext+.v+.sv -full64 -timescale=1ns/10ps -debug_ac
 
 .PHONY: help list prepare com sim check run regression gemm-regression debug wave vcd clean sram requant-vectors gemm-vectors gemm-as-vectors gemm-channel-vectors gemm-as-channel-vectors
 help:
-	@echo 'make run CASE=gemm_os1_ws32_w8a16_channel  # prepare, compile, simulate, check'
+	@echo 'make run CASE=gemm_os1_ws32_as1_w8a16_channel  # prepare, compile, simulate, check'
 	@echo 'make list                      # all case descriptions'
 	@echo 'make regression                # includes expected rejections'
-	@echo 'make gemm-regression           # 11 positive GEMM variants'
+	@echo 'make gemm-regression           # 13 positive GEMM variants'
 	@echo 'See README.md for variables, file lists and FSDB naming.'
 list:
 	$(PYTHON) cases.py --list
@@ -95,12 +97,12 @@ vcd:
 requant-vectors:
 	$(MAKE) prepare CASE=requant_unit
 gemm-vectors:
-	$(MAKE) prepare CASE=gemm_os1_ws32_w8a16_tensor
+	$(MAKE) prepare CASE=gemm_os1_ws32_as1_w8a16_tensor
 gemm-as-vectors:
-	$(MAKE) prepare CASE=gemm_os2_as4_w8a16_tensor
+	$(MAKE) prepare CASE=gemm_os2_ws1_as4_w8a16_tensor
 gemm-channel-vectors:
-	$(MAKE) prepare CASE=gemm_os1_ws32_w8a16_channel
+	$(MAKE) prepare CASE=gemm_os1_ws32_as1_w8a16_channel
 gemm-as-channel-vectors:
-	$(MAKE) prepare CASE=gemm_os2_as4_w8a16_channel
+	$(MAKE) prepare CASE=gemm_os2_ws1_as4_w8a16_channel
 clean:
 	rm -rf -- ./work
