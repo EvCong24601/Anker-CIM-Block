@@ -116,6 +116,25 @@ OS 表示跨 K Tile 累加，WS 表示权重复用多个 Context，AS 表示激�
 
 负向用例只有命中预期 Fatal 才算通过，统一以 `make run` 的检查结果为准。完整用例表见 [VCS README](vcs-rtl/README.md)，驱动与 scoreboard 分工见 [TB 指南](docs/Testbench_Guide.md)。
 
+## ICG 门控验证
+
+门控检查覆盖实际时钟的开关、关钟后数据保持，以及门控开启/关闭两套 Cluster 在相同输入下的逐拍等价性。
+
+| CASE（在 vcs-rtl 下执行 make run CASE=名称） | 检查内容 |
+|---|---|
+| `macro_gate0`、`macro_gate1` | SingleMacro 门控关闭/开启时的算术、时序与保持检查 |
+| `reduce_tree` | 208 种归约树、mask 和转发门控检查 |
+| `gate_equiv_default` | Cluster 基础计算的门控开关逐拍等价性 |
+| `gate_equiv_context_stress`、`gate_equiv_input_overlap` | 多 Context 压力及输入/计算重叠时的等价性 |
+| `gate_equiv_requant_buffers`、`gate_equiv_requant_channel` | Context 量化缓存及逐通道量化的等价性 |
+| `gate_equiv_requant_reset`、`gate_equiv_requant_boundary` | 复位及批次边界的等价性 |
+| `gate_equiv_sram`、`gate_equiv_sram_response` | SRAM 读写、同步读响应的等价性 |
+| `requant_full_shift`、`requant_empty_batch` | 完整 INT10 shift 参数及空批次转有效批次的专项检查，启用门控等价对照 |
+
+检查对象包括 Macro 控制/SRAM/ACT 分区时钟、逐 OC 结果时钟、归约转发、tmp/Psum、Context 参数表及 INT8 输出；per-tensor 还检查未使用的 ZP 缓存时钟保持关闭。实现见 [门控检查器](RTL/cluster/tb/include/cluster_gate_checks.svh) 和 [等价检查器](RTL/cluster/tb/include/cluster_gate_equivalence.svh)。
+
+**已有结果与验证范围**：[已保存日志](RTL/cluster/tb/log/cluster_gate_equivalence_validation.log)记录 9 组 Cluster 门控等价检查全部 PASS，共比较 292,941 个周期。这是历史仿真记录，本次文档更新未重跑仿真。PASS 表示所测场景满足 RTL 功能门控及等价检查；当前使用功能 ICG 模型，工艺 ICG 替换后的时序、毛刺及实际功耗需在实现阶段另行验证。
+
 ## 详细文档
 
 | 文档 | 需要时查看 |
