@@ -112,6 +112,8 @@ OS 表示跨 K Tile 累加，WS 表示权重复用多个 Context，AS 表示激�
 | [cluster/tb/tb_Cluster_GEMM_W4A16_N6_Tail.sv](RTL/cluster/tb/tb_Cluster_GEMM_W4A16_N6_Tail.sv) | `gemm_os1_ws8_as1_w4a16_n6_tail_{tensor,channel}` | N=6 尾块屏蔽与输出完整性 |
 | [cluster/tb/tb_Cluster_GEMM_W4A16_RoundClip.sv](RTL/cluster/tb/tb_Cluster_GEMM_W4A16_RoundClip.sv) | `gemm_os1_ws12_as1_w4a16_round_clip_channel` | 逐通道量化的舍入、正负饱和 |
 
+**PASS 的含义**：正向 GEMM 用例要求 RTL 的 raw / INT8 结果与 Python 按约定整数运算规则生成的 golden 逐元素一致，并通过该用例的时序等检查。这验证的是所测输入下的实现正确性；量化误差是否达标、真实模型的准确率是否保持，需要另行评估。舍入/饱和测试通过也不表示所有矩阵或模型的量化精度达标。
+
 负向用例只有命中预期 Fatal 才算通过，统一以 `make run` 的检查结果为准。完整用例表见 [VCS README](vcs-rtl/README.md)，驱动与 scoreboard 分工见 [TB 指南](docs/Testbench_Guide.md)。
 
 ## 详细文档
