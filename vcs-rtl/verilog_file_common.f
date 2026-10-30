@@ -1,3 +1,5 @@
++incdir+../RTL/macro/rtl
++incdir+../RTL/cluster/rtl
 // Shared functional RTL; paths relative to vcs-rtl.
 +incdir+../RTL/cluster/tb
 +incdir+../RTL/macro/tb

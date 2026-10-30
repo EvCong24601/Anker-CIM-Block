@@ -3,6 +3,7 @@
 // Eight Macros cover K256/N4; each X row is an independent batch.
 module ClusterGemmOs2As4;
   import cluster_pkg::*;
+  `include "cluster_func.sv"
   parameter int ZP_DEPTH = 16;
   parameter int M = 32, OS = 2, AS = 4;
   parameter logic [7:0] BASE_ADDR = 8'h60;

@@ -1,3 +1,7 @@
++incdir+tb
++incdir+../macro/tb
++incdir+../macro/rtl
++incdir+rtl
 // Paths relative to RTL/cluster. This lists functional source only.
 ../macro/rtl/single_macro_pkg.sv
 ../macro/rtl/MacroClockGate.sv

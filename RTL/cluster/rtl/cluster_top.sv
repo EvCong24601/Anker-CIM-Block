@@ -52,6 +52,10 @@ module cluster_top #(
   output logic [31:0] requant_valid_o
 );
   import cluster_pkg::*;
+  `include "cluster_func.sv"
+`ifndef SYNTHESIS
+  `include "cluster_check_func.sv"
+`endif
   // ===== 2. Batch decode nets and pipeline declarations =====
   cluster_ctrl_t command;
   // Batch-invariant combinational decode; no additional configuration DFFs.

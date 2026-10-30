@@ -2,6 +2,8 @@
 // Independent per-tap check: all 26 trees, 8 EN patterns, changing every cycle.
 module tb_ClusterReduceTree;
   import cluster_pkg::*;
+  `include "cluster_func.sv"
+  `include "cluster_check_func.sv"
   // 1. Interface and expected state aligned per pipeline depth (independent of the
   // Cluster ACT/Context scheduling).
   logic clock = 0, reset = 1;

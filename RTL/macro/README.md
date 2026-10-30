@@ -1,6 +1,6 @@
 # SingleMacro V0.2 交付说明
 
-本目录为最小 RTL 集成交付包，包含 6 个 SystemVerilog 源文件、源文件清单及 [SPEC V0.2](SingleMacro_SPEC_v0.2.md)。顶层为 `SingleMacro`，端口定义见 SPEC 第 3、14 节。
+本目录为最小 RTL 集成交付包，包含 6 个独立编译的 SystemVerilog 源文件及 1 个函数 include 文件、源文件清单及 [SPEC V0.2](SingleMacro_SPEC_v0.2.md)。顶层为 `SingleMacro`，端口定义见 SPEC 第 3、14 节。
 
 ## 文件与编译
 
@@ -19,7 +19,7 @@
 iverilog -g2012 -DSYNTHESIS -s SingleMacro -o singlemacro.vvp -f rtl/filelist.f
 ```
 
-以上为 RTL 编译/展开示例，不代表完成逻辑综合。SystemVerilog package 须先于引用它的模块编译。
+以上为 RTL 编译/展开示例，不代表完成逻辑综合。SystemVerilog package 只保留常量，须先于引用它的模块编译。辅助函数位于 `rtl/single_macro_func.sv`，在 `SingleMacro` 模块内 include，不单独编译；`rtl/filelist.f` 已配置对应 include 搜索路径。
 
 ## 集成约定
 
@@ -48,3 +48,5 @@ Cluster通过`cim_result_mask[3:0]`提供每OC的上层消费需求。该信号�
 ACT输入寄存器按W精度分为[127:0]、[255:128]、[511:256]三个门控区，W2/W4/W8分别捕获512/256/128bit。当前输入精度在接受沿前决定开钟区，关闭区保持，异步复位和旁路写使能均保留；详见[ACT分区门控](../../docs/Cluster_ACT_Gating.md)。
 
 权重直接取SRAM的保持输出；独立held_weight及其时钟域、read_address_in和station_in寄存状态不实例化。SRAM行为模型的读出保持仍存在，物理IP需提供等价输出保持。ACT输入边界和1T/II1不变。
+
+仿真专用函数与综合函数分离：综合函数保留在 rtl/*_func.sv；检查和参考计算函数位于 tb/cluster_check_func.sv（Cluster）与 tb/single_macro_check_func.sv（Macro）。RTL 中对检查函数的 include 均受 `ifndef SYNTHESIS 保护，Macro 还要求 SINGLE_MACRO_ASSERTIONS；定义 SYNTHESIS 后无需读取这些 TB 文件。函数文件均通过模块内 include 使用，不单独编译。

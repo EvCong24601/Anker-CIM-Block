@@ -46,13 +46,15 @@ make regression                   # 全部用例，包含预期报错的负向�
 
 | 文件 | 用途 |
 |---|---|
-| [macro/rtl/single_macro_pkg.sv](RTL/macro/rtl/single_macro_pkg.sv) | Macro 精度、类型和辅助函数 |
+| [macro/rtl/single_macro_pkg.sv](RTL/macro/rtl/single_macro_pkg.sv) | Macro 精度常量 |
+| [macro/rtl/single_macro_func.sv](RTL/macro/rtl/single_macro_func.sv) | 模块内 include 的辅助函数 |
 | [macro/rtl/SingleMacro.sv](RTL/macro/rtl/SingleMacro.sv) | 单 Macro 顶层，连接权重存储、乘法及 Slice 融合 |
 | [macro/rtl/MacroWeightSRAM.sv](RTL/macro/rtl/MacroWeightSRAM.sv) | 权重 SRAM 行存储、读写和 OC 写掩码 |
 | [macro/rtl/MacroMul2x4.sv](RTL/macro/rtl/MacroMul2x4.sv) | 2bit 权重 × 4bit 激活的基础乘法 |
 | [macro/rtl/MacroSliceFusion.sv](RTL/macro/rtl/MacroSliceFusion.sv) | 按 W2/W4/W8 移位融合权重 Slice 结果 |
 | [macro/rtl/MacroClockGate.sv](RTL/macro/rtl/MacroClockGate.sv) | 功能 ICG 时钟门控模型 |
-| [cluster/rtl/cluster_pkg.sv](RTL/cluster/rtl/cluster_pkg.sv) | Cluster 命令类型、精度解码和归约辅助函数 |
+| [cluster/rtl/cluster_pkg.sv](RTL/cluster/rtl/cluster_pkg.sv) | Cluster 命令和 Requant 配置类型 |
+| [cluster/rtl/cluster_func.sv](RTL/cluster/rtl/cluster_func.sv) | 模块内 include 的辅助函数 |
 | [cluster/rtl/cluster_top.sv](RTL/cluster/rtl/cluster_top.sv) | Cluster 顶层，8 Macro 调度、ACT 缓存、tmp/Psum 和量化输出 |
 | [cluster/rtl/ClusterReduceTree.sv](RTL/cluster/rtl/ClusterReduceTree.sv) | 可配置归约树、lane valid 和转发门控 |
 | [cluster/rtl/ClusterRequant.sv](RTL/cluster/rtl/ClusterRequant.sv) | 四通道整数 Requant，执行缩放、舍入和 INT8 饱和 |
@@ -145,3 +147,5 @@ OS 表示跨 K Tile 累加，WS 表示权重复用多个 Context，AS 表示激�
 | [辅助文件索引](docs/Source_Map.md) | TB include、Python 脚本、共用主体及数据用途 |
 | [标准逐拍表](docs/Cluster_Timing_Tables.md) | 原 README 中的 42 组时序表与 26 种 split 编码 |
 | [验证清单](docs/Cluster_Verification.md) | 功能覆盖、检查条件及历史验证记录 |
+
+仿真专用函数与综合函数分离：综合函数保留在 rtl/*_func.sv；检查和参考计算函数位于 tb/cluster_check_func.sv（Cluster）与 tb/single_macro_check_func.sv（Macro）。RTL 中对检查函数的 include 均受 `ifndef SYNTHESIS 保护，Macro 还要求 SINGLE_MACRO_ASSERTIONS；定义 SYNTHESIS 后无需读取这些 TB 文件。函数文件均通过模块内 include 使用，不单独编译。

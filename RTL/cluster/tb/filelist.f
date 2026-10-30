@@ -1,3 +1,6 @@
++incdir+../../macro/tb
++incdir+../../macro/rtl
++incdir+../rtl
 +incdir+.
 ../../macro/rtl/single_macro_pkg.sv
 ../../macro/rtl/MacroClockGate.sv

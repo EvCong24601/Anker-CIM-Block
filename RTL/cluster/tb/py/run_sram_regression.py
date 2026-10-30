@@ -65,6 +65,12 @@ def main():
     for src in sources:
         shutil.copy2(src, dest / src.name)
         manifest.append(f'{hashlib.sha256(src.read_bytes()).hexdigest()}  {src.relative_to(root)}')
+    for src in (root / 'RTL/cluster/rtl/cluster_func.sv',
+                macro / 'rtl/single_macro_func.sv',
+                cluster_tb / 'cluster_check_func.sv',
+                macro / 'tb/single_macro_check_func.sv'):
+        shutil.copy2(src, dest / src.name)
+        manifest.append(f'{hashlib.sha256(src.read_bytes()).hexdigest()}  {src.relative_to(root)}')
     # Include fragments retain their paths relative to the owning TB.
     # Copy and hash them too; otherwise the snapshot would use incomplete tests.
     for owner in (cluster_tb, macro / 'tb'):

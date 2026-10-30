@@ -3,6 +3,8 @@
 // include list at the end for the reading order.
 module tb_Cluster;
   import cluster_pkg::*;
+  `include "cluster_func.sv"
+  `include "cluster_check_func.sv"
   parameter logic [7:0] EN_MASK = 8'hff;
   parameter logic [31:0] OC_MASK = 32'hffff_ffff;
   parameter int OS_TILES = 1;

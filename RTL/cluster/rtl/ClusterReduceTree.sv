@@ -20,6 +20,7 @@ module ClusterReduceTree #(
   output logic [671:0] tap_data_o[0:2]
 );
   import cluster_pkg::*;
+  `include "cluster_func.sv"
   typedef struct packed {
     logic valid;
     logic [6:0] split;

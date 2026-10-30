@@ -5,7 +5,8 @@ Cluster 目录只分为 rtl/ 与 tb/ 两个职责：功能实现放 rtl/，验�
 ```text
 RTL/cluster/
   rtl/
-    cluster_pkg.sv          共享命令类型、精度和归约辅助函数
+    cluster_pkg.sv          共享命令与配置类型
+    cluster_func.sv    精度和归约辅助函数，模块内 include
     ClusterRequant.sv       四通道组合Requant，scale可共享或逐OC
     ClusterReduceTree.sv    归约树、有效位与转发门控逻辑
     cluster_top.sv          功能参考顶层，八个Macro归约与最终Requant输出
@@ -38,7 +39,7 @@ Requant配置为297bit：conv_mode（1=weight per-channel，0=weight per-tensor�
 - 从仓库 vcs-rtl/ 运行 make com / make sim；verilog_file_pl.f 指向 ../RTL/cluster/rtl/ 与 ../RTL/cluster/tb/。
 - Python 入口位于 tb/py/，同时定位功能 rtl 和验证 tb，并将源码与 include 复制到仓库外的仿真副本。
 
-共享 package 必须在引用它的模块之前编译，.svh 只通过 include 读取。详细验证说明见 [TB README](tb/README.md)；测试职责和修改位置见 [Testbench 阅读指南](../../docs/Testbench_Guide.md)。
+共享 package 只保留类型和常量，必须在引用它的模块之前编译。cluster_func.sv 和 single_macro_func.sv 在模块内通过 include 读取，不单独加入编译列表；编译时须添加对应 rtl/ 的 include 搜索路径。.svh 也只通过 include 读取。详细验证说明见 [TB README](tb/README.md)；测试职责和修改位置见 [Testbench 阅读指南](../../docs/Testbench_Guide.md)。
 
 GEMM 的配置、检查目标和运行入口见 [GEMM 用例总览](../../docs/Cluster_GEMM.md)。
 
@@ -49,3 +50,5 @@ GEMM 的配置、检查目标和运行入口见 [GEMM 用例总览](../../docs/C
 `psum_data_o/out_valid_o`在RTL端口表中仅为注释，注明TB用途。TB通过内部raw_data/raw_valid建立观察别名；正式集成只连接最终Requant结果。所有权重写入和读回使用常规cim_*端口。
 
 Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。
+
+仿真专用函数与综合函数分离：综合函数保留在 rtl/*_func.sv；检查和参考计算函数位于 tb/cluster_check_func.sv（Cluster）与 tb/single_macro_check_func.sv（Macro）。RTL 中对检查函数的 include 均受 `ifndef SYNTHESIS 保护，Macro 还要求 SINGLE_MACRO_ASSERTIONS；定义 SYNTHESIS 后无需读取这些 TB 文件。函数文件均通过模块内 include 使用，不单独编译。

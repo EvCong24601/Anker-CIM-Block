@@ -5,6 +5,7 @@ module ClusterGemmScenario #(
   parameter string SCENARIO = "w4a16_high_group"
 );
   import cluster_pkg::*;
+  `include "cluster_func.sv"
   logic clock = 0, reset = 1;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;

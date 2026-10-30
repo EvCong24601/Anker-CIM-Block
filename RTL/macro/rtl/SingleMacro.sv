@@ -30,6 +30,7 @@ module SingleMacro #(
   output logic [   1:0] cim_odata_phase
 );
   import single_macro_pkg::*;
+  `include "single_macro_func.sv"
 
   logic         in_valid;  // Valid request at the input boundary.
   logic [511:0] activation_in;  // Registered ACT digits shared by all OCs.
@@ -262,6 +263,7 @@ module SingleMacro #(
 
 `ifndef SYNTHESIS
 `ifdef SINGLE_MACRO_ASSERTIONS
+  `include "single_macro_check_func.sv"
   // Verification state only; SRAM initialization survives logic reset.
   logic [3:0] initialized_ocs[0:255];
   initial for (int a = 0; a < 256; a++) initialized_ocs[a] = '0;
