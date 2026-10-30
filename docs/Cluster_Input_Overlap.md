@@ -65,7 +65,7 @@ ICG 为低电平锁存功能模型，工艺实现需映射时钟门控单元并�
 
 `requant_buffers`覆盖七精度、两种scale模式、AS16/AS8、OS1/OS2、空OC输出，检查独立参数、固定槽位、门控及收集未结束时已经发射。`requant_a4_address_bypass`将地址表深度设为1，验证A4旁路。容量用例覆盖AS17、AS64、地址/标签/参数深度不足。
 
-运行方法见 [VCS入口](../vcs-rtl/README.md)。根README的42组逐拍表由独立Python调度模型生成，并与仿真trace核对。
+运行方法见 [VCS入口](../vcs-rtl/README.md)。[标准逐拍文档](Cluster_Timing_Tables.md)中的42组逐拍表由独立Python调度模型生成，并与仿真trace核对。
 
 计算OC mask关闭对应Macro结果、归约转发、tmp/Psum及tmp/Psum和INT8数据寄存器时钟；对应组合算术操作数隔离。门控按已对齐事务标签生效。公共ACT入口、SRAM整行访问和完整行Hold为其他有效OC保留工作能力。
 

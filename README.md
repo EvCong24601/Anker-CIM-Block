@@ -1,1140 +1,124 @@
-# CIM Cluster 输入与计算说明
+# CIM Cluster RTL
 
-八个 SingleMacro 组成一个 Cluster。当前包内ACT Plane、AS地址和量化参数接收与内部发射重叠；输入寄存后下一拍即可发射。正式输出为寄存INT8和逐lane valid，raw signed32仅供TB观察。批次配置及组合解码共享，Packet只存8bit变化地址；每OC的acc/bit-fusion复用一个组合加法器；三条归约路径的末Context完成位决定批次结束，逐lane完整性由独立TB检查。
+八个 SingleMacro 组成一个 Cluster，完成低比特乘加、归约、跨 Tile 累加及 INT8 量化输出。
 
-## 源码与运行
+## 快速运行
 
-- `RTL/macro/rtl/`：SingleMacro、同步读写SRAM、算术和功能ICG。
-- `RTL/cluster/rtl/`：共享package、调度/存储、归约树和四通道Requant。
-- `RTL/cluster/tb/`：Cluster、归约、量化和七个具体GEMM顶层；include拆分驱动、参考模型、检查器和case。
-- `vcs-rtl/`：各顶层的编译列表、Makefile和用例目录；FSDB自动使用case说明后缀。
+在 **Linux + VCS + GNU Make + Python 3** 环境中运行；查看波形另需 Verdi/FSDB。
 
-从 `vcs-rtl/` 执行 `make run CASE=cluster_default` 或 `make regression`。完整配置和用例说明见 [VCS入口](vcs-rtl/README.md)。
+```sh
+cd vcs-rtl
+make list                         # 全部用例及说明
+make run CASE=cluster_default     # 基础计算与时序
+make gemm-regression              # 13 个正向 GEMM 用例
+make regression                   # 全部用例，包含预期报错的负向测试
+```
 
-## 调度与缓存
+运行结果在 `vcs-rtl/work/<CASE>/`：`compile.log`、`sim.log`、`sim.exit`、`data/` 和波形。使用 `make run` 完成生成、编译、仿真和结果检查；参数及波形操作见 [VCS README](vcs-rtl/README.md)。
 
-所有多Context AS采用Tile → Slice → Context，包括OS1；WS/单Context采用Tile → Context → Slice。AS参数与地址不要求整包收齐，当前Context已收到即可计算。ACT bank为4096bit，后续Plane固定连续输入。
+## 文件导航
 
-OUTPUT_PSUM_DEPTH默认16，统一控制Psum、权重地址表及Requant Context表深度；兼容参数可由容量专项单独覆盖。默认权重行地址表16×8bit；仅AS A8/A16使用深表，A4使用当前地址寄存器。Requant参数表默认16项，与OUTPUT_BUFFER_DEPTH一致，所有AS精度均使用固定槽位，不回收、不覆盖。所有精度cim_as_cnt≤16。
+### vcs-rtl：仿真入口
 
-非AS关闭地址和量化参数深表，使用当前地址及批次参数。Per-tensor每Context仅使用第0组multiplier/shift并广播，另外三组关钟；per-tensor不加载或消费ZP，逐channel修正仅在TB执行；per-channel仍保留四项ZP。参数c固定对应本地OC c，不按mask压缩。
+以下文件均在 [`vcs-rtl/`](vcs-rtl/) 下；`.f` 是编译清单。
 
-Psum使用条件：`cim_os_cnt>1 || cim_as_cnt>1`。WS/单Context在tmp中融合Slice；所有AS多Context在Psum中保存各Context结果及融合历史；OS>1还累加K Tile。OS1 WS64合法，OS1 AS16合法，AS17/AS64拒绝。三个count均为8bit、1～255，WS/AS不能同时大于1。
+| 文件 | 用途 |
+|---|---|
+| [Makefile](vcs-rtl/Makefile) | 运行、编译、回归、检查和波形命令入口 |
+| [cases.py](vcs-rtl/cases.py) | 用例配置源，选择 TB、参数、golden 生成器及通过条件 |
+| [cases.mk](vcs-rtl/cases.mk) | `python3 cases.py --write` 生成的 Make 配置 |
+| [verilog_file_common.f](vcs-rtl/verilog_file_common.f) | 共用功能 RTL，按 package / Macro / Cluster 的依赖顺序编译 |
+| [verilog_file_cluster.f](vcs-rtl/verilog_file_cluster.f) | Cluster 顶层功能测试与时延观察器 |
+| [verilog_file_macro.f](vcs-rtl/verilog_file_macro.f) | SingleMacro 单元测试 |
+| [verilog_file_reduce.f](vcs-rtl/verilog_file_reduce.f) | 归约树单元测试 |
+| [verilog_file_requant.f](vcs-rtl/verilog_file_requant.f) | Requant 算术单元测试 |
+| [verilog_file_gemm_os1_ws32_w8a16.f](vcs-rtl/verilog_file_gemm_os1_ws32_w8a16.f) | W8A16，OS1 / WS32 / AS1 矩阵测试 |
+| [verilog_file_gemm_os2_as4_w8a16.f](vcs-rtl/verilog_file_gemm_os2_as4_w8a16.f) | W8A16，OS2 / WS1 / AS4 矩阵测试 |
+| [verilog_file_gemm_os1_ws1_as8_w8a16.f](vcs-rtl/verilog_file_gemm_os1_ws1_as8_w8a16.f) | W8A16，OS1 / WS1 / AS8，门控及 Command 切换 |
+| [verilog_file_gemm_w4a16_high_group.f](vcs-rtl/verilog_file_gemm_w4a16_high_group.f) | W4A16 高归约组测试 |
+| [verilog_file_gemm_w2a8_high_group.f](vcs-rtl/verilog_file_gemm_w2a8_high_group.f) | W2A8 高归约组测试 |
+| [verilog_file_gemm_w4a16_n6_tail.f](vcs-rtl/verilog_file_gemm_w4a16_n6_tail.f) | W4A16，N=6 尾块与掩码测试 |
+| [verilog_file_gemm_w4a16_round_clip.f](vcs-rtl/verilog_file_gemm_w4a16_round_clip.f) | W4A16 舍入和饱和测试 |
+| [verilog_file_pl.f](vcs-rtl/verilog_file_pl.f) | 兼容聚合清单，当前 Makefile 不使用 |
+| [README.md](vcs-rtl/README.md) / [.gitignore](vcs-rtl/.gitignore) | 运行细则与全部 case 表 / 忽略仿真产物 |
 
-## 时钟与结果
+### RTL：功能实现
 
-SRAM上升沿采样读写。同步读响应带sram_rd_valid，Macro编号随请求锁存；下一请求不改变当前响应。Macro在输入接受沿读权重，下一沿寄存计算结果，II=1。控制、SRAM访问及ACT分区时钟独立；权重由SRAM输出保持，行号/valid随访问更新；归约转发按节点/OC门控，tmp/Psum及INT8数据按对齐有效事件门控，valid保留清零尾沿。Context表采用整批门控。工艺ICG/SRAM映射及STA需由集成实现确认。
+| 文件 | 用途 |
+|---|---|
+| [macro/rtl/single_macro_pkg.sv](RTL/macro/rtl/single_macro_pkg.sv) | Macro 精度、类型和辅助函数 |
+| [macro/rtl/SingleMacro.sv](RTL/macro/rtl/SingleMacro.sv) | 单 Macro 顶层，连接权重存储、乘法及 Slice 融合 |
+| [macro/rtl/MacroWeightSRAM.sv](RTL/macro/rtl/MacroWeightSRAM.sv) | 权重 SRAM 行存储、读写和 OC 写掩码 |
+| [macro/rtl/MacroMul2x4.sv](RTL/macro/rtl/MacroMul2x4.sv) | 2bit 权重 × 4bit 激活的基础乘法 |
+| [macro/rtl/MacroSliceFusion.sv](RTL/macro/rtl/MacroSliceFusion.sv) | 按 W2/W4/W8 移位融合权重 Slice 结果 |
+| [macro/rtl/MacroClockGate.sv](RTL/macro/rtl/MacroClockGate.sv) | 功能 ICG 时钟门控模型 |
+| [cluster/rtl/cluster_pkg.sv](RTL/cluster/rtl/cluster_pkg.sv) | Cluster 命令类型、精度解码和归约辅助函数 |
+| [cluster/rtl/cluster_top.sv](RTL/cluster/rtl/cluster_top.sv) | Cluster 顶层，8 Macro 调度、ACT 缓存、tmp/Psum 和量化输出 |
+| [cluster/rtl/ClusterReduceTree.sv](RTL/cluster/rtl/ClusterReduceTree.sv) | 可配置归约树、lane valid 和转发门控 |
+| [cluster/rtl/ClusterRequant.sv](RTL/cluster/rtl/ClusterRequant.sv) | 四通道整数 Requant，执行缩放、舍入和 INT8 饱和 |
+| [macro/rtl/filelist.f](RTL/macro/rtl/filelist.f) / [cluster/rtl/filelist.f](RTL/cluster/rtl/filelist.f) | 从各自 Macro / Cluster 目录使用的功能源码清单 |
+| [macro/tb/](RTL/macro/tb/) / [cluster/tb/](RTL/cluster/tb/) | TB 顶层、驱动、参考模型、检查器、向量和日志 |
 
-Requant使用一级组合算术及输出寄存器，INT8 valid比raw晚1T，没有输出反压。per-tensor输出`r=clip_INT8(round(raw × multiplier[0] × 2^shift[0]))`，TB再按channel执行`clip_INT8(r+ZP_n)`；per-channel公式保持`clip_INT8(round(raw × multiplier × 2^shift) + zp)`。半整数远离零，shift范围−512～511。merged ZP逐通道，scale支持per-tensor/per-channel。组编号由批次配置统一解码，四通道共享AS Context选择，各OC保留独立隔离和输出门控。
+TB 顶层与用例见下表；其余 `include/*.svh`、`py/*.py`、数据及说明文件逐项用途见 [辅助文件索引](docs/Source_Map.md)。
 
-启用量化时每拍只允许一组、最多四个OC：W8八Macro归约，W4对齐四Macro组，W2对齐两Macro组。raw归约单测可关闭量化。中间tmp/Psum必须符合signed32范围；最终clip不修复历史回绕。
+### lib：接口与黑盒模型
 
-## 文档与测试
+| 文件 | 用途 |
+|---|---|
+| [cluster_top.lib](lib/cluster_top.lib) | Cluster 接口 Liberty 模型，用于黑盒链接，未包含时序弧和功耗表征 |
+| [blackbox/cluster_top.sv](lib/blackbox/cluster_top.sv) | Cluster 接口空壳，替代功能实现参与黑盒链接 |
+| [blackbox/cluster_pkg.sv](lib/blackbox/cluster_pkg.sv) | 随黑盒交付的接口类型 package，须先于空壳编译 |
 
-- [调度、逐拍时序及容量](docs/Cluster_Input_Overlap.md)
-- [常规SRAM接口](docs/Cluster_Weight_SRAM_Interface.md)
-- [Requant参数、门控及数值范围](docs/Cluster_Requant.md)
-- [全部GEMM用例](docs/Cluster_GEMM.md)：13个正向矩阵、5个AS参数负向，包含OS1/WS1/AS8门控与Command切换检查。
-- [TB结构和检查职责](docs/Testbench_Guide.md)
+## 当前功能与使用入口
 
-`context_stress`覆盖224个OS1/WS64、OS1/AS16、OS2/WS8、OS2/AS8 case。`requant_buffers`覆盖77个固定Context场景、2912个raw和2912个INT8比对，检查参数接收与发射重叠。A4旁路、AS17/64拒绝、异步复位、mask和门控由独立专项检查。所有case开始打印英文时间戳和描述。
+OS 表示跨 K Tile 累加，WS 表示权重复用多个 Context，AS 表示激活复用多个 Context。
 
-完整验证条件与用例映射见[验证清单](docs/Cluster_Verification.md)。
-
-## 附录 A 标准逐拍表
-
-以下42组为raw调度/算术表，C0为首Command+A0接受沿；标准W2/W4/W8从内部发射到raw的D=3/4/5T。各表中的split/EN用于raw归约测试，不代表全部符合Requant单组限制。合法量化配置的输出比对应raw晚1T。
-
-### A1 单 Context os=1 ws=1 as=1
-每 Tile K=128；每 Context 总 K=128。
-
-#### precision=0 W2A4
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
+| 功能 | 当前支持范围 | 从哪里看 / 跑 |
 |---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
+| 多精度计算 | W2A4、W2A8、W4A4、W4A8、W4A16、W8A8、W8A16 | `cluster_default`；[Macro 规格](RTL/macro/SingleMacro_SPEC_v0.2.md) |
+| OS / WS / AS 调度 | count 为 1～255；WS 与 AS 不能同时大于 1；默认深度下 AS≤16，覆盖 OS1/WS64 | `context_stress`；[调度与容量](docs/Cluster_Input_Overlap.md) |
+| 输入与计算重叠 | 当前 ACT Plane / Context 地址就绪即可内部发射 | `input_overlap`；[输入时序](docs/Cluster_Input_Overlap.md) |
+| 常规权重 SRAM | 行读写、32 B OC 写掩码、同步读响应、Macro 编号锁存 | `sram_rw`、`sram_response`；[SRAM 接口](docs/Cluster_Weight_SRAM_Interface.md) |
+| INT8 Requant | per-tensor / per-channel scale；四个本地 OC 固定映射；INT10 shift | `requant_unit`、`requant_channel`；[量化说明](docs/Cluster_Requant.md) |
+| Context 缓存 | Psum、地址及量化表默认深度 16，由 `OUTPUT_PSUM_DEPTH` 联动 | `requant_buffers`、`requant_a4_address_bypass` |
+| 时钟门控 | Macro、ACT 分区、归约、Context 表及输出；门控开关逐拍等价检查 | `gate_equiv_*`；[ACT 门控](docs/Cluster_ACT_Gating.md) |
+| GEMM 端到端 | 13 个正向矩阵，覆盖复用、高组、尾块、舍入与饱和 | `make gemm-regression`；[GEMM 说明](docs/Cluster_GEMM.md) |
 
-内部发射与运算：
+正式结果为 `requant_data_o` / `requant_valid_o`，每拍最多 4 个有效 OC，无输出反压；INT8 比内部 raw 晚 1T。per-tensor 的逐 channel ZP 修正在 TB 完成，per-channel 在 DUT 内加 ZP，详见量化说明。raw signed32 仅供 TB 观察，中间累加需满足 signed32 范围。
 
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice → tmp；输出 |
+## TB 与用例
 
-Ctx0：末内部发射 C1，raw 完成 C4。
+以下 `CASE` 均可用 `make run CASE=<名称>` 执行。`{tensor,channel}` 表示两个独立用例后缀；`*` 表示一组用例，完整名字用 `make list` 查看。
 
-#### precision=1 W2A8
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
+| TB 源文件（相对 RTL/） | CASE / 用例组 | 检查内容 |
 |---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-
-Ctx0：末内部发射 C2，raw 完成 C5。
-
-#### precision=2 W4A4
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp；输出 |
-
-Ctx0：末内部发射 C1，raw 完成 C5。
-
-#### precision=3 W4A8
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-
-Ctx0：末内部发射 C2，raw 完成 C6。
-
-#### precision=4 W4A16
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-
-Ctx0：末内部发射 C4，raw 完成 C8。
-
-#### precision=5 W8A8
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-
-Ctx0：末内部发射 C2，raw 完成 C7。
-
-#### precision=6 W8A16
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C9 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-
-Ctx0：末内部发射 C4，raw 完成 C9。
-
-### A2 AS os=1 ws=1 as=2
-每 Tile K=128；每 Context 总 K=128。
-
-#### precision=0 W2A4
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | — |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | 填充: R_slice → P[0]；输出 |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C5 | 填充: R_slice → P[1]；输出 |
-
-Ctx0：末内部发射 C1，raw 完成 C4；Ctx1：末内部发射 C2，raw 完成 C5。
-
-#### precision=1 W2A8
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C5 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C6 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C7 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
-
-Ctx0：末内部发射 C3，raw 完成 C6；Ctx1：末内部发射 C4，raw 完成 C7。
-
-#### precision=2 W4A4
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | — |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0]；输出 |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1]；输出 |
-
-Ctx0：末内部发射 C1，raw 完成 C5；Ctx1：末内部发射 C2，raw 完成 C6。
-
-#### precision=3 W4A8
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C7 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C8 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
-
-Ctx0：末内部发射 C3，raw 完成 C7；Ctx1：末内部发射 C4，raw 完成 C8。
-
-#### precision=4 W4A16
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C7 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C8 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C5 | 8'h20 | 读 A2(T0)，Ctx0复用 | C9 | fusion: P[0] + (R_slice << 8) → P[0] |
-| C6 | 8'h21 | 读 A2(T0)，Ctx1复用 | C10 | fusion: P[1] + (R_slice << 8) → P[1] |
-| C7 | 8'h20 | 读 A3(T0)，Ctx0复用 | C11 | fusion: P[0] + (R_slice << 12) → P[0]；输出 |
-| C8 | 8'h21 | 读 A3(T0)，Ctx1复用 | C12 | fusion: P[1] + (R_slice << 12) → P[1]；输出 |
-
-Ctx0：末内部发射 C7，raw 完成 C11；Ctx1：末内部发射 C8，raw 完成 C12。
-
-#### precision=5 W8A8
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C7 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C8 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C9 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
-
-Ctx0：末内部发射 C3，raw 完成 C8；Ctx1：末内部发射 C4，raw 完成 C9。
-
-#### precision=6 W8A16
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C7 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C8 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C9 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C5 | 8'h20 | 读 A2(T0)，Ctx0复用 | C10 | fusion: P[0] + (R_slice << 8) → P[0] |
-| C6 | 8'h21 | 读 A2(T0)，Ctx1复用 | C11 | fusion: P[1] + (R_slice << 8) → P[1] |
-| C7 | 8'h20 | 读 A3(T0)，Ctx0复用 | C12 | fusion: P[0] + (R_slice << 12) → P[0]；输出 |
-| C8 | 8'h21 | 读 A3(T0)，Ctx1复用 | C13 | fusion: P[1] + (R_slice << 12) → P[1]；输出 |
-
-Ctx0：末内部发射 C7，raw 完成 C12；Ctx1：末内部发射 C8，raw 完成 C13。
-
-### A3 WS os=1 ws=2 as=1
-每 Tile K=128；每 Context 总 K=128。
-
-#### precision=0 W2A4
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C2 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice → tmp；输出 |
-| C3 | 8'h20（不变） | 读 A0(T0,Ctx1) | C6 | tmp捕获: R_slice → tmp；输出 |
-
-Ctx0：末内部发射 C1，raw 完成 C4；Ctx1：末内部发射 C3，raw 完成 C6。
-
-#### precision=1 W2A8
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | — | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-| C4 | 8'h20（不变） | 读 A0(T0,Ctx1) | C7 | tmp捕获: R_slice → tmp |
-| C5 | 8'h20（不变） | 读 A1(T0,Ctx1) | C8 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-
-Ctx0：末内部发射 C2，raw 完成 C5；Ctx1：末内部发射 C5，raw 完成 C8。
-
-#### precision=2 W4A4
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C2 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp；输出 |
-| C3 | 8'h20（不变） | 读 A0(T0,Ctx1) | C7 | tmp捕获: R_slice → tmp；输出 |
-
-Ctx0：末内部发射 C1，raw 完成 C5；Ctx1：末内部发射 C3，raw 完成 C7。
-
-#### precision=3 W4A8
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | — | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-| C4 | 8'h20（不变） | 读 A0(T0,Ctx1) | C8 | tmp捕获: R_slice → tmp |
-| C5 | 8'h20（不变） | 读 A1(T0,Ctx1) | C9 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-
-Ctx0：末内部发射 C2，raw 完成 C6；Ctx1：末内部发射 C5，raw 完成 C9。
-
-#### precision=4 W4A16
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C5 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C6 | — | A1(T0) |
-| C7 | — | A2(T0) |
-| C8 | — | A3(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-| C6 | 8'h20（不变） | 读 A0(T0,Ctx1) | C10 | tmp捕获: R_slice → tmp |
-| C7 | 8'h20（不变） | 读 A1(T0,Ctx1) | C11 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C8 | 8'h20（不变） | 读 A2(T0,Ctx1) | C12 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C9 | 8'h20（不变） | 读 A3(T0,Ctx1) | C13 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-
-Ctx0：末内部发射 C4，raw 完成 C8；Ctx1：末内部发射 C9，raw 完成 C13。
-
-#### precision=5 W8A8
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | — | A1(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-| C4 | 8'h20（不变） | 读 A0(T0,Ctx1) | C9 | tmp捕获: R_slice → tmp |
-| C5 | 8'h20（不变） | 读 A1(T0,Ctx1) | C10 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp；输出 |
-
-Ctx0：末内部发射 C2，raw 完成 C7；Ctx1：末内部发射 C5，raw 完成 C10。
-
-#### precision=6 W8A16
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C5 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C6 | — | A1(T0) |
-| C7 | — | A2(T0) |
-| C8 | — | A3(T0) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C9 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-| C6 | 8'h20（不变） | 读 A0(T0,Ctx1) | C11 | tmp捕获: R_slice → tmp |
-| C7 | 8'h20（不变） | 读 A1(T0,Ctx1) | C12 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C8 | 8'h20（不变） | 读 A2(T0,Ctx1) | C13 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C9 | 8'h20（不变） | 读 A3(T0,Ctx1) | C14 | tmp捕获前 fusion: tmp + (R_slice << 12) → tmp；输出 |
-
-Ctx0：末内部发射 C4，raw 完成 C9；Ctx1：末内部发射 C9，raw 完成 C14。
-
-### A4 单 Context os=2 ws=1 as=1
-每 Tile K=128；每 Context 总 K=256。
-
-#### precision=0 W2A4
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C2 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C3 | 8'h30 | 读 A0(T1,Ctx0) | C6 | tmp捕获: R_slice；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-
-Ctx0：末内部发射 C3，raw 完成 C6。
-
-#### precision=1 W2A8
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C4 | — | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C4 | 8'h30 | 读 A0(T1,Ctx0) | C7 | tmp捕获: R_slice → tmp |
-| C5 | 8'h30（不变） | 读 A1(T1,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-
-Ctx0：末内部发射 C5，raw 完成 C8。
-
-#### precision=2 W4A4
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C2 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C3 | 8'h30 | 读 A0(T1,Ctx0) | C7 | tmp捕获: R_slice；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-
-Ctx0：末内部发射 C3，raw 完成 C7。
-
-#### precision=3 W4A8
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C4 | — | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C4 | 8'h30 | 读 A0(T1,Ctx0) | C8 | tmp捕获: R_slice → tmp |
-| C5 | 8'h30（不变） | 读 A1(T1,Ctx0) | C9 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-
-Ctx0：末内部发射 C5，raw 完成 C9。
-
-#### precision=4 W4A16
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C5 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C6 | — | A1(T1) |
-| C7 | — | A2(T1) |
-| C8 | — | A3(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C6 | 8'h30 | 读 A0(T1,Ctx0) | C10 | tmp捕获: R_slice → tmp |
-| C7 | 8'h30（不变） | 读 A1(T1,Ctx0) | C11 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C8 | 8'h30（不变） | 读 A2(T1,Ctx0) | C12 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C9 | 8'h30（不变） | 读 A3(T1,Ctx0) | C13 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-
-Ctx0：末内部发射 C9，raw 完成 C13。
-
-#### precision=5 W8A8
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C4 | — | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C4 | 8'h30 | 读 A0(T1,Ctx0) | C9 | tmp捕获: R_slice → tmp |
-| C5 | 8'h30（不变） | 读 A1(T1,Ctx0) | C10 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-
-Ctx0：末内部发射 C5，raw 完成 C10。
-
-#### precision=6 W8A16
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C5 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C6 | — | A1(T1) |
-| C7 | — | A2(T1) |
-| C8 | — | A3(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C9 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C6 | 8'h30 | 读 A0(T1,Ctx0) | C11 | tmp捕获: R_slice → tmp |
-| C7 | 8'h30（不变） | 读 A1(T1,Ctx0) | C12 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C8 | 8'h30（不变） | 读 A2(T1,Ctx0) | C13 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C9 | 8'h30（不变） | 读 A3(T1,Ctx0) | C14 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-
-Ctx0：末内部发射 C9，raw 完成 C14。
-
-### A5 WS os=2 ws=2 as=1
-每 Tile K=128；每 Context 总 K=256。
-
-#### precision=0 W2A4
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C2 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C6 | Ctx1，wgt_raddr=8'h30 | A0(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C3 | 8'h20（不变） | 读 A0(T0,Ctx1) | C6 | tmp捕获: R_slice；下一拍 tmp 填充 Psum → tmp；P[1] |
-| C5 | 8'h30 | 读 A0(T1,Ctx0) | C8 | tmp捕获: R_slice；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-| C7 | 8'h30（不变） | 读 A0(T1,Ctx1) | C10 | tmp捕获: R_slice；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
-
-Ctx0：末内部发射 C5，raw 完成 C8；Ctx1：末内部发射 C7，raw 完成 C10。
-
-#### precision=1 W2A8
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | — | A1(T0) |
-| C6 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C7 | — | A1(T1) |
-| C9 | Ctx1，wgt_raddr=8'h30 | A0(T1) |
-| C10 | — | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C4 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C5 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C4 | 8'h20（不变） | 读 A0(T0,Ctx1) | C7 | tmp捕获: R_slice → tmp |
-| C5 | 8'h20（不变） | 读 A1(T0,Ctx1) | C8 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[1] |
-| C7 | 8'h30 | 读 A0(T1,Ctx0) | C10 | tmp捕获: R_slice → tmp |
-| C8 | 8'h30（不变） | 读 A1(T1,Ctx0) | C11 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-| C10 | 8'h30（不变） | 读 A0(T1,Ctx1) | C13 | tmp捕获: R_slice → tmp |
-| C11 | 8'h30（不变） | 读 A1(T1,Ctx1) | C14 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
-
-Ctx0：末内部发射 C8，raw 完成 C11；Ctx1：末内部发射 C11，raw 完成 C14。
-
-#### precision=2 W4A4
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C2 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C6 | Ctx1，wgt_raddr=8'h30 | A0(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C3 | 8'h20（不变） | 读 A0(T0,Ctx1) | C7 | tmp捕获: R_slice；下一拍 tmp 填充 Psum → tmp；P[1] |
-| C5 | 8'h30 | 读 A0(T1,Ctx0) | C9 | tmp捕获: R_slice；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-| C7 | 8'h30（不变） | 读 A0(T1,Ctx1) | C11 | tmp捕获: R_slice；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
-
-Ctx0：末内部发射 C5，raw 完成 C9；Ctx1：末内部发射 C7，raw 完成 C11。
-
-#### precision=3 W4A8
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | — | A1(T0) |
-| C6 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C7 | — | A1(T1) |
-| C9 | Ctx1，wgt_raddr=8'h30 | A0(T1) |
-| C10 | — | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C4 | 8'h20（不变） | 读 A0(T0,Ctx1) | C8 | tmp捕获: R_slice → tmp |
-| C5 | 8'h20（不变） | 读 A1(T0,Ctx1) | C9 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[1] |
-| C7 | 8'h30 | 读 A0(T1,Ctx0) | C11 | tmp捕获: R_slice → tmp |
-| C8 | 8'h30（不变） | 读 A1(T1,Ctx0) | C12 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-| C10 | 8'h30（不变） | 读 A0(T1,Ctx1) | C14 | tmp捕获: R_slice → tmp |
-| C11 | 8'h30（不变） | 读 A1(T1,Ctx1) | C15 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
-
-Ctx0：末内部发射 C8，raw 完成 C12；Ctx1：末内部发射 C11，raw 完成 C15。
-
-#### precision=4 W4A16
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C5 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C6 | — | A1(T0) |
-| C7 | — | A2(T0) |
-| C8 | — | A3(T0) |
-| C10 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C11 | — | A1(T1) |
-| C12 | — | A2(T1) |
-| C13 | — | A3(T1) |
-| C15 | Ctx1，wgt_raddr=8'h30 | A0(T1) |
-| C16 | — | A1(T1) |
-| C17 | — | A2(T1) |
-| C18 | — | A3(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C5 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C6 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C6 | 8'h20（不变） | 读 A0(T0,Ctx1) | C10 | tmp捕获: R_slice → tmp |
-| C7 | 8'h20（不变） | 读 A1(T0,Ctx1) | C11 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C8 | 8'h20（不变） | 读 A2(T0,Ctx1) | C12 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C9 | 8'h20（不变） | 读 A3(T0,Ctx1) | C13 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 tmp 填充 Psum → tmp；P[1] |
-| C11 | 8'h30 | 读 A0(T1,Ctx0) | C15 | tmp捕获: R_slice → tmp |
-| C12 | 8'h30（不变） | 读 A1(T1,Ctx0) | C16 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C13 | 8'h30（不变） | 读 A2(T1,Ctx0) | C17 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C14 | 8'h30（不变） | 读 A3(T1,Ctx0) | C18 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-| C16 | 8'h30（不变） | 读 A0(T1,Ctx1) | C20 | tmp捕获: R_slice → tmp |
-| C17 | 8'h30（不变） | 读 A1(T1,Ctx1) | C21 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C18 | 8'h30（不变） | 读 A2(T1,Ctx1) | C22 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C19 | 8'h30（不变） | 读 A3(T1,Ctx1) | C23 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
-
-Ctx0：末内部发射 C14，raw 完成 C18；Ctx1：末内部发射 C19，raw 完成 C23。
-
-#### precision=5 W8A8
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C3 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C4 | — | A1(T0) |
-| C6 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C7 | — | A1(T1) |
-| C9 | Ctx1，wgt_raddr=8'h30 | A0(T1) |
-| C10 | — | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C4 | 8'h20（不变） | 读 A0(T0,Ctx1) | C9 | tmp捕获: R_slice → tmp |
-| C5 | 8'h20（不变） | 读 A1(T0,Ctx1) | C10 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 tmp 填充 Psum → tmp；P[1] |
-| C7 | 8'h30 | 读 A0(T1,Ctx0) | C12 | tmp捕获: R_slice → tmp |
-| C8 | 8'h30（不变） | 读 A1(T1,Ctx0) | C13 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-| C10 | 8'h30（不变） | 读 A0(T1,Ctx1) | C15 | tmp捕获: R_slice → tmp |
-| C11 | 8'h30（不变） | 读 A1(T1,Ctx1) | C16 | tmp捕获前 fusion: tmp + (R_slice << 4)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
-
-Ctx0：末内部发射 C8，raw 完成 C13；Ctx1：末内部发射 C11，raw 完成 C16。
-
-#### precision=6 W8A16
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | — | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C5 | Ctx1，wgt_raddr=8'h20 | A0(T0) |
-| C6 | — | A1(T0) |
-| C7 | — | A2(T0) |
-| C8 | — | A3(T0) |
-| C10 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C11 | — | A1(T1) |
-| C12 | — | A2(T1) |
-| C13 | — | A3(T1) |
-| C15 | Ctx1，wgt_raddr=8'h30 | A0(T1) |
-| C16 | — | A1(T1) |
-| C17 | — | A2(T1) |
-| C18 | — | A3(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0,Ctx0) | C6 | tmp捕获: R_slice → tmp |
-| C2 | 8'h20（不变） | 读 A1(T0,Ctx0) | C7 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C3 | 8'h20（不变） | 读 A2(T0,Ctx0) | C8 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C4 | 8'h20（不变） | 读 A3(T0,Ctx0) | C9 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 tmp 填充 Psum → tmp；P[0] |
-| C6 | 8'h20（不变） | 读 A0(T0,Ctx1) | C11 | tmp捕获: R_slice → tmp |
-| C7 | 8'h20（不变） | 读 A1(T0,Ctx1) | C12 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C8 | 8'h20（不变） | 读 A2(T0,Ctx1) | C13 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C9 | 8'h20（不变） | 读 A3(T0,Ctx1) | C14 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 tmp 填充 Psum → tmp；P[1] |
-| C11 | 8'h30 | 读 A0(T1,Ctx0) | C16 | tmp捕获: R_slice → tmp |
-| C12 | 8'h30（不变） | 读 A1(T1,Ctx0) | C17 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C13 | 8'h30（不变） | 读 A2(T1,Ctx0) | C18 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C14 | 8'h30（不变） | 读 A3(T1,Ctx0) | C19 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 acc: P[0] + tmp → tmp；P[0]；输出 |
-| C16 | 8'h30（不变） | 读 A0(T1,Ctx1) | C21 | tmp捕获: R_slice → tmp |
-| C17 | 8'h30（不变） | 读 A1(T1,Ctx1) | C22 | tmp捕获前 fusion: tmp + (R_slice << 4) → tmp |
-| C18 | 8'h30（不变） | 读 A2(T1,Ctx1) | C23 | tmp捕获前 fusion: tmp + (R_slice << 8) → tmp |
-| C19 | 8'h30（不变） | 读 A3(T1,Ctx1) | C24 | tmp捕获前 fusion: tmp + (R_slice << 12)；下一拍 acc: P[1] + tmp → tmp；P[1]；输出 |
-
-Ctx0：末内部发射 C14，raw 完成 C19；Ctx1：末内部发射 C19，raw 完成 C24。
-
-### A6 AS os=2 ws=1 as=2
-每 Tile K=128；每 Context 总 K=256。
-
-#### precision=0 W2A4
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | — |
-| C3 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C4 | Ctx1，wgt_raddr=8'h31 | — |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C5 | 填充: R_slice → P[1] |
-| C4 | 8'h30 | 读 A0(T1)，Ctx0复用 | C7 | acc: P[0] + R_slice → P[0]；输出 |
-| C5 | 8'h31 | 读 A0(T1)，Ctx1复用 | C8 | acc: P[1] + R_slice → P[1]；输出 |
-
-Ctx0：末内部发射 C4，raw 完成 C7；Ctx1：末内部发射 C5，raw 完成 C8。
-
-#### precision=1 W2A8
-split_mask=7'h07，EN=8'h55，OC_MASK=32'hFFFF_FFFF；D=3T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-| C5 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C6 | Ctx1，wgt_raddr=8'h31 | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C4 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C5 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C6 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C7 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C6 | 8'h30 | 读 A0(T1)，Ctx0复用 | C9 | acc: P[0] + R_slice → P[0] |
-| C7 | 8'h31 | 读 A0(T1)，Ctx1复用 | C10 | acc: P[1] + R_slice → P[1] |
-| C8 | 8'h30 | 读 A1(T1)，Ctx0复用 | C11 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
-| C9 | 8'h31 | 读 A1(T1)，Ctx1复用 | C12 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
-
-Ctx0：末内部发射 C8，raw 完成 C11；Ctx1：末内部发射 C9，raw 完成 C12。
-
-#### precision=2 W4A4
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | — |
-| C3 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C4 | Ctx1，wgt_raddr=8'h31 | — |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1] |
-| C4 | 8'h30 | 读 A0(T1)，Ctx0复用 | C8 | acc: P[0] + R_slice → P[0]；输出 |
-| C5 | 8'h31 | 读 A0(T1)，Ctx1复用 | C9 | acc: P[1] + R_slice → P[1]；输出 |
-
-Ctx0：末内部发射 C4，raw 完成 C8；Ctx1：末内部发射 C5，raw 完成 C9。
-
-#### precision=3 W4A8
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-| C5 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C6 | Ctx1，wgt_raddr=8'h31 | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C7 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C8 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C6 | 8'h30 | 读 A0(T1)，Ctx0复用 | C10 | acc: P[0] + R_slice → P[0] |
-| C7 | 8'h31 | 读 A0(T1)，Ctx1复用 | C11 | acc: P[1] + R_slice → P[1] |
-| C8 | 8'h30 | 读 A1(T1)，Ctx0复用 | C12 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
-| C9 | 8'h31 | 读 A1(T1)，Ctx1复用 | C13 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
-
-Ctx0：末内部发射 C8，raw 完成 C12；Ctx1：末内部发射 C9，raw 完成 C13。
-
-#### precision=4 W4A16
-split_mask=7'h01，EN=8'h33，OC_MASK=32'hFFFF_FFFF；D=4T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C9 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C10 | Ctx1，wgt_raddr=8'h31 | A1(T1) |
-| C11 | — | A2(T1) |
-| C12 | — | A3(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C5 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C6 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C7 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C8 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C5 | 8'h20 | 读 A2(T0)，Ctx0复用 | C9 | fusion: P[0] + (R_slice << 8) → P[0] |
-| C6 | 8'h21 | 读 A2(T0)，Ctx1复用 | C10 | fusion: P[1] + (R_slice << 8) → P[1] |
-| C7 | 8'h20 | 读 A3(T0)，Ctx0复用 | C11 | fusion: P[0] + (R_slice << 12) → P[0] |
-| C8 | 8'h21 | 读 A3(T0)，Ctx1复用 | C12 | fusion: P[1] + (R_slice << 12) → P[1] |
-| C10 | 8'h30 | 读 A0(T1)，Ctx0复用 | C14 | acc: P[0] + R_slice → P[0] |
-| C11 | 8'h31 | 读 A0(T1)，Ctx1复用 | C15 | acc: P[1] + R_slice → P[1] |
-| C12 | 8'h30 | 读 A1(T1)，Ctx0复用 | C16 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C13 | 8'h31 | 读 A1(T1)，Ctx1复用 | C17 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C14 | 8'h30 | 读 A2(T1)，Ctx0复用 | C18 | fusion: P[0] + (R_slice << 8) → P[0] |
-| C15 | 8'h31 | 读 A2(T1)，Ctx1复用 | C19 | fusion: P[1] + (R_slice << 8) → P[1] |
-| C16 | 8'h30 | 读 A3(T1)，Ctx0复用 | C20 | fusion: P[0] + (R_slice << 12) → P[0]；输出 |
-| C17 | 8'h31 | 读 A3(T1)，Ctx1复用 | C21 | fusion: P[1] + (R_slice << 12) → P[1]；输出 |
-
-Ctx0：末内部发射 C16，raw 完成 C20；Ctx1：末内部发射 C17，raw 完成 C21。
-
-#### precision=5 W8A8
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-| C5 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C6 | Ctx1，wgt_raddr=8'h31 | A1(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C7 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C8 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C9 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C6 | 8'h30 | 读 A0(T1)，Ctx0复用 | C11 | acc: P[0] + R_slice → P[0] |
-| C7 | 8'h31 | 读 A0(T1)，Ctx1复用 | C12 | acc: P[1] + R_slice → P[1] |
-| C8 | 8'h30 | 读 A1(T1)，Ctx0复用 | C13 | fusion: P[0] + (R_slice << 4) → P[0]；输出 |
-| C9 | 8'h31 | 读 A1(T1)，Ctx1复用 | C14 | fusion: P[1] + (R_slice << 4) → P[1]；输出 |
-
-Ctx0：末内部发射 C8，raw 完成 C13；Ctx1：末内部发射 C9，raw 完成 C14。
-
-#### precision=6 W8A16
-split_mask=7'h00，EN=8'h0F，OC_MASK=32'hFFFF_FFFF；D=5T。
-
-外部输入：
-
-| 外部周期 | i_cmd 与共享权重地址 | ACT |
-|---|---|---|
-| C0 | Ctx0，wgt_raddr=8'h20 | A0(T0) |
-| C1 | Ctx1，wgt_raddr=8'h21 | A1(T0) |
-| C2 | — | A2(T0) |
-| C3 | — | A3(T0) |
-| C9 | Ctx0，wgt_raddr=8'h30 | A0(T1) |
-| C10 | Ctx1，wgt_raddr=8'h31 | A1(T1) |
-| C11 | — | A2(T1) |
-| C12 | — | A3(T1) |
-
-内部发射与运算：
-
-| 内部发射周期 | wgt_raddr | ACT buffer 读出 | 运算写回 | 操作及目标 |
-|---|---|---|---|---|
-| C1 | 8'h20 | 读 A0(T0)，Ctx0复用 | C6 | 填充: R_slice → P[0] |
-| C2 | 8'h21 | 读 A0(T0)，Ctx1复用 | C7 | 填充: R_slice → P[1] |
-| C3 | 8'h20 | 读 A1(T0)，Ctx0复用 | C8 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C4 | 8'h21 | 读 A1(T0)，Ctx1复用 | C9 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C5 | 8'h20 | 读 A2(T0)，Ctx0复用 | C10 | fusion: P[0] + (R_slice << 8) → P[0] |
-| C6 | 8'h21 | 读 A2(T0)，Ctx1复用 | C11 | fusion: P[1] + (R_slice << 8) → P[1] |
-| C7 | 8'h20 | 读 A3(T0)，Ctx0复用 | C12 | fusion: P[0] + (R_slice << 12) → P[0] |
-| C8 | 8'h21 | 读 A3(T0)，Ctx1复用 | C13 | fusion: P[1] + (R_slice << 12) → P[1] |
-| C10 | 8'h30 | 读 A0(T1)，Ctx0复用 | C15 | acc: P[0] + R_slice → P[0] |
-| C11 | 8'h31 | 读 A0(T1)，Ctx1复用 | C16 | acc: P[1] + R_slice → P[1] |
-| C12 | 8'h30 | 读 A1(T1)，Ctx0复用 | C17 | fusion: P[0] + (R_slice << 4) → P[0] |
-| C13 | 8'h31 | 读 A1(T1)，Ctx1复用 | C18 | fusion: P[1] + (R_slice << 4) → P[1] |
-| C14 | 8'h30 | 读 A2(T1)，Ctx0复用 | C19 | fusion: P[0] + (R_slice << 8) → P[0] |
-| C15 | 8'h31 | 读 A2(T1)，Ctx1复用 | C20 | fusion: P[1] + (R_slice << 8) → P[1] |
-| C16 | 8'h30 | 读 A3(T1)，Ctx0复用 | C21 | fusion: P[0] + (R_slice << 12) → P[0]；输出 |
-| C17 | 8'h31 | 读 A3(T1)，Ctx1复用 | C22 | fusion: P[1] + (R_slice << 12) → P[1]；输出 |
-
-Ctx0：末内部发射 C16，raw 完成 C21；Ctx1：末内部发射 C17，raw 完成 C22。
-
-## 附录 B 规范 split 编码
-
-以下按 bit6..bit0 给出26种规范编码，K 限制还需结合 precision、EN 和 OC：
-
-`0000000`、`0000001`、`0000011`、`0000101`、`0000111`、`0001011`、`0001111`、`0010011`、`0010111`、`0011011`、`0011111`、`0100101`、`0100111`、`0101111`、`0110111`、`0111111`、`1000101`、`1000111`、`1001111`、`1010111`、`1011111`、`1100101`、`1100111`、`1101111`、`1110111`、`1111111`
-
-Requant的ZP参数均为生成端已round的signed INT32输出域补偿。per-tensor在CIM饱和INT8输出后仅由TB按channel扩位加ZP并再次clip，不再round；per-channel在RTL内先round、加ZP、再clip，TB不重复补偿。完整公式和参考代码转换见[Requant说明](docs/Cluster_Requant.md)及[Block Spec第6.2节](docs/CIM_Block_Spec.docx)。
+| [macro/tb/tb_SingleMacro.sv](RTL/macro/tb/tb_SingleMacro.sv) | `macro_gate0`、`macro_gate1`、`macro_negative_*` | Macro 算术、门控开关及 15 类协议负向测试 |
+| [cluster/tb/tb_Cluster.sv](RTL/cluster/tb/tb_Cluster.sv) | `cluster_default` | 七种精度、raw 算术与标准时序 |
+| 同上 | `sram_rw`、`sram_response`、`sram_*conflict` | SRAM 掩码、同步读响应及读写/计算冲突拒绝 |
+| 同上 | `oc_merge`、`act_buffer`、`full_act`、`mixed_context` | OC 合并、ACT 容量、4096bit ACT 及混合 Context |
+| 同上 | `input_overlap`、`context_stress`、`os_count_limit` | 接收/发射重叠、复用压力与 OS 边界 |
+| 同上 | `requant_integration`、`requant_channel`、`requant_context` | 量化集成、逐通道参数和 Context 映射 |
+| 同上 | `requant_buffers`、`requant_a4_address_bypass`、`requant_full_shift` | 固定 Context 槽位、A4 地址旁路、完整 INT10 shift |
+| 同上 | `requant_reset`、`requant_boundary`、`requant_empty_batch` | 异步复位、批次边界、空批次到有效批次 |
+| 同上 | `gate_equiv_*` | 门控/旁路两套 Cluster 同沿结果与时序比较 |
+| 同上 | `requant_negative_*`、`zero_count_*`、`as17_*`、`as64_*`、`context_capacity_*`、`address_capacity_*`、`metadata_capacity_*` | 非法量化配置、零 count 及各类容量越界拒绝 |
+| [cluster/tb/tb_ClusterReduceTree.sv](RTL/cluster/tb/tb_ClusterReduceTree.sv) | `reduce_tree` | 208 种归约树、mask 和门控检查 |
+| [cluster/tb/tb_ClusterRequant.sv](RTL/cluster/tb/tb_ClusterRequant.sv) | `requant_unit` | Python 整数 golden 与四通道映射 |
+| [cluster/tb/tb_Cluster_GEMM_OS1_WS32_W8A16.sv](RTL/cluster/tb/tb_Cluster_GEMM_OS1_WS32_W8A16.sv) | `gemm_os1_ws32_as1_w8a16_{tensor,channel}` | M32 K128 N16，WS32 权重复用 |
+| [cluster/tb/tb_Cluster_GEMM_OS2_AS4_W8A16.sv](RTL/cluster/tb/tb_Cluster_GEMM_OS2_AS4_W8A16.sv) | `gemm_os2_ws1_as4_w8a16_{tensor,channel}`、`as_context_*` | M32 K512 N16，跨 Tile 累加、AS4 参数及 5 个负向测试 |
+| [cluster/tb/tb_Cluster_GEMM_OS1_WS1_AS8_W8A16.sv](RTL/cluster/tb/tb_Cluster_GEMM_OS1_WS1_AS8_W8A16.sv) | `gemm_os1_ws1_as8_w8a16_{tensor,channel}` | M8 K256 N32，AS8 门控、保持及 Command 切换 |
+| [cluster/tb/tb_Cluster_GEMM_W4A16_HighGroup.sv](RTL/cluster/tb/tb_Cluster_GEMM_W4A16_HighGroup.sv) | `gemm_os1_ws8_as1_w4a16_high_group_{tensor,channel}` | W4A16 高归约组及通道映射 |
+| [cluster/tb/tb_Cluster_GEMM_W2A8_HighGroup.sv](RTL/cluster/tb/tb_Cluster_GEMM_W2A8_HighGroup.sv) | `gemm_os1_ws8_as1_w2a8_high_group_{tensor,channel}` | W2A8 高归约组及通道映射 |
+| [cluster/tb/tb_Cluster_GEMM_W4A16_N6_Tail.sv](RTL/cluster/tb/tb_Cluster_GEMM_W4A16_N6_Tail.sv) | `gemm_os1_ws8_as1_w4a16_n6_tail_{tensor,channel}` | N=6 尾块屏蔽与输出完整性 |
+| [cluster/tb/tb_Cluster_GEMM_W4A16_RoundClip.sv](RTL/cluster/tb/tb_Cluster_GEMM_W4A16_RoundClip.sv) | `gemm_os1_ws12_as1_w4a16_round_clip_channel` | 逐通道量化的舍入、正负饱和 |
+
+负向用例只有命中预期 Fatal 才算通过，统一以 `make run` 的检查结果为准。完整用例表见 [VCS README](vcs-rtl/README.md)，驱动与 scoreboard 分工见 [TB 指南](docs/Testbench_Guide.md)。
+
+## 详细文档
+
+| 文档 | 需要时查看 |
+|---|---|
+| [文档索引](docs/README.md) | 全部接口、设计与验证文档 |
+| [辅助文件索引](docs/Source_Map.md) | TB include、Python 脚本、共用主体及数据用途 |
+| [标准逐拍表](docs/Cluster_Timing_Tables.md) | 原 README 中的 42 组时序表与 26 种 split 编码 |
+| [验证清单](docs/Cluster_Verification.md) | 功能覆盖、检查条件及历史验证记录 |

@@ -107,7 +107,7 @@ OUTPUT_PSUM_DEPTH
 
 ## 4. 文件列表（.f）
 
-12 个 `.f` 都放在 `vcs-rtl/` 下，里面的路径也相对该目录：
+13 个 `.f` 都放在 `vcs-rtl/` 下，里面的路径也相对该目录：
 
 | 清单 | 内容 |
 |---|---|
@@ -157,141 +157,143 @@ make vcd   CASE=gemm_os2_ws1_as4_w8a16_channel  # 导出 VCD
 <details>
 <summary>展开查看全部 135 条</summary>
 
-- `cluster_default`：Raw arithmetic and standard timing；成功标志 `PASS configurations=`。
-- `sram_rw`：Regular SRAM read write and OC masks；成功标志 `PASS sram_rw`。
-- `sram_write_compute_conflict`：Reject regular SRAM write during active compute；预期拒绝，匹配 `CLUSTER_SRAM_PROTOCOL: regular access overlaps compute`。
-- `sram_compute_conflict`：Reject regular SRAM read with compute Command；预期拒绝，匹配 `CLUSTER_SRAM_PROTOCOL: regular access overlaps compute`。
-- `macro_gate0`：SingleMacro clock gating 0；成功标志 `PASS clock_gating=`。
-- `macro_gate1`：SingleMacro clock gating 1；成功标志 `PASS clock_gating=`。
-- `macro_negative_precision`：Reject precision；预期拒绝，匹配 `SM_PROTOCOL: illegal precision/phase`。
-- `macro_negative_phase`：Reject phase；预期拒绝，匹配 `SM_PROTOCOL: illegal precision/phase`。
-- `macro_negative_hold_invalid`：Reject hold invalid；预期拒绝，匹配 `SM_PROTOCOL: reuse invalid hold`。
-- `macro_negative_uninitialized`：Reject uninitialized；预期拒绝，匹配 `SM_PROTOCOL: read uninitialized row`。
-- `macro_negative_masked_uninitialized`：Reject masked uninitialized；预期拒绝，匹配 `SM_PROTOCOL: read uninitialized row`。
-- `macro_negative_masked_uninitialized_reuse`：Reject masked uninitialized reuse；预期拒绝，匹配 `SM_PROTOCOL: read uninitialized row`。
-- `macro_negative_hold_address`：Reject hold address；预期拒绝，匹配 `SM_PROTOCOL: reuse address mismatch`。
-- `macro_negative_hold_address_pending`：Reject hold address pending；预期拒绝，匹配 `SM_PROTOCOL: reuse address mismatch`。
-- `macro_negative_unknown_write`：Reject unknown write；预期拒绝，匹配 `SM_PROTOCOL: unknown write input`。
-- `macro_negative_unknown_activation`：Reject unknown activation；预期拒绝，匹配 `SM_PROTOCOL: unknown compute input`。
-- `macro_negative_unknown_control`：Reject unknown control；预期拒绝，匹配 `SM_PROTOCOL: unknown compute input`。
-- `macro_negative_read_write`：Reject read write；预期拒绝，匹配 `SM_PROTOCOL: simultaneous read/write`。
-- `macro_negative_write_busy`：Reject write busy；预期拒绝，匹配 `SM_PROTOCOL: write before pipeline drain`。
-- `macro_negative_hold_after_write`：Reject hold after write；预期拒绝，匹配 `SM_PROTOCOL: reuse invalid hold`。
-- `macro_negative_hold_after_reset`：Reject hold after reset；预期拒绝，匹配 `SM_PROTOCOL: reuse invalid hold`。
-- `requant_unit`：Integer quantization arithmetic and four OC mapping；成功标志 `PASS requant_unit`。
-- `requant_negative_as17_capacity`：Reject Requant as17 capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `requant_negative_mode`：Reject Requant mode；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: unknown configuration`。
-- `requant_negative_unknown`：Reject Requant unknown；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: unknown configuration`。
-- `requant_negative_conv_group`：Reject Requant conv group；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group`。
-- `requant_negative_zp_group`：Reject Requant zp group；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group`。
-- `requant_integration`：requant integration；成功标志 `PASS requant_integration cases=168`。
-- `requant_channel`：requant channel；成功标志 `PASS requant_channel cases=1536`。
-- `requant_context`：requant context；成功标志 `PASS requant_context cases=4`。
-- `requant_reset`：requant reset；成功标志 `PASS requant_reset`。
-- `requant_boundary`：requant boundary；成功标志 `PASS requant_boundary`。
-- `os_count_limit`：os count limit；成功标志 `PASS os_count_limit cases=12`。
-- `oc_merge`：oc merge；成功标志 `PASS oc_merge_leftmost cases=288`。
-- `act_buffer`：act buffer；成功标志 `PASS act_buffer_capacity cases=280`。
-- `full_act`：full act；成功标志 `PASS full_act_4096 cases=12`。
-- `mixed_context`：mixed context；成功标志 `PASS mixed_context cases=24`。
-- `input_overlap`：input overlap；成功标志 `PASS input_overlap cases=168`。
-- `context_stress`：context stress；成功标志 `PASS context_stress cases=224`。
-- `requant_full_shift`：Full INT10 AS Context parameters and OC gating；成功标志 `PASS context_buffers cases=77`。
-- `requant_empty_batch`：Seven precisions empty batch to live batch clock hold；成功标志 `PASS empty_batch cases=7`。
-- `requant_buffers`：Seven precisions AS16/AS8 fixed slots and A4 weight bypass；成功标志 `PASS context_buffers cases=77`。
-- `requant_a4_address_bypass`：A4 AS16 with one weight address register；成功标志 `PASS context_buffers cases=22`。
-- `as17_p0_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p0_s0_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p0_s1_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p0_s1_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p1_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p1_s0_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p1_s1_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p1_s1_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p2_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p2_s0_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p2_s1_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p2_s1_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p3_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p3_s0_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p3_s1_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p3_s1_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p4_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p4_s0_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p4_s1_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p4_s1_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p5_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p5_s0_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p5_s1_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p5_s1_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p6_s0_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p6_s0_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p6_s1_os1`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as17_p6_s1_os2`：Reject AS17 fixed-slot capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `reduce_tree`：All reduction trees and clock gating；成功标志 `PASS reduce_clock_gating cases=208`。
-- `zero_count_0`：Reject zero count field 0；预期拒绝，匹配 `CLUSTER_COUNT_RANGE: counts must be 1..255`。
-- `zero_count_1`：Reject zero count field 1；预期拒绝，匹配 `CLUSTER_COUNT_RANGE: counts must be 1..255`。
-- `zero_count_2`：Reject zero count field 2；预期拒绝，匹配 `CLUSTER_COUNT_RANGE: counts must be 1..255`。
-- `context_capacity_p0_s0`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p0_s1`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p1_s0`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p1_s1`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p2_s0`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p2_s1`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p3_s0`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p3_s1`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p4_s0`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p4_s1`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p5_s0`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p5_s1`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p6_s0`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `context_capacity_p6_s1`：Reject AS64 with OS2 and Psum depth16；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `address_capacity_s0`：Reject AS16 address capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded`。
-- `address_capacity_s1`：Reject AS16 address capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded`。
-- `metadata_capacity_s0`：Reject AS16 metadata capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: context metadata exceeded`。
-- `metadata_capacity_s1`：Reject AS16 metadata capacity；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: context metadata exceeded`。
-- `gemm_os1_ws1_as8_w8a16_tensor`：W8A16 M8 K256 N32 OS1 WS1 AS8，tensor，buffer 门控与 Command 切换；成功标志 `PASS gemm_os1_as8_w8a16 M=8 K=256 N=32`，并要求 `PASS as8_gate_switch`。
-- `gemm_os1_ws32_as1_w8a16_tensor`：W8A16 M32 K128 N16 OS1 WS32 AS1 tensor；成功标志 `PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16`。
-- `gemm_os2_ws1_as4_w8a16_tensor`：W8A16 M32 K512 N16 OS2 WS1 AS4 tensor；成功标志 `PASS gemm_os2_as4_w8a16 M=32 K=512 N=16`。
-- `gemm_os1_ws1_as8_w8a16_channel`：W8A16 M8 K256 N32 OS1 WS1 AS8，channel，buffer 门控与 Command 切换；成功标志 `PASS gemm_os1_as8_w8a16 M=8 K=256 N=32`，并要求 `PASS as8_gate_switch`。
-- `gemm_os1_ws32_as1_w8a16_channel`：W8A16 M32 K128 N16 OS1 WS32 AS1 channel；成功标志 `PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16`。
-- `gemm_os2_ws1_as4_w8a16_channel`：W8A16 M32 K512 N16 OS2 WS1 AS4 channel；成功标志 `PASS gemm_os2_as4_w8a16 M=32 K=512 N=16`。
-- `as_context_capacity`：Reject as context capacity；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
-- `as_context_capacity_default`：Reject as context capacity default；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded`。
-- `as_context_zp_reload`：Reject as context zp reload；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles`。
-- `as_context_scale_reload`：Reject as context scale reload；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
-- `as_context_tensor_scale_reload`：Reject as context tensor scale reload；预期拒绝，匹配 `CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles`。
-- `gemm_os1_ws8_as1_w4a16_high_group_tensor`：OS1 WS8 AS1 w4a16 high group；成功标志 `PASS gemm_w4a16_high_group`。
-- `gemm_os1_ws8_as1_w4a16_high_group_channel`：OS1 WS8 AS1 w4a16 high group；成功标志 `PASS gemm_w4a16_high_group`。
-- `gemm_os1_ws8_as1_w2a8_high_group_tensor`：OS1 WS8 AS1 w2a8 high group；成功标志 `PASS gemm_w2a8_high_group`。
-- `gemm_os1_ws8_as1_w2a8_high_group_channel`：OS1 WS8 AS1 w2a8 high group；成功标志 `PASS gemm_w2a8_high_group`。
-- `gemm_os1_ws8_as1_w4a16_n6_tail_tensor`：OS1 WS8 AS1 w4a16 n6 tail；成功标志 `PASS gemm_w4a16_n6_tail`。
-- `gemm_os1_ws8_as1_w4a16_n6_tail_channel`：OS1 WS8 AS1 w4a16 n6 tail；成功标志 `PASS gemm_w4a16_n6_tail`。
-- `gemm_os1_ws12_as1_w4a16_round_clip_channel`：OS1 WS12 AS1 w4a16 round clip；成功标志 `PASS gemm_w4a16_round_clip`。
-- `gate_equiv_default`：Gated/ungated Cluster same-edge comparison: default；成功标志 `PASS configurations=`。
-- `gate_equiv_requant_buffers`：Gated/ungated Cluster same-edge comparison: requant_buffers；成功标志 `PASS context_buffers cases=77`。
-- `gate_equiv_requant_channel`：Gated/ungated Cluster same-edge comparison: requant_channel；成功标志 `PASS requant_channel cases=1536`。
-- `gate_equiv_context_stress`：Gated/ungated Cluster same-edge comparison: context_stress；成功标志 `PASS context_stress cases=224`。
-- `gate_equiv_input_overlap`：Gated/ungated Cluster same-edge comparison: input_overlap；成功标志 `PASS input_overlap cases=168`。
-- `gate_equiv_sram`：Gated/ungated Cluster same-edge comparison: sram；成功标志 `PASS sram_rw`。
-- `gate_equiv_requant_reset`：Gated/ungated Cluster same-edge comparison: requant_reset；成功标志 `PASS requant_reset`。
-- `gate_equiv_requant_boundary`：Gated/ungated Cluster same-edge comparison: requant_boundary；成功标志 `PASS requant_boundary`。
-- `as64_p0_s0_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p0_s1_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p1_s0_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p1_s1_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p2_s0_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p2_s1_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p3_s0_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p3_s1_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p4_s0_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p4_s1_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p5_s0_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p5_s1_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p6_s0_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `as64_p6_s1_os1`：Reject AS64 with OS1；预期拒绝，匹配 `CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth`。
-- `sram_response`：Synchronous read valid and sampled Macro response；成功标志 `PASS sram_response reads=32`。
-- `gate_equiv_sram_response`：Read response gated/ungated comparison；成功标志 `PASS sram_response reads=32`。
+| CASE | 检查内容 | 判定方式 / 标志 |
+|---|---|---|
+| `cluster_default` | Raw arithmetic and standard timing | 正向：`PASS configurations=` |
+| `sram_rw` | Regular SRAM read write and OC masks | 正向：`PASS sram_rw` |
+| `sram_write_compute_conflict` | Reject regular SRAM write during active compute | 预期拒绝：`CLUSTER_SRAM_PROTOCOL: regular access overlaps compute` |
+| `sram_compute_conflict` | Reject regular SRAM read with compute Command | 预期拒绝：`CLUSTER_SRAM_PROTOCOL: regular access overlaps compute` |
+| `macro_gate0` | SingleMacro clock gating 0 | 正向：`PASS clock_gating=` |
+| `macro_gate1` | SingleMacro clock gating 1 | 正向：`PASS clock_gating=` |
+| `macro_negative_precision` | Reject precision | 预期拒绝：`SM_PROTOCOL: illegal precision/phase` |
+| `macro_negative_phase` | Reject phase | 预期拒绝：`SM_PROTOCOL: illegal precision/phase` |
+| `macro_negative_hold_invalid` | Reject hold invalid | 预期拒绝：`SM_PROTOCOL: reuse invalid hold` |
+| `macro_negative_uninitialized` | Reject uninitialized | 预期拒绝：`SM_PROTOCOL: read uninitialized row` |
+| `macro_negative_masked_uninitialized` | Reject masked uninitialized | 预期拒绝：`SM_PROTOCOL: read uninitialized row` |
+| `macro_negative_masked_uninitialized_reuse` | Reject masked uninitialized reuse | 预期拒绝：`SM_PROTOCOL: read uninitialized row` |
+| `macro_negative_hold_address` | Reject hold address | 预期拒绝：`SM_PROTOCOL: reuse address mismatch` |
+| `macro_negative_hold_address_pending` | Reject hold address pending | 预期拒绝：`SM_PROTOCOL: reuse address mismatch` |
+| `macro_negative_unknown_write` | Reject unknown write | 预期拒绝：`SM_PROTOCOL: unknown write input` |
+| `macro_negative_unknown_activation` | Reject unknown activation | 预期拒绝：`SM_PROTOCOL: unknown compute input` |
+| `macro_negative_unknown_control` | Reject unknown control | 预期拒绝：`SM_PROTOCOL: unknown compute input` |
+| `macro_negative_read_write` | Reject read write | 预期拒绝：`SM_PROTOCOL: simultaneous read/write` |
+| `macro_negative_write_busy` | Reject write busy | 预期拒绝：`SM_PROTOCOL: write before pipeline drain` |
+| `macro_negative_hold_after_write` | Reject hold after write | 预期拒绝：`SM_PROTOCOL: reuse invalid hold` |
+| `macro_negative_hold_after_reset` | Reject hold after reset | 预期拒绝：`SM_PROTOCOL: reuse invalid hold` |
+| `requant_unit` | Integer quantization arithmetic and four OC mapping | 正向：`PASS requant_unit` |
+| `requant_negative_as17_capacity` | Reject Requant as17 capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `requant_negative_mode` | Reject Requant mode | 预期拒绝：`CLUSTER_REQUANT_CONFIG: unknown configuration` |
+| `requant_negative_unknown` | Reject Requant unknown | 预期拒绝：`CLUSTER_REQUANT_CONFIG: unknown configuration` |
+| `requant_negative_conv_group` | Reject Requant conv group | 预期拒绝：`CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group` |
+| `requant_negative_zp_group` | Reject Requant zp group | 预期拒绝：`CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group` |
+| `requant_integration` | requant integration | 正向：`PASS requant_integration cases=168` |
+| `requant_channel` | requant channel | 正向：`PASS requant_channel cases=1536` |
+| `requant_context` | requant context | 正向：`PASS requant_context cases=4` |
+| `requant_reset` | requant reset | 正向：`PASS requant_reset` |
+| `requant_boundary` | requant boundary | 正向：`PASS requant_boundary` |
+| `os_count_limit` | os count limit | 正向：`PASS os_count_limit cases=12` |
+| `oc_merge` | oc merge | 正向：`PASS oc_merge_leftmost cases=288` |
+| `act_buffer` | act buffer | 正向：`PASS act_buffer_capacity cases=280` |
+| `full_act` | full act | 正向：`PASS full_act_4096 cases=12` |
+| `mixed_context` | mixed context | 正向：`PASS mixed_context cases=24` |
+| `input_overlap` | input overlap | 正向：`PASS input_overlap cases=168` |
+| `context_stress` | context stress | 正向：`PASS context_stress cases=224` |
+| `requant_full_shift` | Full INT10 AS Context parameters and OC gating | 正向：`PASS context_buffers cases=77` |
+| `requant_empty_batch` | Seven precisions empty batch to live batch clock hold | 正向：`PASS empty_batch cases=7` |
+| `requant_buffers` | Seven precisions AS16/AS8 fixed slots and A4 weight bypass | 正向：`PASS context_buffers cases=77` |
+| `requant_a4_address_bypass` | A4 AS16 with one weight address register | 正向：`PASS context_buffers cases=22` |
+| `as17_p0_s0_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p0_s0_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p0_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p0_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p1_s0_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p1_s0_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p1_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p1_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p2_s0_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p2_s0_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p2_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p2_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p3_s0_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p3_s0_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p3_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p3_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p4_s0_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p4_s0_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p4_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p4_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p5_s0_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p5_s0_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p5_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p5_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p6_s0_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p6_s0_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p6_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as17_p6_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `reduce_tree` | All reduction trees and clock gating | 正向：`PASS reduce_clock_gating cases=208` |
+| `zero_count_0` | Reject zero count field 0 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..255` |
+| `zero_count_1` | Reject zero count field 1 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..255` |
+| `zero_count_2` | Reject zero count field 2 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..255` |
+| `context_capacity_p0_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p0_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p1_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p1_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p2_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p2_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p3_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p3_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p4_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p4_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p5_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p5_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p6_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `context_capacity_p6_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `address_capacity_s0` | Reject AS16 address capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded` |
+| `address_capacity_s1` | Reject AS16 address capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded` |
+| `metadata_capacity_s0` | Reject AS16 metadata capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: context metadata exceeded` |
+| `metadata_capacity_s1` | Reject AS16 metadata capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: context metadata exceeded` |
+| `gemm_os1_ws1_as8_w8a16_tensor` | W8A16 M8 K256 N32 OS1 WS1 AS8 buffer gating and command switches tensor | 正向：`PASS gemm_os1_as8_w8a16 M=8 K=256 N=32` |
+| `gemm_os1_ws32_as1_w8a16_tensor` | W8A16 M32 K128 N16 OS1 WS32 AS1 tensor | 正向：`PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16` |
+| `gemm_os2_ws1_as4_w8a16_tensor` | W8A16 M32 K512 N16 OS2 WS1 AS4 tensor | 正向：`PASS gemm_os2_as4_w8a16 M=32 K=512 N=16` |
+| `gemm_os1_ws1_as8_w8a16_channel` | W8A16 M8 K256 N32 OS1 WS1 AS8 buffer gating and command switches channel | 正向：`PASS gemm_os1_as8_w8a16 M=8 K=256 N=32` |
+| `gemm_os1_ws32_as1_w8a16_channel` | W8A16 M32 K128 N16 OS1 WS32 AS1 channel | 正向：`PASS gemm_os1_ws32_w8a16 M=32 K=128 N=16` |
+| `gemm_os2_ws1_as4_w8a16_channel` | W8A16 M32 K512 N16 OS2 WS1 AS4 channel | 正向：`PASS gemm_os2_as4_w8a16 M=32 K=512 N=16` |
+| `as_context_capacity` | Reject as context capacity | 预期拒绝：`CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded` |
+| `as_context_capacity_default` | Reject as context capacity default | 预期拒绝：`CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded` |
+| `as_context_zp_reload` | Reject as context zp reload | 预期拒绝：`CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles` |
+| `as_context_scale_reload` | Reject as context scale reload | 预期拒绝：`CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles` |
+| `as_context_tensor_scale_reload` | Reject as context tensor scale reload | 预期拒绝：`CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles` |
+| `gemm_os1_ws8_as1_w4a16_high_group_tensor` | OS1 WS8 AS1 w4a16 high group tensor | 正向：`PASS gemm_w4a16_high_group` |
+| `gemm_os1_ws8_as1_w4a16_high_group_channel` | OS1 WS8 AS1 w4a16 high group channel | 正向：`PASS gemm_w4a16_high_group` |
+| `gemm_os1_ws8_as1_w2a8_high_group_tensor` | OS1 WS8 AS1 w2a8 high group tensor | 正向：`PASS gemm_w2a8_high_group` |
+| `gemm_os1_ws8_as1_w2a8_high_group_channel` | OS1 WS8 AS1 w2a8 high group channel | 正向：`PASS gemm_w2a8_high_group` |
+| `gemm_os1_ws8_as1_w4a16_n6_tail_tensor` | OS1 WS8 AS1 w4a16 n6 tail tensor | 正向：`PASS gemm_w4a16_n6_tail` |
+| `gemm_os1_ws8_as1_w4a16_n6_tail_channel` | OS1 WS8 AS1 w4a16 n6 tail channel | 正向：`PASS gemm_w4a16_n6_tail` |
+| `gemm_os1_ws12_as1_w4a16_round_clip_channel` | OS1 WS12 AS1 w4a16 round clip channel | 正向：`PASS gemm_w4a16_round_clip` |
+| `gate_equiv_default` | Gated/ungated Cluster same-edge comparison: default | 正向：`PASS configurations=` |
+| `gate_equiv_requant_buffers` | Gated/ungated Cluster same-edge comparison: requant_buffers | 正向：`PASS context_buffers cases=77` |
+| `gate_equiv_requant_channel` | Gated/ungated Cluster same-edge comparison: requant_channel | 正向：`PASS requant_channel cases=1536` |
+| `gate_equiv_context_stress` | Gated/ungated Cluster same-edge comparison: context_stress | 正向：`PASS context_stress cases=224` |
+| `gate_equiv_input_overlap` | Gated/ungated Cluster same-edge comparison: input_overlap | 正向：`PASS input_overlap cases=168` |
+| `gate_equiv_sram` | Gated/ungated Cluster same-edge comparison: sram | 正向：`PASS sram_rw` |
+| `gate_equiv_requant_reset` | Gated/ungated Cluster same-edge comparison: requant_reset | 正向：`PASS requant_reset` |
+| `gate_equiv_requant_boundary` | Gated/ungated Cluster same-edge comparison: requant_boundary | 正向：`PASS requant_boundary` |
+| `as64_p0_s0_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p0_s1_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p1_s0_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p1_s1_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p2_s0_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p2_s1_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p3_s0_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p3_s1_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p4_s0_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p4_s1_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p5_s0_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p5_s1_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p6_s0_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `as64_p6_s1_os1` | Reject AS64 with OS1 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
+| `sram_response` | Synchronous read valid and sampled Macro response | 正向：`PASS sram_response reads=32` |
+| `gate_equiv_sram_response` | Read response gated/ungated comparison | 正向：`PASS sram_response reads=32` |
 
 </details>
 

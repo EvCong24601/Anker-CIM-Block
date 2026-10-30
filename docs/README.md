@@ -16,3 +16,6 @@
 - [Macro ACT分区门控](Cluster_ACT_Gating.md)：W2/W4/W8的512/256/128bit捕获、输入精度切换与门控验证。
 
 Per-tensor当前采用CIM先饱和到INT8、TB按channel加ZP后再次饱和的边界；per-channel保留CIM内加ZP。公式、兼容字段和golden分工见[Requant](Cluster_Requant.md)。
+
+- [源码辅助文件索引](Source_Map.md)：TB include、Python、数据与记录的用途。
+- [标准逐拍表](Cluster_Timing_Tables.md)：42组raw时序表及26种split编码，由generate_readme.py生成。

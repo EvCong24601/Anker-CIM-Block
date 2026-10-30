@@ -42,7 +42,7 @@
 - [x] Requant无效OC四个读操作数必须为0，包括旧output Psum及变化的参数Buffer输出；有效数值向量先独立验证，覆盖保持。
 - [x] 常规同步读：地址变化后、采样沿前，读数据保持；采样沿后返回新行，支持背靠背访问。`sram_rw`检查2618次写、8330次读、16种mask、复位保留及写后计算。
 - [x] CIM刷新在输入接受沿读权重，同沿寄存ACT；下一沿输出Macro结果，固定1T、II=1，Hold连续刷新/复用不增加周期。
-- [x] 独立Python模型核对140个Context输出、480次buffer运算和396次外部输入；根README的42组标准表、CSV及两份Word时序对应当前Slice→Context调度。标准W2/W4/W8末发射到raw分别3/4/5T，INT8再晚1T。
+- [x] 独立Python模型核对140个Context输出、480次buffer运算和396次外部输入；[标准逐拍文档](Cluster_Timing_Tables.md)中的42组标准表、CSV及两份Word时序对应当前Slice→Context调度。标准W2/W4/W8末发射到raw分别3/4/5T，INT8再晚1T。
 
 ## 复现与证据
 

@@ -1,0 +1,305 @@
+/* Interface-only Liberty model for cluster_top.
+ * Source: RTL/cluster/rtl/cluster_top.sv and cluster_pkg.sv.
+ * Packed structs are represented as packed vectors; first field is MSB.
+ * Nominal PVT is inherited from the supplied template, not characterized.
+ * Electrical limits below are user-supplied template placeholders, not characterized.
+ * Transition units: ns. Capacitance units: pF, per individual bus bit.
+ * Input pin capacitance: 0.001821 pF; not a total bus capacitance.
+ * No timing arcs or power characterization.
+ * Intended for interface/black-box linking; not a signoff timing model.
+ * RTL has no explicit power/ground ports; no PG pins are invented.
+ *
+ * cmd_i[106:99] = cim_os_cnt
+ * cmd_i[98:91] = cim_ws_cnt
+ * cmd_i[90:83] = cim_as_cnt
+ * cmd_i[82:76] = cim_reduce_split_mask
+ * cmd_i[75:68] = cim_macro_en_mask
+ * cmd_i[67:36] = cim_macro_oc_mask
+ * cmd_i[35:28] = cim_weight_raddr
+ * cmd_i[27:4] = cim_act_slot_sel
+ * cmd_i[3:1] = cim_precision
+ * cmd_i[0] = cim_signed_en
+ * requant_cfg_i[296] = conv_mode
+ * requant_cfg_i[295:168] = requant_multiplier
+ * requant_cfg_i[167:128] = requant_shift
+ * requant_cfg_i[127:0] = requant_zp
+ */
+library (cluster_top_interface) {
+  technology (cmos);
+  delay_model : table_lookup;
+  bus_naming_style : "%s[%d]";
+  time_unit : "1ns";
+  voltage_unit : "1V";
+  current_unit : "1mA";
+  pulling_resistance_unit : "1kohm";
+  capacitive_load_unit (1, pf);
+  nom_process : 1.0;
+  nom_voltage : 0.8;
+  nom_temperature : 25.0;
+  operating_conditions (tt0p8v25c) {
+    process : 1.0;
+    voltage : 0.8;
+    temperature : 25.0;
+  }
+  default_operating_conditions : tt0p8v25c;
+  input_threshold_pct_rise : 50.0;
+  input_threshold_pct_fall : 50.0;
+  output_threshold_pct_rise : 50.0;
+  output_threshold_pct_fall : 50.0;
+  slew_lower_threshold_pct_rise : 30.0;
+  slew_lower_threshold_pct_fall : 30.0;
+  slew_upper_threshold_pct_rise : 70.0;
+  slew_upper_threshold_pct_fall : 70.0;
+
+  type (bus_2) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 2;
+    bit_from : 1;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_4) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 4;
+    bit_from : 3;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_8) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 8;
+    bit_from : 7;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_32) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 32;
+    bit_from : 31;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_107) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 107;
+    bit_from : 106;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_256) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 256;
+    bit_from : 255;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_297) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 297;
+    bit_from : 296;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_1024) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 1024;
+    bit_from : 1023;
+    bit_to : 0;
+    downto : true;
+  }
+
+  cell (cluster_top) {
+    /* User-specified footprint: X = 1350 um, Y = 850 um.
+     * Area convention: square micrometers (um^2). */
+    area : 1147500;
+    is_macro_cell : true;
+    dont_use : true;
+
+    pin ("clock") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+      clock : true;
+    }
+
+    pin ("reset") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
+    bus ("cmd_i") {
+      bus_type : bus_107;
+      direction : input;
+      pin ("cmd_i[106:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    bus ("requant_cfg_i") {
+      bus_type : bus_297;
+      direction : input;
+      pin ("requant_cfg_i[296:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    pin ("cmd_valid_i") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
+    pin ("cmd_ready_o") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+    }
+
+    bus ("act_data_i") {
+      bus_type : bus_1024;
+      direction : input;
+      pin ("act_data_i[1023:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    pin ("sram_cs_en") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
+    pin ("sram_wr_en") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
+    pin ("sram_macro_group") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
+    bus ("sram_bank_sel") {
+      bus_type : bus_2;
+      direction : input;
+      pin ("sram_bank_sel[1:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    bus ("sram_row_addr") {
+      bus_type : bus_8;
+      direction : input;
+      pin ("sram_row_addr[7:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    bus ("sram_wmask") {
+      bus_type : bus_4;
+      direction : input;
+      pin ("sram_wmask[3:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    bus ("sram_wrdata") {
+      bus_type : bus_1024;
+      direction : input;
+      pin ("sram_wrdata[1023:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    bus ("sram_rd_data") {
+      bus_type : bus_1024;
+      direction : output;
+      pin ("sram_rd_data[1023:0]") {
+        direction : output;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        max_capacitance : 0.287100;
+        min_capacitance : 0.000150;
+      }
+    }
+
+    pin ("sram_rd_valid") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+    }
+
+    bus ("requant_data_o") {
+      bus_type : bus_256;
+      direction : output;
+      pin ("requant_data_o[255:0]") {
+        direction : output;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        max_capacitance : 0.287100;
+        min_capacitance : 0.000150;
+      }
+    }
+
+    bus ("requant_valid_o") {
+      bus_type : bus_32;
+      direction : output;
+      pin ("requant_valid_o[31:0]") {
+        direction : output;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        max_capacitance : 0.287100;
+        min_capacitance : 0.000150;
+      }
+    }
+  }
+}
