@@ -86,6 +86,8 @@ OS 表示跨 K Tile 累加，WS 表示权重复用多个 Context，AS 表示激�
 
 正式结果为 `requant_data_o` / `requant_valid_o`，每拍最多 4 个有效 OC，无输出反压；INT8 比内部 raw 晚 1T。per-tensor 的逐 channel ZP 修正在 TB 完成，per-channel 在 DUT 内加 ZP，详见量化说明。raw signed32 仅供 TB 观察，中间累加需满足 signed32 范围。
 
+**Requant 实现状态**：[`ClusterRequant.sv`](RTL/cluster/rtl/ClusterRequant.sv) 内部为纯组合逻辑，没有时钟、数据寄存器或算术流水；乘法、可变移位、舍入、加 ZP 和饱和处于同一组合路径。INT8 输出寄存器位于 `cluster_top`，使输出比 raw 晚 1T。普通范围仍使用组合可变移位；大 shift 已有精确阈值简化（`shift≥32` 或 `shift≤−64`），因此不能称为完全没有移位优化。当前未完成面向目标工艺的综合、STA 及面积验证，组合路径是否满足目标频率仍需确认。
+
 ## TB 与用例
 
 以下 `CASE` 均可用 `make run CASE=<名称>` 执行。`{tensor,channel}` 表示两个独立用例后缀；`*` 表示一组用例，完整名字用 `make list` 查看。

@@ -8,6 +8,8 @@ Cluster内部保存raw signed32，正式结果由Requant端口输出。Requant�
 
 tmp/Psum存储的raw视图 → 四通道组合Requant → INT8输出寄存器。raw没有独立的数据寄存器，仅raw valid为发布事件；raw仅在valid时有观察合同。量化valid严格比对应raw valid晚一拍，没有内部算术流水、FIFO或反压。仅全部slice和OS Tile完成后的最终raw量化一次；不改变tmp/Psum历史。无valid的lane保持，复位清零并取消待输出结果。
 
+Requant实现状态：ClusterRequant内部为纯组合逻辑，没有时钟、数据寄存器或算术流水；乘法、可变移位、舍入、加ZP与饱和处于同一组合路径。INT8输出寄存器位于cluster_top，使输出相对raw晚1T。普通移位范围仍采用组合可变移位；极大shift已有精确阈值简化，并非完全没有移位优化。当前未完成面向目标工艺的综合、STA及面积验证，不能据此认定组合路径满足目标频率。
+
 reset 高有效、异步置位，INT8 数据与 valid 均不等待时钟边沿清零；两个上升沿之间的短复位脉冲也清除输出和待发布结果。释放由上游同步并满足恢复/移除时序。
 
 启用Requant时，无论per-tensor还是per-channel scale，均只允许一个对齐的Macro归约组、最多4个OC：
