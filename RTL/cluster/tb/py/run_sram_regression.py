@@ -268,12 +268,12 @@ def main():
                  ['+REQUANT_BOUNDARY_TEST','+DATA_DIR='+data.as_posix()], 'PASS requant_boundary')
         for field in range(3):
             simulate(f'zero_count_{field}', 'tb_Cluster', [f'+ZERO_COUNT={field}'],
-                     'CLUSTER_COUNT_RANGE: counts must be 1..255', True)
+                     'CLUSTER_COUNT_RANGE: counts must be 1..511', True)
         data = dest / 'os_count_limit_data'
         data.mkdir(exist_ok=True)
         simulate('os_count_limit', 'tb_Cluster',
                  ['+OS_COUNT_LIMIT_TEST', '+DATA_DIR='+data.as_posix()],
-                 'PASS os_count_limit cases=12')
+                 'PASS os_count_limit cases=36')
         simulate('cluster_default', 'tb_Cluster', [], 'PASS configurations=')
         simulate('reduce_tree', 'tb_ClusterReduceTree', [], 'PASS reduce_clock_gating cases=208')
         for name, option, marker in (

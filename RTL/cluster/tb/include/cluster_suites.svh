@@ -125,17 +125,18 @@ task automatic run_input_overlap_suite();
   $display("PASS input_overlap cases=%0d registered_input_delay=1", cases_run);
 endtask
 
-// OS255 limit: constant extreme weights let wrapped row addresses revisit the same
-// content; it checks the 8-bit maximum count, Tile advance, earlier-scheduled AS and
+// OS255/256/511 boundaries: constant extreme weights let wrapped row addresses revisit the same
+// content; it checks the 9-bit maximum count, Tile advance, earlier-scheduled AS and
 // accumulation, so the test does not only produce zero results.
 task automatic run_os_count_limit_suite();
+  for (int boundary = 0; boundary < 3; boundary++)
   for (int p = 0; p < 2; p++)
     for (int sign_mode = 0; sign_mode < 2; sign_mode++)
       for (int mode = 0; mode < 3; mode++)
-        run_case(p, 1'(sign_mode), 7'h00, 8'h03, 32'hffffffff, 24'h000008, 2, 255, mode == 1 ? 2 : 1,
+        run_case(p, 1'(sign_mode), 7'h00, 8'h03, 32'hffffffff, 24'h000008, 2, boundary == 0 ? 255 : boundary == 1 ? 256 : 511, mode == 1 ? 2 : 1,
                  mode == 2 ? 2 : 1, 0);
-  if (cases_run != 12) $fatal(1, "Missing OS255 scenario coverage");
-  $display("PASS os_count_limit cases=%0d os_max=255 descriptor_bits=%0d", cases_run, $bits(cluster_ctrl_t));
+  if (cases_run != 36) $fatal(1, "Missing OS255/256/511 scenario coverage");
+  $display("PASS os_count_limit cases=%0d os_max=511 descriptor_bits=%0d", cases_run, $bits(cluster_ctrl_t));
 endtask
 
 // Large-Context suite: Psum stays 16 deep, only the tag/address capacity is set to 64.

@@ -151,7 +151,7 @@ task automatic send_scenario_tile(input int tile);
   end
   cmd_i = '0;
   cmd_i.cim_os_cnt = 1;
-  cmd_i.cim_ws_cnt = 8'(m_count);
+  cmd_i.cim_ws_cnt = 9'(m_count);
   cmd_i.cim_as_cnt = 1;
   cmd_i.cim_precision = 3'(precision);
   cmd_i.cim_signed_en = 1;

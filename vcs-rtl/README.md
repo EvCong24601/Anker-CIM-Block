@@ -193,7 +193,7 @@ make vcd   CASE=gemm_os2_ws1_as4_w8a16_channel  # 导出 VCD
 | `requant_context` | requant context | 正向：`PASS requant_context cases=4` |
 | `requant_reset` | requant reset | 正向：`PASS requant_reset` |
 | `requant_boundary` | requant boundary | 正向：`PASS requant_boundary` |
-| `os_count_limit` | os count limit | 正向：`PASS os_count_limit cases=12` |
+| `os_count_limit` | os count limit | 正向：`PASS os_count_limit cases=36` |
 | `oc_merge` | oc merge | 正向：`PASS oc_merge_leftmost cases=288` |
 | `act_buffer` | act buffer | 正向：`PASS act_buffer_capacity cases=280` |
 | `full_act` | full act | 正向：`PASS full_act_4096 cases=12` |
@@ -233,9 +233,9 @@ make vcd   CASE=gemm_os2_ws1_as4_w8a16_channel  # 导出 VCD
 | `as17_p6_s1_os1` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
 | `as17_p6_s1_os2` | Reject AS17 fixed-slot capacity | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
 | `reduce_tree` | All reduction trees and clock gating | 正向：`PASS reduce_clock_gating cases=208` |
-| `zero_count_0` | Reject zero count field 0 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..255` |
-| `zero_count_1` | Reject zero count field 1 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..255` |
-| `zero_count_2` | Reject zero count field 2 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..255` |
+| `zero_count_0` | Reject zero count field 0 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..511` |
+| `zero_count_1` | Reject zero count field 1 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..511` |
+| `zero_count_2` | Reject zero count field 2 | 预期拒绝：`CLUSTER_COUNT_RANGE: counts must be 1..511` |
 | `context_capacity_p0_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
 | `context_capacity_p0_s1` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |
 | `context_capacity_p1_s0` | Reject AS64 with OS2 and Psum depth16 | 预期拒绝：`CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth` |

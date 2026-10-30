@@ -50,7 +50,7 @@ for name, flag, marker in (
         ('requant_context', 'REQUANT_CONTEXT_TEST', 'PASS requant_context cases=4'),
         ('requant_reset', 'REQUANT_RESET_TEST', 'PASS requant_reset'),
         ('requant_boundary', 'REQUANT_BOUNDARY_TEST', 'PASS requant_boundary'),
-        ('os_count_limit', 'OS_COUNT_LIMIT_TEST', 'PASS os_count_limit cases=12'),
+        ('os_count_limit', 'OS_COUNT_LIMIT_TEST', 'PASS os_count_limit cases=36'),
         ('oc_merge', 'OC_MERGE_TEST', 'PASS oc_merge_leftmost cases=288'),
         ('act_buffer', 'ACT_BUFFER_TEST', 'PASS act_buffer_capacity cases=280'),
         ('full_act', 'FULL_ACT_TEST', 'PASS full_act_4096 cases=12'),
@@ -79,7 +79,7 @@ for precision in range(7):
 add('reduce_tree', 'reduce', 'All reduction trees and clock gating', 'PASS reduce_clock_gating cases=208')
 for field in range(3):
     add('zero_count_'+str(field), 'cluster', 'Reject zero count field '+str(field),
-        'CLUSTER_COUNT_RANGE: counts must be 1..255', '+ZERO_COUNT='+str(field), negative=True)
+        'CLUSTER_COUNT_RANGE: counts must be 1..511', '+ZERO_COUNT='+str(field), negative=True)
 for precision in range(7):
     for sign in (0, 1):
         add(f'context_capacity_p{precision}_s{sign}', 'cluster', 'Reject AS64 with OS2 and Psum depth16',

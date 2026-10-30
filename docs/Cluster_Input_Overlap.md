@@ -37,7 +37,7 @@ A16、AS2 的 OS1/OS>1 都采用以下包内时序：
 
 非 AS 关闭两个 Context 深表：权重地址使用当前 Command，Requant 使用批次配置寄存器。AS 参数首 K Tile 加载，后续 Tile 校验有效参数一致；消费结果不释放或覆盖参数槽位。
 
-`cim_os_cnt/cim_ws_cnt/cim_as_cnt` 均为8bit，范围1～255，WS/AS不能同时大于1。AS还需满足地址、参数和元数据容量；默认 AS17/AS64均拒绝。OS>1 WS 的 Context 数也受 Psum 深度限制。
+`cim_os_cnt/cim_ws_cnt/cim_as_cnt` 均为9bit，范围1～511，WS/AS不能同时大于1。AS还需满足地址、参数和元数据容量；默认 AS17/AS64均拒绝。OS>1 WS 的 Context 数也受 Psum 深度限制。
 
 ## Psum 使用条件
 
@@ -75,7 +75,7 @@ Psum深度限制Context数量，signed32位宽限制每次写入的数值，两�
 
 ## 共享事务标签与结果存储
 
-批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签17bit；四级流水68bit、三路径 tmp 标签51bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
+批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签18bit；四级流水72bit、三路径 tmp 标签54bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
 
 Psum 使用条件为 `cim_os_cnt>1 || cim_as_cnt>1`。OS1/AS2～16（含 A4）按 Context 保存结果；深度16允许AS16，AS17/AS64拒绝。AS的 Tile→Slice→Context 发射顺序以及包内接收/发射重叠保持。A4仅旁路深权重地址表，Requant Context 参数仍须保留至消费。
 
@@ -95,7 +95,7 @@ raw 数据直接选择对应 Context 的 Psum 或单 Context/WS 的 tmp，不另
 
 归约树分别对early/c0/c1/c2控制进行对齐解码，得到叶节点、两Macro、四Macro及根节点的OC存活信息。数据左右选择、终点tap和提前一拍的转发门控请求复用对应流水级的结果。不同流水级不共用实时控制；子节点的独立OC门控和数据保持规则保持。
 
-本结构没有增加流水或DFF，默认名义DFF33486bit，ICG锁存位684。MacroSliceFusion保持现状。共享加法器的输入选择器可能影响关键路径，面积及时序收益须由实际综合及STA评估。
+本结构没有增加流水或DFF，计入9bit count及唯一conv_mode后，默认名义DFF按声明差量推导为33496bit，ICG锁存位684。MacroSliceFusion保持现状。共享加法器的输入选择器可能影响关键路径，面积及时序收益须由实际综合及STA评估。
 
 ## 零输出批次的标签与门控
 

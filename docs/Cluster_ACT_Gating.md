@@ -22,7 +22,7 @@ ICG请求由当前cim_precision解码，不使用上一笔请求的weight_mode_i
 
 ## 资源与功耗范围
 
-每Macro增加三个ICG，8 Macro合计24个。activation_in仍为512×8=4096bit数据DFF；默认整个Cluster声明级名义DFF为33486bit，ICG锁存位为684，二者分开统计。
+每Macro增加三个ICG，8 Macro合计24个。activation_in仍为512×8=4096bit数据DFF；计入9bit count及唯一conv_mode后，默认整个Cluster声明级名义DFF按差量推导为33496bit，ICG锁存位为684，二者分开统计。
 
 相对每次有效请求都打开512bit ACT时钟，W4仅打开256bit、W8仅打开128bit。这是ACT寄存器时钟负载的变化，不能直接等同于整个Macro的功耗降低比例。ICG自身面积、时钟树、乘加及SRAM保持输出活动需由综合及功耗工具评估。
 

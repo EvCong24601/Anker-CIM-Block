@@ -127,3 +127,9 @@ per-tensor AS Context和批次ZP的实际门控时钟必须为0，全部ZP槽位
 `gemm_os1_ws8_as1_w4a16_high_group_tensor`与原单次饱和算法最大差值为9，已接受并记录于metadata；原算法参考不作为新流程的通过条件。其余已有GEMM示例中的差值见各自metadata。
 
 证据：[本轮验证记录](../RTL/cluster/tb/log/per_tensor_zp_validation.log)与`per_tensor_zp_sources.sha256`。10个顶层普通及SYNTHESIS条件编译通过；未执行实际VCS、工艺综合或STA。
+
+## 9bit count 扩宽验证 2026年10月30日
+
+cim_os_cnt、cim_ws_cnt、cim_as_cnt均为9bit，合法编码1～511，cluster_ctrl_t共110bit。Tile状态和窄流水标签kt同步扩为9bit；TB赋值转换、描述符宽度检查、ACT参考数组和范围检查同步更新。
+
+ModelSim的11个目标编译通过；默认Cluster回归200组配置、1368个case通过。OS255/256/511覆盖W2A4/W2A8、signed/unsigned、单Context/WS2/AS2，共36个非零算术场景通过。AS256和AS511在默认容量下准确触发CLUSTER_CONTEXT_CAPACITY，避免高位截断后进入错误调度。容量上限仍由MAX_CONTEXTS及各buffer深度决定，编码扩宽不增加默认存储容量。未运行实际VCS、工艺综合或STA。

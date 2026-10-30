@@ -85,7 +85,7 @@ module cluster_top #(
   wire cmd_accept;
   logic [1:0] phase;
   logic [CONTEXT_W - 1:0] context_idx;
-  logic [7:0] tile;
+  logic [8:0] tile;
   int phases, contexts;  // Combinational decode, not DFF state.
   logic need_plane, issue, final_issue;
   logic [31:0] issue_mask;
@@ -290,7 +290,7 @@ module cluster_top #(
     logic valid;
     logic [1:0] ph;
     logic [CONTEXT_W - 1:0] ctx;
-    logic [7:0] kt;
+    logic [8:0] kt;
   } txn_meta_t;
   // Expanded views retain checker access; only compact metadata is registered.
   typedef struct packed {
@@ -447,7 +447,7 @@ module cluster_top #(
     result.valid = tag.valid;
     result.ph = 2'(tag.ph);
     result.ctx = CONTEXT_W'(tag.ctx);
-    result.kt = 8'(tag.kt);
+    result.kt = 9'(tag.kt);
     return result;
   endfunction
   always_comb begin : decode_batch
@@ -849,7 +849,7 @@ module cluster_top #(
       if (cmd_accept) begin
 `ifndef SYNTHESIS
         if (cmd_i.cim_os_cnt == 0 || cmd_i.cim_ws_cnt == 0 || cmd_i.cim_as_cnt == 0)
-          $fatal(1, "CLUSTER_COUNT_RANGE: counts must be 1..255");
+          $fatal(1, "CLUSTER_COUNT_RANGE: counts must be 1..511");
         // Context tags/AS addresses and Psum entries are separate resources.
         // AS always reserves fixed Context slots; WS OS1 may exceed Psum depth.
         if (cmd_i.cim_ws_cnt > MAX_CONTEXTS || cmd_i.cim_as_cnt > MAX_CONTEXTS)
@@ -991,7 +991,7 @@ module cluster_top #(
 `endif
         pipe_meta[0].ph <= 2'(phase);
         pipe_meta[0].ctx <= CONTEXT_W'(context_idx);
-        pipe_meta[0].kt <= 8'(tile);
+        pipe_meta[0].kt <= 9'(tile);
         if (final_issue && context_idx == contexts - 1) batch_input_done <= 1;
         if (command.cim_as_cnt > 1) begin
           if (context_idx == contexts - 1) begin

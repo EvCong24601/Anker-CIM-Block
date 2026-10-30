@@ -19,3 +19,5 @@ Per-tensor当前采用CIM先饱和到INT8、TB按channel加ZP后再次饱和的�
 
 - [源码辅助文件索引](Source_Map.md)：TB include、Python、数据与记录的用途。
 - [标准逐拍表](Cluster_Timing_Tables.md)：42组raw时序表及26种split编码，由generate_readme.py生成。
+
+当前Command接口：OS/WS/AS count各9bit，范围1～511，compute descriptor共110bit。编码范围与缓冲容量限制分别见输入时序说明；两份Word规格已同步更新。SRAM行地址仍为8bit。

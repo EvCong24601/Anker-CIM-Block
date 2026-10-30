@@ -78,7 +78,7 @@ OS 表示跨 K Tile 累加，WS 表示权重复用多个 Context，AS 表示激�
 | 功能 | 当前支持范围 | 从哪里看 / 跑 |
 |---|---|---|
 | 多精度计算 | W2A4、W2A8、W4A4、W4A8、W4A16、W8A8、W8A16 | `cluster_default`；[Macro 规格](RTL/macro/SingleMacro_SPEC_v0.2.md) |
-| OS / WS / AS 调度 | count 为 1～255；WS 与 AS 不能同时大于 1；默认深度下 AS≤16，覆盖 OS1/WS64 | `context_stress`；[调度与容量](docs/Cluster_Input_Overlap.md) |
+| OS / WS / AS 调度 | count 为 1～511；WS 与 AS 不能同时大于 1；默认深度下 AS≤16，覆盖 OS1/WS64 | `context_stress`；[调度与容量](docs/Cluster_Input_Overlap.md) |
 | 输入与计算重叠 | 当前 ACT Plane / Context 地址就绪即可内部发射 | `input_overlap`；[输入时序](docs/Cluster_Input_Overlap.md) |
 | 常规权重 SRAM | 行读写、32 B OC 写掩码、同步读响应、Macro 编号锁存 | `sram_rw`、`sram_response`；[SRAM 接口](docs/Cluster_Weight_SRAM_Interface.md) |
 | INT8 Requant | per-tensor / per-channel scale；四个本地 OC 固定映射；INT10 shift | `requant_unit`、`requant_channel`；[量化说明](docs/Cluster_Requant.md) |

@@ -9,9 +9,9 @@
  * Intended for interface/black-box linking; not a signoff timing model.
  * RTL has no explicit power/ground ports; no PG pins are invented.
  *
- * cmd_i[106:99] = cim_os_cnt
- * cmd_i[98:91] = cim_ws_cnt
- * cmd_i[90:83] = cim_as_cnt
+ * cmd_i[109:101] = cim_os_cnt
+ * cmd_i[100:92] = cim_ws_cnt
+ * cmd_i[91:83] = cim_as_cnt
  * cmd_i[82:76] = cim_reduce_split_mask
  * cmd_i[75:68] = cim_macro_en_mask
  * cmd_i[67:36] = cim_macro_oc_mask
@@ -87,11 +87,11 @@ library (cluster_top_interface) {
     downto : true;
   }
 
-  type (bus_107) {
+  type (bus_110) {
     base_type : array;
     data_type : bit;
-    bit_width : 107;
-    bit_from : 106;
+    bit_width : 110;
+    bit_from : 109;
     bit_to : 0;
     downto : true;
   }
@@ -146,9 +146,9 @@ library (cluster_top_interface) {
     }
 
     bus ("cmd_i") {
-      bus_type : bus_107;
+      bus_type : bus_110;
       direction : input;
-      pin ("cmd_i[106:0]") {
+      pin ("cmd_i[109:0]") {
         direction : input;
         max_transition : 0.871500;
         min_transition : 0.000000;

@@ -26,7 +26,7 @@ cim_reduce_split_mask必须使所选组完整归约；不属于该组的Macro不
 
 ## 参数与固定OC顺序
 
-requant_cfg_t共297bit：conv_mode1 + 4×INT32 multiplier + 4×INT10 shift + 4×INT32 zp。compute descriptor 为107 bit。
+requant_cfg_t共297bit：conv_mode1 + 4×INT32 multiplier + 4×INT10 shift + 4×INT32 zp。compute descriptor 为110 bit。
 
 - requant_multiplier[32*c+:32]：OC c的signed INT32乘数，四项共128bit。
 - requant_shift[10*c+:10]：OC c的signed INT10移位，四项共40bit；当前有效配置为−512～511。
@@ -92,7 +92,7 @@ Python独立生成`cim_golden.hex`（CIM端口值）、`quant_golden.hex`（TB�
 
 TBD：逐次写入的检测位置、溢出后的拒绝或终止、饱和或扩位策略，以及错误状态与输出valid处理均未确定、未实现。后续决策须同时覆盖WS/单Context的tmp bit fusion、AS的逐Context Psum fusion和OS跨Tile累加；扩大Context深度不能解决数值位宽溢出。
 
-当前集成约束：调用方必须保证每次tmp/Psum写入值均在-2147483648～2147483647内，UINT还须非负，不能只保证最终数学和不溢出。Requant末端INT8 clip无法修复先前回绕。cim_os_cnt的8bit/255编码上限与安全累加次数是两类约束。
+当前集成约束：调用方必须保证每次tmp/Psum写入值均在-2147483648～2147483647内，UINT还须非负，不能只保证最终数学和不溢出。Requant末端INT8 clip无法修复先前回绕。cim_os_cnt的9bit/511编码上限与安全累加次数是两类约束。
 
 ## 测试与运行
 
@@ -122,7 +122,7 @@ output Psum寄存器和Requant Context参数存储在无写入时保持，不清
 
 ## 共享事务标签与结果存储
 
-批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签17bit；四级流水68bit、三路径 tmp 标签51bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
+批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签18bit；四级流水72bit、三路径 tmp 标签54bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
 
 Psum 使用条件为 `cim_os_cnt>1 || cim_as_cnt>1`。OS1/AS2～16（含 A4）按 Context 保存结果；深度16允许AS16，AS17/AS64拒绝。AS的 Tile→Slice→Context 发射顺序以及包内接收/发射重叠保持。A4仅旁路深权重地址表，Requant Context 参数仍须保留至消费。
 

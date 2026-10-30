@@ -110,7 +110,7 @@ task automatic run_requant_context_suite();
                  "description=independent-AS2-scale-and-zp/serial-batches mode=%0d os=%0d"}),
         $realtime, mode, os);
       cmd_i = '0;
-      cmd_i.cim_os_cnt = 8'(os);
+      cmd_i.cim_os_cnt = 9'(os);
       cmd_i.cim_ws_cnt = 1;
       cmd_i.cim_as_cnt = 2;
       cmd_i.cim_macro_en_mask = 3;

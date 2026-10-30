@@ -103,8 +103,8 @@ endtask
 
 task automatic send_as_row(input int m);
   cmd_i = '0;
-  cmd_i.cim_os_cnt = 8'(OS);
-  cmd_i.cim_as_cnt = 8'(AS);
+  cmd_i.cim_os_cnt = 9'(OS);
+  cmd_i.cim_as_cnt = 9'(AS);
   cmd_i.cim_ws_cnt = 1;
   cmd_i.cim_precision = 6;
   cmd_i.cim_signed_en = 1;

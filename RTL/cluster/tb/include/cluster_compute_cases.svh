@@ -54,14 +54,14 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
   case_as = as_count;
   case_pattern = pattern;
   case_bubbles = bubbles;
-  if (os < 1 || os > 255 || ws < 1 || ws > 255 || as_count < 1 || as_count > 255 || (ws > 1 && as_count > 1))
-    $fatal(1, "Counts must be 1..255; simultaneous WS/AS reuse is not defined");
+  if (os < 1 || os > 511 || ws < 1 || ws > 511 || as_count < 1 || as_count > 511 || (ws > 1 && as_count > 1))
+    $fatal(1, "Counts must be 1..511; simultaneous WS/AS reuse is not defined");
   case_r = ws > 1 ? ws : as_count;
   case_p = ab / 4;
   d = '0;
-  d.cim_os_cnt = 8'(os);
-  d.cim_ws_cnt = 8'(ws);
-  d.cim_as_cnt = 8'(as_count);
+  d.cim_os_cnt = 9'(os);
+  d.cim_ws_cnt = 9'(ws);
+  d.cim_as_cnt = 9'(as_count);
   d.cim_precision = 3'(precision);
   d.cim_signed_en = sign_en;
   d.cim_reduce_split_mask = split;

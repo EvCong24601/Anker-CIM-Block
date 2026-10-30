@@ -61,7 +61,7 @@ module tb_Cluster;
   assign out_valid_o = dut.raw_valid;
   // Golden model, expected outputs and case/handshake counters.
   logic [31:0] rng = SEED;
-  int unsigned activation[0:255][0:MAX_CONTEXTS - 1][0:255];
+  int unsigned activation[0:510][0:MAX_CONTEXTS - 1][0:255];
   longint signed expected[0:MAX_CONTEXTS - 1][0:31];
   logic [31:0] expected_mask;
   int golden_group[0:7];

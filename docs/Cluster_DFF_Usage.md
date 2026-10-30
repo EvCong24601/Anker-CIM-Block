@@ -1,18 +1,18 @@
 # Cluster 主要 DFF 使用统计
 
-统计对象：SRAM输出复用与ACT分区门控RTL，历史统计基线提交`3be03e0`。默认 `OUTPUT_BUFFER_DEPTH=16`、`REQUANT_CONTEXT_DEPTH=16`、`WGT_RADDR_BUFFER_DEPTH=16`、`MAX_CONTEXTS=64`，8个Macro，`ENABLE_REQUANT=1`、`USE_CLOCK_GATING=1`。
+统计对象：SRAM输出复用与ACT分区门控RTL；当前口径包含9bit OS/WS/AS count。历史统计基线提交为`3be03e0`。默认 `OUTPUT_BUFFER_DEPTH=16`、`REQUANT_CONTEXT_DEPTH=16`、`WGT_RADDR_BUFFER_DEPTH=16`、`MAX_CONTEXTS=64`，8个Macro，`ENABLE_REQUANT=1`、`USE_CLOCK_GATING=1`。
 
-这是按当前RTL时序存储声明展开的位数，由独立TB的`$bits`核对数组及结构体宽度。它不是综合后的DFF单元数或面积：未使用字段、整数高位、常量及重复状态可能被删除、缩位或合并；Psum/参数表也可能映射成其他存储。不能将所有logic、int、longint或乘加中间线网都计成DFF。
+这是按RTL时序存储声明展开的位数。历史基线由独立TB的`$bits`核对；当前数值按新增字段位数修订，尚未重新运行全量资源展开。它不是综合后的DFF单元数或面积：未使用字段、整数高位、常量及重复状态可能被删除、缩位或合并；Psum/参数表也可能映射成其他存储。不能将所有logic、int、longint或乘加中间线网都计成DFF。
 
-2026-10-29：模式控制合并为唯一1bit `conv_mode` 后，批次Requant参数由298bit变为297bit，声明级总量较下列基线减少1bit（默认33,485bit）。下列明细、公式、CSV及展开日志保留历史基线口径；ZP表容量不变。
+2026-10-30：三个count各增加1bit；共享描述符增加3bit，四级流水标签增加4bit，三路径tmp标签增加3bit，Tile状态增加1bit，共增加11bit。叠加此前conv_mode合并减少1bit，当前默认名义总量为33,496bit。下列明细、公式和CSV按当前声明更新；历史展开日志保留原验证口径。
 
 ## 默认规模
 
-- Cluster顶层：27,974位。
+- Cluster顶层：27,984位。
 - 8个Macro的逻辑寄存器：4,928位，其中SRAM输出行号/有效位72位。
 - 归约树：584位，其中转发数据464位、控制和门控请求120位。
-- 上述名义合计：33,486位，不含权重SRAM、SRAM读出保持模型和ICG锁存器。
-- SRAM同步读出保持模型另有8,192位；连同它一起按RTL行为模型统计为41,678位。物理SRAM IP若已包含读出保持，不能再次作为外部DFF重复估算。
+- 上述名义合计：33,496位，不含权重SRAM、SRAM读出保持模型和ICG锁存器。
+- SRAM同步读出保持模型另有8,192位；连同它一起按RTL行为模型统计为41,688位。物理SRAM IP若已包含读出保持，不能再次作为外部DFF重复估算。
 - ICG模型另有684个低电平锁存位，它们属于latch/ICG，不是DFF。
 - 权重阵列为2,097,152bit，即256KiB/Cluster；预期映射SRAM，不计入逻辑DFF。实际是否推导或绑定SRAM须由综合及宏替换确认。
 
@@ -24,18 +24,18 @@
 | tmp 数据 | 1,024 | `1024` |
 | Cluster ACT | 4,096 | `4096` |
 | Requant Context表和valid | 4,752 | `297*Q` |
-| 批次Requant参数 | 298 | `298` |
+| 批次Requant参数 | 297 | `297` |
 | 深权重地址表和A4当前地址 | 136 | `8*W+8` |
 | Raw数据组合视图 | 0 | `0` |
 | 三路径Raw Context指针 | 18 | `3*C` |
 | Raw有效位 | 32 | `32` |
 | INT8输出和valid | 288 | `288` |
-| Packet地址和共享Batch描述符 | 115 | `115` |
-| 四级共享流水标签 | 68 | `4*(11+C)` |
-| 三路径tmp标签和逐lane valid | 83 | `3*(11+C)+32` |
+| Packet地址和共享Batch描述符 | 118 | `118` |
+| 四级共享流水标签 | 72 | `4*(12+C)` |
+| 三路径tmp标签和逐lane valid | 86 | `3*(12+C)+32` |
 | 三路径完成状态 | 3 | `3` |
 | Buffer门控请求及深度开关 | 560 | `32+33*D` |
-| 调度及Hold跟踪 | 113 | `93+C+2*L` |
+| 调度及Hold跟踪 | 114 | `94+C+2*L` |
 | SRAM响应编号和valid | 4 | `4` |
 | 8 Macro ACT | 4,096 | `4096` |
 | 8 Macro SRAM输出行号和有效位 | 72 | `72` |
@@ -51,16 +51,16 @@
 - 32路tmp数据共1,024bit，32路最终INT8数据仅256bit，INT8 valid另32bit；Requant乘法、移位和舍入为组合逻辑，不存在大移位寄存器或内部算术流水。
 - Cluster ACT bank为4,096bit；8个Macro还各有512bit输入ACT寄存器，合计另4,096bit。这是两个实际寄存边界，不应只统计其中一份。
 - Macro乘积、Slice融合及五级加法树均为组合网络；只统计每OC最终18bit结果。
-- `act_complete`为已声明但未被功能读取的1bit状态；共享标签的组合视图不是DFF。因此33,486是声明级名义值，不能称为综合后精确值。
+- `act_complete`为已声明但未被功能读取的1bit状态；共享标签的组合视图不是DFF。因此33,496是声明级名义值，不能称为综合后精确值。
 - 排除仅仿真的操作/门控计数器及初始化检查表。top八个操作统计int和Reduce诊断数组的声明规模合计896bit，不属于功能DFF；Macro initialized_ocs属于仿真检查状态。
 
 ## 参数影响
 
 令D为OUTPUT_BUFFER_DEPTH、Q为REQUANT_CONTEXT_DEPTH、W为WGT_RADDR_BUFFER_DEPTH、M为MAX_CONTEXTS，C=max(1,ceil(log2(M)))，L=max(1,ceil(log2(M+1)))。相同RTL结构、8 Macro且ENABLE_REQUANT=1时，声明级统计为：
 
-`N_RTL = 11614 + 11*C + 2*L + 1057*D + 297*Q + 8*W`
+`N_RTL = 11624 + 11*C + 2*L + 1057*D + 297*Q + 8*W`
 
-当D=Q=W且M=64时，深度8/16/32分别为22,590/33,486/55,278bit；三组均经独立TB展开核对。这只是资源规模变化，不表示所有参数组合均满足AS地址/标签/参数容量合同。
+当D=Q=W且M=64时，深度8/16/32分别为22,600/33,496/55,288bit；历史基线三组均经独立TB展开核对；当前各增加10bit为声明差量推导。这只是资源规模变化，不表示所有参数组合均满足AS地址/标签/参数容量合同。
 
 运行时AS/WS、A4/A8/A16、OC mask或per-tensor配置影响时钟活动及写使能，不会直接减少已经实例化的寄存器容量。USE_CLOCK_GATING=0仅旁路ICG，数据保持使能仍在；其ICG锁存器不实例化。
 
@@ -76,7 +76,7 @@ Macro内部held_address/hold_valid当前供协议断言读取；Cluster顶层另
 
 ## 共享事务标签与结果存储
 
-批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签17bit；四级流水68bit、三路径 tmp 标签51bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
+批次描述符由整个 Cluster 共享。四级流水仅携带 valid、Slice、Context 和 K Tile；tmp 标签按 2/4/8 Macro 三种归约延迟路径共享，lane 通过批次的归约配置选择路径。默认 Context 宽6bit，每个窄标签18bit；四级流水72bit、三路径 tmp 标签54bit，逐lane tmp valid另32bit。三路径 raw Context 指针共18bit。逐lane兼容视图为组合连线，不复制配置寄存器。
 
 Psum 使用条件为 `cim_os_cnt>1 || cim_as_cnt>1`。OS1/AS2～16（含 A4）按 Context 保存结果；深度16允许AS16，AS17/AS64拒绝。AS的 Tile→Slice→Context 发射顺序以及包内接收/发射重叠保持。A4仅旁路深权重地址表，Requant Context 参数仍须保留至消费。
 
@@ -94,14 +94,16 @@ raw 数据直接选择对应 Context 的 Psum 或单 Context/WS 的 tmp，不另
 
 每条有效归约路径按Context顺序返回，延迟固定且没有输出反压。三位completion_path_done记录各路径最后一个Context完成；与batch_input_done及组合生成的路径需求共同决定batch关闭。空路径不等待结果，本拍最终结果参与本拍关闭判断。逐Context/lane预留、重复写和提前关闭检查位于TB的cluster_completion_checks.svh，不计入功能DFF。引入乱序返回或输出反压时须重新设计此条件。
 
-packet_cmd是组合视图，复用107bit batch_command，只另存8bit packet_weight_address，共115bit。批次配置变化仍触发协议错误。
+packet_cmd是组合视图，复用110bit batch_command，只另存8bit packet_weight_address，共118bit。批次配置变化仍触发协议错误。
 
-phase/external_phase各2bit，context_idx为C bit，command_count/batch_contexts各L bit，tile为8bit。默认六个状态合计32bit，相对六个int32减少160bit；数量64需要7bit，索引0～63需要6bit。phases/contexts为组合解码。
+phase/external_phase各2bit，context_idx为C bit，command_count/batch_contexts各L bit，tile为9bit。默认六个状态合计33bit，相对六个int32减少159bit；数量64需要7bit，索引0～63需要6bit。phases/contexts为组合解码。
 
-相对共享事务标签后的37838bit版本：完成跟踪减少4093bit，描述符减少99bit，计数器减少160bit，合计4352bit，默认33486bit。shift接口及存储仍为INT10，没有进行shift压缩；完整INT10运算通过组合范围判定支持，不增加寄存器。Psum仍为32个物理lane，本次未实施四通道压缩。
+相对共享事务标签后的37838bit版本：完成跟踪减少4093bit，描述符减少99bit，计数器减少160bit，合计4352bit，历史默认33486bit（扩宽前）。shift接口及存储仍为INT10，没有进行shift压缩；完整INT10运算通过组合范围判定支持，不增加寄存器。Psum仍为32个物理lane，本次未实施四通道压缩。
 
 ## Per-tensor ZP外移后的资源口径
 
 mode=0不加载批次或AS Context的ZP存储，也不消费ZP操作数；ZP逐channel修正仅在TB执行。mode=1继续使用原四通道ZP结构，因此共享RTL采用297bit配置接口（唯一模式位conv_mode）并保留原ZP数组容量。此修改不能按per-tensor禁用推断全模块物理DFF减少，也未重新完成工艺综合/STA。
 
 Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。
+
+Count位宽更新后，默认缓冲容量保持不变。当前总量为声明差量推导，不是工艺综合结果；历史日志中的旧总量不代表当前RTL。

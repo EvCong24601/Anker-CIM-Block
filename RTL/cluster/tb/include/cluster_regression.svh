@@ -50,14 +50,14 @@ initial begin : regression
   end
   if ($bits(
       cluster_ctrl_t
-    ) != 107 || $bits(
+    ) != 110 || $bits(
       cmd_i.cim_os_cnt
-    ) != 8 || $bits(
+    ) != 9 || $bits(
       cmd_i.cim_ws_cnt
-    ) != 8 || $bits(
+    ) != 9 || $bits(
       cmd_i.cim_as_cnt
-    ) != 8)
-    $fatal(1, "TB: descriptor must contain three eight-bit counts and total 107 bits");
+    ) != 9)
+    $fatal(1, "TB: descriptor must contain three nine-bit counts and total 110 bits");
   if ($value$plusargs("ZERO_COUNT=%d", zero_count)) begin
     repeat (4) @(negedge clock);
     reset = 0;
@@ -100,8 +100,8 @@ initial begin : regression
     end
     if ($value$plusargs("CAPACITY_OS=%d", capacity_os)) begin
     end
-    cmd_i.cim_as_cnt = 8'(capacity_count);
-    cmd_i.cim_os_cnt = 8'(capacity_os);
+    cmd_i.cim_as_cnt = 9'(capacity_count);
+    cmd_i.cim_os_cnt = 9'(capacity_os);
     cmd_i.cim_precision = 3'(capacity_precision);
     cmd_i.cim_signed_en = 1'(capacity_sign);
     cmd_i.cim_macro_en_mask = 8'hff;
