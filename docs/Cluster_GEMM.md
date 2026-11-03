@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Cluster GEMM 用例总览
 
 GEMM 验证由七个具体 TB、三套共用驱动执行，包含 13 个正向 case 和 5 个 AS 参数负向 case。每个正向 case 只使用一个 Cluster，通过 WLC 常规 128 B 接口写入并读回权重，再驱动 Command 和完整 ACT Plane。检查范围包括整数点积、物理输出 lane、raw/INT8 数值、输出周期、寄存器保持、权重 Hold 和适用的 Psum 历史。

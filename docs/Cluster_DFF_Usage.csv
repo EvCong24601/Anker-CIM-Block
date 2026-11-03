@@ -1,14 +1,11 @@
-﻿key,label,group,bits,formula
+key,label,group,bits,formula
 psum,Psum 数据,cluster,16384,1024*D
 tmp,tmp 数据,cluster,1024,1024
 act,Cluster ACT,cluster,4096,4096
-qcontext,Requant Context表和valid,cluster,4752,297*Q
-qbatch,批次Requant参数,cluster,297,297
 waddr,深权重地址表和A4当前地址,cluster,136,8*W+8
 rawdata,Raw数据别名无独立DFF,cluster,0,0
 rawctx,三路径Raw Context指针,cluster,18,18
 rawvalid,Raw有效位,cluster,32,32
-qout,INT8输出和valid,cluster,288,288
 descriptor,Packet地址和共享Batch描述符,cluster,118,118
 pipetags,四级共享窄标签,cluster,72,72
 tmptags,三路径tmp标签和逐lane valid,cluster,86,86
@@ -26,4 +23,4 @@ reduce_data,归约转发寄存器,reduce,464,464
 reduce_ctrl,归约控制和门控请求,reduce,120,120
 sram_read_model,SRAM读出保持模型,read_model,8192,8192
 sram_array,SRAM权重阵列,sram,2097152,2097152
-icg,ICG锁存器,latch,684,172+32*D
+icg,ICG锁存器,latch,648,136+32*D

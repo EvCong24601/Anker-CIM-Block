@@ -22,37 +22,21 @@ function automatic bit expected_result_demand(input cluster_ctrl_t cmd, input in
 endfunction
 // Physical clock checks use the pre-edge transaction/tag, never the live OC
 // mask of a later Command. Root valid/control clocks deliberately keep running.
-for (genvar oc = 0; oc < 4; oc++) begin : g_check_requant_read_isolation
-  always @(negedge clock) begin
-    #0.002;
-    if (!reset && !(ENABLE_REQUANT && (|(dut.raw_valid & (32'h11111111 << oc)))))
-      if (dut.u_requant.g_channel[oc].selected_psum !== 0 ||
-        dut.u_requant.g_channel[oc].selected_multiplier !== 0 ||
-        dut.u_requant.g_channel[oc].selected_shift !== 0 ||
-        dut.u_requant.g_channel[oc].selected_zp !== 0)
-        $fatal(1, "Masked Requant OC consumed Psum/parameter read data OC=%0d", oc);
-  end
-end
 for (genvar lane = 0; lane < 32; lane++) begin : g_check_output_gate
   always @(posedge clock) begin
-    bit raw_req, quant_req;
+    bit raw_req;
     logic [31:0] wanted_raw;
-    logic [7:0] saved_quant;
     int wanted_context;
     if (!reset) begin
       raw_req = dut.result_done[lane];
-      quant_req = ENABLE_REQUANT && dut.raw_valid[lane];
       wanted_raw = 32'(dut.arithmetic_result[lane]);
       wanted_context = dut.tmp_tag[lane].ctx;
-      saved_quant = requant_data_o[8*lane+:8];
       #0.002;
       if (!reset) begin
-        if (dut.raw_valid[lane] !== raw_req || dut.g_output_lane[lane].quant_clock !== quant_req)
+        if (psum_valid[lane] !== raw_req)
           $fatal(1, "Output lane clock mismatch lane=%0d", lane);
-        if (raw_req && (dut.raw_data[32*lane+:32] !== wanted_raw || dut.raw_context[lane] != wanted_context))
+        if (raw_req && (raw_psum[32*lane+:32] !== wanted_raw || dut.raw_context[lane] != wanted_context))
           $fatal(1, "Storage-backed raw view mismatch lane=%0d", lane);
-        if (!quant_req && requant_data_o[8*lane+:8] !== saved_quant)
-          $fatal(1, "Gated INT8 payload changed lane=%0d", lane);
       end
     end
   end
@@ -121,36 +105,6 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
     end
   end
 end
-always @(posedge clock) begin : scale_group_gate_check
-  bit shared_req, extra_req, batch_req, batch_extra_req;
-  logic [95:0] saved_multiplier[0:REQUANT_CONTEXT_DEPTH - 1];
-  logic [29:0] saved_shift[0:REQUANT_CONTEXT_DEPTH - 1];
-  if (!reset) begin
-    shared_req = ENABLE_REQUANT && ((dut.batch_active && dut.batch_command.cim_as_cnt > 1) ||
-                                  (dut.cmd_accept && cmd_i.cim_as_cnt > 1));
-    extra_req = shared_req && (dut.batch_active ? dut.batch_requant_cfg.conv_mode : requant_cfg_i.conv_mode);
-    batch_req = ENABLE_REQUANT && dut.cmd_accept && !dut.batch_active;
-    batch_extra_req = batch_req && requant_cfg_i.conv_mode;
-    for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) begin
-      saved_multiplier[d] = dut.requant_context_multiplier[d][127:32];
-      saved_shift[d] = dut.requant_context_shift[d][39:10];
-    end
-    #0.002;
-    if (!reset) begin
-      if (dut.channel_scale_clock !== extra_req || dut.batch_cfg_clock !== batch_req ||
-        dut.batch_channel_clock !== batch_extra_req)
-        $fatal(1, "Requant parameter group clock mismatch");
-      if (!extra_req)
-        for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++)
-        if (dut.requant_context_multiplier[d][127:32] !== saved_multiplier[d] ||
-            dut.requant_context_shift[d][39:10] !== saved_shift[d])
-          $fatal(1, "Disabled per-channel scale registers changed");
-    end
-  end
-end
-
-// Pair adders are fed directly by Macro output DFFs. Closing both source
-// clocks must hold the actual arithmetic inputs, without forcing them to zero.
 for (genvar pair_id = 0; pair_id < 4; pair_id++) begin : g_check_pair_source_hold
   for (genvar oc = 0; oc < 4; oc++) begin : g_oc
     always @(posedge clock) begin
@@ -218,33 +172,4 @@ always @(posedge clock) begin : check_shared_adder
           (dut.shared_add_a[l] !== 0 || dut.shared_add_b[l] !== 0))
         $fatal(1, "SHARED_ADDER: inactive operands not isolated lane=%0d", l);
     end
-end
-
-// A tensor command must not load either batch or AS Context ZP storage.
-always @(posedge clock) begin : check_tensor_zp_not_loaded
-  logic [127:0] saved_batch_zp;
-  logic [127:0] saved_context_zp[0:REQUANT_CONTEXT_DEPTH-1];
-  if (!reset && ENABLE_REQUANT && dut.cmd_accept && !requant_cfg_i.conv_mode) begin
-    saved_batch_zp = dut.batch_requant_cfg.requant_zp;
-    for (int cx = 0; cx < REQUANT_CONTEXT_DEPTH; cx++) saved_context_zp[cx] = dut.requant_context_zp[cx];
-    #0.003;
-    if (!reset) begin
-      if (dut.batch_requant_cfg.requant_zp !== saved_batch_zp)
-        $fatal(1, "Tensor command loaded unused batch ZP");
-      for (int cx = 0; cx < REQUANT_CONTEXT_DEPTH; cx++)
-        if (dut.requant_context_zp[cx] !== saved_context_zp[cx])
-          $fatal(1, "Tensor command loaded unused Context ZP");
-    end
-  end
-end
-
-// Check actual gated-clock levels on every tensor capture edge, not just CE.
-always @(posedge clock) begin : check_tensor_zp_clocks_closed
-  bit tensor_edge;
-  tensor_edge = !reset && ENABLE_REQUANT &&
-      ((dut.batch_active && !dut.batch_requant_cfg.conv_mode) ||
-       (dut.cmd_accept && !requant_cfg_i.conv_mode));
-  #0.003;
-  if (!reset && tensor_edge && (dut.deep_zp_clock !== 0 || dut.batch_zp_clock !== 0))
-    $fatal(1, "Per-tensor zero-point buffer clock is not fully gated");
 end

@@ -8,46 +8,11 @@
 initial begin : regression
   string data_dir;
   int capacity_precision, capacity_sign, zero_count, capacity_count, capacity_os;
-  string requant_negative;
   if ($test$plusargs("EMPTY_BATCH_TEST")) begin
     repeat (4) @(negedge clock); reset = 0;
     run_empty_batch_suite(); $finish;
   end
-  if ($bits(requant_cfg_t) != 297) $fatal(1, "TB: Requant config must be 297 bits");
-  if ($value$plusargs("REQUANT_NEGATIVE=%s", requant_negative)) begin
-    repeat (4) @(negedge clock);
-    reset = 0;
-    repeat (2) @(negedge clock);
-    $display("[CASE_START] time=%0.3f ns suite=requant_negative description=reject-invalid-config-%s", $realtime,
-             requant_negative);
-    cmd_i = '0;
-    cmd_i.cim_os_cnt = 1;
-    cmd_i.cim_ws_cnt = 1;
-    cmd_i.cim_as_cnt = 1;
-    cmd_i.cim_precision = 6;
-    cmd_i.cim_macro_en_mask = 8'hff;
-    case (requant_negative)
-      "as17_capacity": cmd_i.cim_as_cnt = 17;
-      "mode": requant_cfg_i.conv_mode = 'x;
-      "unknown": requant_cfg_i.requant_multiplier = 'x;
-      "conv_group": begin
-        requant_cfg_i.conv_mode = 1;
-        cmd_i.cim_precision = 4;
-        cmd_i.cim_macro_en_mask = 8'hff;
-        cmd_i.cim_reduce_split_mask = 1;
-      end
-      "zp_group": begin
-        cmd_i.cim_precision = 6;
-        cmd_i.cim_macro_en_mask = 8'hff;
-        cmd_i.cim_reduce_split_mask = 1;
-      end
-      default: $fatal(1, "TB: unknown Requant negative scenario");
-    endcase
-    cmd_valid_i = 1;
-    @(posedge clock);
-    #1;
-    $fatal(1, "TB: missing Requant configuration rejection");
-  end
+
   if ($bits(
       cluster_ctrl_t
     ) != 110 || $bits(
@@ -197,30 +162,12 @@ initial begin : regression
   end
   // Each dedicated suite owns a whole simulation; the default suite additionally
   // checks CSV, routing and gating coverage.
-  if ($test$plusargs("CONTEXT_BUFFER_TEST")) begin
-    run_context_buffer_suite();
-    $finish;
-  end
-  if ($test$plusargs("REQUANT_CONTEXT_TEST")) begin
-    run_requant_context_suite();
-    $finish;
-  end
-  if ($test$plusargs("REQUANT_BOUNDARY_TEST")) begin
-    run_requant_boundary_suite();
-    $finish;
-  end
-  if ($test$plusargs("REQUANT_RESET_TEST")) begin
-    run_requant_reset_suite();
-    $finish;
-  end
-  if ($test$plusargs("REQUANT_TEST")) begin
-    run_requant_suite();
-    $finish;
-  end
-  if ($test$plusargs("REQUANT_CHANNEL_TEST")) begin
-    run_requant_channel_suite();
-    $finish;
-  end
+
+
+
+
+
+
   if ($test$plusargs("INPUT_OVERLAP_TEST")) begin
     run_input_overlap_suite();
     $finish;

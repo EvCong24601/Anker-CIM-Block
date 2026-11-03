@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Cluster 验证清单
 
 本清单对应当前RTL、TB及VCS用例目录。检查功能结果、周期和实际门控行为；物理SRAM IP、综合后门控结构及STA由集成流程验证。

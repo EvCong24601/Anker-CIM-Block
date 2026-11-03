@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Cluster 调度、输入时序与容量
 
 当前包内的 ACT Plane、Context 权重地址和 Requant 参数接收与计算发射重叠。首命令在 `cmd_valid_i && cmd_ready_o` 的上升沿接受；已有输入寄存后，下一沿即可发射，不等待整包或全部 Context 参数收齐。

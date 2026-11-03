@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Cluster 常规权重 SRAM 读写
 
 单个 Cluster 有 8 个 Macro。每个 Macro 为 256 行 × 128 B，四个本地 OC 共用同一个 8-bit 行地址，每 OC 每行占 32 B。Cluster 总容量为 256 KiB。

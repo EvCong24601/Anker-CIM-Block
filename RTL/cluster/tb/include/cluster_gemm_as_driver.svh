@@ -2,22 +2,9 @@ task automatic load_as_gemm_os1_ws32_w8a16_vectors();
   int fd, status, k0, n0;
   longint signed dot, weight_sum;
   if (!$value$plusargs("GEMM_DATA_DIR=%s", data_dir)) $fatal(1, "AS GEMM: require +GEMM_DATA_DIR=PATH");
-  fd = $fopen({data_dir, "/requant_params.txt"}, "r");
-  if (!fd) $fatal(1, "AS GEMM: cannot open parameters");
-  status = $fscanf(fd, "%d %d %d %d", multiplier, shift, output_zp, act_zp);
-  $fclose(fd);
-  if (status != 4 || act_zp == 0) $fatal(1, "AS GEMM: malformed or symmetric ACT parameters");
   $readmemh({data_dir, "/x_q.hex"}, x_q);
   $readmemh({data_dir, "/w_q.hex"}, w_q);
   $readmemh({data_dir, "/raw_golden.hex"}, raw_golden);
-  $readmemh({data_dir, "/centered_golden.hex"}, centered_golden);
-  $readmemh({data_dir, "/quant_golden.hex"}, quant_golden);
-  $readmemh({data_dir, "/cim_golden.hex"}, cim_golden);
-  $readmemh({data_dir, "/requant_zp.hex"}, zp);
-  if ($test$plusargs("PER_CHANNEL_SCALE")) begin
-    $readmemh({data_dir, "/requant_multiplier.hex"}, channel_multiplier);
-    $readmemh({data_dir, "/requant_shift.hex"}, channel_shift);
-  end
   $readmemh({data_dir, "/weight_rows.hex"}, weight_rows);
   $readmemh({data_dir, "/act_planes.hex"}, act_planes);
   $readmemh({data_dir, "/psum_history_golden.hex"}, history_golden);
@@ -29,7 +16,7 @@ task automatic load_as_gemm_os1_ws32_w8a16_vectors();
         dot += longint'($signed(x_q[m*K+k])) * longint'($signed(w_q[k*N+n]));
         weight_sum += longint'($signed(w_q[k*N+n]));
       end
-      if (raw_golden[m*N+n] !== 32'(dot) || centered_golden[m*N+n] !== 32'(dot - longint'(act_zp) * weight_sum))
+      if (raw_golden[m*N+n] !== 32'(dot))
         $fatal(1, "AS GEMM: unpacked matrix golden mismatch m=%0d n=%0d", m, n);
     end
   for (int tile = 0; tile < OS; tile++)
@@ -80,27 +67,6 @@ task automatic load_as_weights();
   sram_cs_en = 0;
 endtask
 
-task automatic select_as_zp(input int tile, input int cx);
-  cx = logical_context(active_m, cx);
-  requant_cfg_i = '0;
-  requant_cfg_i.requant_multiplier = 32'(multiplier);
-  requant_cfg_i.requant_shift = 10'(shift);
-  if ($test$plusargs("PER_CHANNEL_SCALE")) begin
-    requant_cfg_i.conv_mode = 1;
-    for (int oc = 0; oc < 4; oc++) begin
-      requant_cfg_i.requant_multiplier[32*oc+:32] = channel_multiplier[4*cx+oc];
-      requant_cfg_i.requant_shift[10*oc+:10] = channel_shift[4*cx+oc];
-    end
-  end
-  if ($test$plusargs("NEGATIVE_SCALE_RELOAD") && tile == 1 && cx == 1)
-    requant_cfg_i.requant_multiplier[0] = ~requant_cfg_i.requant_multiplier[0];
-  for (int oc = 0; oc < 4; oc++) begin
-    requant_cfg_i.requant_zp[32*oc+:32] = $test$plusargs("PER_CHANNEL_SCALE") ? zp[4*cx+oc] : 32'd0;
-  end
-  if ($test$plusargs("NEGATIVE_ZP_RELOAD") && tile == 1 && cx == 1)
-    requant_cfg_i.requant_zp[0] = ~requant_cfg_i.requant_zp[0];
-endtask
-
 task automatic send_as_row(input int m);
   cmd_i = '0;
   cmd_i.cim_os_cnt = 9'(OS);
@@ -120,7 +86,6 @@ task automatic send_as_row(input int m);
       if (t < AS) begin
         cmd_valid_i = 1;
         cmd_i.cim_weight_raddr = BASE_ADDR + 8'(AS * tile + logical_context(m, t));
-        select_as_zp(tile, t);
         act_data_i = t < 4 ? act_planes[(m*OS+tile)*4+t] : '1;
         $display(
           string'({"[CMD_SEND] time=%0.3f ns description=AS-address-and-ACT-overlap ",
@@ -132,7 +97,6 @@ task automatic send_as_row(input int m);
         if (CHECK_SWITCH) begin
           cmd_i = '1;
           cmd_i.cim_weight_raddr = 8'(cycle);
-          requant_cfg_i = ~requant_cfg_i;
         end
       end
       @(posedge clock);

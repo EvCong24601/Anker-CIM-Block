@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Macro ACT 按精度分区门控
 
 SingleMacro保留512bit activation_in输入寄存边界，将其分成低128bit、中间128bit和高256bit三个独立时钟域。512bit数据容量、1T计算延迟、II=1及外部接口保持原定义。

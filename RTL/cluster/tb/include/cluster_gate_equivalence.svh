@@ -4,23 +4,21 @@
 if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
   wire reference_ready, reference_sram_valid;
   wire [1023:0] reference_sram;
-  wire [ 255:0] reference_quant;
-  wire [  31:0] reference_quant_valid;
-  int checked_cycles = 0, raw_events = 0, quant_events = 0;
+  wire [1023:0] reference_raw;
+  wire [  31:0] reference_valid;
+  int checked_cycles = 0, raw_events = 0;
   cluster_top #(
     .OUTPUT_PSUM_DEPTH(OUTPUT_PSUM_DEPTH),
     .WGT_RADDR_BUFFER_DEPTH(WGT_RADDR_BUFFER_DEPTH),
     .MAX_CONTEXTS(MAX_CONTEXTS),
     .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
-    .REQUANT_CONTEXT_DEPTH(REQUANT_CONTEXT_DEPTH),
-    .ENABLE_REQUANT(ENABLE_REQUANT),
     .USE_CLOCK_GATING(0)
   ) dut_ungated (
     .cmd_ready_o(reference_ready),
     .sram_rd_data(reference_sram),
     .sram_rd_valid(reference_sram_valid),
-    .requant_data_o(reference_quant),
-    .requant_valid_o(reference_quant_valid),
+    .raw_psum(reference_raw),
+    .psum_valid(reference_valid),
     .*
   );
   for (genvar m = 0; m < 8; m++) begin : g_act_compare
@@ -33,7 +31,7 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
   always @(posedge clock) begin
     #0.003;
     if (reference_ready !== cmd_ready_o || reference_sram !== sram_rd_data || reference_sram_valid !== sram_rd_valid ||
-      reference_quant !== requant_data_o || reference_quant_valid !== requant_valid_o)
+      reference_raw !== raw_psum || reference_valid !== psum_valid)
       $fatal(1, "CLUSTER_GATE_EQUIVALENCE: external data/valid/ready mismatch");
     if (dut_ungated.raw_data !== dut.raw_data || dut_ungated.raw_valid !== dut.raw_valid ||
       dut_ungated.act_buffer !== dut.act_buffer || dut_ungated.issue !== dut.issue ||
@@ -53,20 +51,13 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
     for (int c = 0; c < 4; c++)
     if (dut_ungated.u_reduce.forward_q[n][c] !== dut.u_reduce.forward_q[n][c])
       $fatal(1, "CLUSTER_GATE_EQUIVALENCE: reduce mismatch node=%0d OC=%0d", n, c);
-    for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++)
-    if (dut_ungated.requant_context_zp[d] !== dut.requant_context_zp[d] ||
-        dut_ungated.requant_context_multiplier[d] !== dut.requant_context_multiplier[d] ||
-        dut_ungated.requant_context_shift[d] !== dut.requant_context_shift[d])
-      $fatal(1, "CLUSTER_GATE_EQUIVALENCE: parameter slot mismatch depth=%0d", d);
     if (!reset) begin
       checked_cycles++;
       raw_events += $countones(dut.raw_valid);
-      quant_events += $countones(requant_valid_o);
     end
   end
   final begin
     if (checked_cycles == 0) $error("CLUSTER_GATE_EQUIVALENCE: no compared cycles");
-    $display("PASS cluster_gate_equivalence cycles=%0d raw_events=%0d quant_events=%0d", checked_cycles, raw_events,
-             quant_events);
+    $display("PASS cluster_gate_equivalence cycles=%0d raw_events=%0d", checked_cycles, raw_events);
   end
 end

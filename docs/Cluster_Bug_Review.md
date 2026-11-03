@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Cluster 验证与边界问题
 
 当前生产RTL及TB以`fix_empty_int10_sources.sha256`标识，完整回归见`fix_empty_int10_validation.log`。十轮调查的原始证据保留在`ten_round_*`日志中；这些快照不能代替当前源码测试。

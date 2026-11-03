@@ -10,6 +10,5 @@
 ../RTL/macro/rtl/MacroSliceFusion.sv
 ../RTL/macro/rtl/SingleMacro.sv
 ../RTL/cluster/rtl/cluster_pkg.sv
-../RTL/cluster/rtl/ClusterRequant.sv
 ../RTL/cluster/rtl/ClusterReduceTree.sv
 ../RTL/cluster/rtl/cluster_top.sv

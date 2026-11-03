@@ -1,20 +1,19 @@
 `timescale 1ns / 1ps
-// Interface-only shell; no functional implementation.
-// Compile RTL/cluster/rtl/cluster_pkg.sv before this file.
-// Use this shell in place of the implementation, not together with it.
+// Interface-only shell. Compile cluster_pkg.sv first.
 module cluster_top #(
+  // Unified integration depth. Individual overrides support capacity tests.
   parameter int OUTPUT_PSUM_DEPTH = 16,
   parameter int OUTPUT_BUFFER_DEPTH = OUTPUT_PSUM_DEPTH,
   parameter int WGT_RADDR_BUFFER_DEPTH = OUTPUT_BUFFER_DEPTH,
+  // Context tag/completion capacity, independent of the Psum depth. Bounds the
+  // WS/AS context count; for OS1 WS it is the only limit, so up to MAX_CONTEXTS
+  // contexts (e.g. 64) are legal even beyond OUTPUT_BUFFER_DEPTH.
   parameter int MAX_CONTEXTS = 64,
-  parameter int REQUANT_CONTEXT_DEPTH = OUTPUT_BUFFER_DEPTH,
-  parameter bit USE_CLOCK_GATING = 1,
-  parameter bit ENABLE_REQUANT = 1
+  parameter bit USE_CLOCK_GATING = 1
 ) (
   input logic clock,
   input logic reset,
   input cluster_pkg::cluster_ctrl_t cmd_i,
-  input cluster_pkg::requant_cfg_t requant_cfg_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,
   input logic [1023:0] act_data_i,
@@ -27,8 +26,9 @@ module cluster_top #(
   input logic [1023:0] sram_wrdata,
   output wire [1023:0] sram_rd_data,
   output logic sram_rd_valid,
-  output logic [255:0] requant_data_o,
-  output logic [31:0] requant_valid_o
+  // Lane l carries signed32 raw_psum[32*l+:32], qualified by psum_valid[l].
+  // No output backpressure. Invalid lane payload is unspecified.
+  output wire [1023:0] raw_psum,
+  output wire [31:0] psum_valid
 );
-
 endmodule

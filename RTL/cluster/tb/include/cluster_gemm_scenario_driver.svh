@@ -45,7 +45,7 @@ task automatic load_scenario_vectors();
       $fatal(1, "GEMM W2A8 high-group configuration mismatch");
     "w4a16_n6_tail": if (wb != 4 || ab != 16 || m_count != 8 || k_count != 160 || n_count != 6)
       $fatal(1, "GEMM W4A16 N6-tail configuration mismatch");
-    "w4a16_round_clip": if (wb != 4 || ab != 16 || m_count != 12 || k_count != 160 || n_count != 4 || !per_channel)
+    "w4a16_round_clip": if (wb != 4 || ab != 16 || m_count != 12 || k_count != 160 || n_count != 4)
       $fatal(1, "GEMM W4A16 round/clip configuration mismatch");
     default: $fatal(1, "Unknown concrete GEMM scenario");
   endcase
@@ -62,11 +62,6 @@ task automatic load_scenario_vectors();
   $readmemh({data_dir, "/x_q.hex"}, x_q, 0, m_count * k_count - 1);
   $readmemh({data_dir, "/w_q.hex"}, w_q, 0, k_count * n_count - 1);
   $readmemh({data_dir, "/raw_golden.hex"}, raw_golden, 0, m_count * n_count - 1);
-  $readmemh({data_dir, "/quant_golden.hex"}, quant_golden, 0, m_count * n_count - 1);
-  $readmemh({data_dir, "/cim_golden.hex"}, cim_golden, 0, m_count * n_count - 1);
-  $readmemh({data_dir, "/requant_multiplier.hex"}, multiplier, 0, n_count - 1);
-  $readmemh({data_dir, "/requant_shift.hex"}, shift, 0, n_count - 1);
-  $readmemh({data_dir, "/requant_zp.hex"}, zp, 0, n_count - 1);
   $readmemh({data_dir, "/weight_rows.hex"}, weight_rows, 0, n_tiles * 8 - 1);
   $readmemh({data_dir, "/act_planes.hex"}, act_planes, 0, m_count * phases - 1);
   for (int m = 0; m < m_count; m++)
@@ -128,25 +123,12 @@ task automatic send_scenario_tile(input int tile);
   logic [3:0] oc;
   int n;
   oc = 0;
-  requant_cfg_i = '0;
   active_mask = 0;
-  requant_cfg_i.conv_mode = 1'(per_channel);
-  requant_cfg_i.requant_multiplier[0+:32] = multiplier[0];
-  requant_cfg_i.requant_shift[0+:10] = shift[0];
   for (int c = 0; c < 4; c++) begin
     n = n_map[tile][c];
     if (n >= 0) begin
       oc[c] = 1;
       active_mask[lane_base+c] = 1;
-      requant_cfg_i.requant_zp[32*c+:32] = per_channel ? zp[n] : 32'd0;
-      if (per_channel) begin
-        requant_cfg_i.requant_multiplier[32*c+:32] = multiplier[n];
-        requant_cfg_i.requant_shift[10*c+:10] = shift[n];
-      end
-      $display(
-        string'({"[REQUANT_CONFIG] time=%0.3f ns description=fixed-OC-parameter-map ",
-                 "tile=%0d OC=%0d n=%0d multiplier=%0d shift=%0d zp=%0d"}),
-        $realtime, tile, c, n, $signed(multiplier[n]), $signed(shift[n]), $signed(zp[n]));
     end
   end
   cmd_i = '0;

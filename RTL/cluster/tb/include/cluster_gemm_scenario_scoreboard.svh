@@ -1,13 +1,7 @@
-`include "include/requant_tb_helpers.svh"
 // Check physical lane positions, mask holes, exact timing and dense GEMM order.
 always @(posedge clock) begin : edge_scoreboard
-  logic [ 31:0] previous_valid;
-  logic [255:0] previous_quant;
   int row, phase, n, index;
-  logic [7:0] corrected_quant;
   cycle++;
-  previous_valid = out_valid_o;
-  previous_quant = requant_data_o;
   if (!reset && monitoring) begin
     if (cmd_valid_i && cmd_ready_o) begin
       if (first_accept < 0) first_accept = cycle;
@@ -36,12 +30,8 @@ always @(posedge clock) begin : edge_scoreboard
   end
   #1;
   if (!reset && monitoring) begin
-    if ((out_valid_o & ~active_mask) != 0 || (requant_valid_o & ~active_mask) != 0)
+    if ((out_valid_o & ~active_mask) != 0)
       $fatal(1, "GEMM scenario: valid on inactive group or masked OC");
-    if (requant_valid_o !== previous_valid) $fatal(1, "GEMM scenario: quant valid must follow raw by one cycle");
-    for (int lane = 0; lane < 32; lane++)
-    if (!requant_valid_o[lane] && requant_data_o[8*lane+:8] !== previous_quant[8*lane+:8])
-      $fatal(1, "GEMM scenario: inactive output register changed");
     for (int c = 0; c < 4; c++) begin
       n = n_map[active_tile][c];
       if (out_valid_o[lane_base+c]) begin
@@ -56,22 +46,7 @@ always @(posedge clock) begin : edge_scoreboard
         $fdisplay(trace_fd, "%0d,raw,%0d,%0d,%0d,%0d,%0d", cycle, active_tile, row, n, lane_base + c,
                   $signed(observed_raw[index]));
       end
-      if (requant_valid_o[lane_base+c]) begin
-        row   = quant_next[c];
-        index = row * n_count + n;
-        if (requant_data_o[8*(lane_base+c)+:8] !== cim_golden[index])
-          $fatal(1, "GEMM: CIM INT8 before TB correction mismatch");
-        corrected_quant = per_channel ? requant_data_o[8*(lane_base+c)+:8] :
-            tb_correct_tensor($signed(requant_data_o[8*(lane_base+c)+:8]), $signed(zp[n]));
-        if (n < 0 || row >= m_count || cycle != first_accept + row * (phases + 1) + first_raw + 1 ||
-          corrected_quant !== quant_golden[index])
-          $fatal(1, "GEMM scenario: INT8 matrix/OC-parameter/timing mismatch row=%0d n=%0d OC=%0d", row, n, c);
-        observed_quant[index] = corrected_quant;
-        quant_next[c]++;
-        quant_checks++;
-        $fdisplay(trace_fd, "%0d,quant,%0d,%0d,%0d,%0d,%0d", cycle, active_tile, row, n, lane_base + c,
-                  $signed(observed_quant[index]));
-      end
+
     end
   end
 end

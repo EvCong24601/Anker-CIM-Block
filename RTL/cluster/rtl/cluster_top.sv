@@ -1,16 +1,16 @@
 `timescale 1ns / 1ps
-// Simulation reference Cluster, with raw Psum and combinational INT8 Requant.
+// Simulation reference Cluster, with direct signed32 Psum outputs.
 //
 // File map. Search for "=====" to jump between the sections below:
 //    1. Parameters and ports
 //    2. Batch decode nets and pipeline declarations
-//    3. Configuration table clock domains and parameter storage
+//    3. Weight-address storage clock domains
 //    4. Regular SRAM passthrough and protocol checks
 //    5. Pipeline tags and tmp/Psum storage declarations
 //    6. Operation step counters (simulation only)
 //    7. Completion paths, shared views, batch decode
-//    8. Issue scheduling and Requant configuration select
-//    9. Requant unit, output lanes, Macro array, reduction tree
+//    8. Issue scheduling
+//    9. Raw output lanes, Macro array, reduction tree
 //   10. Accumulation: buffer enables, tmp/Psum arrays, arithmetic
 //   11. Main pipeline state machine
 //
@@ -24,14 +24,11 @@ module cluster_top #(
   // WS/AS context count; for OS1 WS it is the only limit, so up to MAX_CONTEXTS
   // contexts (e.g. 64) are legal even beyond OUTPUT_BUFFER_DEPTH.
   parameter int MAX_CONTEXTS = 64,
-  parameter int REQUANT_CONTEXT_DEPTH = OUTPUT_BUFFER_DEPTH,
-  parameter bit USE_CLOCK_GATING = 1,
-  parameter bit ENABLE_REQUANT = 1
+  parameter bit USE_CLOCK_GATING = 1
 ) (
   input logic clock,
   input logic reset,
   input cluster_pkg::cluster_ctrl_t cmd_i,
-  input cluster_pkg::requant_cfg_t requant_cfg_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,
   input logic [1023:0] act_data_i,
@@ -44,12 +41,10 @@ module cluster_top #(
   input logic [1023:0] sram_wrdata,
   output wire [1023:0] sram_rd_data,
   output logic sram_rd_valid,
-  // TB observation only: these are NOT public RTL output ports.
-  // output logic [1023:0] psum_data_o,
-  // output logic [31:0] out_valid_o,
-  // Final registered INT8 data and per-lane valid; no output backpressure.
-  output logic [255:0] requant_data_o,
-  output logic [31:0] requant_valid_o
+  // Lane l carries signed32 raw_psum[32*l+:32], qualified by psum_valid[l].
+  // No output backpressure. Invalid lane payload is unspecified.
+  output wire [1023:0] raw_psum,
+  output wire [31:0] psum_valid
 );
   import cluster_pkg::*;
   `include "cluster_func.sv"
@@ -65,7 +60,6 @@ module cluster_top #(
   logic [3:0] batch_group_size[0:7];
   logic [7:0] batch_macro_active;
   logic batch_is_as, batch_uses_psum;
-  logic [2:0] batch_requant_group;
   int batch_activation_bits, batch_weight_bits, batch_phase_count;
   int batch_last_phase, batch_last_tile, batch_act_digits;
   logic [4095:0] act_buffer;  // four 1024-bit bit-slice planes, A0..A3
@@ -96,15 +90,6 @@ module cluster_top #(
   wire [31:0] macro_mask;
   wire [15:0] macro_phase;
   logic batch_active, batch_input_done;
-  requant_cfg_t batch_requant_cfg;
-  // Fixed Context slots: AS never recycles an entry within a batch.
-  // A4 bypasses only the weight-address table; all AS modes retain scale.
-  // Only per-channel loads or consumes ZP; tensor correction belongs to TB.
-  logic [127:0] requant_context_zp[0:REQUANT_CONTEXT_DEPTH - 1];
-  logic [127:0] requant_context_multiplier[0:REQUANT_CONTEXT_DEPTH - 1];
-  logic [39:0] requant_context_shift[0:REQUANT_CONTEXT_DEPTH - 1];
-  logic [REQUANT_CONTEXT_DEPTH - 1:0] requant_context_valid;
-  requant_cfg_t selected_requant_cfg;
   // Combinational decode of the accepted command. Declarations carry no
   // initialisers, so every wire has exactly one visible assign driver.
   wire deep_command;
@@ -112,68 +97,27 @@ module cluster_top #(
   wire a4_packet;
   wire storage_active;
   wire deep_weight_active;
-  wire deep_requant_active;
-  wire channel_scale_active;
-  wire batch_cfg_load;
-  wire entry0_clock, deep_weight_clock, deep_requant_clock;
-  wire channel_scale_clock, batch_cfg_clock, batch_channel_clock;
-  // ZP belongs to channel-only clock domains. Both clocks stop in tensor mode.
-  wire deep_zp_clock, batch_zp_clock;
   wire [31:0] accepted_context;
   wire [31:0] write_context_slot;
-  // Requant Context slot this command targets. Per-Context zP/Q state is written
-  // and re-checked at this index, so it is a combinational view rather than a
-  // temporary inside the pipeline block.
-  wire [31:0] zp_ctx;
-  wire write_requant_params;
   assign cmd_accept = cmd_valid_i && cmd_ready_o;
   assign deep_command = cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4;
   assign deep_batch = batch_is_as && batch_activation_bits > 4;
   assign a4_packet = batch_is_as && batch_activation_bits == 4;
   assign storage_active = !reset && cmd_accept && cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) == 4;
   assign deep_weight_active = !reset && ((batch_active && deep_batch) || (cmd_accept && deep_command));
-  assign deep_requant_active = !reset && ENABLE_REQUANT &&
-      ((batch_active && batch_command.cim_as_cnt > 1) || (cmd_accept && cmd_i.cim_as_cnt > 1));
-  assign channel_scale_active = deep_requant_active &&
-      (batch_active ? batch_requant_cfg.conv_mode : requant_cfg_i.conv_mode);
-  assign batch_cfg_load = !reset && ENABLE_REQUANT && cmd_accept && !batch_active;
   assign accepted_context = packet_active ? command_count : 0;
   assign write_context_slot = accepted_context;
-  assign zp_ctx = write_context_slot;
-  assign write_requant_params = cmd_accept && ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && (!batch_active || tile == 0);
-  // ===== 3. Configuration table clock domains and parameter storage =====
-  // Six configuration groups, one gated-clock domain each. They use the same
-  // cell and flags, so a single loop instantiates them; the individual clock
-  // names stay as aliases because the testbench observes them.
-  // Bit order [5:0]: batch extra scales/ZP, batch shared config, AS extra
-  // scales/ZP, AS shared scale, weight address, single entry.
-  wire [5:0] table_enable;
-  assign table_enable = {
-    batch_cfg_load && requant_cfg_i.conv_mode,
-    batch_cfg_load,
-    channel_scale_active,
-    deep_requant_active,
-    deep_weight_active,
-    storage_active
-  };
-  wire [5:0] table_clock;
-  for (genvar t = 0; t < 6; t++) begin : g_table_clock
-    MacroClockGate #(
-      .ENABLE_GATING(USE_CLOCK_GATING)
-    ) u_icg (
-      .clock(clock),
-      .enable(table_enable[t]),
-      .gated_clock(table_clock[t])
+  // Weight-address storage has two independent gated clock domains.
+  wire entry0_clock, deep_weight_clock;
+  wire [1:0] table_enable = {deep_weight_active, storage_active};
+  wire [1:0] table_clock;
+  for (genvar t = 0; t < 2; t++) begin : g_table_clock
+    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_icg (
+      .clock(clock), .enable(table_enable[t]), .gated_clock(table_clock[t])
     );
   end
   assign entry0_clock = table_clock[0];
   assign deep_weight_clock = table_clock[1];
-  assign deep_requant_clock = table_clock[2];
-  assign channel_scale_clock = table_clock[3];
-  assign batch_cfg_clock = table_clock[4];
-  assign batch_channel_clock = table_clock[5];
-  assign deep_zp_clock = channel_scale_clock;
-  assign batch_zp_clock = batch_channel_clock;
 
   // WS/single uses packet_cmd directly. A4 AS uses one bypass register.
   always_ff @(posedge entry0_clock or posedge reset)
@@ -183,66 +127,6 @@ module cluster_top #(
     if (reset) for (int d = 0; d < WGT_RADDR_BUFFER_DEPTH; d++) context_address[d] <= '0;
     else if (cmd_accept && deep_command && write_context_slot < WGT_RADDR_BUFFER_DEPTH)
       context_address[write_context_slot] <= cmd_i.cim_weight_raddr;
-  end
-  // Shared scale has its own table clock. ZP and unused channel scales use
-  // channel-only clocks, so every ZP storage bit is clock-gated in tensor mode.
-  // No additional ICGs, per-entry clock gates or FIFO pointers.
-  always_ff @(posedge deep_requant_clock or posedge reset) begin
-    if (reset)
-      for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) begin
-        requant_context_multiplier[d][31:0] <= '0;
-        requant_context_shift[d][9:0] <= '0;
-      end
-    else if (write_requant_params && write_context_slot < REQUANT_CONTEXT_DEPTH) begin
-      requant_context_multiplier[write_context_slot][31:0] <= requant_cfg_i.requant_multiplier[31:0];
-      requant_context_shift[write_context_slot][9:0] <= requant_cfg_i.requant_shift[9:0];
-    end
-  end
-  always_ff @(posedge channel_scale_clock or posedge reset) begin
-    if (reset)
-      for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) begin
-        requant_context_multiplier[d][127:32] <= '0;
-        requant_context_shift[d][39:10] <= '0;
-      end
-    else if (write_requant_params && requant_cfg_i.conv_mode && write_context_slot < REQUANT_CONTEXT_DEPTH) begin
-      requant_context_multiplier[write_context_slot][127:32] <= requant_cfg_i.requant_multiplier[127:32];
-      requant_context_shift[write_context_slot][39:10] <= requant_cfg_i.requant_shift[39:10];
-    end
-  end
-  // Non-AS uses only this batch configuration. Its payload clocks pulse at
-  // configuration load; the combinational Requant reads retained values.
-  always_ff @(posedge batch_cfg_clock or posedge reset) begin
-    if (reset) begin
-      batch_requant_cfg.conv_mode <= 0;
-      batch_requant_cfg.requant_multiplier[31:0] <= 1;
-      batch_requant_cfg.requant_shift[9:0] <= '0;
-    end else if (batch_cfg_load) begin
-      batch_requant_cfg.conv_mode <= requant_cfg_i.conv_mode;
-      batch_requant_cfg.requant_multiplier[31:0] <= requant_cfg_i.requant_multiplier[31:0];
-      batch_requant_cfg.requant_shift[9:0] <= requant_cfg_i.requant_shift[9:0];
-    end
-  end
-  always_ff @(posedge batch_channel_clock or posedge reset) begin
-    if (reset) begin
-      batch_requant_cfg.requant_multiplier[127:32] <= '0;
-      batch_requant_cfg.requant_shift[39:10] <= '0;
-    end else if (batch_cfg_load && requant_cfg_i.conv_mode) begin
-      batch_requant_cfg.requant_multiplier[127:32] <= requant_cfg_i.requant_multiplier[127:32];
-      batch_requant_cfg.requant_shift[39:10] <= requant_cfg_i.requant_shift[39:10];
-    end
-  end
-  // Separate ZP register processes use existing channel-only gated clocks.
-  // Async reset remains effective even when all tensor-mode ZP clocks stop.
-  always_ff @(posedge deep_zp_clock or posedge reset) begin
-    if (reset)
-      for (int d = 0; d < REQUANT_CONTEXT_DEPTH; d++) requant_context_zp[d] <= '0;
-    else if (write_requant_params && requant_cfg_i.conv_mode && write_context_slot < REQUANT_CONTEXT_DEPTH)
-      requant_context_zp[write_context_slot] <= requant_cfg_i.requant_zp;
-  end
-  always_ff @(posedge batch_zp_clock or posedge reset) begin
-    if (reset) batch_requant_cfg.requant_zp <= '0;
-    else if (batch_cfg_load && requant_cfg_i.conv_mode)
-      batch_requant_cfg.requant_zp <= requant_cfg_i.requant_zp;
   end
   // ===== 4. Regular SRAM passthrough and protocol checks =====
   wire [2:0] regular_macro_id;
@@ -327,7 +211,7 @@ module cluster_top #(
   // NUMERIC LIMIT: tmp/Psum are signed32 storage. Intermediate writes truncate
   // before the final-result overflow check; there is no intermediate overflow
   // flag or saturation. Every stored intermediate must fit signed32, not only
-  // the final mathematical sum. See docs/Cluster_Requant.md (Psum limits).
+  // the final mathematical sum.
   logic signed [31:0] psum[0:OUTPUT_BUFFER_DEPTH - 1][0:31];
   logic [OUTPUT_BUFFER_DEPTH - 1:0] psum_depth_open;
   logic [CONTEXT_COUNT_W - 1:0] batch_contexts;
@@ -347,8 +231,6 @@ module cluster_top #(
   longint signed shared_add_a[0:31], shared_add_b[0:31], shared_add_result[0:31];
   longint signed tmp_store_data[0:31], arithmetic_result[0:31];
   logic [31:0] fusion_enable, acc_enable, psum_write, result_done;
-  wire [255:0] requant_comb_data;
-  wire [ 31:0] requant_comb_valid;
   // ===== 6. Operation step counters (simulation only) =====
   // Internal operation coverage; no extra external interface. The pipeline
   // block only updates state; step terms are gathered separately so each
@@ -411,14 +293,13 @@ module cluster_top #(
   // Contexts on that path. Per-lane reservation/duplicate checks live in TB.
   logic [2:0] completion_path_done;
   logic [2:0] completion_path_required, completion_path_last;
-  // Internal observation only; no new external signal.
-  // Raw observations remain available for the independent compute scoreboard.
+  // Raw publication state drives the public result ports.
   logic [31:0] raw_valid;
   int raw_context[0:31]; // Combinational view of three shared Context registers.
   wire [1023:0] raw_data; // Valid-qualified observation of existing tmp/Psum storage.
 `ifndef SYNTHESIS
   initial begin
-    if (MAX_CONTEXTS < 1 || OUTPUT_BUFFER_DEPTH < 1 || WGT_RADDR_BUFFER_DEPTH < 1 || REQUANT_CONTEXT_DEPTH < 1)
+    if (MAX_CONTEXTS < 1 || OUTPUT_BUFFER_DEPTH < 1 || WGT_RADDR_BUFFER_DEPTH < 1)
       $fatal(1, "Context capacity must be >= 1");
   end
 `endif
@@ -467,16 +348,14 @@ module cluster_top #(
     batch_lane_mask = '0;
     batch_macro_demand = '0;
     batch_macro_active = '0;
-    batch_requant_group = '0;
     for (int g = 0; g < 8; g++) batch_group_size[g] = '0;
     for (int m = 0; m < 8; m++) begin
       batch_macro_group[m] = 3'(group_of(batch_command.cim_reduce_split_mask, m));
       batch_group_size[batch_macro_group[m]]++;
       batch_macro_active[m] = batch_command.cim_macro_en_mask[m] &&
           (|batch_command.cim_macro_oc_mask[4*m+:4]);
-      // Requant legality guarantees exactly one enabled group. Decode it
+      // Decode physical group placement for each enabled Macro.
       // from Macro enables, never from OC0's potentially masked valid.
-      if (batch_command.cim_macro_en_mask[m]) batch_requant_group = batch_macro_group[m];
       for (int c = 0; c < 4; c++) begin
         batch_macro_demand[4*m+c] = merge_contributes(
             batch_command.cim_reduce_split_mask, batch_command.cim_macro_oc_mask, m, c);
@@ -507,7 +386,7 @@ module cluster_top #(
       raw_context[l] = int'(raw_path_context[int'(batch_group_path[l/4])]);
     end
   end
-  // ===== 8. Issue scheduling and Requant configuration select =====
+  // ===== 8. Issue scheduling =====
   always_comb begin
     packet_cmd = batch_command;
     packet_cmd.cim_weight_raddr = packet_weight_address;
@@ -536,70 +415,12 @@ module cluster_top #(
                        (!packet_active || (packet_cmd.cim_as_cnt > 1 && command_count < int'(packet_cmd.cim_as_cnt)));
   // A registered publication valid and shared Context select retained
   // tmp/Psum data directly; there is no separate raw payload register.
-  // Storage-backed Psum -> combinational Requant -> INT8 output registers.
-  // NBA semantics capture the PREVIOUS raw publication and configuration.
-  // A new batch may load its configuration on that same capture edge.
-  logic [CONTEXT_W - 1:0] requant_read_context;
-  logic [3:0] requant_group_valid;
-  always_comb begin : select_requant_context
-    requant_read_context = raw_path_context[batch_group_path[batch_requant_group]];
-    requant_group_valid = raw_valid[4*batch_requant_group+:4];
-    selected_requant_cfg = batch_requant_cfg;
-    if (!batch_requant_cfg.conv_mode) selected_requant_cfg.requant_zp = '0;
-    if (batch_is_as && (|requant_group_valid) && int'(requant_read_context) < REQUANT_CONTEXT_DEPTH) begin
-      for (int c = 0; c < 4; c++) begin
-        // Preserve per-OC isolation while sharing the Context address.
-        if (requant_group_valid[c] && batch_requant_cfg.conv_mode) begin
-          selected_requant_cfg.requant_zp[32*c+:32] = requant_context_zp[requant_read_context][32*c+:32];
-          if (batch_requant_cfg.conv_mode) begin
-            selected_requant_cfg.requant_multiplier[32*c+:32] =
-                requant_context_multiplier[requant_read_context][32*c+:32];
-            selected_requant_cfg.requant_shift[10*c+:10] = requant_context_shift[requant_read_context][10*c+:10];
-          end
-        end
-      end
-      // Tensor entry zero is shared even when OC0 itself is masked.
-      if (!batch_requant_cfg.conv_mode) begin
-        selected_requant_cfg.requant_multiplier[31:0] = requant_context_multiplier[requant_read_context][31:0];
-        selected_requant_cfg.requant_shift[9:0] = requant_context_shift[requant_read_context][9:0];
-      end
-    end
-  end
-  // ===== 9. Requant unit, output lanes, Macro array, reduction tree =====
-  ClusterRequant u_requant (
-    .cfg_i  (selected_requant_cfg),
-    .group_sel_i(batch_requant_group),
-    .psum_i (raw_data),
-    .valid_i(ENABLE_REQUANT ? raw_valid : 32'b0),
-    .data_o (requant_comb_data),
-    .valid_o(requant_comb_valid)
-  );
-  // Valid stays on the root clock so the final pulse always clears.
-  always_ff @(posedge clock or posedge reset)
-    if (reset) requant_valid_o <= '0;
-    else requant_valid_o <= requant_comb_valid;
+  // Direct storage-backed raw output. Existing raw publication timing is retained.
+  assign raw_psum = raw_data;
+  assign psum_valid = raw_valid;
   for (genvar l = 0; l < 32; l++) begin : g_output_lane
-    wire quant_clock;
-    MacroClockGate #(
-      .ENABLE_GATING(USE_CLOCK_GATING)
-    ) u_quant_icg (
-      .clock(clock),
-      .enable(!reset && requant_comb_valid[l]),
-      .gated_clock(quant_clock)
-    );
-    assign raw_data[32 * l +: 32] = batch_uses_psum ?
+    assign raw_data[32*l+:32] = batch_uses_psum ?
         psum[raw_context[l]][l] : tmp_result[l];
-    always_ff @(posedge quant_clock or posedge reset) begin
-      if (reset) requant_data_o[8*l+:8] <= '0;
-      else if (requant_comb_valid[l]) begin
-`ifndef SYNTHESIS
-        if (batch_command.cim_as_cnt > 1 &&
-            (raw_context[l] >= REQUANT_CONTEXT_DEPTH || !requant_context_valid[raw_context[l]]))
-          $fatal(1, "CLUSTER_REQUANT_CONFIG: missing AS context zp");
-`endif
-        requant_data_o[8*l+:8] <= requant_comb_data[8*l+:8];
-      end
-    end
   end
   for (genvar m = 0; m < 8; m++) begin : g_macro
     logic [511:0] idata;
@@ -840,7 +661,6 @@ module cluster_top #(
       batch_active <= 0;
       batch_input_done <= 0;
       batch_contexts <= 0;
-      requant_context_valid <= '0;
       batch_command <= '0;
       psum_depth_open <= '0;
       for (int path = 0; path < 4; path++) pipe_meta[path] <= '0;
@@ -860,34 +680,7 @@ module cluster_top #(
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded");
         if (cmd_i.cim_os_cnt > 1 && (cmd_i.cim_ws_cnt > OUTPUT_BUFFER_DEPTH || cmd_i.cim_as_cnt > OUTPUT_BUFFER_DEPTH))
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
-        if (ENABLE_REQUANT && cmd_i.cim_as_cnt > 1 && cmd_i.cim_as_cnt > REQUANT_CONTEXT_DEPTH)
-          $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp depth exceeded");
 `endif
-        if (ENABLE_REQUANT && cmd_i.cim_as_cnt > 1) begin
-`ifndef SYNTHESIS
-          if (batch_active && requant_cfg_i.conv_mode !== batch_requant_cfg.conv_mode)
-            $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context mode changed");
-          if ($isunknown({requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}))
-            $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context scale");
-          if (requant_cfg_i.conv_mode && $isunknown(requant_cfg_i.requant_zp)) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown AS context zp");
-`endif
-          if (write_requant_params) begin
-            if (!batch_active) requant_context_valid <= '0;
-            requant_context_valid[zp_ctx] <= 1;
-          end else begin
-`ifndef SYNTHESIS
-            if (!requant_context_valid[zp_ctx] ||
-                (requant_cfg_i.conv_mode && requant_cfg_i.requant_zp !== requant_context_zp[zp_ctx]))
-              $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context zp changed across K Tiles");
-            else if (requant_cfg_i.conv_mode ?
-                    (requant_cfg_i.requant_multiplier !== requant_context_multiplier[zp_ctx] ||
-                     requant_cfg_i.requant_shift !== requant_context_shift[zp_ctx]) :
-                    (requant_cfg_i.requant_multiplier[31:0] !== requant_context_multiplier[zp_ctx][31:0] ||
-                     requant_cfg_i.requant_shift[9:0] !== requant_context_shift[zp_ctx][9:0]))
-              $fatal(1, "CLUSTER_REQUANT_CONFIG: AS context scale changed across K Tiles");
-`endif
-          end
-        end
         if (!packet_active) begin
           packet_weight_address <= cmd_i.cim_weight_raddr;
           packet_active <= 1;
@@ -904,15 +697,6 @@ module cluster_top #(
           command_count <= command_count + 1;
         end
         if (!batch_active) begin
-`ifndef SYNTHESIS
-          if (ENABLE_REQUANT &&
-              ($isunknown({requant_cfg_i.conv_mode,
-                           requant_cfg_i.requant_multiplier, requant_cfg_i.requant_shift}) ||
-               (requant_cfg_i.conv_mode && $isunknown(requant_cfg_i.requant_zp)))) $fatal(1, "CLUSTER_REQUANT_CONFIG: unknown configuration");
-          if (ENABLE_REQUANT && !conv_group_legal(cmd_i))
-            $fatal(1, "CLUSTER_REQUANT_CONFIG: Requant requires one aligned reduction group");
-`endif
-
           batch_active   <= 1;
           batch_command  <= cmd_i;
           batch_contexts <= CONTEXT_COUNT_W'(cmd_i.cim_ws_cnt > 1 ? cmd_i.cim_ws_cnt : cmd_i.cim_as_cnt);

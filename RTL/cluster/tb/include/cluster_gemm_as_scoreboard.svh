@@ -1,14 +1,8 @@
-`include "include/requant_tb_helpers.svh"
 always @(posedge clock) begin : as_gemm_scoreboard
-  logic [31:0] previous_raw_valid;
-  logic [255:0] previous_quant;
   bit check_history[4];
   logic [31:0] wanted_history[4];
   int hc[4], tile, cx, ph, index, n;
-  logic [7:0] corrected_quant;
   cycle++;
-  previous_raw_valid = out_valid_o;
-  previous_quant = requant_data_o;
   for (int l = 0; l < 4; l++) check_history[l] = 0;
   if (!reset && monitoring) begin
     if (cmd_valid_i && cmd_ready_o) begin
@@ -57,12 +51,8 @@ always @(posedge clock) begin : as_gemm_scoreboard
         $fatal(1, "AS GEMM: per-phase Psum history mismatch m=%0d ctx=%0d lane=%0d", active_m, hc[l], l);
       psum_checks++;
     end
-    if ((out_valid_o & 32'hfffffff0) != 0 || (requant_valid_o & 32'hfffffff0) != 0)
+    if ((out_valid_o & 32'hfffffff0) != 0)
       $fatal(1, "AS GEMM: inactive output lane valid");
-    if (requant_valid_o !== previous_raw_valid) $fatal(1, "AS GEMM: Requant valid must follow raw by one cycle");
-    for (int l = 0; l < 32; l++)
-    if (!requant_valid_o[l] && requant_data_o[8*l+:8] !== previous_quant[8*l+:8])
-      $fatal(1, "AS GEMM: INT8 output register did not hold");
     for (int l = 0; l < 4; l++) begin
       if (out_valid_o[l]) begin
         cx = raw_next[l];
@@ -76,22 +66,7 @@ always @(posedge clock) begin : as_gemm_scoreboard
         row_raw++;
         raw_checks++;
       end
-      if (requant_valid_o[l]) begin
-        cx = quant_next[l];
-        n  = 4 * logical_context(active_m, cx) + l;
-        if (requant_data_o[8*l+:8] !== cim_golden[active_m*N+n])
-          $fatal(1, "GEMM: CIM INT8 before TB correction mismatch");
-        corrected_quant = $test$plusargs("PER_CHANNEL_SCALE") ? requant_data_o[8*l+:8] :
-            tb_correct_tensor($signed(requant_data_o[8*l+:8]), $signed(zp[n]));
-        if (cx >= AS || cycle != first_accept + FIRST_RAW + 1 + cx || corrected_quant !== quant_golden[active_m*N+n])
-          $fatal(1, "AS GEMM: INT8 matrix/Context-zp/timing mismatch m=%0d ctx=%0d lane=%0d", active_m, cx, l);
-        observed_quant[active_m*N+n] = corrected_quant;
-        $fdisplay(trace_fd, "%0d,%0d,quant,%0d,1,%0d,%0d,%0d,%0d", cycle, cycle - first_accept, active_m, cx, l, n,
-                  $signed(observed_quant[active_m*N+n]));
-        quant_next[l]++;
-        row_quant++;
-        quant_checks++;
-      end
+
     end
   end
 end

@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # 四通道 Requant
 
 Cluster内部保存raw signed32，正式结果由Requant端口输出。Requant使用四个组合算术通道；参数c固定对应归约结果的OC c，与 oc_mask 中OC0、OC1、OC2、OC3的位序一一对应。屏蔽OC1不会把参数1挪给OC2。

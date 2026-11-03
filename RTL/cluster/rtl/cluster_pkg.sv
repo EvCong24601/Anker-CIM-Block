@@ -1,17 +1,5 @@
 `timescale 1ns / 1ps
 package cluster_pkg;
-  // Independent batch configuration; not part of the compute descriptor.
-  typedef struct packed {
-    // Weight quantization: 0 = per-tensor, shared entry 0 and ZP in TB;
-    // 1 = per-channel, entry c for OC c and ZP in RTL before saturation.
-    logic conv_mode;
-    logic [127:0] requant_multiplier;  // INT32 entry c: [32*c+:32]
-    logic [39:0] requant_shift;  // INT10 entry c: [10*c+:10], -512..511
-    // Per-channel INT32 effective zero point supplied by the parameter
-    // producer, including input-offset compensation. Used only in mode=1;
-    // mode=0 ignores this compatibility field and applies channel ZP in TB.
-    logic [127:0] requant_zp;  // OC c: [32*c+:32], never compact masked OCs
-  } requant_cfg_t;
   // Cluster descriptor: three nine-bit counts, total packed width 110 bits.
   typedef struct packed {
     // All counts are >=1. ws>1 selects WS, as>1 selects AS;

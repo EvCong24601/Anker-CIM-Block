@@ -19,10 +19,6 @@
  * cmd_i[27:4] = cim_act_slot_sel
  * cmd_i[3:1] = cim_precision
  * cmd_i[0] = cim_signed_en
- * requant_cfg_i[296] = conv_mode
- * requant_cfg_i[295:168] = requant_multiplier
- * requant_cfg_i[167:128] = requant_shift
- * requant_cfg_i[127:0] = requant_zp
  */
 library (cluster_top_interface) {
   technology (cmos);
@@ -96,23 +92,7 @@ library (cluster_top_interface) {
     downto : true;
   }
 
-  type (bus_256) {
-    base_type : array;
-    data_type : bit;
-    bit_width : 256;
-    bit_from : 255;
-    bit_to : 0;
-    downto : true;
-  }
 
-  type (bus_297) {
-    base_type : array;
-    data_type : bit;
-    bit_width : 297;
-    bit_from : 296;
-    bit_to : 0;
-    downto : true;
-  }
 
   type (bus_1024) {
     base_type : array;
@@ -156,16 +136,6 @@ library (cluster_top_interface) {
       }
     }
 
-    bus ("requant_cfg_i") {
-      bus_type : bus_297;
-      direction : input;
-      pin ("requant_cfg_i[296:0]") {
-        direction : input;
-        max_transition : 0.871500;
-        min_transition : 0.000000;
-        capacitance : 0.001821;
-      }
-    }
 
     pin ("cmd_valid_i") {
       direction : input;
@@ -278,10 +248,10 @@ library (cluster_top_interface) {
       min_capacitance : 0.000150;
     }
 
-    bus ("requant_data_o") {
-      bus_type : bus_256;
+    bus ("raw_psum") {
+      bus_type : bus_1024;
       direction : output;
-      pin ("requant_data_o[255:0]") {
+      pin ("raw_psum[1023:0]") {
         direction : output;
         max_transition : 0.871500;
         min_transition : 0.000000;
@@ -290,10 +260,10 @@ library (cluster_top_interface) {
       }
     }
 
-    bus ("requant_valid_o") {
+    bus ("psum_valid") {
       bus_type : bus_32;
       direction : output;
-      pin ("requant_valid_o[31:0]") {
+      pin ("psum_valid[31:0]") {
         direction : output;
         max_transition : 0.871500;
         min_transition : 0.000000;

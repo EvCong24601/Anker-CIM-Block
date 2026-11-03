@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Testbench 文件与检查职责
 
 功能源码位于 `RTL/cluster/rtl/` 和 `RTL/macro/rtl/`；TB、include、golden和观察器位于对应的 `tb/`。`.svh` 在module内include，不单独编译，也不形成硬件层次。

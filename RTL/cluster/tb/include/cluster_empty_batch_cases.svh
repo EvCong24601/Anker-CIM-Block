@@ -27,11 +27,7 @@ task automatic run_empty_batch_suite();
   bit driver_done;
   outputs = 0;
   driver_done = 0;
-  if (!ENABLE_REQUANT) $fatal(1, "Empty batch test requires Requant");
   for (int m = 0; m < 8; m++) load_weight_row(m, 0, {128{8'd1}});
-  requant_cfg_i = '0;
-  requant_cfg_i.requant_multiplier[31:0] = 1;
-  requant_cfg_i.requant_shift[9:0] = 10'(-2);
   fork
     begin
       @(negedge clock);
@@ -49,13 +45,13 @@ task automatic run_empty_batch_suite();
       for (int timeout = 0; timeout < 300; timeout++) begin
         @(posedge clock);
         #1;
-        if (requant_valid_o != 0) begin
-          if (requant_valid_o !== 32'hf) $fatal(1, "Empty boundary output mask mismatch");
+        if (psum_valid != 0) begin
+          if (psum_valid !== 32'hf) $fatal(1, "Empty boundary output mask mismatch");
           for (int c = 0; c < 4; c++)
-            if (requant_data_o[8*c+:8] !== 8'd64) $fatal(1, "Empty boundary numeric mismatch");
+            if (raw_psum[32*c+:32] !== 32'd256) $fatal(1, "Empty boundary numeric mismatch");
           outputs++;
         end
-        if (driver_done && !dut.batch_active && requant_valid_o == 0) break;
+        if (driver_done && !dut.batch_active && psum_valid == 0) break;
         if (timeout == 299) $fatal(1, "Empty boundary timeout");
       end
     end

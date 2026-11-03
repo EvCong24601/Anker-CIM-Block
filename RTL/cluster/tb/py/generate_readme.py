@@ -10,7 +10,7 @@ BODY = r"""# Cluster 标准逐拍表
 
 ## 附录 A 标准逐拍表
 
-以下42组为raw调度/算术表，C0为首Command+A0接受沿；标准W2/W4/W8从内部发射到raw的D=3/4/5T。各表中的split/EN用于raw归约测试，不代表全部符合Requant单组限制。合法量化配置的输出比对应raw晚1T。
+以下42组为raw调度/算术表，C0为首Command+A0接受沿；标准W2/W4/W8从内部发射到raw的D=3/4/5T。各表中的raw周期即当前raw_psum/psum_valid正式输出周期，保留物理组和OC mask布局；不存在Requant额外1T或单组限制。
 """
 
 

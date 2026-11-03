@@ -1,9 +1,7 @@
 `timescale 1ns / 1ps
 // Concrete OS2/AS4/W8A16 GEMM entry; driver and checking live in ClusterGemmOs2As4.
-// ZP_DEPTH stays on the top so the case overrides keep their original path.
 module tb_Cluster_GEMM_OS2_AS4_W8A16;
-  parameter int ZP_DEPTH = 16;
-  ClusterGemmOs2As4 #(.ZP_DEPTH(ZP_DEPTH)) u_gemm ();
+  ClusterGemmOs2As4 u_gemm ();
 `ifdef CLUSTER_FSDB
   initial begin : case_fsdb_dump
     string fsdb_file;

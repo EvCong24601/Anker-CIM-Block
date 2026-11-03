@@ -1,10 +1,12 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # Cluster 标准逐拍表
 
 [返回项目入口](../README.md) · [调度与容量说明](Cluster_Input_Overlap.md)
 
 ## 附录 A 标准逐拍表
 
-以下42组为raw调度/算术表，C0为首Command+A0接受沿；标准W2/W4/W8从内部发射到raw的D=3/4/5T。各表中的split/EN用于raw归约测试，不代表全部符合Requant单组限制。合法量化配置的输出比对应raw晚1T。
+以下42组为raw调度/算术表，C0为首Command+A0接受沿；标准W2/W4/W8从内部发射到raw的D=3/4/5T。各表中的raw周期即当前raw_psum/psum_valid正式输出周期，保留物理组和OC mask布局；不存在Requant额外1T或单组限制。
 
 ### A1 单 Context os=1 ws=1 as=1
 每 Tile K=128；每 Context 总 K=128。

@@ -1,3 +1,5 @@
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+
 # RTL 辅助文件索引
 
 [返回项目入口](../README.md)。功能 RTL、TB 顶层和 `vcs-rtl/` 文件在首页逐项列出；这里列出其余源码和辅助文件。路径相对仓库根目录。
