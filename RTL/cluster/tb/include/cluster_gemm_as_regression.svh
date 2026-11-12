@@ -7,7 +7,7 @@ initial begin : as_gemm_regression
   $fdisplay(trace_fd, "cycle,relative_cycle,event,m,k_tile,as_context,lane,n,value");
   for (int macro = 0; macro < 8; macro++) refreshes[macro] = 0;
   repeat (4) @(negedge clock);
-  reset = 0;
+  reset_n = 1;
   load_as_weights();
   for (int m = 0; m < M; m++) begin
     $display("[CASE_START] time=%0.3f ns suite=gemm_os2_as4_row description=two-K-Tiles-four-N-Contexts m=%0d",

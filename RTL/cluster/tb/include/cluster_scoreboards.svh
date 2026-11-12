@@ -11,7 +11,7 @@
 // wait until the preceding packet's final internal issue has consumed it.
 always @(posedge clock) begin : act_buffer_scoreboard
   logic [4095:0] wanted;
-  if (!reset) begin
+  if (reset_n) begin
     wanted = dut.act_buffer;
     if (cmd_valid_i && cmd_ready_o && !dut.packet_active) wanted[0+:1024] = act_data_i;
     if (dut.act_loading) wanted[1024*dut.external_phase+:1024] = act_data_i;
@@ -52,7 +52,7 @@ always @(posedge clock) begin : buffer_clock_scoreboard
   logic [31:0] want_input;
   int c, ph, ab, writes;
   bit writes_psum;
-  if (!reset) begin
+  if (reset_n) begin
     want_input = dut.capture_valid;
     for (int l = 0; l < 32; l++) begin
       old_tmp[l]  = dut.tmp_result[l];
@@ -115,7 +115,7 @@ always @(posedge clock) begin : arithmetic_scoreboard
   int cx[0:31], ph, kt, c, fc;
   bit check_p[0:31], traced, is_as, acc, fusion, trace_as;
   string trace_row, op;
-  if (!reset && monitoring) begin
+  if (reset_n && monitoring) begin
     traced = 0;
     trace_row = "";
     for (int l = 0; l < 32; l++) begin
@@ -197,7 +197,7 @@ always @(posedge clock) begin : scoreboard
   int t, c, p, idx, tag, external_ctx, external_ph;
   bit act_sample, command_sample;
   cycle = cycle + 1;
-  if (!reset && monitoring) begin
+  if (reset_n && monitoring) begin
     if (held_cmd && (!cmd_valid_i || cmd_i !== last_cmd)) $fatal(1, "Command changed before ready");
     if (held_act_for_cmd && act_data_i !== last_act) $fatal(1, "ACT payload changed while its Command was stalled");
     held_cmd = cmd_valid_i && !cmd_ready_o;

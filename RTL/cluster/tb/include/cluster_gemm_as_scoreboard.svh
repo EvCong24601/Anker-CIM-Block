@@ -4,7 +4,7 @@ always @(posedge clock) begin : as_gemm_scoreboard
   int hc[4], tile, cx, ph, index, n;
   cycle++;
   for (int l = 0; l < 4; l++) check_history[l] = 0;
-  if (!reset && monitoring) begin
+  if (reset_n && monitoring) begin
     if (cmd_valid_i && cmd_ready_o) begin
       if (first_accept < 0) first_accept = cycle;
       tile = row_commands / AS;
@@ -42,7 +42,7 @@ always @(posedge clock) begin : as_gemm_scoreboard
     end
   end
   #1;
-  if (!reset && monitoring) begin
+  if (reset_n && monitoring) begin
     if (dut.batch_active && dut.psum_depth_open !== 16'((1 << AS) - 1))
       $fatal(1, "AS GEMM: incorrect Psum Context enable mask");
     for (int l = 0; l < 4; l++)

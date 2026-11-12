@@ -7,8 +7,8 @@ logic [31:0] completion_expected_mask;
 int completion_expected_contexts, completion_reserved_count;
 int completion_batch_checks = 0;
 bit completion_was_active;
-always @(posedge clock or posedge reset) begin : check_batch_completion
-  if (reset) begin
+always @(posedge clock or negedge reset_n) begin : check_batch_completion
+  if (!reset_n) begin
     for (int c = 0; c < MAX_CONTEXTS; c++) begin
       completion_reserved[c] = '0;
       completion_seen[c] = '0;
@@ -34,7 +34,7 @@ always @(posedge clock or posedge reset) begin : check_batch_completion
     end
     // Observe the completed NBA state before the arithmetic scoreboard's #1.
     #0.006;
-    if (!reset) begin
+    if (reset_n) begin
       for (int l = 0; l < 32; l++)
       if (dut.raw_valid[l]) begin
         if (dut.raw_context[l] >= completion_expected_contexts ||

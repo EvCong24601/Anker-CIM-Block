@@ -6,7 +6,7 @@ module ClusterGemmScenario #(
 );
   import cluster_pkg::*;
   `include "cluster_func.sv"
-  logic clock = 0, reset = 1;
+  logic clock = 0, reset_n = 0;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
@@ -22,7 +22,7 @@ module ClusterGemmScenario #(
   wire [31:0] out_valid_o;
   cluster_top dut (
     .clock(clock),
-    .reset(reset),
+    .reset_n(reset_n),
     .cmd_i(cmd_i),
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),

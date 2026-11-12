@@ -7,7 +7,8 @@
 - raw_psum[1023:0]：32 个物理 lane，每个 lane 为 32 bit。lane l 对应 raw_psum[32*l+:32]，按 signed32 解释。
 - psum_valid[31:0]：每 bit 对应同编号 lane，仅在该 bit 为 1 的周期采样对应数据。允许多个归约组同时发布，最多 32 个 lane 有效。
 - 输出无 ready、无反压。接收端必须能在有效周期接受数据；无效 lane 的 payload 不保证保持或为零。
-- reset 异步清除有效位；复位期间 psum_valid=0。
+- reset_n 为低电平有效异步复位，下降沿清除有效位；复位期间 psum_valid=0。释放须由集成端同步并满足恢复/移除时序。
+- reset_n 仅连接有复位状态的子模块，不参与 ready、请求或 ICG/SRAM 使能的组合译码。cmd_ready_o 不保证在复位期间为0；Command握手仅在 reset_n=1 时有效。MacroWeightSRAM 是无复位 wrapper，上层必须在复位期间将 sram_cs_en 置0；直接使用 SingleMacro 时还须将 cim_ren、sram_wen、sram_ren 置0。在访问使能无效时，SRAM阵列和内部读出保持值保持；wrapper 不会自动屏蔽复位期间的访问。
 
 raw_psum 是现有 tmp/Psum 存储的组合读取，psum_valid 使用已有 raw 发布寄存器。没有新增输出数据寄存器，也没有原 Requant 的额外 1T 延迟。下游应在 psum_valid 为 1 的周期采样，不能继续沿用旧 INT8 输出的延迟。
 
@@ -35,7 +36,20 @@ TB 的独立数值模型通过公开 raw_psum/psum_valid 端口验证算术与�
 
 ## 本轮验证
 
-本地ModelSim的10个目标普通及SYNTHESIS条件编译通过。默认Cluster的200组配置、1368个case，以及输入重叠、OS255/256/511的36个边界场景、门控开关对照、空批次边界、常规SRAM和Context压力场景通过。7种GEMM的1504个signed32输出逐元素匹配。零count三个字段、Context超容量和SRAM写/计算冲突均按预期拒绝。未执行实际VCS或工艺综合/STA。
+2026年11月12日对低有效异步复位、无复位SRAM wrapper的最终版本完成验证。SRAM保留测试由上层保持访问请求无效，检查阵列和读出保持值；异步短脉冲测试检查在途事务取消。
+
+- ModelSim全量回归：107项全部通过，包括27项正常用例和80项预期非法输入拒绝，无遗漏或非预期失败。
+- 7种GEMM的1504个signed32输出全部匹配参考值；门控开/关、Cluster逐拍对照、归约树、SRAM读写/响应、输入重叠及容量边界均通过相应用例。
+- 55个源码/include文件的语法树和16份编译清单复查通过：17个RTL异步复位模板全部低有效，未发现复位参与端口运算或组合使能译码；SRAM wrapper及其父实例没有复位引用，黑盒与Liberty接口一致。
+- 编译快照、语法树快照和用例目录的哈希均与受测RTL/TB一致。SYNTHESIS分支编译通过；未执行实际VCS、工艺综合或STA。
+
+从仓库根目录复现全量回归（需要ModelSim的vlib、vlog、vsim位于PATH）：
+
+```sh
+python RTL/cluster/tb/py/run_sram_regression.py --full --sim-dir ../cluster_tb_work/local_sim/resetless_sram_full_20261112
+```
+
+日志位于仓库外的 `../cluster_tb_work/local_sim/resetless_sram_full_20261112/`；`summary.log` 记录107项结果，`sources.json` 保存受测源码哈希，`reset_ast_audit.json` 保存复位检查结果。
 
 ## 输入 Macro 和输出 channel 的位序
 

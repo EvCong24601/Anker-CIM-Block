@@ -5,7 +5,7 @@ module ClusterReduceTree #(
   parameter bit USE_CLOCK_GATING = 1
 ) (
   input logic clock,
-  input logic reset,
+  input logic reset_n,
   input logic early_valid_i,
   input logic [6:0] early_split_i,
   input logic [7:0] early_en_i,
@@ -177,8 +177,8 @@ module ClusterReduceTree #(
   // ICG enable is explicitly registered ONE edge before its forwarding DFF:
   // t3..t6 request at Cq+1, capture at Cq+2; t1/t2 request at Cq+2,
   // capture at Cq+3. Root writes the existing destination buffer at Cq+4.
-  always_ff @(posedge clock or posedge reset) begin
-    if (reset) begin
+  always_ff @(posedge clock or negedge reset_n) begin
+    if (!reset_n) begin
       c1 <= '0;
       c2 <= '0;
       for (int n = 1; n < 7; n++) cg_channel_req[n] <= '0;
@@ -203,8 +203,8 @@ module ClusterReduceTree #(
         .gated_clock(oc_clock[c])
       );
       assign forward_q[n][c] = result_q[c];
-      always_ff @(posedge oc_clock[c] or posedge reset)
-        if (reset) result_q[c] <= '0;
+      always_ff @(posedge oc_clock[c] or negedge reset_n)
+        if (!reset_n) result_q[c] <= '0;
         else if (cg_channel_req[n][c]) result_q[c] <= node_value[n][c];
     end
 `ifndef SYNTHESIS
@@ -217,14 +217,14 @@ module ClusterReduceTree #(
       logic signed [W - 1:0] saved[0:3];
       sampled_req = cg_channel_req[n];
       for (int c = 0; c < 4; c++) saved[c] = result_q[c];
-      if (!reset) begin
+      if (reset_n) begin
         if (sampled_req != forward_mask(source_ctrl[n], n))
           $fatal(1, "Forward node %0d enable not predicted one cycle ahead", n);
         if (|sampled_req) active_edges[n]++;
         #1;
-        if (!reset && oc_clock !== (USE_CLOCK_GATING ? sampled_req : 4'hf))
+        if (reset_n && oc_clock !== (USE_CLOCK_GATING ? sampled_req : 4'hf))
           $fatal(1, "ICG pulse mismatch node %0d", n);
-        if (!reset)
+        if (reset_n)
           for (int c = 0; c < 4; c++)
           if (!sampled_req[c]) begin
             if (result_q[c] !== saved[c]) $fatal(1, "Gated forwarding DFF t%0d OC%0d changed", n, c);
@@ -282,7 +282,7 @@ module ClusterReduceTree #(
   always @(posedge clock) begin : check_downstream
     logic [3:0] changed_inputs[0:2];
     logic signed [20:0] saved_sum[0:2][0:3];
-    if (!reset) begin
+    if (reset_n) begin
       for (int stage = 0; stage < 3; stage++) begin
         if (tap_valid_o[stage]) terminal_writes[stage]++;
         changed_inputs[stage] = stage == 0 ? cg_channel_req[1] | cg_channel_req[2] :
@@ -290,7 +290,7 @@ module ClusterReduceTree #(
         for (int c = 0; c < 4; c++) saved_sum[stage][c] = node_adder[stage][c];
       end
       #1;
-      if (!reset)
+      if (reset_n)
         for (int n = 0; n < 3; n++)
         for (int c = 0; c < 4; c++)
         if (!changed_inputs[n][c]) begin

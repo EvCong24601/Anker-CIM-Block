@@ -18,7 +18,7 @@ module tb_Cluster;
   parameter logic [31:0] SEED = 32'h19e2a407;
   logic clock = 0;
   always #5 clock = ~clock;
-  logic reset = 1;
+  logic reset_n = 0;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
   wire cmd_ready_o;

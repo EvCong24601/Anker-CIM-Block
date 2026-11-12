@@ -6,7 +6,7 @@ module tb_ClusterReduceTree;
   `include "cluster_check_func.sv"
   // 1. Interface and expected state aligned per pipeline depth (independent of the
   // Cluster ACT/Context scheduling).
-  logic clock = 0, reset = 1;
+  logic clock = 0, reset_n = 0;
   always #5 clock = ~clock;
   logic early_valid_i = 0, valid_i = 0;
   logic [6:0] early_split_i = 0, split_i = 0;
@@ -64,8 +64,8 @@ module tb_ClusterReduceTree;
   endtask
   // 2. Driver alignment: register the early inputs first, then advance the case
   // ID/valid together with each tap depth.
-  always_ff @(posedge clock or posedge reset) begin
-    if (reset) begin
+  always_ff @(posedge clock or negedge reset_n) begin
+    if (!reset_n) begin
       valid_i <= 0;
       split_i <= 0;
       en_i <= 0;
@@ -96,7 +96,7 @@ module tb_ClusterReduceTree;
     logic [ 3:0] expected_gate;
     int id, stage, first, size;
     #2;
-    if (!reset)
+    if (reset_n)
       for (int stage = 0; stage < 3; stage++) begin
         mask = valids[stage] ? masks[ids[stage]][stage] : 0;
         if (tap_valid_o[stage] !== (|mask) || tap_mask_o[stage] !== mask)
@@ -110,7 +110,7 @@ module tb_ClusterReduceTree;
       end
     // Independent gate prediction from recursively decoded group widths,
     // rather than reusing the RTL's forward_mask function.
-    if (!reset)
+    if (reset_n)
       for (int n = 1; n < 7; n++) begin
         stage = n < 3 ? 1 : 0;
         id = ids[stage];
@@ -134,7 +134,7 @@ module tb_ClusterReduceTree;
     logic [7:0] test_en;
     case_count = 0;
     repeat (3) @(negedge clock);
-    reset = 0;
+    reset_n = 1;
     for (int mode = 0; mode < 8; mode++) begin
       case (mode)
         0: test_en = 8'hff;

@@ -3,7 +3,7 @@
 always @(posedge clock) begin : gemm_scoreboard
   int row, n, ph;
   cycle++;
-  if (!reset && monitoring) begin
+  if (reset_n && monitoring) begin
     if (|psum_activity) $fatal(1, "GEMM: OS1 WS32 must bypass the depth16 Psum buffer");
     if (cmd_valid_i && (&cmd_ready_o)) begin
       if (first_accept[active_tile] < 0) first_accept[active_tile] = cycle;
@@ -30,7 +30,7 @@ always @(posedge clock) begin : gemm_scoreboard
     end
   end
   #1;
-  if (!reset && monitoring)
+  if (reset_n && monitoring)
     for (int c = 0; c < CLUSTERS; c++) begin
       if ((out_valid_o[c] & 32'hfffffff0) != 0)
         $fatal(1, "GEMM: output on inactive group lane cluster=%0d", c);

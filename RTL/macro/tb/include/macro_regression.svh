@@ -18,8 +18,8 @@ initial begin : stimulus
   end
   if ($value$plusargs("NEGATIVE=%s", negative_case)) negative_mode = 1;
   // Generate a real asynchronous assertion edge even if the functional
-  // clock gate remains closed throughout reset.
-  #1 reset = 1;
+  // clock gate remains closed throughout reset_n.
+  #1 reset_n = 0;
   case_description = "exhaustive-2x4-primitive";
 
   for (int sw = 0; sw < 2; sw++)
@@ -39,7 +39,7 @@ initial begin : stimulus
     primitive_count++;
   end
   @(negedge clock);
-  reset = 0;
+  reset_n = 1;
   if (negative_mode) run_negative(negative_case);
 
   // All 256 rows, including boundary addresses, with consecutive writes.
@@ -168,7 +168,7 @@ initial begin : stimulus
   drain();
 
   // Interrupt valid transactions asynchronously, retaining SRAM rows.
-  case_description = "inflight-reset/SRAM-retention";
+  case_description = "inflight-reset_n/SRAM-retention";
   for (int i = 0; i < 6; i++) send_phase(4, i[1:0], 1, 15, 200, 1, padded_activation(random_activation(), 4));
   async_reset();
   send_phase(4, 3, 1, 15, 200, 1, padded_activation(random_activation(), 4));
@@ -192,6 +192,10 @@ initial begin : stimulus
   @(negedge clock);
   sram_ren = 0;
   async_reset();
+  reset_sram_retention();
+  // This low pulse begins and ends between clock edges, cancelling an issue.
+  send_phase(0, 0, 0, 15, 0, 1, '1);
+  async_reset(1);
   send_phase(0, 0, 0, 15, 0, 1, '1);
   drain();
   @(posedge clock);

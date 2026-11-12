@@ -2,7 +2,7 @@
 always @(posedge clock) begin : edge_scoreboard
   int row, phase, n, index;
   cycle++;
-  if (!reset && monitoring) begin
+  if (reset_n && monitoring) begin
     if (cmd_valid_i && cmd_ready_o) begin
       if (first_accept < 0) first_accept = cycle;
       if (cycle != first_accept + (phases + 1) * commands || cmd_i.cim_weight_raddr !== 8'(base_address + active_tile))
@@ -29,7 +29,7 @@ always @(posedge clock) begin : edge_scoreboard
     if ((|dut.psum_depth_open) || (|dut.psum_write)) $fatal(1, "GEMM scenario: OS1 must bypass Psum history");
   end
   #1;
-  if (!reset && monitoring) begin
+  if (reset_n && monitoring) begin
     if ((out_valid_o & ~active_mask) != 0)
       $fatal(1, "GEMM scenario: valid on inactive group or masked OC");
     for (int c = 0; c < 4; c++) begin

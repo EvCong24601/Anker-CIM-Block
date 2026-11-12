@@ -5,9 +5,9 @@
 // Shared signals/counters are declared in the parent TB; do not add a module or any
 // extra begin/end scope.
 
-always @(posedge clock or posedge reset) begin : scoreboard
+always @(posedge clock or negedge reset_n) begin : scoreboard
   logic [1023:0] row;
-  if (reset) begin
+  if (!reset_n) begin
     for (int i = 0; i < EXPECTED_LATENCY; i++) if (expected_valid[i] === 1'b1) cancelled_count++;
     expected_valid = '0;
     for (int i = 0; i <= EXPECTED_LATENCY; i++) begin
@@ -99,20 +99,20 @@ end
 for (genvar bank = 0; bank < 3; bank++) begin : g_act_capture_check
   localparam int FIRST = bank == 0 ? 0 : bank == 1 ? 128 : 256;
   localparam int WIDTH = bank == 2 ? 256 : 128;
-  always @(posedge clock or posedge reset) begin
+  always @(posedge clock or negedge reset_n) begin
     bit want;
     logic [WIDTH - 1:0] saved, expected_act;
-    if (reset) begin
+    if (!reset_n) begin
       #0.002;
       if (dut.activation_in[FIRST +: WIDTH] !== '0)
-        $fatal(1, "ACT bank asynchronous reset failed bank=%0d", bank);
+        $fatal(1, "ACT bank asynchronous reset_n failed bank=%0d", bank);
     end else if (!negative_mode) begin
       want = cim_ren && (|cim_oc_mask) &&
              (bank == 0 || (bank == 1 && cim_precision <= 4) || (bank == 2 && cim_precision <= 1));
       saved = dut.activation_in[FIRST +: WIDTH];
       expected_act = cim_idata[FIRST +: WIDTH];
       #0.002;
-      if (!reset) begin
+      if (reset_n) begin
         if (dut.act_clock[bank] !== (CLOCK_GATING ? want : 1'b1))
           $fatal(1, "ACT bank clock mismatch bank=%0d precision=%0d", bank, cim_precision);
         if (dut.activation_in[FIRST +: WIDTH] !== (want ? expected_act : saved))

@@ -6,7 +6,7 @@ module tb_SingleMacro;
   parameter bit CLOCK_GATING = 1'b1;
   logic clock = 1'b0;
   always #5 clock = ~clock;
-  logic reset = 1'b0;
+  logic reset_n = 1'b1;
   logic cim_ren = 0, cim_station = 1, cim_signed_en = 0, sram_wen = 0;
   logic [511:0] cim_idata = '0;
   logic [7:0] cim_raddr = '0, sram_waddr = '0;

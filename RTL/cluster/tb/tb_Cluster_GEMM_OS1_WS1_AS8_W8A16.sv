@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 // Eight AS Contexts, rotating logical columns across consecutive rows without
-// reset. Invalid live commands are poisoned while the saved batch computes.
+// reset_n. Invalid live commands are poisoned while the saved batch computes.
 module tb_Cluster_GEMM_OS1_WS1_AS8_W8A16;
   ClusterGemmOs2As4 #(.M(8), .OS(1), .AS(8), .BASE_ADDR(8'hc0), .CHECK_SWITCH(1)) u_gemm ();
 `ifdef CLUSTER_FSDB

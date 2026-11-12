@@ -27,7 +27,7 @@ module cluster_top #(
   parameter bit USE_CLOCK_GATING = 1
 ) (
   input logic clock,
-  input logic reset,
+  input logic reset_n,
   input cluster_pkg::cluster_ctrl_t cmd_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,
@@ -103,8 +103,8 @@ module cluster_top #(
   assign deep_command = cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4;
   assign deep_batch = batch_is_as && batch_activation_bits > 4;
   assign a4_packet = batch_is_as && batch_activation_bits == 4;
-  assign storage_active = !reset && cmd_accept && cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) == 4;
-  assign deep_weight_active = !reset && ((batch_active && deep_batch) || (cmd_accept && deep_command));
+  assign storage_active = cmd_accept && cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) == 4;
+  assign deep_weight_active = (batch_active && deep_batch) || (cmd_accept && deep_command);
   assign accepted_context = packet_active ? command_count : 0;
   assign write_context_slot = accepted_context;
   // Weight-address storage has two independent gated clock domains.
@@ -120,11 +120,11 @@ module cluster_top #(
   assign deep_weight_clock = table_clock[1];
 
   // WS/single uses packet_cmd directly. A4 AS uses one bypass register.
-  always_ff @(posedge entry0_clock or posedge reset)
-    if (reset) current_weight_address <= '0;
+  always_ff @(posedge entry0_clock or negedge reset_n)
+    if (!reset_n) current_weight_address <= '0;
     else if (storage_active) current_weight_address <= cmd_i.cim_weight_raddr;
-  always_ff @(posedge deep_weight_clock or posedge reset) begin
-    if (reset) for (int d = 0; d < WGT_RADDR_BUFFER_DEPTH; d++) context_address[d] <= '0;
+  always_ff @(posedge deep_weight_clock or negedge reset_n) begin
+    if (!reset_n) for (int d = 0; d < WGT_RADDR_BUFFER_DEPTH; d++) context_address[d] <= '0;
     else if (cmd_accept && deep_command && write_context_slot < WGT_RADDR_BUFFER_DEPTH)
       context_address[write_context_slot] <= cmd_i.cim_weight_raddr;
   end
@@ -136,15 +136,15 @@ module cluster_top #(
   wire [7:0] memory_wen;
   wire [8191:0] regular_read_data;
   assign regular_macro_id = {sram_macro_group, sram_bank_sel};
-  assign regular_access = !reset && sram_cs_en;
+  assign regular_access = sram_cs_en;
   assign regular_read = regular_access && !sram_wr_en;
   assign regular_write = regular_access && sram_wr_en && !(&sram_wmask);
   assign memory_wen = regular_write ? (8'd1 << regular_macro_id) : 8'd0;
   // Request and response selection share the SRAM sampling edge. The
   // next live request must not change an outstanding synchronous response.
   logic [2:0] sram_response_macro;
-  always_ff @(posedge clock or posedge reset) begin
-    if (reset) begin
+  always_ff @(posedge clock or negedge reset_n) begin
+    if (!reset_n) begin
       sram_rd_valid <= 0;
       sram_response_macro <= '0;
     end else begin
@@ -155,7 +155,7 @@ module cluster_top #(
   assign sram_rd_data = sram_rd_valid ? regular_read_data[1024*sram_response_macro+:1024] : 1024'b0;
 `ifndef SYNTHESIS
   always @(posedge clock)
-    if (!reset) begin
+    if (reset_n) begin
       if (sram_cs_en && (batch_active || packet_active || cmd_valid_i || (|macro_valid)))
         $fatal(1, "CLUSTER_SRAM_PROTOCOL: regular access overlaps compute");
       if (sram_cs_en && ((^{sram_wr_en, sram_macro_group, sram_bank_sel, sram_row_addr}) === 1'bx))
@@ -266,8 +266,8 @@ module cluster_top #(
       end
     end
   end
-  always_ff @(posedge clock or posedge reset)
-    if (reset) begin
+  always_ff @(posedge clock or negedge reset_n)
+    if (!reset_n) begin
       tmp_only_steps <= 0;
       as_seed_steps <= 0;
       as_fusion_steps <= 0;
@@ -411,7 +411,9 @@ module cluster_top #(
     ren = active & {8{issue}};
     for (int m = 0; m < 8; m++) station[m] = !hold_valid[m] || hold_addr[m] != command.cim_weight_raddr;
   end
-  assign cmd_ready_o = !reset && !sram_cs_en && !batch_input_done &&
+  // Handshakes are meaningful only while reset_n is high. Reset is confined
+  // to sequential state and is not part of the ready/ICG-enable decode.
+  assign cmd_ready_o = !sram_cs_en && !batch_input_done &&
                        (!packet_active || (packet_cmd.cim_as_cnt > 1 && command_count < int'(packet_cmd.cim_as_cnt)));
   // A registered publication valid and shared Context select retained
   // tmp/Psum data directly; there is no separate raw payload register.
@@ -440,7 +442,7 @@ module cluster_top #(
       .USE_CLOCK_GATING(USE_CLOCK_GATING)
     ) u_macro (
       .clock(clock),
-      .reset(reset),
+      .reset_n(reset_n),
       .cim_ren(ren[m]),
       .cim_idata(idata),
       .cim_raddr(command.cim_weight_raddr),
@@ -467,7 +469,7 @@ module cluster_top #(
     .USE_CLOCK_GATING(USE_CLOCK_GATING)
   ) u_reduce (
     .clock(clock),
-    .reset(reset),
+    .reset_n(reset_n),
     .early_valid_i(in_tag.valid),
     .early_split_i(in_tag.cmd.cim_reduce_split_mask),
     .early_en_i(in_tag.cmd.cim_macro_en_mask),
@@ -497,8 +499,8 @@ module cluster_top #(
       end
   end
   // ===== 10. Accumulation: buffer enables, tmp/Psum arrays, arithmetic =====
-  always_ff @(posedge clock or posedge reset) begin : advance_buffer_enables
-    if (reset) begin
+  always_ff @(posedge clock or negedge reset_n) begin : advance_buffer_enables
+    if (!reset_n) begin
       tmp_input_cg_en <= '0;
       for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++) psum_cg_en[d] <= '0;
     end else begin
@@ -523,8 +525,8 @@ module cluster_top #(
       .enable(tmp_input_cg_en[l]),
       .gated_clock(tmp_input_clock[l])
     );
-    always_ff @(posedge tmp_input_clock[l] or posedge reset)
-      if (reset) tmp_result[l] <= 0;
+    always_ff @(posedge tmp_input_clock[l] or negedge reset_n)
+      if (!reset_n) tmp_result[l] <= 0;
       else if (tmp_input_cg_en[l]) begin
 `ifndef SYNTHESIS
         // Every intermediate store must fit signed32. A final-value-only check
@@ -541,16 +543,16 @@ module cluster_top #(
     assign tmp_meta_req = |(tmp_input_cg_en & path_lanes[path]);
     assign raw_meta_req = |(result_done & path_lanes[path]);
     MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_tmp_meta_icg (
-      .clock(clock), .enable(!reset && tmp_meta_req), .gated_clock(tmp_meta_clock)
+      .clock(clock), .enable(tmp_meta_req), .gated_clock(tmp_meta_clock)
     );
     MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_raw_meta_icg (
-      .clock(clock), .enable(!reset && raw_meta_req), .gated_clock(raw_meta_clock)
+      .clock(clock), .enable(raw_meta_req), .gated_clock(raw_meta_clock)
     );
-    always_ff @(posedge tmp_meta_clock or posedge reset)
-      if (reset) tmp_path_meta[path] <= '0;
+    always_ff @(posedge tmp_meta_clock or negedge reset_n)
+      if (!reset_n) tmp_path_meta[path] <= '0;
       else if (tmp_meta_req) tmp_path_meta[path] <= compact_tag(tap_tag[path]);
-    always_ff @(posedge raw_meta_clock or posedge reset)
-      if (reset) raw_path_context[path] <= '0;
+    always_ff @(posedge raw_meta_clock or negedge reset_n)
+      if (!reset_n) raw_path_context[path] <= '0;
       else if (raw_meta_req) raw_path_context[path] <= tmp_path_meta[path].ctx;
   end
   for (genvar d = 0; d < OUTPUT_BUFFER_DEPTH; d++) begin : g_psum_depth
@@ -562,8 +564,8 @@ module cluster_top #(
         .enable(psum_depth_open[d] && psum_cg_en[d][l]),
         .gated_clock(psum_clock[d][l])
       );
-      always_ff @(posedge psum_clock[d][l] or posedge reset)
-        if (reset) psum[d][l] <= 0;
+      always_ff @(posedge psum_clock[d][l] or negedge reset_n)
+        if (!reset_n) psum[d][l] <= 0;
         else if (psum_depth_open[d] && psum_cg_en[d][l]) begin
 `ifndef SYNTHESIS
           if (arithmetic_result[l] < -64'sd2147483648 || arithmetic_result[l] > 64'sd2147483647)
@@ -642,8 +644,8 @@ module cluster_top #(
   assign tap_claim_2  = tap_valid[2] ? tap_mask[2] : 32'd0;
   assign tap_conflict = (tap_claim_1 & tap_claim_0) | (tap_claim_2 & (tap_claim_0 | tap_claim_1));
 `endif
-  always_ff @(posedge clock or posedge reset) begin : pipeline
-    if (reset) begin
+  always_ff @(posedge clock or negedge reset_n) begin : pipeline
+    if (!reset_n) begin
       act_buffer <= '0;
       packet_weight_address <= '0;
       packet_active <= 0;

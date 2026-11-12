@@ -2,6 +2,8 @@
 
 当前 Cluster 直接输出 raw_psum[1023:0] 和 psum_valid[31:0]，每个物理 lane 为 signed32。Requant 参数、运算、存储及 INT8 输出已移除。
 
+Cluster/Macro/ReduceTree 统一使用低有效异步复位 reset_n（原 reset 端口已更名）。复位不参与端口使能的组合译码；SRAM wrapper不含复位端口，上层须在复位期间保持SRAM访问无效，存储内容保留。
+
 接口契约、数值布局和迁移说明见 [Cluster 原始 Psum 输出](docs/Cluster_Raw_Output.md)。
 
 ## 源码与编译

@@ -9,7 +9,7 @@ initial begin : scenario_regression
   if (!trace_fd) $fatal(1, "GEMM scenario: cannot create event trace");
   $fdisplay(trace_fd, "cycle,event,tile,m,n,lane,value");
   repeat (4) @(negedge clock);
-  reset = 0;
+  reset_n = 1;
   load_scenario_weights();
   for (int tile = 0; tile < n_tiles; tile++) begin
     $display(

@@ -1,4 +1,4 @@
-// Regular SRAM cases: independent byte-wise mirror, all masks, isolation/hold, reset and
+// Regular SRAM cases: independent byte-wise mirror, all masks, isolation/hold, reset_n and
 // write-to-compute.
 // This file is included inside the parent TB module scope and is not a stand-alone
 // compilation unit.
@@ -103,7 +103,7 @@ task automatic sram_compute_check(bit patched);
 endtask
 task automatic run_sram_cases;
   // Scenario order: all addresses -> all masks/isolation -> CS off -> back-to-back writes
-  // -> reset retention -> per-Macro write/readback -> write-to-compute, Hold invalidation
+  // -> reset_n retention -> per-Macro write/readback -> write-to-compute, Hold invalidation
   // and all-masked retention.
   int a;
   logic [7:0] saved_hold;
@@ -152,10 +152,10 @@ task automatic run_sram_cases;
   sram_cs_en = 0;
   sram_wr_en = 0;
   // Reset must preserve all initialized SRAM, including masked neighbors.
-  $display("[CASE_START] time=%0.3f ns suite=sram_reset description=reset-retains-all-8x256-rows", $realtime);
-  reset = 1;
+  $display("[CASE_START] time=%0.3f ns suite=sram_reset description=reset_n-retains-all-8x256-rows", $realtime);
+  reset_n = 0;
   repeat (3) @(negedge clock);
-  reset = 0;
+  reset_n = 1;
   for (int m = 0; m < 8; m++) for (int row = 0; row < 256; row++) sram_read_check(m, row);
   // Per-Macro writes and public readback share the same addressed storage.
   $display("[CASE_START] time=%0.3f ns suite=sram_row_load description=regular-write-and-readback-all-macros",

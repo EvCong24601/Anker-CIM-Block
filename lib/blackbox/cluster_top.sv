@@ -12,7 +12,7 @@ module cluster_top #(
   parameter bit USE_CLOCK_GATING = 1
 ) (
   input logic clock,
-  input logic reset,
+  input logic reset_n,
   input cluster_pkg::cluster_ctrl_t cmd_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,

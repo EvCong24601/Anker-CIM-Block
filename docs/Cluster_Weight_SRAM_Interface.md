@@ -31,7 +31,7 @@ group=0 选择 Macro0…3，group=1 选择 Macro4…7；bank_sel 不表示 Macro
 
 `MacroWeightSRAM`在上升沿采样读写请求。读请求为`sram_cs_en && !sram_wr_en`；同沿锁存响应Macro编号，SRAM数据沿后可见，`sram_rd_valid`沿后置1，没有额外数据流水。支持每拍一笔请求。
 
-采样之后，输入可以切到下一Macro/行或改变CS、读写方向，当前有效响应保持到下一采样沿。下一沿若仍为读，则发布下一响应；若为空闲或写，则valid清零、数据输出0。reset异步清除valid并取消待响应数据，不清SRAM。
+采样之后，输入可以切到下一Macro/行或改变CS、读写方向，当前有效响应保持到下一采样沿。下一沿若仍为读，则发布下一响应；若为空闲或写，则valid清零、数据输出0。低有效异步复位 `reset_n` 清除响应valid及标签，不清SRAM。复位不参与端口/使能的组合表达式；`MacroWeightSRAM` 是无复位wrapper，不含复位端口或访问保护条件。上层必须在复位期间将Cluster的 `sram_cs_en` 置0；直接使用SingleMacro时须将 `cim_ren`、`sram_wen`、`sram_ren` 置0。wrapper只按时钟和功能使能读写；访问无效时阵列及内部读出保持值保持，复位本身不会阻止访问。
 
 例如C0接受Macro0/row1，C0沿后返回该行且valid=1；C0到C1之间准备Macro1/row2，响应仍为Macro0；C1沿后才切换到Macro1。接收端在valid=1时取数，无响应反压。
 
@@ -39,7 +39,7 @@ CIM刷新在Macro接受输入的边沿同步读SRAM，同沿寄存ACT，下一�
 
 常规访问与 CIM 计算分阶段使用同一 SRAM，无并发双端口能力。片选期间 cmd_ready_o 为零；若常规访问与有效 Command、活动计算批次重叠，仿真报告 CLUSTER_SRAM_PROTOCOL 错误，禁止将其当作静默仲裁。
 
-有效写入使所选Macro的SRAM输出行标签失效；全屏蔽写及未片选写保持状态。常规读和CIM刷新均更新实际读出行号与valid；普通读过其他行后，下一次CIM须按目标地址重新判断刷新，不能沿用旧计算行。reset清标签，不清SRAM阵列。计算直接使用SRAM保持输出，不配置独立held_weight，也不经对外sram_rd_data返回路径取数。
+有效写入使所选Macro的SRAM输出行标签失效；全屏蔽写及未片选写保持状态。常规读和CIM刷新均更新实际读出行号与valid；普通读过其他行后，下一次CIM须按目标地址重新判断刷新，不能沿用旧计算行。`reset_n=0` 清标签，不清SRAM阵列。计算直接使用SRAM保持输出，不配置独立held_weight，也不经对外sram_rd_data返回路径取数。
 
 Cluster 权重存储仅通过常规 WLC 接口访问：每次选择一个 Macro 的一行，写入/读回均为 128 B。TB 逐 Macro 写入并读回校验后，再开始计算。
 

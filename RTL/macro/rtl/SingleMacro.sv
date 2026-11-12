@@ -6,7 +6,7 @@ module SingleMacro #(
   parameter bit USE_CLOCK_GATING = 1'b1
 ) (
   input  logic          clock,
-  input  logic          reset,
+  input  logic          reset_n,
   input  logic          cim_ren,
   input  logic [ 511:0] cim_idata,
   input  logic [   7:0] cim_raddr,
@@ -47,10 +47,10 @@ module SingleMacro #(
   wire memory_active;
   // Include output valid to preserve the final valid-clearing edge n+2.
   wire clock_active;
-  assign issue = !reset && cim_ren && (|cim_oc_mask);
+  assign issue = cim_ren && (|cim_oc_mask);
   assign write_active = sram_wen && !(&sram_wmask);
-  assign memory_active = !reset && (write_active || sram_ren || (issue && cim_station));
-  assign clock_active = !reset && (issue || in_valid || cim_odata_valid);
+  assign memory_active = write_active || sram_ren || (issue && cim_station);
+  assign clock_active = issue || in_valid || cim_odata_valid;
   generate
     if (USE_CLOCK_GATING) begin : g_icg
       MacroClockGate u_clock_gate (
@@ -88,8 +88,8 @@ module SingleMacro #(
     );
     // Inactive banks retain their old contents, including in the ICG-bypass
     // reference. Every newly needed bank updates on the same acceptance edge.
-    always_ff @(posedge act_clock[bank] or posedge reset)
-      if (reset) activation_in[FIRST +: WIDTH] <= '0;
+    always_ff @(posedge act_clock[bank] or negedge reset_n)
+      if (!reset_n) activation_in[FIRST +: WIDTH] <= '0;
       else if (act_capture_en[bank]) activation_in[FIRST +: WIDTH] <= cim_idata[FIRST +: WIDTH];
   end
 
@@ -97,34 +97,38 @@ module SingleMacro #(
   logic hold_valid;
   wire [1023:0] sram_read_data;
   wire sram_read_enable;
-  assign sram_read_enable = !reset && issue && cim_station;
+  wire memory_read_enable;
+  wire [7:0] memory_read_address;
+  assign sram_read_enable = issue && cim_station;
+  assign memory_read_enable = sram_read_enable || sram_ren;
+  assign memory_read_address = sram_ren ? sram_raddr : cim_raddr;
   // Both refresh and reuse consume the SRAM's retained read output.
   // There is no second 1024-bit weight data register after the SRAM.
   wire [1023:0] compute_weight;
   assign compute_weight = in_valid ? sram_read_data : 1024'b0;
   MacroWeightSRAM u_weight_sram (
     .clock(memory_clock),
-    .write_enable(!reset && write_active),
+    .write_enable(write_active),
     .write_address(sram_waddr),
     .write_data(sram_wdata),
     .write_mask(sram_wmask),
-    .read_enable(sram_read_enable || (!reset && sram_ren)),
-    .read_address(sram_ren ? sram_raddr : cim_raddr),
+    .read_enable(memory_read_enable),
+    .read_address(memory_read_address),
     .read_data(sram_read_data)
   );
   // Align local read qualification with the sampled request, not the next
   // request's live sram_ren. Payload remains in the synchronous SRAM output.
   logic sram_response_valid;
-  always_ff @(posedge clock or posedge reset)
-    if (reset) sram_response_valid <= 0;
+  always_ff @(posedge clock or negedge reset_n)
+    if (!reset_n) sram_response_valid <= 0;
     else sram_response_valid <= sram_ren;
   assign sram_rdata = sram_response_valid ? sram_read_data : 1024'b0;
 
   // Tags describe the actual SRAM output, including ordinary reads. Writes
   // invalidate the tag because read_data retains the old contents on a write.
   // Only address/valid state is stored here, not another copy of the row.
-  always_ff @(posedge memory_clock or posedge reset) begin
-    if (reset) begin
+  always_ff @(posedge memory_clock or negedge reset_n) begin
+    if (!reset_n) begin
       held_address <= '0;
       hold_valid <= 1'b0;
     end else if (write_active) begin
@@ -146,7 +150,7 @@ module SingleMacro #(
     for (genvar c = 0; c < 4; c++) begin : g_oc
       wire result_clock;
       wire result_enable;
-      assign result_enable = !reset && in_valid && mask_in[c] && result_mask_in[c];
+      assign result_enable = in_valid && mask_in[c] && result_mask_in[c];
       if (USE_CLOCK_GATING) begin : g_result_icg
         MacroClockGate u_clock_gate (
           .clock(clock),
@@ -160,8 +164,8 @@ module SingleMacro #(
       // this request; shared ACT and SRAM retained output serve active OCs.
       // Parent-blocked OC results also hold; local valid/phase/Hold semantics
       // stay aligned, so no extra pipeline stage is introduced.
-      always_ff @(posedge result_clock or posedge reset)
-        if (reset) cim_odata[18*c+:18] <= '0;
+      always_ff @(posedge result_clock or negedge reset_n)
+        if (!reset_n) cim_odata[18*c+:18] <= '0;
         else if (result_enable) cim_odata[18*c+:18] <= sum_l5[c];
       for (genvar s = 0; s < 32; s++) begin : g_slice
         for (genvar t = 0; t < 4; t++) begin : g_submul
@@ -231,8 +235,8 @@ module SingleMacro #(
 
   // Only two compute boundaries: n samples input; n+1 registers its result.
   // Nonblocking updates preserve the previous request for output/Hold capture.
-  always_ff @(posedge macro_clock or posedge reset) begin
-    if (reset) begin
+  always_ff @(posedge macro_clock or negedge reset_n) begin
+    if (!reset_n) begin
       in_valid <= 1'b0;
       weight_mode_in <= W_MODE_2;
       signed_en_in <= 1'b0;
@@ -264,11 +268,11 @@ module SingleMacro #(
 `ifndef SYNTHESIS
 `ifdef SINGLE_MACRO_ASSERTIONS
   `include "single_macro_check_func.sv"
-  // Verification state only; SRAM initialization survives logic reset.
+  // Verification state only; SRAM initialization survives logic reset_n.
   logic [3:0] initialized_ocs[0:255];
   initial for (int a = 0; a < 256; a++) initialized_ocs[a] = '0;
   always @(posedge clock) begin
-    if (!reset) begin
+    if (reset_n) begin
       if (sram_ren && (cim_ren || in_valid || sram_wen)) $fatal(1, "SM_PROTOCOL: regular read overlaps compute/write");
       if (sram_wen) begin
         if (cim_ren) $fatal(1, "SM_PROTOCOL: simultaneous read/write");

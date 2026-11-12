@@ -17,7 +17,7 @@ initial begin : gemm_regression
     for (int macro = 0; macro < 8; macro++) refreshes[tile][macro] = 0;
   end
   repeat (4) @(negedge clock);
-  reset = 0;
+  reset_n = 1;
   load_gemm_weights();
   for (int tile = 0; tile < N_TILES; tile++) begin
     active_tile = tile;

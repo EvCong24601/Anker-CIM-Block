@@ -12,7 +12,7 @@ tmp/Psum存储的raw视图 → 四通道组合Requant → INT8输出寄存器。
 
 Requant实现状态：ClusterRequant内部为纯组合逻辑，没有时钟、数据寄存器或算术流水；乘法、可变移位、舍入、加ZP与饱和处于同一组合路径。INT8输出寄存器位于cluster_top，使输出相对raw晚1T。普通移位范围仍采用组合可变移位；极大shift已有精确阈值简化，并非完全没有移位优化。当前未完成面向目标工艺的综合、STA及面积验证，不能据此认定组合路径满足目标频率。
 
-reset 高有效、异步置位，INT8 数据与 valid 均不等待时钟边沿清零；两个上升沿之间的短复位脉冲也清除输出和待发布结果。释放由上游同步并满足恢复/移除时序。
+本节INT8复位行为随Requant删除而失效，原 `reset` 端口不再存在。当前Cluster使用低有效异步 `reset_n`，取消在途事务并清除有效位；释放由上游同步并满足恢复/移除时序。端口及使能表达式不再包含复位组合门控，当前行为以[原始Psum输出契约](Cluster_Raw_Output.md)为准。
 
 启用Requant时，无论per-tensor还是per-channel scale，均只允许一个对齐的Macro归约组、最多4个OC：
 

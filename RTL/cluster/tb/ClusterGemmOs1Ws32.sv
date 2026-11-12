@@ -7,7 +7,7 @@ module ClusterGemmOs1Ws32;
   `include "cluster_func.sv"
   localparam int M = 32, K = 128, N = 16, CLUSTERS = 1, N_TILES = 4;
   localparam logic [7:0] WEIGHT_ADDR = 8'h40;
-  logic clock = 0, reset = 1;
+  logic clock = 0, reset_n = 0;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
@@ -29,7 +29,7 @@ module ClusterGemmOs1Ws32;
   for (genvar c = 0; c < CLUSTERS; c++) begin : g_cluster
     cluster_top dut (
       .clock(clock),
-      .reset(reset),
+      .reset_n(reset_n),
       .cmd_i(cmd_i),
       .cmd_valid_i(cmd_valid_i),
       .cmd_ready_o(cmd_ready_o[c]),

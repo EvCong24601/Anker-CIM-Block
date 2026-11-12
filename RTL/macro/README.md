@@ -24,11 +24,12 @@ iverilog -g2012 -DSYNTHESIS -s SingleMacro -o singlemacro.vvp -f rtl/filelist.f
 ## 集成约定
 
 - 请求在上升沿 n 接受，四路 signed18 Phase Sum 在 n+1 更新后可见，Phase II=1；下游上升沿寄存器在 n+2 采样该结果。
-- `reset` 高有效、异步置位；释放须由集成端同步并满足恢复/移除时序。SRAM 内容不复位，Hold-valid 复位。
+- `reset_n` 低有效、异步拉低有效；释放须由集成端同步并满足恢复/移除时序。SRAM 内容不复位，Hold-valid 复位。
+- `reset_n` 仅连接有复位状态的子模块，不参与请求、ICG 使能或 SRAM 使能的组合译码。`MacroWeightSRAM` 是无复位 wrapper，阵列和读出保持值均不清零。复位期间上层必须将 `cim_ren`、`sram_wen`、`sram_ren` 置0；wrapper 不会自动阻止使能有效时的读写。
 - `cim_station=1` 在输入沿读取SRAM；0复用SRAM保持输出，不配置独立held_weight数据寄存器。仅保存行号和有效位，支持紧邻刷新后的复用。
 - 零 OC mask 不发射。输出无 ready，Cluster 须提前预留接收位置。最后请求 n 后最早 n+2 写；最后写 w 后最早 w+1 发射刷新计算。
 - `USE_CLOCK_GATING` 默认 1，使用功能 ICG 模型；置 0 使用普通时钟和寄存器使能。
-- `MacroWeightSRAM` 是上升沿按 32 B OC 掩码写、使能组合读的通用存储描述；物理 SRAM 替换须保证读访问和全部运算共用一拍。`MacroClockGate` 在 ASIC 流程中需适配工艺 ICG。
+- `MacroWeightSRAM` 是无复位、上升沿按 32 B OC 掩码写、使能同步读的通用存储描述；物理 SRAM 替换须保证读访问和全部运算共用一拍。`MacroClockGate` 在 ASIC 流程中需适配工艺 ICG。
 
 仿真时定义 `SINGLE_MACRO_ASSERTIONS` 可启用协议检查；定义 `SYNTHESIS` 排除仿真检查器。接口已通过门控开/关功能回归（共 4,928 笔结果）及 15 类协议负向检查；尚未进行逻辑综合、门级仿真或 STA。
 

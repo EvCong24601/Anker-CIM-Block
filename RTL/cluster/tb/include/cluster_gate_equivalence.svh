@@ -51,7 +51,7 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
     for (int c = 0; c < 4; c++)
     if (dut_ungated.u_reduce.forward_q[n][c] !== dut.u_reduce.forward_q[n][c])
       $fatal(1, "CLUSTER_GATE_EQUIVALENCE: reduce mismatch node=%0d OC=%0d", n, c);
-    if (!reset) begin
+    if (reset_n) begin
       checked_cycles++;
       raw_events += $countones(dut.raw_valid);
     end

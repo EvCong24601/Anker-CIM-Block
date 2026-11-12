@@ -118,7 +118,7 @@ library (cluster_top_interface) {
       clock : true;
     }
 
-    pin ("reset") {
+    pin ("reset_n") {
       direction : input;
       max_transition : 0.871500;
       min_transition : 0.000000;

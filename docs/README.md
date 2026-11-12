@@ -2,6 +2,8 @@
 
 当前版本移除Requant，正式接口为 raw_psum[1023:0] 与 psum_valid[31:0]。以 [原始 Psum 输出契约](Cluster_Raw_Output.md) 和当前 RTL 为准。
 
+当前控制/数据寄存器复位统一为低有效异步 `reset_n`，SRAM wrapper没有复位端口或复位访问保护；上层须在复位期间保持SRAM访问无效，见[SRAM接口说明](Cluster_Weight_SRAM_Interface.md)。Word规格、旧日志及本地备份中的原 `reset` 极性不适用于当前接口。
+
 - [raw接口、数值及迁移](Cluster_Raw_Output.md)
 - [当前资源声明统计](Cluster_DFF_Usage.md)
 - [VCS仿真入口](../vcs-rtl/README.md)

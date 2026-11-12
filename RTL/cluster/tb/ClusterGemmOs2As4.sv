@@ -10,7 +10,7 @@ module ClusterGemmOs2As4;
   localparam int K = 256 * OS, N = 4 * AS;
   localparam int TILE_CYCLES = 4 * AS + 1;
   localparam int FIRST_RAW = (OS - 1) * TILE_CYCLES + 3 * AS + 6;
-  logic clock = 0, reset = 1;
+  logic clock = 0, reset_n = 0;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
@@ -26,7 +26,7 @@ module ClusterGemmOs2As4;
   wire [31:0] out_valid_o;
   cluster_top dut (
     .clock(clock),
-    .reset(reset),
+    .reset_n(reset_n),
     .cmd_i(cmd_i),
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),

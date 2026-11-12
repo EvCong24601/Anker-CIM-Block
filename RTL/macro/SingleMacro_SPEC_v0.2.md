@@ -32,17 +32,19 @@ Cluster 的 `cim_macro_en_mask[m]=0` 时，对该 Macro 不发射计算，即驱
 
 ## 2 时钟 复位与门控
 
-**沿用旧 Macro：** 时钟 `clock` 上升沿触发；`reset` 为高有效异步复位，时序形式为 `always_ff @(posedge clock or posedge reset)`。
+**当前接口：** 时钟 `clock` 上升沿触发；`reset_n` 为低有效异步复位，时序形式为 `always_ff @(posedge clock or negedge reset_n)`。
+
+`reset_n` 仅用于时序状态复位，并直接连接有复位状态的子模块，不参与 issue、ICG enable 或 SRAM enable 的组合表达式。`MacroWeightSRAM` 是无复位 wrapper，没有复位端口或访问保护条件；读写仅由访问时钟及功能使能决定。复位期间上层必须将 `cim_ren`、`sram_wen`、`sram_ren` 置0；在访问使能无效时，阵列和读出保持值均保持。若复位期间仍发起读写，wrapper 仍按功能使能执行，不能假定复位会屏蔽访问。
 
 复位立即清除入口 valid、出口 valid、输出数据/OC mask/phase、入口 ACT 和控制寄存器，并清除 Weight Hold 的有效位。SRAM输出保持本体不复位；hold_valid只标记其是否可复用，无独立Hold数据DFF；本版不存在乘积或归约中间数据寄存器。有效事务的全部组合运算输入必须有定义。
 
-**沿用旧存储行为：** reset 不清除 SRAM 单元。SRAM 目标行是否已经加载由上游保证，不设置 256 个行有效位。reset 后首次计算必须 `cim_station=1`，重新建立有效权重读出；即使 SRAM 保留了内容，也不能直接使用复位前的 Hold。
+**沿用旧存储行为：** reset_n 不清除 SRAM 单元。SRAM 目标行是否已经加载由上游保证，不设置 256 个行有效位。reset_n 后首次计算必须 `cim_station=1`，重新建立有效权重读出；即使 SRAM 保留了内容，也不能直接使用复位前的 Hold。
 
-**本轮设计决定：** 若 reset 打断尚未提交完成的整行写，该行内容不提供保证，使用前须重写整行；不承诺对中断写进行回滚。已经完成提交且未受电源状态变化影响的行不因逻辑 reset 主动清零。
+**本轮设计决定：** 若 reset_n 打断尚未提交完成的整行写，该行内容不提供保证，使用前须重写整行；不承诺对中断写进行回滚。已经完成提交且未受电源状态变化影响的行不因逻辑 reset_n 主动清零。
 
 **本轮设计决定：** 复位释放由集成端同步到 clock 并满足恢复/移除时序；复位期间禁止计算和写入。复位取消所有在途 Macro 事务，Cluster 同步取消对应标签、结果等待和预留额度，不能把复位前的 Context 与复位后的结果匹配。
 
-门控沿用旧设计的安全方式：ICG 或低电平锁存使能后门控，不能将任意组合控制直接 AND 到时钟。reset 的异步有效不依赖门控时钟；已接受请求所需的结果/Hold 捕获边沿和最后一次输出 valid 清除边沿必须保留。
+门控沿用旧设计的安全方式：ICG 或低电平锁存使能后门控，不能将任意组合控制直接 AND 到时钟。reset_n 的异步有效不依赖门控时钟；已接受请求所需的结果/Hold 捕获边沿和最后一次输出 valid 清除边沿必须保留。
 
 当前控制/输出valid计算域覆盖issue、in_valid、out_valid；SRAM访问域覆盖有效写、常规读及当前issue刷新；输出行号和有效位随SRAM访问域更新，不设独立Hold时钟。ACT另分低128bit、中128bit、高256bit三个独立门控区，按当前W精度在输入沿捕获；四OC结果域分别按本地有效位及上层消费需求开钟。控制域保留最终结果后的一沿，使valid清零；各需复位的寄存器均异步复位。
 
@@ -55,7 +57,7 @@ SRAM在请求接受沿采样刷新地址，读数据在沿后稳定，ACT也在�
 | 端口 | 方向 | 位宽 | 规定 | 来源 |
 |---|---|---:|---|---|
 | clock | 输入 | 1 | 上升沿时钟 | 旧 Macro |
-| reset | 输入 | 1 | 高有效异步复位 | 用户要求沿用旧 Macro |
+| reset_n | 输入 | 1 | 低有效异步复位 | 低有效异步复位接口 |
 | cim_ren | 输入 | 1 | 发射一个 Phase 请求；每个有效上升沿可发射一笔 | 旧接口，本轮明确事务语义 |
 | cim_idata | 输入 | 512 | 当前 Slot 的 4-bit digit 向量 | 固定位宽沿用旧接口；布局由本轮决定 |
 | cim_raddr | 输入 | 8 | 本 Macro 的权重行地址，不自动递增 | 用户指定 |
@@ -194,10 +196,10 @@ cim_odata[18*c +: 18] = signed18(S[c,p])
 合法计算事务的发射条件为：
 
 ```text
-issue = !reset && cim_ren && (|cim_oc_mask)
+issue = cim_ren && (|cim_oc_mask)
 ```
 
-上游在采样上升沿前满足所有输入 setup/hold。每个上升沿的 issue 是独立事务；连续保持 cim_ren=1 表示连续发射，不表示等待同一事务完成。
+以上 issue 为功能请求译码，仅在 `reset_n=1` 时接受事务。上游在采样上升沿前满足所有输入 setup/hold。每个上升沿的 issue 是独立事务；连续保持 cim_ren=1 表示连续发射，不表示等待同一事务完成。
 
 `cim_oc_mask=0` 不发射事务、不刷新 Hold、不产生属于该输入的新结果；Cluster 不等待该 Macro。cim_ren=0 时计算控制输入被忽略。无新发射时，先前已接受请求仍在其 n+1 边沿完成输出及可能的 Hold 刷新，不能被当前 mask=0 或 cim_ren=0 取消。
 
@@ -205,7 +207,7 @@ issue = !reset && cim_ren && (|cim_oc_mask)
 
 ```text
 in_valid[n]  = issue[n]
-out_valid[n] = in_valid[n-1] = issue[n-1]   // 未发生取消事务的 reset
+out_valid[n] = in_valid[n-1] = issue[n-1]   // 未发生取消事务的 reset_n
 ```
 
 等式中的状态为相应上升沿更新后的值。出口数据/标签在该边沿更新前的 in_valid=1 时捕获，否则保持。入口 valid 每个运行边沿更新，入口数据/控制仅在 issue=1 时更新。
@@ -234,7 +236,7 @@ Cluster 标签 valid 必须使用相同的 issue 条件，含 mask=0 的气泡�
 - station=0：对应事务使用最新先行刷新请求建立的 Hold；cim_raddr 必须等于 Hold 行地址。
 - station=0 可以在先行 station=1 的下一上升沿发射，无需插气泡；使用上一输入沿已读出并保持的SRAM行。
 - station=0 不限制 cim_precision/cim_signed_en 的本地解码，完整原始权重行仍按当前请求解析；Cluster 的 Tile 级配置切换约束继续有效。
-- reset 或任意一次有效写入（sram_wen && !(&sram_wmask)）均清除 hold_valid；全屏蔽写入不清除。写后须先通过CIM刷新或常规读取得有效输出行，再允许复用。
+- reset_n 或任意一次有效写入（sram_wen && !(&sram_wmask)）均清除 hold_valid；全屏蔽写入不清除。写后须先通过CIM刷新或常规读取得有效输出行，再允许复用。
 - 重复 station=1 允许每拍读取不同地址；地址不自动递增。
 
 没有自动地址命中判断或隐式 SRAM 刷新。station=0 时地址不匹配或 Hold 无效属于上游非法请求，不能默默读取另一个地址或复用旧行。
@@ -263,13 +265,13 @@ n+1的结果捕获使用边沿前稳定的A的ACT和SRAM输出；B的新读出�
 - 若最后一次 issue 在上升沿 n，n+1 输出其结果，最早在 n+2 发射写入。n+1仍是该请求的结果捕获边沿，禁止在此边沿同时写入。
 - 相邻上升沿允许连续整行写。每次写地址和数据在对应上升沿被采样，整行须在下一上升沿前完成提交。
 - 最后一次写入在上升沿 w，最早在 w+1 发射 station=1 的计算；SRAM 适配层保证其看到已提交的新内容。
-- 有效写入使 Hold 无效，屏蔽的 OC 与其他行保持；全屏蔽写保持输出标签；常规读更新保持输出与标签；reset 不清除 SRAM。
+- 有效写入使 Hold 无效，屏蔽的 OC 与其他行保持；全屏蔽写保持输出标签；常规读更新保持输出与标签；reset_n 不清除 SRAM。
 
 旧 bitcell 的高电平写窗口可以实现上述逻辑提交契约；使用其他 SRAM 时必须由适配层保证契约，不把旧 latch/bitcell 的电气行为直接当成新 IP 的能力。
 
 同时读写、请求尚未完成就写、首次读未初始化行等不属于合法使用。仿真与形式验证需检查这些协议条件，不增加错误 IO。非法请求的数值和输出不提供正确性保证；不得把本规则理解为静默仲裁或自动重试。
 
-写入许可按采样边沿前的状态判断：reset=0、sram_wen=1、cim_ren=0 且 in_valid=0。该时刻 out_valid=1 可以是上一边沿已经计算完成的结果，允许下游采样该独立出口寄存器，同时写 SRAM；不能误将 out_valid=1 当成仍在进行 SRAM/运算访问。
+写入许可按采样边沿前的状态判断：reset_n=1、sram_wen=1、cim_ren=0 且 in_valid=0。该时刻 out_valid=1 可以是上一边沿已经计算完成的结果，允许下游采样该独立出口寄存器，同时写 SRAM；不能误将 out_valid=1 当成仍在进行 SRAM/运算访问。
 
 完整切换示例：最后请求 n → n+1 结果可见 → n+2 整行写 → n+3 首次 station=1 读计算 → n+4 新结果可见。
 
@@ -352,7 +354,7 @@ SRAM 适配层必须保证：地址在 n 后由入口寄存器给出，本次读
 2. 所有合法 Phase，尤其 INT 最高 digit 与低 digit 的不同符号解释。
 3. OC mask 的 16 种取值，屏蔽OC的寄存器保持；全零mask不发射。
 4. 行地址、cim_precision、phase、mask 连续每拍变化时，结果与标签不串拍。
-5. 连续刷新、紧邻刷新后的复用、同一行不同 activation/OC mask 的 Hold；任意写与 reset 后 Hold 无效。
+5. 连续刷新、紧邻刷新后的复用、同一行不同 activation/OC mask 的 Hold；任意写与 reset_n 后 Hold 无效。
 6. 整行写的 OC/K packing、连续写、写后首读，以及排空后加载。
 7. 固定一拍结果可见、输入气泡、连续有效、复位中断未完成事务。
 8. 刷新请求的完成与下一拍复用请求同边沿发生；零 mask 或停止发射不得取消先前请求的结果/Hold 提交。
@@ -367,7 +369,7 @@ VCS 的 `macro_gate0`、`macro_gate1` 分别验证门控关闭和开启状态。
 
 ## 12 设计约定
 
-- reset 为高有效异步复位，SRAM 内容保持，Hold-valid 清零。
+- reset_n 为低有效异步复位，SRAM 内容保持，Hold-valid 清零。
 - cim_oc_mask 控制计算 OC，sram_wmask 控制每个 32 B 通道的写入，两者语义独立。
 - 计算路径为 R_in→组合运算→R_out；ACT 入口为四个 OC 共用的一组 512-bit 寄存器。
 - Macro 使用显式 phase 输入，回传 phase 和 OC mask；Context 与 tree 标签由 Cluster 管理。
@@ -395,7 +397,7 @@ SRAM Dual-Rail、Retention、供电/隔离/测试控制和 MAC 是否采用 MTCM
 ```systemverilog
 module SingleMacro (
     input  logic          clock,
-    input  logic          reset,
+    input  logic          reset_n,
     input  logic          cim_ren,
     input  logic [511:0]  cim_idata,
     input  logic [7:0]    cim_raddr,

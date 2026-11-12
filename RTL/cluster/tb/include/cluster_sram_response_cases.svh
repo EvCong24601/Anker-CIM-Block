@@ -4,9 +4,9 @@ logic [1023:0] response_memory[0:7][0:255];
 logic expected_sram_valid = 0;
 logic [1023:0] expected_sram_data = '0;
 int sram_response_checks = 0;
-always @(posedge clock or posedge reset) begin : check_sampled_sram_response
+always @(posedge clock or negedge reset_n) begin : check_sampled_sram_response
   int macro_id;
-  if (reset) begin
+  if (!reset_n) begin
     expected_sram_valid = 0;
     expected_sram_data  = '0;
   end else begin
@@ -20,19 +20,19 @@ always @(posedge clock or posedge reset) begin : check_sampled_sram_response
   #0.003;
   if (sram_rd_valid !== expected_sram_valid || sram_rd_data !== expected_sram_data)
     $fatal(1, "SRAM_RESPONSE: sampled valid/data mismatch");
-  if (!reset) sram_response_checks++;
+  if (reset_n) sram_response_checks++;
 end
 // Check after requests change between edges, including CS and read/write.
 always @(sram_cs_en or sram_wr_en or sram_macro_group or sram_bank_sel or sram_row_addr) begin
   #0.004;
-  if (!reset && (sram_rd_valid !== expected_sram_valid || sram_rd_data !== expected_sram_data))
+  if (reset_n && (sram_rd_valid !== expected_sram_valid || sram_rd_data !== expected_sram_data))
     $fatal(1, "SRAM_RESPONSE: live request changed the previous response");
 end
 
 task automatic run_sram_response_suite();
   logic [1023:0] saved;
   int m, a;
-  $display("[CASE_START] time=%0.3f ns suite=sram_response description=cross-Macro-back-to-back/read-idle-write/reset",
+  $display("[CASE_START] time=%0.3f ns suite=sram_response description=cross-Macro-back-to-back/read-idle-write/reset_n",
            $realtime);
   for (int macro_id = 0; macro_id < 8; macro_id++)
     for (int row_id = 0; row_id < 2; row_id++)
@@ -86,12 +86,12 @@ task automatic run_sram_response_suite();
   sram_wr_en = 0;
   @(posedge clock);
   #1;
-  reset = 1;
+  reset_n = 0;
   #0.002;
-  if (sram_rd_valid || sram_rd_data !== 0) $fatal(1, "SRAM_RESPONSE: async reset did not cancel response");
+  if (sram_rd_valid || sram_rd_data !== 0) $fatal(1, "SRAM_RESPONSE: async reset_n did not cancel response");
   @(negedge clock);
   sram_cs_en = 0;
-  reset = 0;
+  reset_n = 1;
   repeat (3) @(negedge clock);
   $display("PASS sram_response reads=32 macros=8 checks=%0d request_hold=1 async_reset=1", sram_response_checks);
 endtask

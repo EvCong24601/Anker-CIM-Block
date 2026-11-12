@@ -9,7 +9,7 @@ initial begin : regression
   string data_dir;
   int capacity_precision, capacity_sign, zero_count, capacity_count, capacity_os;
   if ($test$plusargs("EMPTY_BATCH_TEST")) begin
-    repeat (4) @(negedge clock); reset = 0;
+    repeat (4) @(negedge clock); reset_n = 1;
     run_empty_batch_suite(); $finish;
   end
 
@@ -25,7 +25,7 @@ initial begin : regression
     $fatal(1, "TB: descriptor must contain three nine-bit counts and total 110 bits");
   if ($value$plusargs("ZERO_COUNT=%d", zero_count)) begin
     repeat (4) @(negedge clock);
-    reset = 0;
+    reset_n = 1;
     repeat (2) @(negedge clock);
     $display("[CASE_START] time=%0.3f ns suite=count_range description=reject-zero-count field=%0d", $realtime,
              zero_count);
@@ -53,7 +53,7 @@ initial begin : regression
     end
     if (capacity_precision < 0 || capacity_precision > 6) $fatal(1, "TB: capacity precision must be 0..6");
     repeat (4) @(negedge clock);
-    reset = 0;
+    reset_n = 1;
     repeat (2) @(negedge clock);
     cmd_i = '0;
     cmd_i.cim_os_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;
@@ -90,7 +90,7 @@ initial begin : regression
       "SRAM_CONFLICT_COMPUTE"
     )) begin
     repeat (4) @(negedge clock);
-    reset = 0;
+    reset_n = 1;
     repeat (2) @(negedge clock);
     if ($test$plusargs("SRAM_CONFLICT_WRITE_COMPUTE")) begin
       $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-write-during-active-compute",
@@ -154,7 +154,7 @@ initial begin : regression
     string'({"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,",
              "group2_K,group3_K,group4_K,group5_K,group6_K,group7_K"}));
   repeat (4) @(negedge clock);
-  reset = 0;
+  reset_n = 1;
   repeat (2) @(negedge clock);
   if ($test$plusargs("SRAM_RESPONSE_TEST")) begin
     run_sram_response_suite();
