@@ -6,6 +6,13 @@
 ../RTL/macro/rtl/MacroWeightSRAM.sv
 ../RTL/macro/rtl/MacroMul2x4.sv
 ../RTL/macro/rtl/MacroSliceFusion.sv
+../RTL/macro/rtl/MacroCompress42.sv
+../RTL/macro/rtl/MacroFullWeightPairLUT.sv
+../RTL/macro/rtl/MacroW8MainEntry.sv
+../RTL/macro/rtl/MacroW8MainTreeCSA.sv
+../RTL/macro/rtl/MacroW8MainTree.sv
+../RTL/macro/rtl/MacroW8MainCorrection.sv
+../RTL/macro/rtl/MacroW8MainOC.sv
 ../RTL/macro/rtl/SingleMacro.sv
 ../RTL/macro/tb/tb_SingleMacro.sv
 

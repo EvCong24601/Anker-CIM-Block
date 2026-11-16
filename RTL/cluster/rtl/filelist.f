@@ -8,6 +8,13 @@
 ../macro/rtl/MacroWeightSRAM.sv
 ../macro/rtl/MacroMul2x4.sv
 ../macro/rtl/MacroSliceFusion.sv
+../macro/rtl/MacroCompress42.sv
+../macro/rtl/MacroFullWeightPairLUT.sv
+../macro/rtl/MacroW8MainEntry.sv
+../macro/rtl/MacroW8MainTreeCSA.sv
+../macro/rtl/MacroW8MainTree.sv
+../macro/rtl/MacroW8MainCorrection.sv
+../macro/rtl/MacroW8MainOC.sv
 ../macro/rtl/SingleMacro.sv
 rtl/cluster_pkg.sv
 rtl/ClusterReduceTree.sv

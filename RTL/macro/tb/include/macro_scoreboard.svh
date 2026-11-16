@@ -94,6 +94,45 @@ always @(posedge clock or negedge reset_n) begin : scoreboard
   end
 end
 
+// Five shared mode bits cross the SAME n+1 edge as the CSA rows. Check
+// capture/hold and independently derive the CPA-cycle correction formula.
+always @(posedge clock) begin : shared_correction_check
+  bit capture;
+  logic [4:0] saved, incoming;
+  logic [17:0] expected_correction;
+  int width, pairs, pair_offset;
+  if (reset_n && !negative_mode) begin
+    capture = dut.in_valid && (|(dut.mask_in & dut.result_mask_in));
+    saved = {dut.weight_mode_cpa, dut.signed_en_cpa,
+             dut.activation_signed_cpa, dut.dw_compact_cpa};
+    incoming = {dut.weight_mode_in, dut.signed_en_in,
+                dut.activation_signed_in, dut.dw_compact_in};
+    if (capture) begin
+      width = 2 << int'(dut.weight_mode_in);
+      pairs = dut.dw_compact_in ? 16 : 128/width;
+      pair_offset = 15*(1 << width)*int'(dut.signed_en_in) +
+                    8*((1 << (width+1))-1)*int'(dut.activation_signed_in) -
+                    16*(1 << width)*int'(dut.signed_en_in)*int'(dut.activation_signed_in);
+      expected_correction = 18'(-pairs*pair_offset);
+    end
+    #0.002;
+    if (reset_n) begin
+      if ({dut.weight_mode_cpa, dut.signed_en_cpa,
+           dut.activation_signed_cpa, dut.dw_compact_cpa} !== (capture ? incoming : saved))
+        $fatal(1, "Shared CPA mode capture/hold mismatch");
+      if (capture && dut.correction_cpa !== expected_correction)
+        $fatal(1, "CPA correction formula mismatch expected=%h got=%h",
+               expected_correction, dut.correction_cpa);
+    end
+  end
+end
+
+for (genvar oc = 0; oc < 4; oc++) begin : g_csa_zero_correction_check
+  always @(posedge clock)
+    if (dut.g_oc[oc].u_compute.u_main_tree.u_csa.correction !== 18'b0)
+      $fatal(1, "Fixed CSA correction must be tied to zero OC=%0d", oc);
+end
+
 // Incoming W precision controls ACT capture on this edge. Check real clocks,
 // exact captured data and retained inactive bits, independently of RTL decode.
 for (genvar bank = 0; bank < 3; bank++) begin : g_act_capture_check

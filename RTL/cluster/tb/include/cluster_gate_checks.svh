@@ -76,17 +76,33 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
     always @(posedge clock) begin
       bit want;
       bit consumer;
+      bit want_csa;
       logic [17:0] saved;
+      logic [36:0] saved_csa;
       if (reset_n) begin
+        if (dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.u_csa.correction !== 18'b0)
+          $fatal(1, "Fixed CSA correction is not zero macro=%0d OC=%0d", macro_id, oc);
         consumer = expected_result_demand(dut.command, macro_id, oc);
         if (dut.g_macro[macro_id].u_macro.in_valid && dut.g_macro[macro_id].u_macro.result_mask_in[oc] !== consumer)
           $fatal(1, "Macro consumer request not aligned ahead of result macro=%0d OC=%0d", macro_id, oc);
+        want_csa = dut.g_macro[macro_id].u_macro.in_valid &&
+                   dut.g_macro[macro_id].u_macro.mask_in[oc] && consumer;
+        saved_csa = {dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.sum_row_q,
+                     dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.carry_row_q,
+                     dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.carry_in_q};
         consumer = expected_result_demand(dut.early_tag.cmd, macro_id, oc);
         want = dut.early_tag.valid && dut.early_tag.cmd.cim_macro_en_mask[macro_id] &&
                dut.early_tag.cmd.cim_macro_oc_mask[4*macro_id+oc] && consumer;
         saved = dut.macro_data[72*macro_id+18*oc+:18];
         #0.002;
         if (reset_n) begin
+          if (dut.g_macro[macro_id].u_macro.g_oc[oc].csa_clock !== want_csa)
+            $fatal(1, "Macro CSA clock mismatch macro=%0d OC=%0d", macro_id, oc);
+          if (!want_csa &&
+              {dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.sum_row_q,
+               dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.carry_row_q,
+               dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.carry_in_q} !== saved_csa)
+            $fatal(1, "Masked Macro CSA payload changed macro=%0d OC=%0d", macro_id, oc);
           if (dut.g_macro[macro_id].u_macro.g_oc[oc].result_clock !== want)
             $fatal(1, "Macro OC clock mismatch macro=%0d OC=%0d", macro_id, oc);
           if (!want && dut.macro_data[72*macro_id+18*oc+:18] !== saved)
@@ -97,12 +113,31 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
   end
   always @(posedge clock) begin
     bit compute_req, memory_req;
+    bit correction_req;
+    logic [4:0] saved_correction_mode, incoming_correction_mode;
     if (reset_n) begin
+      correction_req = dut.g_macro[macro_id].u_macro.in_valid &&
+                       (|(dut.g_macro[macro_id].u_macro.mask_in &
+                          dut.g_macro[macro_id].u_macro.result_mask_in));
+      saved_correction_mode = {dut.g_macro[macro_id].u_macro.weight_mode_cpa,
+                               dut.g_macro[macro_id].u_macro.signed_en_cpa,
+                               dut.g_macro[macro_id].u_macro.activation_signed_cpa,
+                               dut.g_macro[macro_id].u_macro.dw_compact_cpa};
+      incoming_correction_mode = {dut.g_macro[macro_id].u_macro.weight_mode_in,
+                                  dut.g_macro[macro_id].u_macro.signed_en_in,
+                                  dut.g_macro[macro_id].u_macro.activation_signed_in,
+                                  dut.g_macro[macro_id].u_macro.dw_compact_in};
       compute_req = dut.ren[macro_id] || dut.g_macro[macro_id].u_macro.in_valid ||
-                dut.g_macro[macro_id].u_macro.stage_valid || dut.g_macro[macro_id].u_macro.cim_odata_valid;
+                dut.g_macro[macro_id].u_macro.csa_valid || dut.g_macro[macro_id].u_macro.cim_odata_valid;
       memory_req = dut.memory_wen[macro_id] || (dut.regular_read && dut.regular_macro_id == macro_id) ||
                (dut.ren[macro_id] && dut.station[macro_id]);
       #0.002;
+      if (reset_n && {dut.g_macro[macro_id].u_macro.weight_mode_cpa,
+                      dut.g_macro[macro_id].u_macro.signed_en_cpa,
+                      dut.g_macro[macro_id].u_macro.activation_signed_cpa,
+                      dut.g_macro[macro_id].u_macro.dw_compact_cpa} !==
+          (correction_req ? incoming_correction_mode : saved_correction_mode))
+        $fatal(1, "Shared CPA mode capture/hold mismatch macro=%0d", macro_id);
       if (reset_n && (dut.g_macro[macro_id].u_macro.macro_clock !== compute_req ||
                  dut.g_macro[macro_id].u_macro.memory_clock !== memory_req))
         $fatal(1, "Macro clock domain mismatch macro=%0d", macro_id);

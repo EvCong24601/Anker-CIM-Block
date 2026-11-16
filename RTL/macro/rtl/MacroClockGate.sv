@@ -14,6 +14,15 @@ module MacroClockGate #(
 );
   generate
     if (ENABLE_GATING) begin : g_icg
+`ifdef SYNTHESIS
+      (* dont_touch = "true" *)
+      CKLNQD8BWP30P140HVT u_icg (
+        .CP(clock),
+        .E(enable),
+        .TE(1'b0),
+        .Q(gated_clock)
+      );
+`else
       logic enable_latched;
       // Blocking assignment: the enable path is transparent, so a non-blocking
       // update would leave the latch one delta cycle behind.
@@ -21,6 +30,7 @@ module MacroClockGate #(
         if (!clock) enable_latched = enable;
       end
       assign gated_clock = clock & enable_latched;
+`endif
     end else begin : g_bypass
       // Verification/reference configuration; receiving registers retain CEs.
       assign gated_clock = clock;

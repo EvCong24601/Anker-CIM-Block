@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 `default_nettype none
-// Issue at n, local phase sum at n+2; accepts one request per cycle.
+// Full-weight pair LUTs, W2/W4 entry CSA, and a direct W8 main-tree path.
+// SRAM/mask semantics retained; input n -> CSA n+1 -> output n+2, II=1.
 module SingleMacro #(
   // Functional ICG; set to 0 to use register enables on the ordinary clock.
   parameter bit USE_CLOCK_GATING = 1'b1
@@ -28,37 +29,35 @@ module SingleMacro #(
   output logic          cim_odata_valid,
   output logic [   3:0] cim_odata_oc_mask,
   output logic [   1:0] cim_odata_phase,
-  input  logic          cim_dw_compact = 1'b0  // Compact input uses 32 ACT digits at every W precision.
+  input  logic          cim_dw_compact = 1'b0  // Use 32 ACT digits at every W precision.
 );
   import single_macro_pkg::*;
-  `include "single_macro_func.sv"
 
   logic         in_valid;  // Valid request at the input boundary.
   logic [511:0] activation_in;  // Registered ACT digits shared by all OCs.
   logic [  1:0] weight_mode_in;  // Decoded W2/W4/W8 weight mode.
-  logic         dw_compact_in;  // Aligned with the ACT and weight mode consumed by the multipliers.
+  logic         dw_compact_in;  // Captured with the ACT and weight mode.
   logic         signed_en_in;  // Signed interpretation of weight digits.
   logic         activation_signed_in;  // Signed interpretation of this ACT digit.
   logic [  3:0] mask_in;  // Enabled OCs for this request.
-  logic [  3:0] result_mask_in;  // Consumer demand sampled on issue.
+  logic [  3:0] result_mask_in;
   logic [  1:0] phase_in;  // ACT digit phase returned with the result.
-
-  // Behavioral timing boundary. The implementation of the two compute cycles
-  // is local to the physical macro. The interface accepts a request every edge.
-  logic         stage_valid;
-  logic [3:0]   stage_mask, stage_result_mask;
-  logic [1:0]   stage_phase;
+  logic csa_valid;
+  logic [3:0] mask_csa,result_mask_csa;
+  logic [1:0] phase_csa;
 
   wire          issue;
   wire          write_active;
   wire macro_clock, memory_clock;
   wire memory_active;
-  // Include output valid to preserve the final valid-clearing edge n+3.
+  // Drain both stages and preserve the final valid-clearing edge n+3.
   wire clock_active;
   assign issue = cim_ren && (|cim_oc_mask);
   assign write_active = sram_wen && !(&sram_wmask);
+  // The caller keeps SRAM/compute requests inactive during reset_n. Reset is
+  // not part of the combinational request or ICG-enable decode.
   assign memory_active = write_active || sram_ren || (issue && cim_station);
-  assign clock_active = issue || in_valid || stage_valid || cim_odata_valid;
+  assign clock_active = issue || in_valid || csa_valid || cim_odata_valid;
   generate
     if (USE_CLOCK_GATING) begin : g_icg
       MacroClockGate u_clock_gate (
@@ -107,23 +106,19 @@ module SingleMacro #(
   logic hold_valid;
   wire [1023:0] sram_read_data;
   wire sram_read_enable;
-  wire memory_read_enable;
-  wire [7:0] memory_read_address;
   assign sram_read_enable = issue && cim_station;
-  assign memory_read_enable = sram_read_enable || sram_ren;
-  assign memory_read_address = sram_ren ? sram_raddr : cim_raddr;
   // Both refresh and reuse consume the SRAM's retained read output.
   // There is no second 1024-bit weight data register after the SRAM.
-  wire [1023:0] compute_weight;
-  assign compute_weight = in_valid ? sram_read_data : 1024'b0;
+  // Keep precompute inputs stable across bubbles. Query outputs are isolated
+  // after the highest-plane XOR; pooled correction joins after the CSA register.
   MacroWeightSRAM u_weight_sram (
     .clock(memory_clock),
     .write_enable(write_active),
     .write_address(sram_waddr),
     .write_data(sram_wdata),
     .write_mask(sram_wmask),
-    .read_enable(memory_read_enable),
-    .read_address(memory_read_address),
+    .read_enable(sram_read_enable || sram_ren),
+    .read_address(sram_ren ? sram_raddr : cim_raddr),
     .read_data(sram_read_data)
   );
   // Align local read qualification with the sampled request, not the next
@@ -149,22 +144,37 @@ module SingleMacro #(
     end
   end
 
-  wire signed [6:0] product_comb[0:3][0:31][0:3];
-  wire signed [12:0] slice_comb[0:3][0:31];
-  wire signed [13:0] sum_l1[0:3][0:15];
-  wire signed [14:0] sum_l2[0:3][0:7];
-  wire signed [15:0] sum_l3[0:3][0:3];
-  wire signed [16:0] sum_l4[0:3][0:1];
-  wire signed [17:0] sum_l5[0:3];
+  wire [17:0] correction_cpa;
+  wire signed [17:0] phase_sum [0:3];
+  // Only the five shared mode bits cross n+1. Decode correction in the CPA
+  // cycle instead of storing an 18-bit correction payload for that cycle.
+  logic [1:0] weight_mode_cpa;
+  logic signed_en_cpa, activation_signed_cpa, dw_compact_cpa;
+  wire cpa_mode_capture_en = in_valid && (|(mask_in & result_mask_in));
+  // No payload reset: valid/masks cancel pending work across reset_n.
+  always_ff @(posedge macro_clock) begin
+    if (cpa_mode_capture_en) begin
+      weight_mode_cpa <= weight_mode_in;
+      signed_en_cpa <= signed_en_in;
+      activation_signed_cpa <= activation_signed_in;
+      dw_compact_cpa <= dw_compact_in;
+    end
+  end
+  MacroW8MainCorrection u_sign_control (
+    .weight_mode(weight_mode_cpa), .signed_en(signed_en_cpa),
+    .activation_signed(activation_signed_cpa), .dw_compact(dw_compact_cpa),
+    .correction(correction_cpa)
+  );
   generate
     for (genvar c = 0; c < 4; c++) begin : g_oc
+      wire csa_clock;
+      wire csa_capture_en = in_valid && mask_in[c] && result_mask_in[c];
+      MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_csa_clock_gate (
+        .clock(clock), .enable(csa_capture_en), .gated_clock(csa_clock)
+      );
       wire result_clock;
       wire result_enable;
-      logic signed [17:0] stage_data;
-      always_ff @(posedge macro_clock)
-        if (in_valid && mask_in[c] && result_mask_in[c]) stage_data <= sum_l5[c];
-
-      assign result_enable = stage_valid && stage_mask[c] && stage_result_mask[c];
+      assign result_enable = csa_valid && mask_csa[c] && result_mask_csa[c];
       if (USE_CLOCK_GATING) begin : g_result_icg
         MacroClockGate u_clock_gate (
           .clock(clock),
@@ -176,86 +186,34 @@ module SingleMacro #(
       end
       // Masked OC payload holds. Valid/mask identify which values belong to
       // this request; shared ACT and SRAM retained output serve active OCs.
+      // Parent-blocked OCs hold at both CSA and output boundaries. Tags/valid
+      // still advance for every accepted request, including result_mask=0.
       always_ff @(posedge result_clock or negedge reset_n)
         if (!reset_n) cim_odata[18*c+:18] <= '0;
-        else if (result_enable) cim_odata[18*c+:18] <= stage_data;
-      for (genvar s = 0; s < 32; s++) begin : g_slice
-        // Each slice consumes 4, 2 or 1 ACT digits for W2, W4 or W8.
-        // Compact requests use just the first 32 digits, even when higher banks hold old data.
-        wire slice_enabled = in_valid && mask_in[c] &&
-                             (!dw_compact_in || s < 8 || weight_mode_in == W_MODE_8 ||
-                              (s < 16 && weight_mode_in == W_MODE_4));
-        for (genvar t = 0; t < 4; t++) begin : g_submul
-          wire [1:0] weight_bits;
-          wire [3:0] activation_bits;
-          wire weight_signed;
-          assign weight_bits = slice_enabled ? compute_weight[256*c+8*s+2*t+:2] : 2'b0;
-          assign activation_bits = !slice_enabled ? 4'b0
-                        : (weight_mode_in == W_MODE_2) ? activation_in[4 * (4 * s + t) +: 4]
-                        : (weight_mode_in == W_MODE_4) ? activation_in[4 * (2 * s + t / 2) +: 4]
-                        : activation_in[4 * s +: 4];
-          assign weight_signed = signed_en_in &&
-                        ((weight_mode_in == W_MODE_2) ||
-                         ((weight_mode_in == W_MODE_4) && ((t % 2) == 1)) ||
-                         ((weight_mode_in == W_MODE_8) && (t == 3)));
-          MacroMul2x4 u_mul (
-            .weight_bits(weight_bits),
-            .activation_bits(activation_bits),
-            .weight_signed(weight_signed),
-            .activation_signed(activation_signed_in),
-            .product(product_comb[c][s][t])
-          );
-        end
-        MacroSliceFusion u_slice_fusion (
-          .weight_mode(weight_mode_in),
-          .p0(product_comb[c][s][0]),
-          .p1(product_comb[c][s][1]),
-          .p2(product_comb[c][s][2]),
-          .p3(product_comb[c][s][3]),
-          .sum(slice_comb[c][s])
-        );
-      end
-      // Five combinational levels. Extend both operands BEFORE addition.
-      for (genvar i = 0; i < 16; i++) begin : g_l1
-        assign sum_l1[c][i] = $signed(
-          {slice_comb[c][2*i][12], slice_comb[c][2*i]}
-        ) + $signed(
-          {slice_comb[c][2*i+1][12], slice_comb[c][2*i+1]}
-        );
-      end
-      for (genvar i = 0; i < 8; i++) begin : g_l2
-        assign sum_l2[c][i] = $signed(
-          {sum_l1[c][2*i][13], sum_l1[c][2*i]}
-        ) + $signed(
-          {sum_l1[c][2*i+1][13], sum_l1[c][2*i+1]}
-        );
-      end
-      for (genvar i = 0; i < 4; i++) begin : g_l3
-        assign sum_l3[c][i] = $signed(
-          {sum_l2[c][2*i][14], sum_l2[c][2*i]}
-        ) + $signed(
-          {sum_l2[c][2*i+1][14], sum_l2[c][2*i+1]}
-        );
-      end
-      for (genvar i = 0; i < 2; i++) begin : g_l4
-        assign sum_l4[c][i] = $signed(
-          {sum_l3[c][2*i][15], sum_l3[c][2*i]}
-        ) + $signed(
-          {sum_l3[c][2*i+1][15], sum_l3[c][2*i+1]}
-        );
-      end
-      assign sum_l5[c] = $signed({sum_l4[c][0][16], sum_l4[c][0]}) + $signed({sum_l4[c][1][16], sum_l4[c][1]});
+        else if (result_enable) cim_odata[18*c+:18] <= phase_sum[c];
+      wire enabled_oc = in_valid && mask_in[c];
+      // Shared CPA-stage correction follows the registered result masks,
+      // not the next request's input-stage controls. Closed consumers see zero.
+      wire [17:0] oc_correction = correction_cpa & {18{result_enable}};
+      MacroW8MainOC u_compute (
+        .csa_clock(csa_clock), .csa_capture_en(csa_capture_en),
+        .weights(sram_read_data[256*c +: 256]), .activations(activation_in),
+        .weight_mode(weight_mode_in), .weight_signed(signed_en_in),
+        .activation_signed(activation_signed_in), .enable(enabled_oc),
+        .dw_compact(dw_compact_in),
+        .correction(oc_correction), .result(phase_sum[c])
+      );
     end
   endgenerate
 
-  // n samples ACT and reads/reuses the weight. The result is visible after n+2.
+  // Three boundaries: input n, CSA n+1, output n+2. All tags follow the data.
   always_ff @(posedge macro_clock or negedge reset_n) begin
     if (!reset_n) begin
       in_valid <= 1'b0;
-      stage_valid <= 1'b0;
-      stage_mask <= '0;
-      stage_result_mask <= '0;
-      stage_phase <= '0;
+      csa_valid <= 1'b0;
+      mask_csa <= '0;
+      result_mask_csa <= '0;
+      phase_csa <= '0;
       weight_mode_in <= W_MODE_2;
       dw_compact_in <= 1'b0;
       signed_en_in <= 1'b0;
@@ -268,10 +226,10 @@ module SingleMacro #(
       cim_odata_phase <= '0;
     end else begin
       in_valid <= issue;
-      stage_valid <= in_valid;
-      cim_odata_valid <= stage_valid;
+      csa_valid <= in_valid;
+      cim_odata_valid <= csa_valid;
       if (issue) begin
-        weight_mode_in <= input_weight_mode;
+        weight_mode_in <= decode_weight_mode(cim_precision);
         dw_compact_in <= cim_dw_compact;
         signed_en_in <= cim_signed_en;
         activation_signed_in <= digit_is_signed(cim_precision, cim_phase, cim_signed_en);
@@ -280,20 +238,19 @@ module SingleMacro #(
         phase_in <= cim_phase;
       end
       if (in_valid) begin
-        stage_mask <= mask_in;
-        stage_result_mask <= result_mask_in;
-        stage_phase <= phase_in;
+        mask_csa <= mask_in;
+        result_mask_csa <= result_mask_in;
+        phase_csa <= phase_in;
       end
-      if (stage_valid) begin
-        cim_odata_oc_mask <= stage_mask;
-        cim_odata_phase   <= stage_phase;
+      if (csa_valid) begin
+        cim_odata_oc_mask <= mask_csa;
+        cim_odata_phase   <= phase_csa;
       end
     end
   end
 
 `ifndef SYNTHESIS
 `ifdef SINGLE_MACRO_ASSERTIONS
-  `include "single_macro_check_func.sv"
   // Verification state only; SRAM initialization survives logic reset_n.
   logic [3:0] initialized_ocs[0:255];
   initial for (int a = 0; a < 256; a++) initialized_ocs[a] = '0;
@@ -302,7 +259,8 @@ module SingleMacro #(
       if (sram_ren && (cim_ren || in_valid || sram_wen)) $fatal(1, "SM_PROTOCOL: regular read overlaps compute/write");
       if (sram_wen) begin
         if (cim_ren) $fatal(1, "SM_PROTOCOL: simultaneous read/write");
-        // At n+2 the pending output uses stage_data and the SRAM port is free.
+        // Only the pre-CSA stage still consumes SRAM output. A write at n+2
+        // is legal while the previous request completes through its CPA.
         if (in_valid) $fatal(1, "SM_PROTOCOL: write before pipeline drain");
         // Reduction catches X/Z without simulator-specific handling of
         // $isunknown on a wide, temporary concatenation.

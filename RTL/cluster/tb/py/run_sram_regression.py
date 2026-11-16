@@ -18,11 +18,13 @@ def main():
     parser.add_argument('--sim-dir',type=Path)
     parser.add_argument('--case',action='append',choices=catalog.CASES)
     parser.add_argument('--full',action='store_true',help='run every raw-output and protocol case')
+    parser.add_argument('--csa-golden',action='store_true',
+                        help='replace only the fixed PDK CSA with its test-only arithmetic model')
     args=parser.parse_args()
     dest=(args.sim_dir or ROOT.parent/'cluster_tb_work/local_sim/raw_psum').resolve()
     if dest==ROOT or ROOT in dest.parents:parser.error('--sim-dir must be outside the Git checkout')
     dest.mkdir(parents=True,exist_ok=True)
-    sources=svfiles.compile_union(svfiles.targets())
+    sources=svfiles.compile_union(svfiles.targets(),csa_golden=args.csa_golden)
     manifest={}
     for src in sources:
         shutil.copy2(src,dest/src.name);manifest[str(src)]=hashlib.sha256(src.read_bytes()).hexdigest()
@@ -55,7 +57,8 @@ def main():
         (run/'sim.exit').write_text(str(r.returncode))
         catalog.check(name,run)
         line='PASS '+name;summaries.append(line);print(line,flush=True)
-    (dest/'summary.log').write_text('\n'.join(summaries)+'\n')
-    print(f'TOTAL PASS={len(summaries)} snapshot={dest}',flush=True)
+    model='arithmetic golden (fixed PDK CSA not simulated)' if args.csa_golden else 'fixed PDK CSA'
+    (dest/'summary.log').write_text('CSA='+model+'\n'+'\n'.join(summaries)+'\n')
+    print(f'TOTAL PASS={len(summaries)} CSA={model} snapshot={dest}',flush=True)
 
 if __name__=='__main__':main()

@@ -1,0 +1,15 @@
+# The upstream archive uses -text. Preserve those source bytes when committing
+# and checking out here as well, without changing the legacy helper files.
+*.sv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+MacroClockGate.sv -text
+MacroCompress42.sv -text
+MacroFullWeightPairLUT.sv -text
+MacroW8MainCorrection.sv -text
+MacroW8MainEntry.sv -text
+MacroW8MainOC.sv -text
+MacroW8MainTree.sv -text
+MacroW8MainTreeCSA.sv -text
+MacroWeightSRAM.sv -text
+SingleMacro.sv -text
+single_macro_pkg.sv -text
+blackbox/MacroWeightSRAM.sv -text

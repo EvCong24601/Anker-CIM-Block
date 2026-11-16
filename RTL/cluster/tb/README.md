@@ -10,4 +10,8 @@ TB 通过正式端口 raw_psum[1023:0]、psum_valid[31:0] 检查 signed32 原始
 
 从仓库运行 python RTL/cluster/tb/py/run_sram_regression.py；--full 运行全部目录化用例，--case 选择用例，--sim-dir 指定仓库外快照。脚本读取与 VCS 相同的 filelist 和 cases.py，用 sources.json 记录快照文件散列。
 
+当前 Macro 使用两拍 LUT/CSA 实现。没有 HVT FA/HA 库时，加 `--csa-golden`，仅将固定 CSA 文件替换为无工艺依赖的数学 golden model。其余 LUT、DW、CSA 寄存、CPA 和 ICG 保持真实 RTL。`summary.log` 标注验证模型。此模式验证功能与接口时序，不验证固定门连接或 PPA，详见 [Macro 说明](../../macro/README.md#无工艺库的-golden-model-仿真)。
+
+固定/golden CSA 的 correction 输入均接零。Macro 在 n+1 保存共享的 5 bit 模式信息，第二拍译码 correction 并直接加到 CPA。Cluster 检查共享模式的捕获与保持，以及原有每 OC 的 CSA/结果门控，数值仍由独立整数点积逐 lane 核对。
+
 从 vcs-rtl 运行 make list、make run CASE=cluster_default、make gemm-regression。详见 [VCS说明](../../../vcs-rtl/README.md) 和 [raw输出契约](../../../docs/Cluster_Raw_Output.md)。

@@ -6,7 +6,7 @@ cluster_top 的正式输出为 raw_psum[1023:0] 和 psum_valid[31:0]。每个 la
 
 复位接口为低有效异步 `reset_n`，仅连接有复位状态的子模块，不参与请求、ready 或时钟使能的组合译码。Command握手仅在 `reset_n=1` 时有效；复位期间输出有效位为0。SRAM wrapper无复位端口或访问保护，上层须将 `sram_cs_en` 置0以保持SRAM内容。
 
-rtl/ 包含 cluster_top.sv、ClusterReduceTree.sv、cluster_pkg.sv 和 cluster_func.sv。tb/ 包含仿真检查函数及 TB；package 只包含类型，函数通过模块内 include 使用。
+rtl/ 包含 cluster_top.sv、ClusterReduceTree.sv、cluster_pkg.sv 和 cluster_func.sv。tb/ 包含仿真检查函数及 TB；cluster_pkg 只包含类型，Cluster 函数通过模块内 include 使用。
 
 从本目录使用 rtl/filelist.f；从 tb/ 使用 filelist.f；从仓库 vcs-rtl/ 使用 verilog_file_*.f。所有 include 搜索路径已在对应清单中配置。SYNTHESIS 定义排除 RTL 中的仿真协议检查。
 

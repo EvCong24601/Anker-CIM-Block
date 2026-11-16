@@ -112,6 +112,20 @@ initial begin : stimulus
   drain();
   $display("PASS first_compact_dw gating=%0d precisions=7 retained_high=384 first_result=0", CLOCK_GATING);
 
+  // Identical W/sign/phase but different DW flags require different pooled
+  // corrections. Alternate on every issue to expose a missing DW stage bit.
+  case_description = "CPA-correction/signed-normal-DW/II1";
+  for (int p = 0; p < 7; p++) begin
+    for (int ph = 0; ph < activation_bits(p)/4; ph++) begin
+      send_phase(3'(p), 2'(ph), 1, 15, 1, 1, random_activation(), 0);
+      send_phase(3'(p), 2'(ph), 1, 4'b0001 << ((p+ph)%4), 1, 0, random_activation(), 1);
+      send_phase(3'(p), 2'(ph), 1, 15, 1, 0, random_activation(), 0);
+      send_phase(3'(p), 2'(ph), 1, 15, 1, 0, random_activation(), 1);
+    end
+  end
+  drain();
+  $display("PASS cpa_correction_mode gating=%0d signed_normal_dw=64 II=1", CLOCK_GATING);
+
   // Hold preserves masked-off OC data and ignores zero-mask refreshes.
   case_description = "Hold-preservation/zero-compute-mask";
   send_phase(3, 0, 1, 1, 5, 1, padded_activation(random_activation(), 3));

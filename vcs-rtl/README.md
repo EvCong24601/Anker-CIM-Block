@@ -15,7 +15,9 @@ make run依次生成输入、编译、仿真并核对预期结果。cases.py是�
 
 make com使用verilog_file_<TB>.f；Cluster与GEMM清单引用verilog_file_common.f，Macro使用独立清单。+incdir覆盖cluster/macro的rtl和tb目录。函数通过include读取，不作为独立编译单元。
 
-当前有109个用例，覆盖三通道握手、配置切换、缺操作数时在途结果排出、默认raw算术、SRAM访问和互斥、count/Context容量拒绝、OS255/256/511、归约门控、Macro协议、空批次及7种GEMM几何。用 `make run CASE=act_buffer_write_enable` 检查 ACT 末次直通时的数据保持、AS 跨 Context 复用和同沿替换 plane。原有round_clip场景名保留输入矩阵几何，当前检查raw点积。
+当前默认清单接入两拍 LUT/CSA Macro，固定树的完整展开需要 HVT FA/HA 仿真库。无工艺库的本地功能回归从仓库根目录运行 `python RTL/cluster/tb/py/run_sram_regression.py --csa-golden --full`，仅替换 CSA 为[数学 golden model](../RTL/macro/tb/models/MacroW8MainTreeCSA_golden.sv)。默认 VCS 清单仍使用固定树，golden 模式的结果不等同于固定树门级验证。
+
+当前有116个用例，覆盖三通道握手、配置切换、缺操作数时在途结果排出、默认raw算术、SRAM访问和互斥、count/Context容量拒绝、OS255/256/511、归约门控、Macro协议、空批次、DW及7种GEMM几何。用 `make run CASE=act_buffer_write_enable` 检查 ACT 末次直通时的数据保持、AS 跨 Context 复用和同沿替换 plane。原有round_clip场景名保留输入矩阵几何，当前检查raw点积。
 
 GEMM raw结果CSV为m,n,raw；Python按矩阵坐标验证每个signed32结果，拒绝缺失或重复元素。波形含正式raw输出端口，数据无效时不作保持假设。
 

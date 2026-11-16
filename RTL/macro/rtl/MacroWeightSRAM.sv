@@ -2,7 +2,6 @@
 `default_nettype none
 // Synchronous single-port SRAM model: requests sample on a rising access
 // clock edge. Read data holds until the next read; storage is not reset.
-// Reset-free wrapper: the caller must keep access requests inactive during reset.
 // The parent issues a refresh at R_in and computes during R_in -> R_out.
 module MacroWeightSRAM (
   input  logic          clock,
