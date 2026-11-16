@@ -1,3 +1,4 @@
+`include "include/cluster_channel_driver.svh"
 task automatic load_as_gemm_os1_ws32_w8a16_vectors();
   int fd, status, k0, n0;
   longint signed dot, weight_sum;
@@ -16,8 +17,7 @@ task automatic load_as_gemm_os1_ws32_w8a16_vectors();
         dot += longint'($signed(x_q[m*K+k])) * longint'($signed(w_q[k*N+n]));
         weight_sum += longint'($signed(w_q[k*N+n]));
       end
-      if (raw_golden[m*N+n] !== 32'(dot))
-        $fatal(1, "AS GEMM: unpacked matrix golden mismatch m=%0d n=%0d", m, n);
+      if (raw_golden[m*N+n] !== 32'(dot)) $fatal(1, "AS GEMM: unpacked matrix golden mismatch m=%0d n=%0d", m, n);
     end
   for (int tile = 0; tile < OS; tile++)
     for (int cx = 0; cx < AS; cx++)
@@ -78,30 +78,20 @@ task automatic send_as_row(input int m);
   cmd_i.cim_macro_en_mask = 8'hff;
   cmd_i.cim_macro_oc_mask = 32'hffffffff;
   cmd_i.cim_act_slot_sel = 24'hfac688;
-  for (int tile = 0; tile < OS; tile++) begin
-    // One command per Context; ACT Planes A0..A3 always arrive on the first
-    // four edges. Replay saved ACT while accepting the remaining AS8 commands.
-    for (int t = 0; t < TILE_CYCLES; t++) begin
-      @(negedge clock);
-      if (t < AS) begin
-        cmd_valid_i = 1;
-        cmd_i.cim_weight_raddr = BASE_ADDR + 8'(AS * tile + logical_context(m, t));
-        act_data_i = t < 4 ? act_planes[(m*OS+tile)*4+t] : '1;
-        $display(
-          string'({"[CMD_SEND] time=%0.3f ns description=AS-address-and-ACT-overlap ",
-                   "m=%0d k_tile=%0d ctx=%0d slice=%0d address=0x%02h"}),
-          $realtime, m, tile, t, t < 4 ? t : -1, cmd_i.cim_weight_raddr);
-      end else begin
-        cmd_valid_i = 0;
-        act_data_i  = '1;
-        if (CHECK_SWITCH) begin
-          cmd_i = '1;
-          cmd_i.cim_weight_raddr = 8'(cycle);
-        end
-      end
-      @(posedge clock);
-      if (t < AS && !cmd_ready_o) $fatal(1, "AS GEMM: Command not accepted at its planned edge");
-      #1;
+  channel_cmd(cmd_i);
+  fork
+    begin
+      for (int tile = 0; tile < OS; tile++)
+      for (int cx = 0; cx < AS; cx++) channel_weight(BASE_ADDR + 8'(AS * tile + logical_context(m, cx)));
     end
+    begin
+      for (int tile = 0; tile < OS; tile++) for (int ph = 0; ph < 4; ph++) channel_act(act_planes[(m*OS+tile)*4+ph]);
+    end
+  join
+  // Poison unqualified pins to prove every operand was captured on its fire.
+  if (CHECK_SWITCH) begin
+    cmd_i = '1;
+    weight_raddr_i = 8'(cycle);
+    act_data_i = '1;
   end
 endtask

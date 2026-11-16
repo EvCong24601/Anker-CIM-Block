@@ -1,4 +1,4 @@
-"""Enumerate buffer operations for the six agreed os/ws/as configurations.
+"""Enumerate the historical combined command/A0 schedules for six configurations.
 
 Uses only Python's standard library. CSV expands every legal split/sign entry
 in split_cases.csv; TXT lists the 42 standard precision/configuration examples.

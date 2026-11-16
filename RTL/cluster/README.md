@@ -10,4 +10,4 @@ rtl/ 包含 cluster_top.sv、ClusterReduceTree.sv、cluster_pkg.sv 和 cluster_f
 
 从本目录使用 rtl/filelist.f；从 tb/ 使用 filelist.f；从仓库 vcs-rtl/ 使用 verilog_file_*.f。所有 include 搜索路径已在对应清单中配置。SYNTHESIS 定义排除 RTL 中的仿真协议检查。
 
-OS/WS/AS count 各9bit、范围1～511，Command共110bit。默认OUTPUT_PSUM_DEPTH=16统一设置Psum及权重地址深度；MAX_CONTEXTS默认64。WS/AS不能同时大于1，容量限制继续有效。
+OS/WS/AS count 各9bit、范围1～511，Command 共103bit，最低位为 cim_dw_compact。每个任务握手一次 cmd，weight 和 ACT 各自按序传输。两路的首个操作数可在 cmd 握手沿接收。默认OUTPUT_PSUM_DEPTH=16统一设置Psum及权重地址深度；MAX_CONTEXTS默认64。WS/AS不能同时大于1，容量限制继续有效。

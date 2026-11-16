@@ -3,9 +3,9 @@ always @(posedge clock) begin : edge_scoreboard
   int row, phase, n, index;
   cycle++;
   if (reset_n && monitoring) begin
-    if (cmd_valid_i && cmd_ready_o) begin
+    if (act_valid_i && act_ready_o && dut.external_phase == 0) begin
       if (first_accept < 0) first_accept = cycle;
-      if (cycle != first_accept + (phases + 1) * commands || cmd_i.cim_weight_raddr !== 8'(base_address + active_tile))
+      if (cycle != first_accept + phases * commands || weight_raddr_i !== 8'(base_address + active_tile))
         $fatal(1, "GEMM scenario: Command cycle or address mismatch");
       commands++;
       total_commands++;
@@ -13,9 +13,9 @@ always @(posedge clock) begin : edge_scoreboard
     if (dut.issue) begin
       row   = issues / phases;
       phase = issues % phases;
-      if (cycle != first_accept + (phases + 1) * row + 1 + phase || dut.context_idx != row || dut.phase != phase ||
-        dut.plane !== act_planes[row * phases + phase] || dut.ren !== 8'(en) ||
-        dut.command.cim_weight_raddr !== 8'(base_address + active_tile))
+      if (cycle != first_accept + phases * row + phase || dut.context_idx != row || dut.phase != phase ||
+      dut.plane !== act_planes[row * phases + phase] || dut.ren !== 8'(en) ||
+      dut.issue_weight_address !== 8'(base_address + active_tile))
         $fatal(1, "GEMM scenario: internal ACT/Context/phase/weight route mismatch");
       for (int macro = first_macro; macro < first_macro + macro_count; macro++) begin
         // One-tile preload readback already retains the first weight row.
@@ -30,15 +30,14 @@ always @(posedge clock) begin : edge_scoreboard
   end
   #1;
   if (reset_n && monitoring) begin
-    if ((out_valid_o & ~active_mask) != 0)
-      $fatal(1, "GEMM scenario: valid on inactive group or masked OC");
+    if ((out_valid_o & ~active_mask) != 0) $fatal(1, "GEMM scenario: valid on inactive group or masked OC");
     for (int c = 0; c < 4; c++) begin
       n = n_map[active_tile][c];
       if (out_valid_o[lane_base+c]) begin
         row   = raw_next[c];
         index = row * n_count + n;
-        if (n < 0 || row >= m_count || cycle != first_accept + row * (phases + 1) + first_raw ||
-          psum_data_o[32 * (lane_base + c) +: 32] !== raw_golden[index])
+        if (n < 0 || row >= m_count || cycle != first_accept + row * phases + first_raw - 1 ||
+        psum_data_o[32 * (lane_base + c) +: 32] !== raw_golden[index])
           $fatal(1, "GEMM scenario: raw matrix/timing mismatch row=%0d n=%0d OC=%0d", row, n, c);
         observed_raw[index] = psum_data_o[32*(lane_base+c)+:32];
         raw_next[c]++;

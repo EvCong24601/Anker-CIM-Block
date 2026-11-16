@@ -12,6 +12,7 @@
 ../rtl/ClusterReduceTree.sv
 ../rtl/cluster_top.sv
 tb_Cluster.sv
+tb_ClusterChannels.sv
 tb_ClusterReduceTree.sv
 ClusterGemmOs1Ws32.sv
 tb_Cluster_GEMM_OS1_WS32_W8A16.sv

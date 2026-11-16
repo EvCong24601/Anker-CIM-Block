@@ -1,3 +1,4 @@
+`include "include/cluster_channel_driver.svh"
 // Matrix loading and physical packing checks are distinct from DUT checks.
 task automatic load_gemm_os1_ws32_w8a16_vectors();
   int fd, status, n0, k0;
@@ -13,7 +14,7 @@ task automatic load_gemm_os1_ws32_w8a16_vectors();
   // generated physical rows/planes rather than sharing their interpretation.
   for (int m = 0; m < M; m++)
     for (int n = 0; n < N; n++) begin
-      dot  = 0;
+      dot = 0;
       for (int k = 0; k < K; k++) begin
         dot += longint'($signed(x_q[m*K+k])) * longint'($signed(w_q[k*N+n]));
       end
@@ -51,10 +52,9 @@ task automatic load_gemm_weights();
       sram_macro_group = 1'(macro / 4);
       sram_bank_sel = 2'(macro % 4);
       sram_wrdata[0] = weight_rows[8*tile+macro];
-      $display(
-        string'({"[WEIGHT_WRITE] time=%0.3f ns description=load-single-cluster-N-tile ",
-                 "tile=%0d macro=%0d address=0x%02h k=%0d..%0d"}),
-        $realtime, tile, macro, sram_row_addr, 32 * macro, 32 * macro + 31);
+      $display(string'({"[WEIGHT_WRITE] time=%0.3f ns description=load-single-cluster-N-tile ",
+                        "tile=%0d macro=%0d address=0x%02h k=%0d..%0d"}), $realtime, tile, macro, sram_row_addr,
+                 32 * macro, 32 * macro + 31);
     end
   @(negedge clock);
   sram_wr_en = 0;
@@ -82,32 +82,12 @@ task automatic send_gemm_rows(input int tile);
   cmd_i.cim_reduce_split_mask = 7'h00;
   cmd_i.cim_macro_en_mask = 8'hff;
   cmd_i.cim_macro_oc_mask = 32'hffffffff;
-  cmd_i.cim_weight_raddr = WEIGHT_ADDR + 8'(tile);
   cmd_i.cim_act_slot_sel = 24'hfac688;
-  for (int m = 0; m < M; m++) begin
-    @(negedge clock);
-    cmd_valid_i = 1;
-    act_data_i  = act_planes[4*m];
-    $display(
-      string'({"[CMD_SEND] time=%0.3f ns description=WS-GEMM-row ",
-               "tile=%0d row=%0d address=0x%02h os=1 ws=32 as=1 split=0x00 slots=0xfac688"}),
-      $realtime, tile, m, cmd_i.cim_weight_raddr);
-    @(posedge clock);
-    if (cmd_ready_o !== 1'b1) $fatal(1, "GEMM: Command was not accepted by the single Cluster");
-    #1;
-    for (int ph = 1; ph < 4; ph++) begin
-      @(negedge clock);
-      cmd_valid_i = 0;
-      act_data_i  = act_planes[4*m+ph];
-      @(posedge clock);
-      #1;
+  channel_cmd(cmd_i);
+  fork
+    channel_weight(WEIGHT_ADDR + 8'(tile));
+    begin
+      for (int m = 0; m < M; m++) for (int ph = 0; ph < 4; ph++) channel_act(act_planes[4*m+ph]);
     end
-    // Fifth cycle consumes the final registered Plane. No next-packet load
-    // may overwrite this bank; the next row's A0 arrives one edge later.
-    @(negedge clock);
-    cmd_valid_i = 0;
-    act_data_i  = '1;
-    @(posedge clock);
-    #1;
-  end
+  join
 endtask

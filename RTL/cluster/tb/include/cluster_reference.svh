@@ -12,8 +12,8 @@ function automatic int unsigned rand32();
   return rng;
 endfunction
 
-function automatic int unsigned sample_bits(input int bits, input int pattern, input int index,
-                                            input bit sign_en, input bit is_weight);
+function automatic int unsigned sample_bits(input int bits, input int pattern, input int index, input bit sign_en,
+                                            input bit is_weight);
   int unsigned hi, lo;
   hi = sign_en ? (1 << (bits - 1)) - 1 : (1 << bits) - 1;
   lo = sign_en ? 1 << (bits - 1) : 0;
@@ -79,5 +79,5 @@ function automatic int lane_latency(input int lane);
   int size;
   size = 0;
   for (int m = 0; m < 8; m++) if (golden_group[m] == lane / 4) size++;
-  return size <= 2 ? 3 : size == 4 ? 4 : 5;
+  return (size <= 2 ? 4 : size == 4 ? 5 : 6) - ((case_os == 1 && case_as == 1) ? 1 : 0);
 endfunction

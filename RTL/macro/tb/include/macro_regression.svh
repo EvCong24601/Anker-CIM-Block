@@ -90,6 +90,28 @@ initial begin : stimulus
   end
   drain();
 
+  // Back-to-back ordinary -> compact -> ordinary. Row 1 has nonzero
+  // weights at every index, so stale ACT in any excluded slice is observable.
+  case_description = "first-compact-DW/nonzero-high-banks";
+  for (int p = 0; p < 7; p++) begin
+    send_phase(0, 0, 0, 1, 1, 1, {128{4'h1}});  // Seed all 512 bits in W2.
+    send_phase(3'(p), 0, 0, 1, 1, 0, {128{4'h1}});
+    send_phase(3'(p), 0, 0, 1, 1, 0, {{96{4'h2}}, 128'b0}, 1);
+    @(posedge clock);
+    #0.002;
+    if (dut.act_clock !== (CLOCK_GATING ? 3'b001 : 3'b111) ||
+        dut.activation_in !== {{96{4'h1}}, 128'b0})
+      $fatal(1, "First compact issue lost retained ACT or clocked an upper bank precision=%0d", p);
+    send_phase(3'(p), 0, 0, 1, 1, 0, {{96{4'h3}}, {32{4'h2}}}, 1);
+    send_phase(3'(p), 0, 0, 1, 1, 0, {128{4'h4}});
+    @(posedge clock);
+    #2;
+    if (cim_odata_valid !== 1'b1 || cim_odata[17:0] !== '0)
+      $fatal(1, "Stale high ACT contributed to first compact result precision=%0d", p);
+  end
+  drain();
+  $display("PASS first_compact_dw gating=%0d precisions=7 retained_high=384 first_result=0", CLOCK_GATING);
+
   // Hold preserves masked-off OC data and ignores zero-mask refreshes.
   case_description = "Hold-preservation/zero-compute-mask";
   send_phase(3, 0, 1, 1, 5, 1, padded_activation(random_activation(), 3));
@@ -156,8 +178,7 @@ initial begin : stimulus
   end
   drain();
 
-  // Legal earliest write: last issue n; complete n+1; write at n+2
-  // while the previous output is sampled. Also write again at n+3.
+  // Earliest SRAM write at n+2 coexists with the previous compute result.
   case_description = "earliest-legal-write-after-drain";
   send_phase(5, 0, 0, 15, 255, 1, padded_activation('1, 5));
   idle_cycle();

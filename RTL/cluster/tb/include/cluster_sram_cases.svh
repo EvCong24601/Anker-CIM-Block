@@ -13,10 +13,9 @@ endfunction
 task automatic sram_write(int m, int a, logic [1023:0] data, logic [3:0] mask, bit selected = 1);
   // Drive on the falling edge and commit on the rising edge; the mirror updates per byte
   // and the 32 B behind a 1-mask bit stays unchanged.
-  $display(
-    string'({"[CASE_START] time=%0.3f ns suite=sram_write case=%0d ",
-             "description=32B-active-high-mask/write-isolation macro=%0d row=%0d mask=%h cs=%0d"}),
-    $realtime, sram_write_cases, m, a, mask, selected);
+  $display(string'({"[CASE_START] time=%0.3f ns suite=sram_write case=%0d ",
+                    "description=32B-active-high-mask/write-isolation macro=%0d row=%0d mask=%h cs=%0d"}), $realtime,
+             sram_write_cases, m, a, mask, selected);
   @(negedge clock);
   sram_cs_en = selected;
   sram_wr_en = 1;
@@ -38,10 +37,9 @@ task automatic sram_read_check(int m, int a, logic [3:0] mask = 0);
   // compared after that edge.
   // DUT.mem is never used as the golden, so address-decode errors cannot be hidden by a
   // same-source reference.
-  $display(
-    string'({"[CASE_START] time=%0.3f ns suite=sram_read case=%0d ",
-             "description=full-row-read/macro-row-isolation/read-ignores-mask macro=%0d row=%0d mask=%h"}),
-    $realtime, sram_read_checks, m, a, mask);
+  $display(string'({"[CASE_START] time=%0.3f ns suite=sram_read case=%0d ",
+                    "description=full-row-read/macro-row-isolation/read-ignores-mask macro=%0d row=%0d mask=%h"}),
+             $realtime, sram_read_checks, m, a, mask);
   @(negedge clock);
   sram_cs_en = 1;
   sram_wr_en = 0;
@@ -78,7 +76,6 @@ task automatic sram_compute_check(bit patched);
   cmd_i.cim_reduce_split_mask = 7'h7f;
   cmd_i.cim_macro_en_mask = 8'hff;
   cmd_i.cim_macro_oc_mask = 32'hffffffff;
-  cmd_i.cim_weight_raddr = 8'd7;
   cmd_i.cim_precision = 3'd2;  // W4A4, 64 weights per OC, UINT
   act_data_i = {256{4'h1}};
   cmd_valid_i = 1;
@@ -87,6 +84,10 @@ task automatic sram_compute_check(bit patched);
   end while (!cmd_ready_o);
   @(negedge clock);
   cmd_valid_i = 0;
+  fork
+    channel_weight(8'd7);
+    channel_act({256{4'h1}});
+  join
   received = 0;
   repeat (30) begin
     @(negedge clock);
@@ -131,10 +132,8 @@ task automatic run_sram_cases;
   end
   // Back-to-back writes change Macro, group, row and mask on every cycle.
   for (int n = 0; n < 32; n++) begin
-    $display(
-      string'({"[CASE_START] time=%0.3f ns suite=sram_back_to_back case=%0d ",
-               "description=consecutive-writes/change-macro-row-mask"}),
-      $realtime, n);
+    $display(string'({"[CASE_START] time=%0.3f ns suite=sram_back_to_back case=%0d ",
+                      "description=consecutive-writes/change-macro-row-mask"}), $realtime, n);
     @(negedge clock);
     sram_cs_en = 1;
     sram_wr_en = 1;
@@ -168,7 +167,7 @@ task automatic run_sram_cases;
   sram_read_check(5, 8);
   if (dut.hold_valid !== saved_hold || dut.hold_addr[5] !== 8)
     $fatal(1, "Ordinary read did not retag the selected Macro SRAM output");
-  sram_compute_check(0); // Macro5 must refresh Row7 rather than reuse Row8.
+  sram_compute_check(0);  // Macro5 must refresh Row7 rather than reuse Row8.
   sram_write(5, 7, {128{8'h22}}, 4'b1101);  // only OC1 changes
   if (dut.hold_valid !== 8'hdf) $fatal(1, "Masked write did not invalidate only Macro5 Hold");
   sram_compute_check(1);

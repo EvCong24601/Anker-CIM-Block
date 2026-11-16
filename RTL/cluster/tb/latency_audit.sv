@@ -40,8 +40,8 @@ module latency_audit;
       final_input[tb_Cluster.dut.context_idx] = tick - origin;
     #2;
     // Per-OC publication pulses out_valid_o per lane. Log one row per
-    // Context once its LAST reserved lane has pulsed: the tick still marks
-    // the whole-Context terminal latency 3T/4T/5T.
+    // Context once its last reserved lane has pulsed. The latency depends
+    // on both its reduction endpoint and its tmp/Psum destination.
     if (selected && tb_Cluster.monitoring && tb_Cluster.dut.raw_valid != 0) begin
       for (int l = 0; l < 32; l++)
       if (tb_Cluster.out_valid_o[l]) begin

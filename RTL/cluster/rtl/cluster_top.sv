@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-// Simulation reference Cluster, with direct signed32 Psum outputs.
+// Three-channel Cluster: no pending command or output payload register.
 //
 // File map. Search for "=====" to jump between the sections below:
 //    1. Parameters and ports
@@ -31,7 +31,12 @@ module cluster_top #(
   input cluster_pkg::cluster_ctrl_t cmd_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,
+  input logic [7:0] weight_raddr_i,
+  input logic weight_valid_i,
+  output wire weight_ready_o,
   input logic [1023:0] act_data_i,
+  input logic act_valid_i,
+  output wire act_ready_o,
   input logic sram_cs_en,
   input logic sram_wr_en,
   input logic sram_macro_group,
@@ -62,26 +67,28 @@ module cluster_top #(
   logic batch_is_as, batch_uses_psum;
   int batch_activation_bits, batch_weight_bits, batch_phase_count;
   int batch_last_phase, batch_last_tile, batch_act_digits;
-  logic [4095:0] act_buffer;  // four 1024-bit bit-slice planes, A0..A3
+  wire [4095:0] act_buffer;  // four 1024-bit bit-slice planes, A0..A3
   logic [1023:0] plane;
   localparam int CONTEXT_W = MAX_CONTEXTS > 1 ? $clog2(MAX_CONTEXTS) : 1;
   localparam int CONTEXT_COUNT_W = MAX_CONTEXTS > 1 ? $clog2(MAX_CONTEXTS + 1) : 1;
-  // Only the packet weight address changes within a batch. Other fields
-  // are a combinational view of the single shared batch descriptor.
-  logic [7:0] packet_weight_address;
-  cluster_ctrl_t packet_cmd;
+  localparam int REUSE_COUNT_W = CONTEXT_COUNT_W < 9 ? CONTEXT_COUNT_W : 9;
+  // One active configuration, no pending command. Operands belong to the
+  // accepted input job, independently of older jobs still draining.
+  logic [7:0] packet_weight_address;  // Shared by WS, single Context and single-phase AS.
   logic [7:0] context_address[0:WGT_RADDR_BUFFER_DEPTH - 1];
-  logic [7:0] current_weight_address;  // A4 AS bypass; no deep address entry clocks
-  logic packet_active, act_loading, act_complete;
+  logic packet_active, weight_available;
   logic [3:0] act_slice_valid;
   logic [1:0] external_phase;
   logic [CONTEXT_COUNT_W - 1:0] command_count;
-  wire cmd_accept;
+  // Nested receive counters avoid multiplying run-time descriptor counts.
+  logic [8:0] act_tiles_left, weight_tiles_left;
+  logic [REUSE_COUNT_W - 1:0] reuse_left;
+  wire cmd_accept, act_accept, weight_accept;
   logic [1:0] phase;
   logic [CONTEXT_W - 1:0] context_idx;
   logic [8:0] tile;
-  int phases, contexts;  // Combinational decode, not DFF state.
-  logic need_plane, issue, final_issue;
+  int phases, contexts;
+  logic issue, final_issue;
   logic [31:0] issue_mask;
   logic [7:0] active, ren, station, hold_valid;
   logic [7:0] hold_addr[0:7];
@@ -89,44 +96,61 @@ module cluster_top #(
   wire [7:0] macro_valid;
   wire [31:0] macro_mask;
   wire [15:0] macro_phase;
-  logic batch_active, batch_input_done;
-  // Combinational decode of the accepted command. Declarations carry no
-  // initialisers, so every wire has exactly one visible assign driver.
-  wire deep_command;
-  wire deep_batch;
-  wire a4_packet;
-  wire storage_active;
-  wire deep_weight_active;
-  wire [31:0] accepted_context;
+  logic batch_active;
+  wire deep_batch, a4_packet, deep_weight_active;
   wire [31:0] write_context_slot;
+  wire tile_end, job_end, release_plane, release_weight;
+  wire upstream_busy, drain_safe, input_slot_free;
+  wire [7:0] issue_weight_address;
   assign cmd_accept = cmd_valid_i && cmd_ready_o;
-  assign deep_command = cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4;
+  assign act_accept = act_valid_i && act_ready_o;
+  assign weight_accept = weight_valid_i && weight_ready_o;
   assign deep_batch = batch_is_as && batch_activation_bits > 4;
   assign a4_packet = batch_is_as && batch_activation_bits == 4;
-  assign storage_active = cmd_accept && cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) == 4;
-  assign deep_weight_active = (batch_active && deep_batch) || (cmd_accept && deep_command);
-  assign accepted_context = packet_active ? command_count : 0;
-  assign write_context_slot = accepted_context;
-  // Weight-address storage has two independent gated clock domains.
-  wire entry0_clock, deep_weight_clock;
-  wire [1:0] table_enable = {deep_weight_active, storage_active};
-  wire [1:0] table_clock;
-  for (genvar t = 0; t < 2; t++) begin : g_table_clock
-    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_icg (
-      .clock(clock), .enable(table_enable[t]), .gated_clock(table_clock[t])
+  // A lane forwarding the final missing old beat consumes it directly. On
+  // turnover only the *other* beats may update the new job's input state.
+  wire forward_act, forward_weight;
+  wire store_act = act_accept && !(cmd_accept && forward_act);
+  wire act_buffer_we = store_act && !(forward_act && release_plane);
+  wire store_weight = weight_accept && !(cmd_accept && forward_weight);
+  wire incoming_a4 = abits(int'(cmd_i.cim_precision)) == 4;
+  wire [8:0] receive_ws_count = cmd_accept ? cmd_i.cim_ws_cnt : batch_command.cim_ws_cnt;
+  wire [8:0] receive_as_count = cmd_accept ? cmd_i.cim_as_cnt : batch_command.cim_as_cnt;
+  wire receive_deep_as = receive_as_count > 1 && (cmd_accept ? !incoming_a4 : batch_activation_bits > 4);
+  wire receive_frame_end = cmd_accept ? incoming_a4 : external_phase == batch_last_phase;
+  // Only one of WS/AS can exceed one. Its stream owns the intra-tile counter.
+  wire [REUSE_COUNT_W - 1:0] reuse_count = REUSE_COUNT_W'(receive_ws_count > 1 ? receive_ws_count : receive_as_count);
+  wire [REUSE_COUNT_W - 1:0] receive_left = cmd_accept ? reuse_count : reuse_left;
+  wire consume_reuse = (receive_ws_count > 1 && store_act && receive_frame_end) ||
+                       (receive_as_count > 1 && store_weight);
+  assign deep_weight_active = store_weight && receive_deep_as;
+  assign write_context_slot = (cmd_accept || tile_end) ? 0 : 32'(command_count);
+  wire [3:0] act_plane_clock;
+  for (genvar p = 0; p < 4; p++) begin : g_act_plane
+    wire plane_we = act_buffer_we && external_phase == 2'(p);
+    logic [1023:0] plane_q;
+    MacroClockGate #(
+      .ENABLE_GATING(USE_CLOCK_GATING)
+    ) u_icg (
+      .clock(clock),
+      .enable(plane_we),
+      .gated_clock(act_plane_clock[p])
     );
+    // With the ICG bypassed the data enable still holds an unwritten plane.
+    always_ff @(posedge act_plane_clock[p] or negedge reset_n)
+      if (!reset_n) plane_q <= '0;
+      else if (USE_CLOCK_GATING || plane_we) plane_q <= act_data_i;
+    assign act_buffer[1024*p+:1024] = plane_q;
   end
-  assign entry0_clock = table_clock[0];
-  assign deep_weight_clock = table_clock[1];
 
-  // WS/single uses packet_cmd directly. A4 AS uses one bypass register.
-  always_ff @(posedge entry0_clock or negedge reset_n)
-    if (!reset_n) current_weight_address <= '0;
-    else if (storage_active) current_weight_address <= cmd_i.cim_weight_raddr;
+  wire deep_weight_clock;
+  MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_deep_table_gate (
+    .clock(clock), .enable(deep_weight_active), .gated_clock(deep_weight_clock)
+  );
   always_ff @(posedge deep_weight_clock or negedge reset_n) begin
     if (!reset_n) for (int d = 0; d < WGT_RADDR_BUFFER_DEPTH; d++) context_address[d] <= '0;
-    else if (cmd_accept && deep_command && write_context_slot < WGT_RADDR_BUFFER_DEPTH)
-      context_address[write_context_slot] <= cmd_i.cim_weight_raddr;
+    else if (deep_weight_active && write_context_slot < WGT_RADDR_BUFFER_DEPTH)
+      context_address[write_context_slot] <= weight_raddr_i;
   end
   // ===== 4. Regular SRAM passthrough and protocol checks =====
   wire [2:0] regular_macro_id;
@@ -174,22 +198,22 @@ module cluster_top #(
     logic valid;
     logic [1:0] ph;
     logic [CONTEXT_W - 1:0] ctx;
-    logic [8:0] kt;
+    logic first_tile, last_tile;
   } txn_meta_t;
   // Expanded views retain checker access; only compact metadata is registered.
   typedef struct packed {
     logic valid;
     cluster_ctrl_t cmd;
-    int ph, ctx, kt;
+    int ph, ctx;
+    logic first_tile, last_tile;
     logic [31:0] mask;
   } tag_t;
-  txn_meta_t pipe_meta[0:3];
+  txn_meta_t pipe_meta[0:4];
   txn_meta_t tmp_path_meta[0:2];
   logic [CONTEXT_W - 1:0] raw_path_context[0:2];
   logic [31:0] path_lanes[0:2];
-  tag_t in_tag, macro_tag, red1_tag, red2_tag;
+  tag_t early_tag, macro_tag, red1_tag, red2_tag;
   tag_t tap_tag[0:2];
-  tag_t early_tmp_tag[0:2];
   wire [2:0] tap_valid;
   wire [31:0] tap_mask[0:2];
   wire [671:0] tap_data[0:2];
@@ -197,15 +221,12 @@ module cluster_top #(
     tap_tag[0] = macro_tag;
     tap_tag[1] = red1_tag;
     tap_tag[2] = red2_tag;
-    early_tmp_tag[0] = in_tag;
-    early_tmp_tag[1] = macro_tag;
-    early_tmp_tag[2] = red1_tag;
   end
   // Each tree endpoint writes one per-output-channel tmp result register.
   // The tagged arithmetic stage consumes it on the NEXT edge (II=1).
   // OUTPUT_BUFFER_DEPTH is the per-OC Context state capacity, not a FIFO.
-  logic [31:0] tmp_valid;
-  tag_t tmp_tag[0:31]; // Combinational views only; no per-lane tag storage.
+  wire [31:0] tmp_valid;
+  tag_t tmp_tag[0:31];  // Combinational views only; no per-lane tag storage.
   logic signed [31:0] tmp_result[0:31];  // one 32-bit data DFF per OC
   // One tmp data register per OC; Psum stores Context history.
   // NUMERIC LIMIT: tmp/Psum are signed32 storage. Intermediate writes truncate
@@ -213,14 +234,12 @@ module cluster_top #(
   // flag or saturation. Every stored intermediate must fit signed32, not only
   // the final mathematical sum.
   logic signed [31:0] psum[0:OUTPUT_BUFFER_DEPTH - 1][0:31];
-  logic [OUTPUT_BUFFER_DEPTH - 1:0] psum_depth_open;
-  logic [CONTEXT_COUNT_W - 1:0] batch_contexts;
+  wire [OUTPUT_BUFFER_DEPTH - 1:0] psum_depth_open;
   cluster_ctrl_t batch_command;
-  // Explicit advance ICG enables: registered at tmp capture, consumed by
-  // the arithmetic-state DFFs on the next edge. High address depths are
-  // disabled for the WHOLE batch, independently of per-cycle write requests.
-  logic [31:0] tmp_input_cg_en;
-  logic [31:0] psum_cg_en[0:OUTPUT_BUFFER_DEPTH - 1];
+  // All lanes on a reduction path have the same capture and publication edges.
+  logic [2:0] tmp_path_valid, psum_path_valid;
+  wire [31:0] tmp_input_cg_en;
+  wire [31:0] psum_cg_en[0:OUTPUT_BUFFER_DEPTH - 1];
   wire [31:0] tmp_input_clock;
   wire [31:0] psum_clock[0:OUTPUT_BUFFER_DEPTH - 1];
   logic [31:0] capture_valid;
@@ -291,27 +310,18 @@ module cluster_top #(
   // No output backpressure: each fixed-latency path returns Contexts in
   // issue order. The last Context completing a path also drains all earlier
   // Contexts on that path. Per-lane reservation/duplicate checks live in TB.
-  logic [2:0] completion_path_done;
-  logic [2:0] completion_path_required, completion_path_last;
-  // Raw publication state drives the public result ports.
+  logic [2:0] completion_path_required;
+  // Psum publication is registered; tmp publication uses its capture metadata.
   logic [31:0] raw_valid;
-  int raw_context[0:31]; // Combinational view of three shared Context registers.
-  wire [1023:0] raw_data; // Valid-qualified observation of existing tmp/Psum storage.
+  wire [31:0] psum_raw_valid;
+  int raw_context[0:31];  // Combinational view of three shared Context registers.
+  wire [1023:0] raw_data;  // Valid-qualified observation of existing tmp/Psum storage.
 `ifndef SYNTHESIS
   initial begin
     if (MAX_CONTEXTS < 1 || OUTPUT_BUFFER_DEPTH < 1 || WGT_RADDR_BUFFER_DEPTH < 1)
       $fatal(1, "Context capacity must be >= 1");
   end
 `endif
-  function automatic logic [31:0] mask_for_batch(input cluster_ctrl_t cfg);
-    logic [31:0] result;
-    result = '0;
-    for (int m = 0; m < 8; m++)
-      for (int c = 0; c < 4; c++)
-        if (cfg.cim_macro_en_mask[m] && merge_contributes(cfg.cim_reduce_split_mask, cfg.cim_macro_oc_mask, m, c))
-          result[4 * group_of(cfg.cim_reduce_split_mask, m) + c] = 1;
-    return result;
-  endfunction
   function automatic tag_t expand_meta(input txn_meta_t meta);
     tag_t result;
     result = '0;
@@ -319,7 +329,8 @@ module cluster_top #(
     result.cmd = batch_command;
     result.ph = int'(meta.ph);
     result.ctx = int'(meta.ctx);
-    result.kt = int'(meta.kt);
+    result.first_tile = meta.first_tile;
+    result.last_tile = meta.last_tile;
     result.mask = batch_lane_mask;
     return result;
   endfunction
@@ -328,7 +339,8 @@ module cluster_top #(
     result.valid = tag.valid;
     result.ph = 2'(tag.ph);
     result.ctx = CONTEXT_W'(tag.ctx);
-    result.kt = 9'(tag.kt);
+    result.first_tile = tag.first_tile;
+    result.last_tile = tag.last_tile;
     return result;
   endfunction
   always_comb begin : decode_batch
@@ -339,7 +351,8 @@ module cluster_top #(
     batch_phase_count = batch_activation_bits / 4;
     batch_last_phase = batch_phase_count - 1;
     batch_last_tile = int'(batch_command.cim_os_cnt) - 1;
-    case (batch_weight_bits)
+    // Compact DW shares the W8 window geometry for every weight precision.
+    case (batch_command.cim_dw_compact ? 8 : batch_weight_bits)
       2: batch_act_digits = 128;
       4: batch_act_digits = 64;
       8: batch_act_digits = 32;
@@ -352,13 +365,12 @@ module cluster_top #(
     for (int m = 0; m < 8; m++) begin
       batch_macro_group[m] = 3'(group_of(batch_command.cim_reduce_split_mask, m));
       batch_group_size[batch_macro_group[m]]++;
-      batch_macro_active[m] = batch_command.cim_macro_en_mask[m] &&
-          (|batch_command.cim_macro_oc_mask[4*m+:4]);
+      batch_macro_active[m] = batch_command.cim_macro_en_mask[m] && (|batch_command.cim_macro_oc_mask[4*m+:4]);
       // Decode physical group placement for each enabled Macro.
       // from Macro enables, never from OC0's potentially masked valid.
       for (int c = 0; c < 4; c++) begin
-        batch_macro_demand[4*m+c] = merge_contributes(
-            batch_command.cim_reduce_split_mask, batch_command.cim_macro_oc_mask, m, c);
+        batch_macro_demand[4*m+c] =
+          merge_contributes(batch_command.cim_reduce_split_mask, batch_command.cim_macro_oc_mask, m, c);
         if (batch_command.cim_macro_en_mask[m] && batch_macro_demand[4*m+c])
           batch_lane_mask[4*batch_macro_group[m]+c] = 1;
       end
@@ -372,57 +384,70 @@ module cluster_top #(
   always_comb begin : completion_paths
     for (int path = 0; path < 3; path++) begin
       completion_path_required[path] = |path_lanes[path];
-      completion_path_last[path] = (|(result_done & path_lanes[path])) &&
-          int'(tmp_path_meta[path].ctx) == int'(batch_contexts) - 1;
     end
   end
   always_comb begin : shared_metadata_views
-    in_tag = expand_meta(pipe_meta[0]);
-    macro_tag = expand_meta(pipe_meta[1]);
-    red1_tag = expand_meta(pipe_meta[2]);
-    red2_tag = expand_meta(pipe_meta[3]);
+    early_tag = expand_meta(pipe_meta[1]);
+    macro_tag = expand_meta(pipe_meta[2]);
+    red1_tag = expand_meta(pipe_meta[3]);
+    red2_tag = expand_meta(pipe_meta[4]);
     for (int l = 0; l < 32; l++) begin
       tmp_tag[l] = expand_meta(tmp_path_meta[int'(batch_group_path[l/4])]);
-      raw_context[l] = int'(raw_path_context[int'(batch_group_path[l/4])]);
+      raw_context[l] = batch_uses_psum ? int'(raw_path_context[int'(batch_group_path[l/4])]) : tmp_tag[l].ctx;
     end
   end
-  // ===== 8. Issue scheduling =====
+  // ===== 8. Independent channel reception and issue scheduling =====
+  // An empty slot can always accept its next beat. Derive forwarding from
+  // that capacity directly so issue does not feed back through ready.
+  wire buffered_weight = deep_batch ? context_idx < command_count : weight_available;
+  wire issue_last_tile = tile == batch_last_tile;
+  assign forward_act = packet_active && !sram_cs_en && act_tiles_left != 0 &&
+      !act_slice_valid[phase] && external_phase == phase && act_valid_i;
+  assign forward_weight = packet_active && !sram_cs_en && weight_tiles_left != 0 &&
+      !buffered_weight && (!deep_batch || context_idx == command_count) && weight_valid_i;
   always_comb begin
-    packet_cmd = batch_command;
-    packet_cmd.cim_weight_raddr = packet_weight_address;
-    command = packet_cmd;
-    if (packet_cmd.cim_as_cnt > 1)
-      command.cim_weight_raddr = a4_packet ? current_weight_address : context_address[context_idx];
+    command = batch_command;
     phases = batch_phase_count;
-    contexts = command.cim_ws_cnt > 1 ? int'(command.cim_ws_cnt) : int'(command.cim_as_cnt);
-    // A0 accompanies the first Context descriptor. A1..A3 follow on
-    // consecutive edges without ACT handshake. Other AS descriptors may
-    // arrive concurrently; they only provide their own weight addresses.
-    need_plane = !(packet_active && packet_cmd.cim_as_cnt > 1 && command_count < int'(packet_cmd.cim_as_cnt));
-    plane = act_buffer[1024*phase+:1024];
+    contexts = batch_command.cim_ws_cnt > 1 ? int'(batch_command.cim_ws_cnt) : int'(batch_command.cim_as_cnt);
+    plane = forward_act ? act_data_i : act_buffer[1024*phase+:1024];
     issue_mask = batch_lane_mask;
     active = batch_macro_active;
-    final_issue = phase == batch_last_phase && tile == batch_last_tile;
-    // Consume only registered inputs: a Plane/address accepted on this edge
-    // becomes eligible on the next edge. Later Planes and AS descriptors may
-    // still be loading; keep the existing phase/Context order when stalled.
-    issue = packet_active && act_slice_valid[phase] && !batch_input_done &&
-            (packet_cmd.cim_as_cnt <= 1 || context_idx < command_count);
+    final_issue = phase == batch_last_phase && issue_last_tile;
+    issue = packet_active && (act_slice_valid[phase] || forward_act) && (buffered_weight || forward_weight);
     ren = active & {8{issue}};
-    for (int m = 0; m < 8; m++) station[m] = !hold_valid[m] || hold_addr[m] != command.cim_weight_raddr;
+    for (int m = 0; m < 8; m++) station[m] = !hold_valid[m] || hold_addr[m] != issue_weight_address;
   end
-  // Handshakes are meaningful only while reset_n is high. Reset is confined
-  // to sequential state and is not part of the ready/ICG-enable decode.
-  assign cmd_ready_o = !sram_cs_en && !batch_input_done &&
-                       (!packet_active || (packet_cmd.cim_as_cnt > 1 && command_count < int'(packet_cmd.cim_as_cnt)));
-  // A registered publication valid and shared Context select retained
-  // tmp/Psum data directly; there is no separate raw payload register.
-  // Direct storage-backed raw output. Existing raw publication timing is retained.
+  assign issue_weight_address = forward_weight ? weight_raddr_i :
+      deep_batch ? context_address[context_idx] : packet_weight_address;
+  assign tile_end = issue && phase == batch_last_phase && context_idx == contexts - 1;
+  assign job_end = tile_end && issue_last_tile;
+  assign release_plane = issue && (!batch_is_as || context_idx == contexts - 1);
+  assign release_weight = a4_packet ? issue : tile_end;
+  assign input_slot_free = !packet_active || job_end;
+  // Ignore unused deeper metadata stages: endpoint groups have different tails.
+  // A current RAW pulse is sampled on this edge, so it does not block turnover.
+  assign upstream_busy = (issue && (|issue_mask)) || pipe_meta[0].valid || pipe_meta[1].valid || pipe_meta[2].valid ||
+      ((completion_path_required[1] || completion_path_required[2]) && pipe_meta[3].valid) ||
+      (completion_path_required[2] && pipe_meta[4].valid);
+  assign drain_safe = !upstream_busy && !(batch_uses_psum && (|tmp_valid));
+  // Ready is a capacity promise; reset qualification belongs to the protocol.
+  assign cmd_ready_o = !sram_cs_en && input_slot_free && (!batch_active || cmd_i == batch_command || drain_safe);
+  // Each stream is ordered independently. The old job has first claim on
+  // its last missing beat; a stream already finished may start the next job.
+  assign act_ready_o = cmd_accept || (!sram_cs_en && packet_active && act_tiles_left != 0 &&
+      (!act_slice_valid[external_phase] || (release_plane && phase == external_phase)));
+  assign weight_ready_o = cmd_accept || (!sram_cs_en && packet_active && weight_tiles_left != 0 &&
+      (deep_batch ? (command_count < contexts || tile_end) : (!weight_available || release_weight)));
+  // tmp-backed results are visible as soon as the final tmp write completes.
+  // The consumer samples them before the following edge may overwrite tmp.
+  // Psum-backed results retain writeback-aligned registered publication.
   assign raw_psum = raw_data;
   assign psum_valid = raw_valid;
+  always_comb begin
+    for (int l = 0; l < 32; l++) raw_valid[l] = batch_uses_psum ? psum_raw_valid[l] : result_done[l];
+  end
   for (genvar l = 0; l < 32; l++) begin : g_output_lane
-    assign raw_data[32*l+:32] = batch_uses_psum ?
-        psum[raw_context[l]][l] : tmp_result[l];
+    assign raw_data[32*l+:32] = batch_uses_psum ? psum[raw_context[l]][l] : tmp_result[l];
   end
   for (genvar m = 0; m < 8; m++) begin : g_macro
     logic [511:0] idata;
@@ -445,11 +470,12 @@ module cluster_top #(
       .reset_n(reset_n),
       .cim_ren(ren[m]),
       .cim_idata(idata),
-      .cim_raddr(command.cim_weight_raddr),
+      .cim_raddr(issue_weight_address),
       .cim_station(station[m]),
       .cim_oc_mask(command.cim_macro_oc_mask[4*m+:4]),
       .cim_result_mask(result_mask),
       .cim_precision(command.cim_precision),
+      .cim_dw_compact(command.cim_dw_compact),
       .cim_signed_en(command.cim_signed_en),
       .cim_phase(2'(phase)),
       .sram_wen(memory_wen[m]),
@@ -470,10 +496,10 @@ module cluster_top #(
   ) u_reduce (
     .clock(clock),
     .reset_n(reset_n),
-    .early_valid_i(in_tag.valid),
-    .early_split_i(in_tag.cmd.cim_reduce_split_mask),
-    .early_en_i(in_tag.cmd.cim_macro_en_mask),
-    .early_oc_i(in_tag.cmd.cim_macro_oc_mask),
+    .early_valid_i(early_tag.valid),
+    .early_split_i(early_tag.cmd.cim_reduce_split_mask),
+    .early_en_i(early_tag.cmd.cim_macro_en_mask),
+    .early_oc_i(early_tag.cmd.cim_macro_oc_mask),
     .valid_i(macro_tag.valid),
     .split_i(macro_tag.cmd.cim_reduce_split_mask),
     .en_i(macro_tag.cmd.cim_macro_en_mask),
@@ -499,24 +525,13 @@ module cluster_top #(
       end
   end
   // ===== 10. Accumulation: buffer enables, tmp/Psum arrays, arithmetic =====
-  always_ff @(posedge clock or negedge reset_n) begin : advance_buffer_enables
-    if (!reset_n) begin
-      tmp_input_cg_en <= '0;
-      for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++) psum_cg_en[d] <= '0;
-    end else begin
-      tmp_input_cg_en <= (path_lanes[0] & {32{early_tmp_tag[0].valid}}) |
-                         (path_lanes[1] & {32{early_tmp_tag[1].valid}}) |
-                         (path_lanes[2] & {32{early_tmp_tag[2].valid}});
-      for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++) psum_cg_en[d] <= '0;
-      for (int l = 0; l < 32; l++)
-      if (capture_valid[l]) begin
-        if (batch_is_as) begin
-          psum_cg_en[capture_tag[l].ctx][l] <= 1;
-        end else if (capture_tag[l].cmd.cim_os_cnt > 1 && capture_tag[l].ph == batch_last_phase)
-          psum_cg_en[capture_tag[l].ctx][l] <= 1;
-      end
-    end
-  end
+  function automatic logic [31:0] expand_path_mask(input logic [2:0] requests, input logic [31:0] lanes[0:2]);
+    return (lanes[0] & {32{requests[0]}}) | (lanes[1] & {32{requests[1]}}) | (lanes[2] & {32{requests[2]}});
+  endfunction
+  // The aligned pipeline valid already reaches each tap before its tmp write edge.
+  assign tmp_input_cg_en = expand_path_mask({red2_tag.valid, red1_tag.valid, macro_tag.valid}, path_lanes);
+  assign tmp_valid = expand_path_mask(tmp_path_valid, path_lanes);
+  assign psum_raw_valid = expand_path_mask(psum_path_valid, path_lanes);
   for (genvar l = 0; l < 32; l++) begin : g_tmp_input
     MacroClockGate #(
       .ENABLE_GATING(USE_CLOCK_GATING)
@@ -541,12 +556,29 @@ module cluster_top #(
     wire tmp_meta_clock, raw_meta_clock;
     wire tmp_meta_req, raw_meta_req;
     assign tmp_meta_req = |(tmp_input_cg_en & path_lanes[path]);
-    assign raw_meta_req = |(result_done & path_lanes[path]);
-    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_tmp_meta_icg (
-      .clock(clock), .enable(tmp_meta_req), .gated_clock(tmp_meta_clock)
+    assign raw_meta_req = batch_uses_psum && (|(result_done & path_lanes[path]));
+    always_ff @(posedge clock or negedge reset_n) begin
+      if (!reset_n) begin
+        tmp_path_valid[path] <= 1'b0;
+        psum_path_valid[path] <= 1'b0;
+      end else begin
+        tmp_path_valid[path] <= tap_valid[path];
+        psum_path_valid[path] <= raw_meta_req;
+      end
+    end
+    MacroClockGate #(
+      .ENABLE_GATING(USE_CLOCK_GATING)
+    ) u_tmp_meta_icg (
+      .clock(clock),
+      .enable(tmp_meta_req),
+      .gated_clock(tmp_meta_clock)
     );
-    MacroClockGate #(.ENABLE_GATING(USE_CLOCK_GATING)) u_raw_meta_icg (
-      .clock(clock), .enable(raw_meta_req), .gated_clock(raw_meta_clock)
+    MacroClockGate #(
+      .ENABLE_GATING(USE_CLOCK_GATING)
+    ) u_raw_meta_icg (
+      .clock(clock),
+      .enable(raw_meta_req),
+      .gated_clock(raw_meta_clock)
     );
     always_ff @(posedge tmp_meta_clock or negedge reset_n)
       if (!reset_n) tmp_path_meta[path] <= '0;
@@ -556,6 +588,17 @@ module cluster_top #(
       else if (raw_meta_req) raw_path_context[path] <= tmp_path_meta[path].ctx;
   end
   for (genvar d = 0; d < OUTPUT_BUFFER_DEPTH; d++) begin : g_psum_depth
+    // Register each tap's write request at tmp capture, one edge before Psum
+    // writeback. The batch holds its lane mapping until these writes drain.
+    logic [2:0] path_write_req;
+    for (genvar path = 0; path < 3; path++) begin : g_path_req
+      always_ff @(posedge clock or negedge reset_n)
+        if (!reset_n) path_write_req[path] <= 1'b0;
+        else path_write_req[path] <= tap_valid[path] && tap_tag[path].ctx == d &&
+            (batch_is_as || (batch_command.cim_os_cnt > 1 && tap_tag[path].ph == batch_last_phase));
+    end
+    assign psum_cg_en[d] = expand_path_mask(path_write_req, path_lanes);
+    assign psum_depth_open[d] = batch_active && batch_uses_psum && d < contexts;
     for (genvar l = 0; l < 32; l++) begin : g_lane
       MacroClockGate #(
         .ENABLE_GATING(USE_CLOCK_GATING)
@@ -583,6 +626,10 @@ module cluster_top #(
   // Both operands of an unused adder are isolated to zero. ASIC STA required.
   always_comb begin : arithmetic
     for (int l = 0; l < 32; l++) begin
+      longint signed shift_data;
+      logic [1:0] shift_phase;
+      shift_data = batch_is_as ? longint'($signed(tmp_result[l])) : capture_data[l];
+      shift_phase = batch_is_as ? 2'(tmp_tag[l].ph) : 2'(capture_tag[l].ph);
       fusion_enable[l] = 0;
       acc_enable[l] = 0;
       psum_write[l] = 0;
@@ -593,21 +640,19 @@ module cluster_top #(
       if (capture_valid[l] && !batch_is_as && capture_tag[l].ph > 0) begin
         fusion_enable[l] = 1;
         fusion_a[l] = tmp_result[l];
-        fusion_b[l] = capture_data[l] <<< (4 * capture_tag[l].ph);
       end
       if (tmp_valid[l] && batch_is_as && tmp_tag[l].ph > 0) begin
         fusion_enable[l] = 1;
         fusion_a[l] = psum[tmp_tag[l].ctx][l];
-        fusion_b[l] = tmp_result[l] <<< (4 * tmp_tag[l].ph);
       end
+      if (fusion_enable[l]) fusion_b[l] = shift_data <<< {shift_phase, 2'b00};
       if (tmp_valid[l]) begin
         if (batch_is_as) begin
           psum_write[l] = 1;
-          acc_enable[l] = tmp_tag[l].ph == 0 && tmp_tag[l].kt > 0;
+          acc_enable[l] = tmp_tag[l].ph == 0 && !tmp_tag[l].first_tile;
         end else begin
-          psum_write[l] = tmp_tag[l].cmd.cim_os_cnt > 1 &&
-            tmp_tag[l].ph == batch_last_phase;
-          acc_enable[l] = psum_write[l] && tmp_tag[l].kt > 0;
+          psum_write[l] = tmp_tag[l].cmd.cim_os_cnt > 1 && tmp_tag[l].ph == batch_last_phase;
+          acc_enable[l] = psum_write[l] && !tmp_tag[l].first_tile;
         end
         if (acc_enable[l]) begin
           acc_a[l] = psum[tmp_tag[l].ctx][l];
@@ -624,17 +669,10 @@ module cluster_top #(
       arithmetic_result[l] = acc_enable[l] ? acc_result[l] :
         (tmp_valid[l] && batch_is_as && tmp_tag[l].ph > 0) ?
         fusion_result[l] : tmp_result[l];
-      result_done[l] = tmp_valid[l] && tmp_tag[l].ph == batch_last_phase &&
-        tmp_tag[l].kt == batch_last_tile;
+      result_done[l] = tmp_valid[l] && tmp_tag[l].ph == batch_last_phase && tmp_tag[l].last_tile;
     end
   end
   // ===== 11. Main pipeline state machine =====
-  // Batch close: every required completion path has reported, including the
-  // last-Context publications made by this edge. completion_path_done is
-  // registered, so this reads its pre-edge value like the block below does.
-  wire all_done;
-  assign all_done = batch_input_done &&
-      (((completion_path_done | completion_path_last) & completion_path_required) == completion_path_required);
 `ifndef SYNTHESIS
   // A channel may be captured by at most one active tap. Union the masks in tap
   // order; only the assertion inside the pipeline block consumes the conflicts.
@@ -646,96 +684,97 @@ module cluster_top #(
 `endif
   always_ff @(posedge clock or negedge reset_n) begin : pipeline
     if (!reset_n) begin
-      act_buffer <= '0;
       packet_weight_address <= '0;
       packet_active <= 0;
-      act_loading <= 0;
-      act_complete <= 0;
+      weight_available <= 0;
       act_slice_valid <= '0;
       external_phase <= 0;
       command_count <= 0;
+      act_tiles_left <= 0;
+      reuse_left <= 0;
+      weight_tiles_left <= 0;
       phase <= 0;
       context_idx <= 0;
       tile <= 0;
       hold_valid <= '0;
-      raw_valid <= '0;
-      tmp_valid <= '0;
       batch_active <= 0;
-      batch_input_done <= 0;
-      batch_contexts <= 0;
       batch_command <= '0;
-      psum_depth_open <= '0;
-      for (int path = 0; path < 4; path++) pipe_meta[path] <= '0;
-      completion_path_done <= '0;
+      foreach (pipe_meta[s]) pipe_meta[s] <= '0;
     end else begin
+      // A missing operand only inserts an invalid issue. Downstream stages
+      // always advance, including while a different command is held outside.
+      if (release_plane) act_slice_valid[phase] <= 0;
+      if (release_weight) weight_available <= 0;
+      if (tile_end) command_count <= 0;
+      if (job_end) packet_active <= 0;
+      if (batch_active && !packet_active && drain_safe) batch_active <= 0;
+      // Initialize the new input job before crediting any same-edge beats.
       if (cmd_accept) begin
 `ifndef SYNTHESIS
         if (cmd_i.cim_os_cnt == 0 || cmd_i.cim_ws_cnt == 0 || cmd_i.cim_as_cnt == 0)
           $fatal(1, "CLUSTER_COUNT_RANGE: counts must be 1..511");
-        // Context tags/AS addresses and Psum entries are separate resources.
-        // AS always reserves fixed Context slots; WS OS1 may exceed Psum depth.
         if (cmd_i.cim_ws_cnt > MAX_CONTEXTS || cmd_i.cim_as_cnt > MAX_CONTEXTS)
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: context metadata exceeded");
         if (cmd_i.cim_as_cnt > OUTPUT_BUFFER_DEPTH)
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: AS count exceeds output depth");
-        if (deep_command && cmd_i.cim_as_cnt > WGT_RADDR_BUFFER_DEPTH)
+        if (cmd_i.cim_as_cnt > 1 && abits(int'(cmd_i.cim_precision)) > 4 && cmd_i.cim_as_cnt > WGT_RADDR_BUFFER_DEPTH)
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: weight address depth exceeded");
-        if (cmd_i.cim_os_cnt > 1 && (cmd_i.cim_ws_cnt > OUTPUT_BUFFER_DEPTH || cmd_i.cim_as_cnt > OUTPUT_BUFFER_DEPTH))
+        if (cmd_i.cim_os_cnt > 1 && cmd_i.cim_ws_cnt > OUTPUT_BUFFER_DEPTH)
           $fatal(1, "CLUSTER_CONTEXT_CAPACITY: Psum depth exceeded");
-`endif
-        if (!packet_active) begin
-          packet_weight_address <= cmd_i.cim_weight_raddr;
-          packet_active <= 1;
-          command_count <= 1;
-          act_buffer[0+:1024] <= act_data_i;
-          act_slice_valid <= 4'b0001;
-          external_phase <= 1;
-          act_loading <= abits(int'(cmd_i.cim_precision)) > 4;
-          act_complete <= abits(int'(cmd_i.cim_precision)) == 4;
-        end else begin
-`ifndef SYNTHESIS
-          if (deep_command && command_count >= WGT_RADDR_BUFFER_DEPTH) $fatal(1, "AS address capacity exceeded");
-`endif
-          command_count <= command_count + 1;
+        if (cmd_i.cim_precision > 6 || !canonical(cmd_i.cim_reduce_split_mask) ||
+            (cmd_i.cim_ws_cnt > 1 && cmd_i.cim_as_cnt > 1))
+          $fatal(1, "Invalid descriptor / context capacity");
+        if (cmd_i.cim_dw_compact && cmd_i.cim_reduce_split_mask != 7'h7f)
+          $fatal(1, "Compact DW requires independent g1 Macros");
+        for (int m = 0; m < 8; m++)
+        if (cmd_i.cim_macro_en_mask[m]) begin
+          if (cmd_i.cim_dw_compact && !$onehot(cmd_i.cim_macro_oc_mask[4*m+:4]))
+            $fatal(1, "Compact DW requires one OC per enabled Macro");
+          if (!cmd_i.cim_dw_compact && int'(cmd_i.cim_act_slot_sel[3*m+:3]) >= wbits(int'(cmd_i.cim_precision)))
+            $fatal(1, "ACT slot outside plane");
+          for (int n = 0; n < m; n++)
+          if (cmd_i.cim_macro_en_mask[n] && cmd_i.cim_act_slot_sel[3*m+:3] == cmd_i.cim_act_slot_sel[3*n+:3]) begin
+            if (cmd_i.cim_dw_compact) $fatal(1, "Repeated ACT slot in compact DW issue");
+            if (group_of(cmd_i.cim_reduce_split_mask, n) == group_of(cmd_i.cim_reduce_split_mask, m))
+              $fatal(1, "Repeated K slot in one reduction group");
+          end
         end
-        if (!batch_active) begin
-          batch_active   <= 1;
-          batch_command  <= cmd_i;
-          batch_contexts <= CONTEXT_COUNT_W'(cmd_i.cim_ws_cnt > 1 ? cmd_i.cim_ws_cnt : cmd_i.cim_as_cnt);
-          completion_path_done <= '0;
-          for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++)
-          psum_depth_open[d] <= (cmd_i.cim_os_cnt > 1 || cmd_i.cim_as_cnt > 1) &&
-              d < int'(cmd_i.cim_ws_cnt > 1 ? cmd_i.cim_ws_cnt : cmd_i.cim_as_cnt);
-        end else begin
-`ifndef SYNTHESIS
-          if (cmd_i.cim_os_cnt != batch_command.cim_os_cnt ||
-            cmd_i.cim_ws_cnt != batch_command.cim_ws_cnt || cmd_i.cim_as_cnt != batch_command.cim_as_cnt ||
-            cmd_i.cim_precision != batch_command.cim_precision ||
-            cmd_i.cim_signed_en != batch_command.cim_signed_en ||
-            cmd_i.cim_reduce_split_mask != batch_command.cim_reduce_split_mask ||
-            cmd_i.cim_macro_en_mask != batch_command.cim_macro_en_mask ||
-            cmd_i.cim_macro_oc_mask != batch_command.cim_macro_oc_mask ||
-            cmd_i.cim_act_slot_sel != batch_command.cim_act_slot_sel)
-            $fatal(1, "Batch descriptor fields changed before completion");
 `endif
-        end
+        batch_active <= 1;
+        batch_command <= cmd_i;
+        packet_active <= 1;
+        act_slice_valid <= '0;
+        external_phase <= 0;
+        command_count <= 0;
+        weight_available <= 0;
+        act_tiles_left <= cmd_i.cim_os_cnt;
+        weight_tiles_left <= cmd_i.cim_os_cnt;
       end
-      if (act_loading) begin
-        act_buffer[1024*external_phase+:1024] <= act_data_i;
-        act_slice_valid[external_phase] <= 1;
-        if (external_phase == batch_last_phase) begin
-          act_loading  <= 0;
-          act_complete <= 1;
-        end else external_phase <= external_phase + 1;
+      if (consume_reuse) reuse_left <= receive_left == 1 ? reuse_count : receive_left - 1'b1;
+      else if (cmd_accept) reuse_left <= reuse_count;
+      if (store_act) begin
+        act_slice_valid[external_phase] <= !(forward_act && release_plane);
+        if (receive_frame_end && (receive_ws_count == 1 || receive_left == 1))
+          act_tiles_left <= (cmd_accept ? cmd_i.cim_os_cnt : act_tiles_left) - 1'b1;
+        external_phase <= receive_frame_end ? 0 : external_phase + 1'b1;
+      end
+      if (store_weight) begin
+        if (receive_as_count == 1 || receive_left == 1)
+          weight_tiles_left <= (cmd_accept ? cmd_i.cim_os_cnt : weight_tiles_left) - 1'b1;
+        if (receive_deep_as) command_count <= (cmd_accept || tile_end) ? 1 : command_count + 1'b1;
+        else begin
+          weight_available <= !(forward_weight && release_weight);
+          packet_weight_address <= weight_raddr_i;
+        end
       end
       for (int m = 0; m < 8; m++) begin
         if (memory_wen[m]) hold_valid[m] <= 0;
         else if (regular_read && regular_macro_id == m) begin
           hold_valid[m] <= 1;
-          hold_addr[m] <= sram_row_addr;
+          hold_addr[m]  <= sram_row_addr;
         end else if (ren[m] && station[m]) begin
           hold_valid[m] <= 1;
-          hold_addr[m] <= command.cim_weight_raddr;
+          hold_addr[m]  <= issue_weight_address;
         end
       end
       // Empty effective masks have no downstream transaction. Suppressing
@@ -744,41 +783,13 @@ module cluster_top #(
       pipe_meta[0].valid <= issue && (|issue_mask);
       if (issue) begin
 `ifndef SYNTHESIS
-        if (!act_slice_valid[phase]) $fatal(1, "Internal issue before ACT slice loaded");
+        if (forward_act && !act_accept || forward_weight && !weight_accept)
+          $fatal(1, "Internal issue forwarded an operand without a handshake");
 `endif
-        if (phase == phases - 1 && (command.cim_as_cnt <= 1 || context_idx == contexts - 1)) begin
-          packet_active <= 0;
-          act_complete <= 0;
-          command_count <= 0;
-          act_slice_valid <= '0;
-        end
-`ifndef SYNTHESIS
-        if (command.cim_precision > 6 || !canonical(
-            command.cim_reduce_split_mask
-          ) || command.cim_os_cnt < 1 || command.cim_ws_cnt < 1 || command.cim_as_cnt < 1 ||
-            (command.cim_ws_cnt > 1 && command.cim_as_cnt > 1) || contexts > MAX_CONTEXTS ||
-            (command.cim_as_cnt > 1 && abits(
-            int'(command.cim_precision)
-          ) > 4 && command.cim_as_cnt > WGT_RADDR_BUFFER_DEPTH) ||
-            (command.cim_os_cnt > 1 && contexts > OUTPUT_BUFFER_DEPTH))
-          $fatal(1, "Invalid descriptor / context capacity");
-        for (int m = 0; m < 8; m++)
-        if (command.cim_macro_en_mask[m]) begin
-          if (int'(command.cim_act_slot_sel[3*m+:3]) >= wbits(int'(command.cim_precision)))
-            $fatal(1, "ACT slot outside plane");
-          for (int n = 0; n < m; n++)
-          if (command.cim_macro_en_mask[n] && group_of(
-              command.cim_reduce_split_mask, n
-            ) == group_of(
-              command.cim_reduce_split_mask, m
-            ) && command.cim_act_slot_sel[3*m+:3] == command.cim_act_slot_sel[3*n+:3])
-            $fatal(1, "Repeated K slot in one reduction group");
-        end
-`endif
-        pipe_meta[0].ph <= 2'(phase);
+        pipe_meta[0].ph  <= 2'(phase);
         pipe_meta[0].ctx <= CONTEXT_W'(context_idx);
-        pipe_meta[0].kt <= 9'(tile);
-        if (final_issue && context_idx == contexts - 1) batch_input_done <= 1;
+        pipe_meta[0].first_tile <= tile == 0;
+        pipe_meta[0].last_tile <= issue_last_tile;
         if (command.cim_as_cnt > 1) begin
           if (context_idx == contexts - 1) begin
             context_idx <= 0;
@@ -797,8 +808,7 @@ module cluster_top #(
           end else phase <= phase + 1;
         end
       end
-      pipe_meta[1] <= pipe_meta[0];
-      pipe_meta[2] <= pipe_meta[1];
+      for (int s = 1; s < $size(pipe_meta); s++) pipe_meta[s] <= pipe_meta[s-1];
       if (macro_tag.valid) begin
 `ifndef SYNTHESIS
         for (int m = 0; m < 8; m++) begin
@@ -810,47 +820,27 @@ module cluster_top #(
         end
 `endif
       end
-      pipe_meta[3] <= pipe_meta[2];
-      raw_valid <= '0;
-      // Consume the PREVIOUS tmp DFF contents. NBA state writes preserve
-      // consecutive-phase feedback and prevent zero-time procedural cascades.
+`ifndef SYNTHESIS
       for (int l = 0; l < 32; l++)
-      if (tmp_valid[l] && result_done[l]) begin
-`ifndef SYNTHESIS
-          // This checks the current widened operation only. Earlier signed32
-          // tmp/Psum truncation may already have wrapped an oversized history
-          // back into range; this is not end-to-end overflow detection.
-          if(arithmetic_result[l] < -64'sd2147483648 || arithmetic_result[l]>64'sd2147483647 ||
+      if (result_done[l]) begin
+        // This checks the current widened operation only. Earlier signed32
+        // tmp/Psum truncation may already have wrapped an oversized history
+        // back into range; this is not end-to-end overflow detection.
+        if(arithmetic_result[l] < -64'sd2147483648 || arithmetic_result[l]>64'sd2147483647 ||
              (!tmp_tag[l].cmd.cim_signed_en && arithmetic_result[l]<0))
-            $fatal(1, "Psum signed32 overflow (policy TBD)");
-`endif
-          // Publish this lane for one cycle. The observation reads existing
-          // tmp/Psum storage and has no holding contract while valid is low.
-          raw_valid[l] <= 1;
-        end
-      // Independent tree taps capture into per-channel tmp DFFs. There is
-      // no additional root-only DFF or full-depth result alignment pipeline.
-`ifndef SYNTHESIS
+          $fatal(1, "Psum signed32 overflow (policy TBD)");
+      end
       if (|tap_conflict) $fatal(1, "Concurrent tree taps target same channel");
-`endif
-      tmp_valid <= '0;
       for (int path = 0; path < 3; path++)
       if (tap_valid[path]) begin
-`ifndef SYNTHESIS
-        if (!tap_tag[path].valid || ((tap_mask[path] & ~tap_tag[path].mask) != 0))
+        if (!tap_tag[path].valid || tap_mask[path] !== path_lanes[path])
           $fatal(1, "Terminal tap metadata mismatch path=%0d", path);
+      end
 `endif
-        for (int l = 0; l < 32; l++) if (tap_mask[path][l]) tmp_valid[l] <= 1;
-      end
-      // Include this edge's last-Context publications, preserving the
-      // existing batch-close cycle. Empty paths require no completion event.
-      completion_path_done <= completion_path_done | completion_path_last;
-      if (cmd_accept && !batch_active) completion_path_done <= '0;
-      if (batch_active && all_done) begin
-        batch_active <= 0;
-        batch_input_done <= 0;
-        psum_depth_open <= '0;
-      end
+      // Short endpoints may leave valid bits in unused deeper tag stages.
+      // They must not be reinterpreted with a newly installed deeper route.
+      if (cmd_accept && (!batch_active || cmd_i != batch_command))
+        foreach (pipe_meta[s]) pipe_meta[s].valid <= 0;
     end
   end
 endmodule

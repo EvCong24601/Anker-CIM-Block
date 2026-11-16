@@ -35,13 +35,12 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
   longint signed w, a;
   // 1. Record the case intent and configuration; every later scoreboard uses this fixed
   // configuration.
-  $display(
-    string'({"[CASE_START] time=%0.3f ns suite=cluster case=%0d standard_case=%0d ",
-             "description=%s/%s mode=%s W%0dA%0d signed=%0d pattern=%0d os=%0d ws=%0d as=%0d ",
-             "split=%02h en=%02h oc=%08h slots=%06h bubbles=%0d depth=%0d seed=%08h"}),
-    $realtime, cases_run, standard_case, cluster_suite(), pattern_name(pattern),
-    ws > 1 ? "WS" : as_count > 1 ? "AS" : "SINGLE", wbits(precision), abits(precision), sign_en, pattern, os, ws,
-    as_count, split, en, oc, slots, bubbles, OUTPUT_BUFFER_DEPTH, SEED);
+  $display(string'({"[CASE_START] time=%0.3f ns suite=cluster case=%0d standard_case=%0d ",
+                    "description=%s/%s mode=%s W%0dA%0d signed=%0d pattern=%0d os=%0d ws=%0d as=%0d ",
+                    "split=%02h en=%02h oc=%08h slots=%06h bubbles=%0d depth=%0d seed=%08h"}), $realtime, cases_run,
+             standard_case, cluster_suite(), pattern_name(pattern), ws > 1 ? "WS" : as_count > 1 ? "AS" : "SINGLE",
+             wbits(precision), abits(precision), sign_en, pattern, os, ws, as_count, split, en, oc, slots, bubbles,
+             OUTPUT_BUFFER_DEPTH, SEED);
   wb = wbits(precision);
   ab = abits(precision);
   kr = 256 / wb;
@@ -127,6 +126,7 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
   first_external = -1;
   input_commands = 0;
   act_planes_received = 0;
+  weight_inputs = 0;
   exact_ii = !bubbles;
   act_issue_overlap = 0;
   address_issue_overlap = 0;
@@ -137,13 +137,13 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
   // 4. Open the compute check window; the driver owns handshake/plane timing and the
   // scoreboard owns the verdict.
   monitoring = 1;
+  channel_cmd(d);
   for (int kt = 0; kt < os; kt++)
     for (int cx = 0; cx < (as_count > 1 ? 1 : case_r); cx++) begin
-      d.cim_weight_raddr = 8'('h20 + 16 * kt);
       full_act = '0;
       for (int ph = 0; ph < case_p; ph++)
       for (int k = 0; k < used_digits; k++) full_act[1024*ph+4*k+:4] = 4'(activation[kt][cx][k] >> (4 * ph));
-      send_act_frame(d, full_act, kt, bubbles ? (kt + cx) % 3 : 0, bubbles);
+      send_act_frame(d, full_act, kt, cx, bubbles ? (kt + cx) % 3 : 0, bubbles);
     end
   // 5. Poison the external ACT and wait for completion, proving the internals use the
   // saved full ACT.
@@ -156,12 +156,10 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
       break;
     if (wait_cycles == TIMEOUT_CYCLES - 1) $fatal(1, "Output timeout");
   end
-  if (raw_count != case_r * $countones(
-      expected_mask
-    ) || issue_count != os * case_r * case_p || input_commands != os * case_r)
+  if (raw_count != case_r * $countones(expected_mask) || issue_count != os * case_r * case_p || input_commands != 1)
     $fatal(1, "Lost/duplicate compute or result");
   if (act_planes_received != os * (as_count > 1 ? 1 : case_r) * case_p) $fatal(1, "ACT frame slice count mismatch");
-  if (first_issue != first_external + 1) $fatal(1, "First issue did not follow the first registered Plane/address");
+  if (weight_inputs != os * (as_count > 1 ? as_count : 1)) $fatal(1, "Weight address count mismatch");
   if (case_p > 1 && act_issue_overlap == 0) $fatal(1, "Missing same-packet ACT load/issue overlap");
   if (as_count > 1 && !bubbles && address_issue_overlap == 0)
     $fatal(1, "Missing same-packet AS address/issue overlap");
@@ -172,8 +170,7 @@ task automatic run_case(input int precision, input bit sign_en, input logic [6:0
   // 6. After draining, check that no extra output appears, so duplicate results cannot
   // leak into the next case.
   repeat (6) @(negedge clock);
-  if (dut.raw_valid != 0 || dut.batch_active)
-    $fatal(1, "Unexpected output after the final Context published");
+  if (dut.raw_valid != 0 || dut.batch_active) $fatal(1, "Unexpected output after the final Context published");
   monitoring = 0;
   cases_run++;
 endtask

@@ -1,3 +1,4 @@
+`include "include/cluster_channel_driver.svh"
 // Read and independently unpack all matrices, packed rows and ACT slices.
 task automatic load_scenario_vectors();
   int fd, status, kr, k0, n;
@@ -32,20 +33,24 @@ task automatic load_scenario_vectors();
   );
   $fclose(fd);
   if (status != 17 || m_count < 1 || m_count > 16 || k_count < 1 || k_count > 256 || n_count < 1 || n_count > 8 ||
-    n_tiles != (n_count + 3) / 4 || wb != wbits(
+  n_tiles != (n_count + 3) / 4 || wb != wbits(
       precision
     ) || ab != abits(
       precision
     ) || macro_count != wb || lane_base != 4 * (first_macro / macro_count) || first_raw != ab / 4 + (wb == 2 ? 3 : 4))
     $fatal(1, "GEMM scenario: invalid dimensions or physical route");
   case (SCENARIO)
-    "w4a16_high_group": if (wb != 4 || ab != 16 || m_count != 8 || k_count != 192 || n_count != 8 || first_macro != 4)
+    "w4a16_high_group":
+    if (wb != 4 || ab != 16 || m_count != 8 || k_count != 192 || n_count != 8 || first_macro != 4)
       $fatal(1, "GEMM W4A16 high-group configuration mismatch");
-    "w2a8_high_group": if (wb != 2 || ab != 8 || m_count != 8 || k_count != 192 || n_count != 8 || first_macro != 6)
+    "w2a8_high_group":
+    if (wb != 2 || ab != 8 || m_count != 8 || k_count != 192 || n_count != 8 || first_macro != 6)
       $fatal(1, "GEMM W2A8 high-group configuration mismatch");
-    "w4a16_n6_tail": if (wb != 4 || ab != 16 || m_count != 8 || k_count != 160 || n_count != 6)
+    "w4a16_n6_tail":
+    if (wb != 4 || ab != 16 || m_count != 8 || k_count != 160 || n_count != 6)
       $fatal(1, "GEMM W4A16 N6-tail configuration mismatch");
-    "w4a16_round_clip": if (wb != 4 || ab != 16 || m_count != 12 || k_count != 160 || n_count != 4)
+    "w4a16_round_clip":
+    if (wb != 4 || ab != 16 || m_count != 12 || k_count != 160 || n_count != 4)
       $fatal(1, "GEMM W4A16 round/clip configuration mismatch");
     default: $fatal(1, "Unknown concrete GEMM scenario");
   endcase
@@ -80,7 +85,7 @@ task automatic load_scenario_vectors();
         wanted_weight = 0;
         if (n >= 0 && k0 + j < k_count) wanted_weight = w_q[(k0+j)*n_count+n];
         if (((weight_rows[8 * tile + macro] >> (256 * c + wb * j)) & 1024'((1 << wb) - 1))
-            !== 1024'(wanted_weight & 8'((1 << wb) - 1)))
+          !== 1024'(wanted_weight & 8'((1 << wb) - 1)))
           $fatal(1, "GEMM scenario: weight packing mismatch tile=%0d macro=%0d OC=%0d", tile, macro, c);
       end
     end
@@ -140,25 +145,12 @@ task automatic send_scenario_tile(input int tile);
   cmd_i.cim_macro_en_mask = 8'(en);
   cmd_i.cim_reduce_split_mask = 7'(split);
   cmd_i.cim_macro_oc_mask = {8{oc}};
-  cmd_i.cim_weight_raddr = 8'(base_address + tile);
   cmd_i.cim_act_slot_sel = 24'(slots);
-  for (int m = 0; m < m_count; m++) begin
-    for (int ph = 0; ph < phases; ph++) begin
-      @(negedge clock);
-      cmd_valid_i = (ph == 0);
-      act_data_i  = act_planes[m*phases+ph];
-      $display(
-        string'({"[ACT_SEND] time=%0.3f ns description=edge-GEMM-row-and-slice ",
-                 "tile=%0d row=%0d slice=%0d command=%0d address=0x%02h"}),
-        $realtime, tile, m, ph, cmd_valid_i, cmd_i.cim_weight_raddr);
-      @(posedge clock);
-      if (ph == 0 && !cmd_ready_o) $fatal(1, "GEMM scenario: Command not accepted on schedule");
-      #1;
+  channel_cmd(cmd_i);
+  fork
+    channel_weight(8'(base_address + tile));
+    begin
+      for (int m = 0; m < m_count; m++) for (int ph = 0; ph < phases; ph++) channel_act(act_planes[m*phases+ph]);
     end
-    @(negedge clock);
-    cmd_valid_i = 0;
-    act_data_i  = '1;
-    @(posedge clock);
-    #1;
-  end
+  join
 endtask

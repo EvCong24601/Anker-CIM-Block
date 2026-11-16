@@ -8,81 +8,34 @@
 // Log external descriptors, not the later internal Macro compute issues.
 // cases_run and input_commands are zero-based and match the scoreboard.
 task automatic display_command(input string event_name, input cluster_ctrl_t d);
-  $display(
-    string'({"[CMD_%s] time=%0.3f ns cycle=%0d case=%0d standard_case=%0d cmd=%0d tile=%0d ",
-             "context=%0d kind=%0s mode=%0s precision=%0d W%0dA%0d signed_en=%0d pattern=%0d bubbles=%0d ",
-             "os_cnt=%0d ws_cnt=%0d as_cnt=%0d reduce_split_mask=0x%02h macro_en_mask=0x%02h ",
-             "macro_oc_mask=0x%08h cim_weight_raddr=0x%02h act_slot_sel=0x%06h depth=%0d seed=0x%08h"}),
-    event_name, $realtime, cycle, cases_run, standard_case, input_commands, input_commands / case_r,
-    input_commands % case_r, (d.cim_as_cnt > 1 && input_commands % case_r != 0) ? "ADDRESS" : "ACT",
-    d.cim_as_cnt > 1 ? "AS" : d.cim_ws_cnt > 1 ? "WS" : "SINGLE", d.cim_precision, wbits(int'(d.cim_precision)), abits(
-    int'(d.cim_precision)), d.cim_signed_en, case_pattern, case_bubbles, d.cim_os_cnt, d.cim_ws_cnt, d.cim_as_cnt,
-    d.cim_reduce_split_mask, d.cim_macro_en_mask, d.cim_macro_oc_mask, d.cim_weight_raddr, d.cim_act_slot_sel,
-    OUTPUT_BUFFER_DEPTH, SEED);
+  $display(string'({"[CMD_%s] time=%0.3f ns cycle=%0d case=%0d standard_case=%0d cmd=%0d ",
+                    "mode=%0s precision=%0d W%0dA%0d signed_en=%0d pattern=%0d bubbles=%0d ",
+                    "os_cnt=%0d ws_cnt=%0d as_cnt=%0d reduce_split_mask=0x%02h macro_en_mask=0x%02h ",
+                    "macro_oc_mask=0x%08h act_slot_sel=0x%06h depth=%0d seed=0x%08h"}),
+             event_name, $realtime, cycle, cases_run, standard_case, input_commands,
+             d.cim_as_cnt > 1 ? "AS" : d.cim_ws_cnt > 1 ? "WS" : "SINGLE", d.cim_precision, wbits(
+             int'(d.cim_precision)), abits(int'(d.cim_precision)), d.cim_signed_en, case_pattern, case_bubbles,
+             d.cim_os_cnt, d.cim_ws_cnt, d.cim_as_cnt, d.cim_reduce_split_mask, d.cim_macro_en_mask,
+             d.cim_macro_oc_mask, d.cim_act_slot_sel, OUTPUT_BUFFER_DEPTH, SEED);
 endtask
 
-task automatic send_compute(input cluster_ctrl_t d, input logic [1023:0] data, input int gap);
-  @(negedge clock);
-  repeat (gap) @(negedge clock);
-  cmd_i = d;
-  cmd_valid_i = 1;
-  act_data_i = data;
-  display_command("SEND", d);
-  for (int t = 0; t < TIMEOUT_CYCLES; t++) begin
-    @(posedge clock);
-    if (cmd_ready_o) begin
-      #1;
-      cmd_valid_i = 0;
-      return;
-    end
-  end
-  $fatal(1, "Command timeout");
-endtask
-
-task automatic send_address(input cluster_ctrl_t d, input int gap);
-  @(negedge clock);
-  repeat (gap) @(negedge clock);
-  cmd_i = d;
-  cmd_valid_i = 1;
-  display_command("SEND", d);
-  for (int q = 0; q < TIMEOUT_CYCLES; q++) begin
-    @(posedge clock);
-    if (cmd_ready_o) begin
-      #1;
-      cmd_valid_i = 0;
-      return;
-    end
-  end
-  $fatal(1, "AS descriptor timeout");
-endtask
-task automatic send_act_frame(input cluster_ctrl_t descriptor, input logic [4095:0] data, input int kt,
+`include "include/cluster_channel_driver.svh"
+task automatic send_act_frame(input cluster_ctrl_t descriptor, input logic [4095:0] data, input int kt, input int cx,
                               input int gap, input bit bubbles);
-  cluster_ctrl_t d;
-  int pcount, rcount;
-  d = descriptor;
-  pcount = abits(int'(d.cim_precision)) / 4;
-  rcount = d.cim_as_cnt > 1 ? int'(d.cim_as_cnt) : 1;
-  send_compute(d, data[0+:1024], gap);
   fork
     begin
-      for (int ph = 1; ph < pcount; ph++) begin
-        @(negedge clock);
-        act_data_i = data[1024*ph+:1024];
-        @(posedge clock);
-        #1;
-      end
+      for (int ph = 0; ph < abits(int'(descriptor.cim_precision)) / 4; ph++)
+      channel_act(data[1024*ph+:1024], ph == 0 ? gap : 0);
     end
     begin
-      for (int cx = 1; cx < rcount; cx++) begin
-        d.cim_weight_raddr = 8'('h20 + 16 * kt + cx);
-        // The overlap suite deliberately withholds Context1 until after
-        // the entire ACT stream, proving that only that Context stalls.
-        send_address(d, bubbles ? (($test$plusargs("INPUT_OVERLAP_TEST") && cx == 1) ? pcount : cx % 3) : 0);
-      end
+      if (descriptor.cim_as_cnt > 1)
+        for (int c = 0; c < int'(descriptor.cim_as_cnt); c++)
+        channel_weight(8'('h20 + 16 * kt + c), bubbles ? (($test$plusargs("INPUT_OVERLAP_TEST") && c == 1) ? abits(
+                       int'(descriptor.cim_precision)) / 4 : c % 3) : 0);
+      else if (cx == 0) channel_weight(8'('h20 + 16 * kt), gap);
     end
   join
 endtask
-
 // Load one Macro row through the public WLC port and independently read it back.
 // Initialization runs outside the monitored compute interval; one call writes
 // one 128 B row, with all four active-high mask bits cleared.

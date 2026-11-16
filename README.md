@@ -16,6 +16,6 @@ Cluster/Macro/ReduceTree 统一使用低有效异步复位 reset_n（原 reset �
 
 从 vcs-rtl 运行 make run CASE=cluster_default。GEMM 示例：make run CASE=gemm_os1_ws32_as1_w8a16_raw。make list 列出当前用例。
 
-OS/WS/AS count 各为 9 bit，编码 1～511，Command 共 110 bit。默认 Psum/权重地址深度 16，MAX_CONTEXTS=64；编码范围不等于可用 buffer 容量。
+Command 为 103 bit，最低位 `cim_dw_compact` 选择紧凑深度卷积 ACT 排布，每个任务握手一次。首个 8 bit 权重行地址和首个 1024 bit ACT plane 均可在该沿或之后独立握手。OS/WS/AS count 各为 9 bit，编码 1～511。默认 Psum/权重地址深度为 16，MAX_CONTEXTS=64。
 
 [文档入口](docs/README.md) · [VCS 仿真](vcs-rtl/README.md) · [Macro 规格](RTL/macro/README.md)

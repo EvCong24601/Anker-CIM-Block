@@ -19,21 +19,19 @@ initial begin : as_gemm_regression
     row_raw = 0;
     row_raw = 0;
     for (int l = 0; l < 4; l++) begin
-      raw_next[l]   = 0;
+      raw_next[l] = 0;
     end
     monitoring = 1;
     send_as_row(m);
-    for (int t = 0; t < 30; t++) begin
+    for (int t = 0; t < 100; t++) begin
       @(negedge clock);
       if (row_raw == N && !dut.batch_active) break;
-      if (t == 29) $fatal(1, "AS GEMM: row output timeout");
+      if (t == 99) $fatal(1, "AS GEMM: row output timeout");
     end
     repeat (2) @(negedge clock);
-    if (row_commands != OS * AS || row_issues != OS * 4 * AS || row_raw != N ||
-        out_valid_o != 0)
+    if (row_commands != OS * AS || row_issues != OS * 4 * AS || row_raw != N || out_valid_o != 0)
       $fatal(1, "AS GEMM: row counts or drain mismatch");
-    for (int l = 0; l < 4; l++)
-    if (raw_next[l] != AS) $fatal(1, "AS GEMM: missing Context output");
+    for (int l = 0; l < 4; l++) if (raw_next[l] != AS) $fatal(1, "AS GEMM: missing Context output");
     monitoring = 0;
   end
   if (total_commands != M * OS * AS || total_issues != M * OS * 4 * AS || raw_checks != M * N || psum_checks != M * OS * 4 * AS * 4)
@@ -44,11 +42,11 @@ initial begin : as_gemm_regression
   if (!fd) $fatal(1, "AS GEMM: cannot write observed matrix");
   $fdisplay(fd, "m,n,raw");
   for (int m = 0; m < M; m++)
-  for (int n = 0; n < N; n++)
-  $fdisplay(fd, "%0d,%0d,%0d", m, n, $signed(observed_raw[m*N+n]));
+  for (int n = 0; n < N; n++) $fdisplay(fd, "%0d,%0d,%0d", m, n, $signed(observed_raw[m*N+n]));
   $fclose(fd);
   $fclose(trace_fd);
-  $display("PASS gemm_os%0d_as%0d_w8a16 M=%0d K=%0d N=%0d raw_checks=%0d psum_checks=%0d", OS, AS, M, K, N, raw_checks, psum_checks);
+  $display("PASS gemm_os%0d_as%0d_w8a16 M=%0d K=%0d N=%0d raw_checks=%0d psum_checks=%0d", OS, AS, M, K, N,
+           raw_checks, psum_checks);
   $finish;
 end
 initial begin

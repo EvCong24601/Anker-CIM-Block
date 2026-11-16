@@ -8,6 +8,7 @@ module tb_SingleMacro;
   always #5 clock = ~clock;
   logic reset_n = 1'b1;
   logic cim_ren = 0, cim_station = 1, cim_signed_en = 0, sram_wen = 0;
+  logic cim_dw_compact = 0;
   logic [511:0] cim_idata = '0;
   logic [7:0] cim_raddr = '0, sram_waddr = '0;
   logic [3:0] cim_oc_mask = '0;
@@ -43,7 +44,7 @@ module tb_SingleMacro;
   logic [7:0] reference_hold_address;
   logic reference_hold_valid = 0;
   // Independent interface expectation: never import the DUT latency constant.
-  localparam int EXPECTED_LATENCY = 1;
+  localparam int EXPECTED_LATENCY = 2;
   logic [EXPECTED_LATENCY:0] expected_valid = 0;
   logic [71:0] expected_data[0:EXPECTED_LATENCY];
   logic [3:0] expected_mask[0:EXPECTED_LATENCY];

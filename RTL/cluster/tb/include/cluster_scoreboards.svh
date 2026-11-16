@@ -11,32 +11,33 @@
 // wait until the preceding packet's final internal issue has consumed it.
 always @(posedge clock) begin : act_buffer_scoreboard
   logic [4095:0] wanted;
+  logic [3:0] expected_clocks;
   if (reset_n) begin
     wanted = dut.act_buffer;
-    if (cmd_valid_i && cmd_ready_o && !dut.packet_active) wanted[0+:1024] = act_data_i;
-    if (dut.act_loading) wanted[1024*dut.external_phase+:1024] = act_data_i;
-    if (dut.issue && !dut.act_slice_valid[dut.phase])
-      $fatal(1, "ACT buffer issued before the selected Plane was received");
-    if (dut.issue && dut.packet_cmd.cim_as_cnt > 1 && dut.context_idx >= dut.command_count)
-      $fatal(1, "Internal issue before the selected Context address was received");
-    if (dut.issue && cmd_valid_i && cmd_ready_o && !dut.packet_active)
-      $fatal(1, "ACT input overwrites a packet still being issued");
+    expected_clocks = '0;
+    // Predict last use from the issuing context and the consumed plane slot.
+    if (act_valid_i && act_ready_o && !(dut.issue && !dut.act_slice_valid[dut.phase] &&
+        dut.external_phase == dut.phase && (dut.batch_command.cim_as_cnt <= 1 ||
+        dut.context_idx == dut.batch_command.cim_as_cnt - 1))) begin
+      wanted[1024*dut.external_phase+:1024] = act_data_i;
+      expected_clocks[dut.external_phase] = 1;
+    end
+    if (dut.issue && !dut.act_slice_valid[dut.phase] &&
+        !(act_valid_i && act_ready_o && dut.external_phase == dut.phase))
+      $fatal(1, "Issue before ACT acceptance");
     if (monitoring) begin
-      // Readiness is checked independently of the DUT's issue expression.
-      // A later AS address can arrive while an earlier Context is issued.
-      if (dut.packet_active && !dut.batch_input_done &&
-        dut.act_slice_valid[dut.phase] &&
-        (case_as <= 1 || dut.context_idx < dut.command_count) && !dut.issue)
-        $fatal(1, "Ready Plane/Context was unnecessarily stalled");
-      if (dut.issue && dut.act_loading) act_issue_overlap++;
-      if (dut.issue && cmd_valid_i && cmd_ready_o) address_issue_overlap++;
-      if (dut.packet_active && dut.act_slice_valid[dut.phase] &&
-        case_as > 1 && dut.context_idx >= dut.command_count) begin
+      if (dut.issue && act_valid_i && act_ready_o) act_issue_overlap++;
+      if (dut.issue && weight_valid_i && weight_ready_o) address_issue_overlap++;
+      if (dut.packet_active && dut.act_slice_valid[dut.phase] && case_as>1 &&
+        !(case_p>1 ? dut.context_idx<dut.command_count : dut.weight_available)) begin
         address_wait_cycles++;
-        if (dut.act_complete) late_address_wait++;
+        if (act_cycle[dut.tile][0][case_p-1] >= first_external && act_cycle[dut.tile][0][case_p-1] <= cycle)
+          late_address_wait++;
       end
     end
     #0.002;
+    if (dut.act_plane_clock !== expected_clocks)
+      $fatal(1, "ACT plane clocks got=%b expected=%b", dut.act_plane_clock, expected_clocks);
     if (dut.act_buffer !== wanted) $fatal(1, "ACT bank write/hold mismatch");
     if ($countones(dut.act_slice_valid) > max_act_planes) max_act_planes = $countones(dut.act_slice_valid);
     act_buffer_checks++;
@@ -70,8 +71,7 @@ always @(posedge clock) begin : buffer_clock_scoreboard
       c = dut.tmp_tag[l].ctx;
       ph = dut.tmp_tag[l].ph;
       ab = abits(int'(dut.tmp_tag[l].cmd.cim_precision));
-      writes_psum = (dut.tmp_tag[l].cmd.cim_as_cnt > 1) ? 1 :
-        (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == ab / 4 - 1);
+      writes_psum = (dut.tmp_tag[l].cmd.cim_as_cnt > 1) ? 1 : (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == ab / 4 - 1);
       // A bypass Context can have an ID beyond the physical Psum array.
       if (writes_psum) begin
         if (c >= OUTPUT_BUFFER_DEPTH) $fatal(1, "TB: Psum Context exceeds depth");
@@ -85,7 +85,7 @@ always @(posedge clock) begin : buffer_clock_scoreboard
       for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++) begin
         if (dut.psum_clock[d][l] !== want_p[d][l]) $fatal(1, "Psum ICG mismatch");
         if (dut.psum_clock[d][l]) writes++;
-        if (dut.batch_active && d >= dut.batch_contexts) begin
+        if (dut.batch_active && d >= dut.contexts) begin
           if (dut.psum_depth_open[d] || dut.psum_clock[d][l]) $fatal(1, "High Context entry not gated");
           high_depth_checks++;
         end
@@ -113,9 +113,11 @@ always @(posedge clock) begin : arithmetic_scoreboard
   longint signed raw_slice[0:31], saved_fa[0:31], saved_fb[0:31];
   longint signed want[0:31], fa, fb, aa, bb;
   int cx[0:31], ph, kt, c, fc;
+  int tmp_steps[0:31];
   bit check_p[0:31], traced, is_as, acc, fusion, trace_as;
   string trace_row, op;
   if (reset_n && monitoring) begin
+    if (cmd_valid_i && cmd_ready_o) foreach (tmp_steps[l]) tmp_steps[l] = 0;
     traced = 0;
     trace_row = "";
     for (int l = 0; l < 32; l++) begin
@@ -127,14 +129,18 @@ always @(posedge clock) begin : arithmetic_scoreboard
       if (dut.tmp_valid[l]) begin
         c = dut.tmp_tag[l].ctx;
         ph = dut.tmp_tag[l].ph;
-        kt = dut.tmp_tag[l].kt;
+        // Each active lane consumes all phases of all Contexts once per Tile.
+        kt = tmp_steps[l] / (case_r * case_p);
+        tmp_steps[l]++;
+        if (dut.tmp_tag[l].first_tile !== (kt == 0) || dut.tmp_tag[l].last_tile !== (kt == case_os - 1))
+          $fatal(1, "Tile boundary mismatch at tile=%0d lane=%0d", kt, l);
         is_as = dut.tmp_tag[l].cmd.cim_as_cnt > 1;
         cx[l] = c;
         if (ph == 0 && kt == 0) running_sum[c][l] = 0;
         running_sum[c][l] += raw_slice[l] <<< (4 * ph);
         want[l] = running_sum[c][l];
-        check_p[l] = is_as ? 1 :
-          (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == abits(int'(dut.tmp_tag[l].cmd.cim_precision)) / 4 - 1);
+        check_p[l] = is_as ?
+          1 : (dut.tmp_tag[l].cmd.cim_os_cnt > 1 && ph == abits(int'(dut.tmp_tag[l].cmd.cim_precision)) / 4 - 1);
         if (dut.psum_write[l] !== check_p[l]) $fatal(1, "Psum write phase mismatch");
         acc = kt > 0 && (is_as ? ph == 0 : check_p[l]);
         fusion = ph > 0;
@@ -199,10 +205,11 @@ always @(posedge clock) begin : scoreboard
   cycle = cycle + 1;
   if (reset_n && monitoring) begin
     if (held_cmd && (!cmd_valid_i || cmd_i !== last_cmd)) $fatal(1, "Command changed before ready");
-    if (held_act_for_cmd && act_data_i !== last_act) $fatal(1, "ACT payload changed while its Command was stalled");
+    if (held_act_for_cmd && (!act_valid_i || act_data_i !== last_act))
+      $fatal(1, "ACT payload changed while its Command was stalled");
     held_cmd = cmd_valid_i && !cmd_ready_o;
     last_cmd = cmd_i;
-    held_act_for_cmd = cmd_valid_i && !cmd_ready_o && dut.need_plane;
+    held_act_for_cmd = act_valid_i && !act_ready_o;
     last_act = act_data_i;
     if (cmd_valid_i && cmd_ready_o) begin
       display_command("ACCEPT", cmd_i);
@@ -210,10 +217,25 @@ always @(posedge clock) begin : scoreboard
       input_commands++;
     end
     command_sample = cmd_valid_i && cmd_ready_o;
-    act_sample = dut.act_loading || (command_sample && !dut.packet_active);
-    if (act_sample) act_planes_received++;
+    act_sample = act_valid_i && act_ready_o;
+    if (act_sample) begin
+      int frame, kt, cx, ph;
+      frame = act_planes_received / case_p;
+      ph = act_planes_received % case_p;
+      kt = frame / (case_as > 1 ? 1 : case_r);
+      cx = case_as > 1 ? 0 : frame % case_r;
+      act_cycle[kt][cx][ph] = cycle;
+      act_planes_received++;
+    end
+    if (weight_valid_i && weight_ready_o) begin
+      int kt, cx;
+      kt = weight_inputs / (case_as > 1 ? case_r : 1);
+      cx = case_as > 1 ? weight_inputs % case_r : 0;
+      weight_cycle[kt][cx] = cycle;
+      weight_inputs++;
+    end
     external_ctx = case_as > 1 ? (dut.packet_active ? dut.command_count : 0) : dut.context_idx;
-    external_ph  = dut.act_loading ? dut.external_phase : 0;
+    external_ph  = dut.external_phase;
     if (standard_case != 0 && (command_sample || act_sample))
       $fdisplay(
         external_trace,
@@ -225,7 +247,7 @@ always @(posedge clock) begin : scoreboard
         dut.tile,
         int'(command_sample),
         command_sample ? external_ctx : -1,
-        cmd_i.cim_weight_raddr,
+        weight_raddr_i,
         int'(act_sample),
         act_sample ? external_ph : -1,
         act_sample ? $sformatf(
@@ -249,15 +271,17 @@ always @(posedge clock) begin : scoreboard
       for (int k = 0; k < 256; k++)
       if (dut.plane[4*k+:4] !== (k < case_used_digits ? 4'(activation[t][c][k] >> (4 * p)) : 4'd0))
         $fatal(1, "ACT Plane sampling/reuse mismatch tile=%0d ctx=%0d phase=%0d digit=%0d", t, c, p, k);
-      if (dut.command.cim_weight_raddr !== 8'('h20 + 16 * t + (case_as > 1 ? c : 0)))
+      if (dut.issue_weight_address !== 8'('h20 + 16 * t + (case_as > 1 ? c : 0)))
         $fatal(1, "Descriptor weight address mismatch");
       if (issue_count == 0) first_issue = cycle;
-      if (exact_ii) begin
-        if (case_as > 1) begin
-          if (cycle - first_external != t * (1 + case_r * case_p) + 1 + (p * case_r + c))
-            $fatal(1, "AS external-load/internal-issue timing mismatch");
-        end else if (cycle - first_external != (t * case_r + c) * (case_p + 1) + 1 + p)
-          $fatal(1, "WS external-load/internal-issue timing mismatch");
+      begin
+        int earliest;
+        earliest = act_cycle[t][case_as > 1 ? 0 : c][p];
+        if (weight_cycle[t][case_as > 1 ? c : 0] > earliest) earliest = weight_cycle[t][case_as > 1 ? c : 0];
+        if (first_external + 1 > earliest) earliest = first_external + 1;
+        if (last_issue + 1 > earliest) earliest = last_issue + 1;
+        if (cycle != earliest)
+          $fatal(1, "Issue not at earliest operand-ready edge actual=%0d expected=%0d", cycle, earliest);
       end
       last_issue = cycle;
       issue_count++;
@@ -272,9 +296,8 @@ always @(posedge clock) begin : scoreboard
     for (int cx = 0; cx < case_r; cx++)
     for (int l = 0; l < 32; l++)
     if (lane_due[cx][l] >= cycle) begin
-      if (cycle < lane_due[cx][l] && completion_seen[cx][l])
-        $fatal(1, "Premature terminal write ctx=%0d lane=%0d", cx, l);
-      if (cycle == lane_due[cx][l] && (!completion_seen[cx][l] || !dut.raw_valid[l]))
+      if (cycle < lane_due[cx][l] && raw_seen[cx][l]) $fatal(1, "Premature terminal write ctx=%0d lane=%0d", cx, l);
+      if (cycle == lane_due[cx][l] && !dut.raw_valid[l])
         $fatal(1, "Missing direct terminal write ctx=%0d lane=%0d", cx, l);
     end
     if (dut.raw_valid != 0) begin

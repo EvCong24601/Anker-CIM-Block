@@ -1,5 +1,7 @@
 # 单个 Macro RTL 规格 V0.2
 
+> 本文记录 2026-10-14 的单拍实现。M1 当前使用两拍行为模型，接口时序及 SRAM 复用规则见[当前集成约定](README.md#集成约定)。
+
 日期：2026-10-14。状态：V0.2 SystemVerilog RTL 已实现并通过单周期功能回归；`SYNTHESIS` 分支编译/展开通过。工艺 SRAM/ICG 适配、逻辑综合、门级仿真和 STA 尚未完成，目标频率尚未签核。
 
 本规格面向方案 A：Macro 每次计算一个 activation digit Phase 的四路局部和，Cluster 先做跨 Macro 归约，再做 A8/A16 Activation Fusion、跨 K Tile 的 Psum 和 Requant。

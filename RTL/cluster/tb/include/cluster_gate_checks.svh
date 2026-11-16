@@ -1,7 +1,8 @@
 // Compare advance requests against actual consumers at the capture edge.
 // In particular, an empty batch must not borrow the next batch's OC mask.
-always @(posedge clock) if (reset_n && dut.tmp_input_cg_en !== dut.capture_valid)
-  $fatal(1, "TMP clock request has no matching capture transaction");
+always @(posedge clock)
+  if (reset_n && dut.tmp_input_cg_en !== dut.capture_valid)
+    $fatal(1, "TMP clock request has no matching capture transaction");
 
 // Independent endpoint walk for child output clock demand. Decode the endpoint
 // top-down, then inspect each fixed-leftmost mask on this leaf's merge path.
@@ -28,13 +29,14 @@ for (genvar lane = 0; lane < 32; lane++) begin : g_check_output_gate
     logic [31:0] wanted_raw;
     int wanted_context;
     if (reset_n) begin
-      raw_req = dut.result_done[lane];
-      wanted_raw = 32'(dut.arithmetic_result[lane]);
-      wanted_context = dut.tmp_tag[lane].ctx;
+      raw_req = dut.batch_uses_psum ? dut.result_done[lane] :
+        (dut.capture_valid[lane] && dut.capture_tag[lane].ph == dut.batch_last_phase &&
+         dut.capture_tag[lane].last_tile);
+      wanted_raw = dut.batch_uses_psum ? 32'(dut.arithmetic_result[lane]) : 32'(dut.tmp_store_data[lane]);
+      wanted_context = dut.batch_uses_psum ? dut.tmp_tag[lane].ctx : dut.capture_tag[lane].ctx;
       #0.002;
       if (reset_n) begin
-        if (psum_valid[lane] !== raw_req)
-          $fatal(1, "Output lane clock mismatch lane=%0d", lane);
+        if (psum_valid[lane] !== raw_req) $fatal(1, "Output lane clock mismatch lane=%0d", lane);
         if (raw_req && (raw_psum[32*lane+:32] !== wanted_raw || dut.raw_context[lane] != wanted_context))
           $fatal(1, "Storage-backed raw view mismatch lane=%0d", lane);
       end
@@ -50,19 +52,19 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_act_bank_gat
       logic [WIDTH - 1:0] saved, expected_act;
       if (!reset_n) begin
         #0.002;
-        if (dut.g_macro[macro_id].u_macro.activation_in[FIRST +: WIDTH] !== '0)
+        if (dut.g_macro[macro_id].u_macro.activation_in[FIRST+:WIDTH] !== '0)
           $fatal(1, "Cluster ACT bank reset_n failed macro=%0d bank=%0d", macro_id, bank);
       end else begin
         want = dut.ren[macro_id] &&
-               (bank == 0 || (bank == 1 && dut.command.cim_precision <= 4) ||
-                             (bank == 2 && dut.command.cim_precision <= 1));
-        saved = dut.g_macro[macro_id].u_macro.activation_in[FIRST +: WIDTH];
-        expected_act = dut.g_macro[macro_id].idata[FIRST +: WIDTH];
+               (bank == 0 || (!dut.command.cim_dw_compact &&
+                             (bank == 1 ? dut.command.cim_precision <= 4 : dut.command.cim_precision <= 1)));
+        saved = dut.g_macro[macro_id].u_macro.activation_in[FIRST+:WIDTH];
+        expected_act = dut.g_macro[macro_id].idata[FIRST+:WIDTH];
         #0.002;
         if (reset_n) begin
           if (dut.g_macro[macro_id].u_macro.act_clock[bank] !== want)
             $fatal(1, "Cluster ACT bank clock mismatch macro=%0d bank=%0d", macro_id, bank);
-          if (dut.g_macro[macro_id].u_macro.activation_in[FIRST +: WIDTH] !== (want ? expected_act : saved))
+          if (dut.g_macro[macro_id].u_macro.activation_in[FIRST+:WIDTH] !== (want ? expected_act : saved))
             $fatal(1, "Cluster ACT bank capture/hold mismatch macro=%0d bank=%0d", macro_id, bank);
         end
       end
@@ -76,10 +78,12 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
       bit consumer;
       logic [17:0] saved;
       if (reset_n) begin
-        consumer = expected_result_demand(dut.in_tag.cmd, macro_id, oc);
+        consumer = expected_result_demand(dut.command, macro_id, oc);
         if (dut.g_macro[macro_id].u_macro.in_valid && dut.g_macro[macro_id].u_macro.result_mask_in[oc] !== consumer)
           $fatal(1, "Macro consumer request not aligned ahead of result macro=%0d OC=%0d", macro_id, oc);
-        want  = dut.g_macro[macro_id].u_macro.in_valid && dut.g_macro[macro_id].u_macro.mask_in[oc] && consumer;
+        consumer = expected_result_demand(dut.early_tag.cmd, macro_id, oc);
+        want = dut.early_tag.valid && dut.early_tag.cmd.cim_macro_en_mask[macro_id] &&
+               dut.early_tag.cmd.cim_macro_oc_mask[4*macro_id+oc] && consumer;
         saved = dut.macro_data[72*macro_id+18*oc+:18];
         #0.002;
         if (reset_n) begin
@@ -95,12 +99,12 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
     bit compute_req, memory_req;
     if (reset_n) begin
       compute_req = dut.ren[macro_id] || dut.g_macro[macro_id].u_macro.in_valid ||
-                  dut.g_macro[macro_id].u_macro.cim_odata_valid;
+                dut.g_macro[macro_id].u_macro.stage_valid || dut.g_macro[macro_id].u_macro.cim_odata_valid;
       memory_req = dut.memory_wen[macro_id] || (dut.regular_read && dut.regular_macro_id == macro_id) ||
-                 (dut.ren[macro_id] && dut.station[macro_id]);
+               (dut.ren[macro_id] && dut.station[macro_id]);
       #0.002;
       if (reset_n && (dut.g_macro[macro_id].u_macro.macro_clock !== compute_req ||
-                   dut.g_macro[macro_id].u_macro.memory_clock !== memory_req))
+                 dut.g_macro[macro_id].u_macro.memory_clock !== memory_req))
         $fatal(1, "Macro clock domain mismatch macro=%0d", macro_id);
     end
   end
@@ -135,23 +139,25 @@ for (genvar path = 0; path < 3; path++) begin : g_check_shared_meta
   always @(posedge clock) begin
     bit tmp_req, raw_req;
     logic [$bits(dut.tmp_path_meta[0]) - 1:0] saved_tmp;
-    int want_ph, want_ctx, want_kt, raw_ctx, saved_raw_ctx;
+    int want_ph, want_ctx, raw_ctx, saved_raw_ctx;
+    logic want_first_tile, want_last_tile;
     if (reset_n) begin
       tmp_req = |(dut.capture_valid & dut.path_lanes[path]);
-      raw_req = |(dut.result_done & dut.path_lanes[path]);
+      raw_req = (dut.batch_command.cim_os_cnt > 1 || dut.batch_command.cim_as_cnt > 1) &&
+          (|(dut.result_done & dut.path_lanes[path]));
       want_ph = dut.tap_tag[path].ph;
       want_ctx = dut.tap_tag[path].ctx;
-      want_kt = dut.tap_tag[path].kt;
+      want_first_tile = dut.tap_tag[path].first_tile;
+      want_last_tile = dut.tap_tag[path].last_tile;
       raw_ctx = int'(dut.tmp_path_meta[path].ctx);
       saved_tmp = dut.tmp_path_meta[path];
       saved_raw_ctx = int'(dut.raw_path_context[path]);
       #0.002;
       if (reset_n) begin
-        if (dut.g_shared_meta[path].tmp_meta_clock !== tmp_req ||
-            dut.g_shared_meta[path].raw_meta_clock !== raw_req)
+        if (dut.g_shared_meta[path].tmp_meta_clock !== tmp_req || dut.g_shared_meta[path].raw_meta_clock !== raw_req)
           $fatal(1, "Shared metadata advance clock mismatch path=%0d", path);
-        if (tmp_req && (dut.tmp_path_meta[path].ph != want_ph ||
-            dut.tmp_path_meta[path].ctx != want_ctx || dut.tmp_path_meta[path].kt != want_kt))
+        if (tmp_req && (dut.tmp_path_meta[path].ph != want_ph || dut.tmp_path_meta[path].ctx != want_ctx ||
+          dut.tmp_path_meta[path].first_tile !== want_first_tile || dut.tmp_path_meta[path].last_tile !== want_last_tile))
           $fatal(1, "Shared tmp metadata alignment mismatch path=%0d", path);
         if (!tmp_req && dut.tmp_path_meta[path] !== saved_tmp)
           $fatal(1, "Inactive shared metadata changed path=%0d", path);
@@ -168,8 +174,7 @@ always @(posedge clock) begin : check_shared_adder
     for (int l = 0; l < 32; l++) begin
       if (dut.fusion_enable[l] && dut.acc_enable[l])
         $fatal(1, "SHARED_ADDER: simultaneous fusion/acc demand lane=%0d", l);
-      if (!dut.fusion_enable[l] && !dut.acc_enable[l] &&
-          (dut.shared_add_a[l] !== 0 || dut.shared_add_b[l] !== 0))
+      if (!dut.fusion_enable[l] && !dut.acc_enable[l] && (dut.shared_add_a[l] !== 0 || dut.shared_add_b[l] !== 0))
         $fatal(1, "SHARED_ADDER: inactive operands not isolated lane=%0d", l);
     end
 end

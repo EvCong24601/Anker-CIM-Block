@@ -9,20 +9,22 @@ initial begin : regression
   string data_dir;
   int capacity_precision, capacity_sign, zero_count, capacity_count, capacity_os;
   if ($test$plusargs("EMPTY_BATCH_TEST")) begin
-    repeat (4) @(negedge clock); reset_n = 1;
-    run_empty_batch_suite(); $finish;
+    repeat (4) @(negedge clock);
+    reset_n = 1;
+    run_empty_batch_suite();
+    $finish;
   end
 
   if ($bits(
       cluster_ctrl_t
-    ) != 110 || $bits(
+    ) != 103 || $bits(
       cmd_i.cim_os_cnt
     ) != 9 || $bits(
       cmd_i.cim_ws_cnt
     ) != 9 || $bits(
       cmd_i.cim_as_cnt
     ) != 9)
-    $fatal(1, "TB: descriptor must contain three nine-bit counts and total 110 bits");
+    $fatal(1, "TB: descriptor must contain three nine-bit counts and total 103 bits");
   if ($value$plusargs("ZERO_COUNT=%d", zero_count)) begin
     repeat (4) @(negedge clock);
     reset_n = 1;
@@ -58,7 +60,8 @@ initial begin : regression
     cmd_i = '0;
     cmd_i.cim_os_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;
     cmd_i.cim_ws_cnt = 1;
-    cmd_i.cim_as_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 16 : 64;
+    cmd_i.cim_as_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 16 :
+      64;
     capacity_count = int'(cmd_i.cim_as_cnt);
     capacity_os = int'(cmd_i.cim_os_cnt);
     if ($value$plusargs("CAPACITY_COUNT=%d", capacity_count)) begin
@@ -71,12 +74,11 @@ initial begin : regression
     cmd_i.cim_signed_en = 1'(capacity_sign);
     cmd_i.cim_macro_en_mask = 8'hff;
     cmd_i.cim_macro_oc_mask = 32'hffffffff;
-    $display(
-      string'({"[CASE_START] time=%0.3f ns suite=context_capacity ",
-               "description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=%0d ",
-               "psum_depth=%0d max_contexts=%0d weight_address_depth=%0d"}),
-      $realtime, wbits(capacity_precision), abits(capacity_precision), capacity_sign, capacity_os, capacity_count,
-      OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS, WGT_RADDR_BUFFER_DEPTH);
+    $display(string'({"[CASE_START] time=%0.3f ns suite=context_capacity ",
+                      "description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=%0d ",
+                      "psum_depth=%0d max_contexts=%0d weight_address_depth=%0d"}), $realtime, wbits(
+               capacity_precision), abits(capacity_precision), capacity_sign, capacity_os, capacity_count,
+               OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS, WGT_RADDR_BUFFER_DEPTH);
     cmd_valid_i = 1;
     @(posedge clock);
     #1;
@@ -93,8 +95,9 @@ initial begin : regression
     reset_n = 1;
     repeat (2) @(negedge clock);
     if ($test$plusargs("SRAM_CONFLICT_WRITE_COMPUTE")) begin
-      $display("[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-write-during-active-compute",
-               $realtime);
+      $display(
+        "[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-write-during-active-compute",
+        $realtime);
       load_weight_row(0, 8'd0, '0);
       @(negedge clock);
       cmd_i = '0;
@@ -145,14 +148,11 @@ initial begin : regression
   if (!manifest || !operation_trace || !external_trace) $fatal(1, "Cannot open CSV output directory %s", data_dir);
   $fdisplay(external_trace,
             "input_cycle,case,precision,signed_en,tile,command,context,weight_address,act_sample,phase,act_hex");
-  $fdisplay(
-    operation_trace,
-    string'({"compute_cycle,case,precision,signed_en,tile,context,phase,lane,operation,tmp,",
-             "fusion_a,fusion_b,acc_a,acc_b,result,done,tmp_stored,fusion_cycle"}));
-  $fdisplay(
-    manifest,
-    string'({"precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,",
-             "group2_K,group3_K,group4_K,group5_K,group6_K,group7_K"}));
+  $fdisplay(operation_trace, string'({"compute_cycle,case,precision,signed_en,tile,context,phase,lane,operation,tmp,",
+                                      "fusion_a,fusion_b,acc_a,acc_b,result,done,tmp_stored,fusion_cycle"}));
+  $fdisplay(manifest, string'({
+            "precision,signed_en,split_mask_hex,en_mask_hex,oc_mask_hex,slots_hex,group0_K,group1_K,",
+            "group2_K,group3_K,group4_K,group5_K,group6_K,group7_K"}));
   repeat (4) @(negedge clock);
   reset_n = 1;
   repeat (2) @(negedge clock);
@@ -207,8 +207,8 @@ initial begin : regression
              dut.u_reduce.gated_checks[n]);
   end
   if (dut.tmp_only_steps == 0 || dut.as_seed_steps == 0 || dut.as_fusion_steps == 0 ||
-    dut.as_acc_steps == 0 || dut.ws_fusion_steps == 0 || dut.ws_acc_steps == 0 ||
-    dut.ws_tile_commits == 0 || dut.a4_acc_steps == 0)
+  dut.as_acc_steps == 0 || dut.ws_fusion_steps == 0 || dut.ws_acc_steps == 0 ||
+  dut.ws_tile_commits == 0 || dut.a4_acc_steps == 0)
     $fatal(1, "Missing tmp/fusion/acc routing coverage");
   $display(
     "TMP_ROUTES os1=%0d AS_seed=%0d AS_fusion=%0d AS_acc=%0d WS_fusion=%0d WS_acc=%0d WS_tile_commit=%0d A4_acc=%0d",

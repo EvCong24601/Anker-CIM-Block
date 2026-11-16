@@ -1,0 +1,212 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2010 886" width="2010" height="886" role="img" aria-labelledby="t d"><title id="t">A3 和 A4 的三个交接沿</title><desc id="d">相同的 Cluster 前端分别显示 C138、C139 和 C142 的数据流、输入握手及实际 DFF 写入。</desc><defs><marker id="arr-a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#00755c"/></marker><marker id="arr-b" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#285ab0"/></marker><marker id="arr-idle" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#bac5c9"/></marker></defs><style>text{font-family:"Microsoft YaHei","Segoe UI",sans-serif;fill:#17394a}.mono{font-family:Consolas,"Microsoft YaHei",monospace}</style><rect width="100%" height="100%" fill="white"/>
+<text x="36" y="54" font-size="36" style="fill:#17394a" font-weight="650">A3 / A4 同 ctrl 交接时的数据流</text>
+<text x="36" y="89" font-size="19" style="fill:#17394a" font-weight="400">同一段 Cluster 数据通路，依次读三个上升沿。输入旁的 V/R 为沿前 valid/ready，框内的“写”表示该沿采样。</text>
+<text x="1240" y="48" font-size="20" style="fill:#00755c" font-weight="650">A3</text>
+<text x="1300" y="48" font-size="20" style="fill:#285ab0" font-weight="650">A4</text>
+<rect x="1381" y="30" width="36" height="22" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="1428" y="49" font-size="18" style="fill:#17394a" font-weight="400">DFF</text>
+<rect x="1500" y="30" width="36" height="22" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1547" y="49" font-size="18" style="fill:#17394a" font-weight="400">组合逻辑</text>
+<text x="1680" y="49" font-size="17" style="fill:#627784" font-weight="400">灰色为非活动路径</text>
+<line x1="36" y1="111" x2="1974" y2="111" stroke="#c8d6db"/>
+<g id="C138" transform="translate(36 0)">
+<text x="0" y="163" font-size="34" style="fill:#17394a" font-weight="650" class="mono">C138</text>
+<text x="93" y="162" font-size="23" style="fill:#17394a" font-weight="650">A3 发射，同时接收 A4 的 cmd</text>
+<text x="0" y="228" font-size="16" style="fill:#17394a" font-weight="650" class="mono">cmd_i</text>
+<text x="0" y="254" font-size="17" style="fill:#285ab0" font-weight="650" class="mono">A4   1/1</text>
+<text x="0" y="330" font-size="16" style="fill:#17394a" font-weight="650" class="mono">act_data_i</text>
+<text x="0" y="356" font-size="17" style="fill:#627784" font-weight="650" class="mono">—    0/1</text>
+<text x="0" y="431" font-size="16" style="fill:#17394a" font-weight="650" class="mono">weight_raddr_i</text>
+<text x="0" y="457" font-size="17" style="fill:#00755c" font-weight="650" class="mono">A3   1/1</text>
+<rect x="151" y="207" width="156" height="60" rx="3" fill="#e8f0fd" stroke="#285ab0" stroke-width="2"/>
+<text x="159" y="229" font-size="16" style="fill:#285ab0" font-weight="650">写 A4 · 同 ctrl</text>
+<text x="159" y="251" font-size="14" style="fill:#285ab0" font-weight="400">batch_command</text>
+<rect x="151" y="310" width="156" height="62" rx="3" fill="#e3f5ed" stroke="#00755c" stroke-width="2"/>
+<text x="159" y="332" font-size="16" style="fill:#00755c" font-weight="650">读 A3 · plane 0</text>
+<text x="159" y="354" font-size="14" style="fill:#00755c" font-weight="400">C135 已写入</text>
+<rect x="151" y="411" width="156" height="63" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="159" y="433" font-size="16" style="fill:#627784" font-weight="650">保持 0x01</text>
+<text x="159" y="455" font-size="14" style="fill:#627784" font-weight="400">本沿未写</text>
+<rect x="354" y="310" width="98" height="62" rx="3" fill="#e3f5ed" stroke="#00755c" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="362" y="332" font-size="16" style="fill:#00755c" font-weight="650">ACT 选择</text>
+<text x="362" y="354" font-size="14" style="fill:#00755c" font-weight="400">选缓冲</text>
+<rect x="354" y="411" width="98" height="63" rx="3" fill="#e3f5ed" stroke="#00755c" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="362" y="433" font-size="16" style="fill:#00755c" font-weight="650">地址选择</text>
+<text x="362" y="455" font-size="14" style="fill:#00755c" font-weight="400">选直通</text>
+<rect x="499" y="308" width="137" height="63" rx="3" fill="#e3f5ed" stroke="#00755c" stroke-width="2"/>
+<text x="507" y="330" font-size="16" style="fill:#00755c" font-weight="650">写 A3 输入</text>
+<text x="507" y="352" font-size="14" style="fill:#00755c" font-weight="400">activation_in</text>
+<text x="502" y="426" font-size="16" style="fill:#00755c" font-weight="650">权重 SRAM</text>
+<text x="502" y="449" font-size="16" style="fill:#00755c" font-weight="650">读 0x02 · A3</text>
+<rect x="499" y="500" width="137" height="53" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="507" y="522" font-size="16" style="fill:#627784" font-weight="650">Macro 运算</text>
+<rect x="499" y="572" width="137" height="55" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="507" y="594" font-size="15" style="fill:#627784" font-weight="650">C1 · 结果 DFF</text>
+<text x="507" y="616" font-size="14" style="fill:#627784" font-weight="400">无有效结果</text>
+<path d="M115 239 H149" fill="none" stroke="#285ab0" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-b)"/>
+<path d="M115 341 H149" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M124 442 H149" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M307 341 H352" fill="none" stroke="#00755c" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-a)"/>
+<path d="M307 442 H352" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M127 341 V394 H337 V354 H352" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<text x="158" y="389" font-size="14" style="fill:#627784" font-weight="400" class="mono">forward_act = 0</text>
+<path d="M127 442 V495 H337 V455 H352" fill="none" stroke="#00755c" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-a)"/>
+<text x="158" y="490" font-size="14" style="fill:#00755c" font-weight="400" class="mono">forward_weight = 1</text>
+<path d="M452 341 H497" fill="none" stroke="#00755c" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-a)"/>
+<path d="M452 442 H497" fill="none" stroke="#00755c" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-a)"/>
+<path d="M637 341 H643 V482 H549 V498" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M565 456 V498" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M565 553 V570" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<text x="0" y="551" font-size="23" style="fill:#00755c" font-weight="650" class="mono">issue = 1   ·   A3</text>
+<text x="0" y="583" font-size="17" style="fill:#17394a" font-weight="400">沿前的当前任务为 A3。</text>
+<text x="0" y="609" font-size="16" style="fill:#627784" font-weight="400">A4 的 cmd 在沿上接收，沿后生效。</text>
+<line x1="0" y1="645" x2="635" y2="645" stroke="#c8d6db"/>
+<text x="0" y="676" font-size="20" style="fill:#17394a" font-weight="650">A4 接管前端，A3 完成本次发射</text>
+<text x="0" y="704" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="704" font-size="15" style="fill:#17394a" font-weight="400">batch_command ← cmd_i（位值相同）；packet_active ← 1。</text>
+<text x="0" y="729" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="729" font-size="15" style="fill:#17394a" font-weight="400">ACT、地址各待收 1 笔；两个操作数有效位清零。</text>
+<text x="0" y="754" font-size="15" style="fill:#00755c" font-weight="650" class="mono">A3</text>
+<text x="29" y="754" font-size="15" style="fill:#17394a" font-weight="650">0x02 直通 SRAM。store_weight=0，地址缓冲保持 0x01。</text>
+<text x="0" y="779" font-size="15" style="fill:#00755c" font-weight="650" class="mono">A3</text>
+<text x="29" y="779" font-size="15" style="fill:#17394a" font-weight="400">Macro 锁存已缓存的 ACT；held_address ← 0x02。</text>
+<text x="0" y="804" font-size="15" style="fill:#00755c" font-weight="650" class="mono">A3</text>
+<text x="29" y="804" font-size="15" style="fill:#17394a" font-weight="400">in_valid ← 1，pipe_meta[0].valid ← 1。</text>
+</g>
+<line x1="682" y1="134" x2="682" y2="788" stroke="#c8d6db"/>
+<g id="C139" transform="translate(694 0)">
+<text x="0" y="163" font-size="34" style="fill:#17394a" font-weight="650" class="mono">C139</text>
+<text x="93" y="162" font-size="23" style="fill:#17394a" font-weight="650">A4 收地址，A3 写 Macro 结果</text>
+<text x="0" y="228" font-size="16" style="fill:#17394a" font-weight="650" class="mono">cmd_i</text>
+<text x="0" y="254" font-size="17" style="fill:#627784" font-weight="650" class="mono">—    0/0</text>
+<text x="0" y="330" font-size="16" style="fill:#17394a" font-weight="650" class="mono">act_data_i</text>
+<text x="0" y="356" font-size="17" style="fill:#627784" font-weight="650" class="mono">—    0/1</text>
+<text x="0" y="431" font-size="16" style="fill:#17394a" font-weight="650" class="mono">weight_raddr_i</text>
+<text x="0" y="457" font-size="17" style="fill:#285ab0" font-weight="650" class="mono">A4   1/1</text>
+<rect x="151" y="207" width="156" height="60" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="159" y="229" font-size="16" style="fill:#627784" font-weight="650">当前任务 A4</text>
+<text x="159" y="251" font-size="14" style="fill:#627784" font-weight="400">同 ctrl</text>
+<rect x="151" y="310" width="156" height="62" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="159" y="332" font-size="16" style="fill:#627784" font-weight="650">ACT plane 缓冲</text>
+<text x="159" y="354" font-size="14" style="fill:#627784" font-weight="400">无有效 ACT</text>
+<rect x="151" y="411" width="156" height="63" rx="3" fill="#e8f0fd" stroke="#285ab0" stroke-width="2"/>
+<text x="159" y="433" font-size="16" style="fill:#285ab0" font-weight="650">写 A4 · 0x03</text>
+<text x="159" y="455" font-size="14" style="fill:#285ab0" font-weight="400">地址有效位置 1</text>
+<rect x="354" y="310" width="98" height="62" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="362" y="332" font-size="16" style="fill:#627784" font-weight="650">ACT 选择</text>
+<text x="362" y="354" font-size="14" style="fill:#627784" font-weight="400">无 ACT</text>
+<rect x="354" y="411" width="98" height="63" rx="3" fill="#e8f0fd" stroke="#285ab0" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="362" y="433" font-size="16" style="fill:#285ab0" font-weight="650">地址选择</text>
+<text x="362" y="455" font-size="14" style="fill:#285ab0" font-weight="400">选直通</text>
+<rect x="499" y="308" width="137" height="63" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="507" y="330" font-size="16" style="fill:#627784" font-weight="650">输入无效</text>
+<text x="507" y="352" font-size="14" style="fill:#627784" font-weight="400">in_valid ← 0</text>
+<text x="502" y="426" font-size="16" style="fill:#627784" font-weight="650">权重 SRAM</text>
+<text x="502" y="449" font-size="16" style="fill:#627784" font-weight="650">无读使能</text>
+<rect x="499" y="500" width="137" height="53" rx="3" fill="#e3f5ed" stroke="#00755c" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="507" y="522" font-size="16" style="fill:#00755c" font-weight="650">Macro 运算</text>
+<rect x="499" y="572" width="137" height="55" rx="3" fill="#e3f5ed" stroke="#00755c" stroke-width="2"/>
+<text x="507" y="594" font-size="15" style="fill:#00755c" font-weight="650">C1 · 结果 DFF</text>
+<text x="507" y="616" font-size="14" style="fill:#00755c" font-weight="400">写 A3 · cim_odata</text>
+<path d="M115 239 H149" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M115 341 H149" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M124 442 H149" fill="none" stroke="#285ab0" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-b)"/>
+<path d="M307 341 H352" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M307 442 H352" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M127 341 V394 H337 V354 H352" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<text x="158" y="389" font-size="14" style="fill:#627784" font-weight="400" class="mono">forward_act = 0</text>
+<path d="M127 442 V495 H337 V455 H352" fill="none" stroke="#285ab0" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-b)"/>
+<text x="158" y="490" font-size="14" style="fill:#285ab0" font-weight="400" class="mono">forward_weight = 1</text>
+<path d="M452 341 H497" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M452 442 H497" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M637 341 H643 V482 H549 V498" fill="none" stroke="#00755c" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-a)"/>
+<path d="M565 456 V498" fill="none" stroke="#00755c" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-a)"/>
+<path d="M565 553 V570" fill="none" stroke="#00755c" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-a)"/>
+<text x="491" y="473" font-size="14" style="fill:#627784" font-weight="400" class="mono">ren = 0</text>
+<text x="0" y="551" font-size="23" style="fill:#627784" font-weight="650" class="mono">issue = 0</text>
+<text x="0" y="583" font-size="17" style="fill:#17394a" font-weight="400">A4 留在前端等待 ACT。</text>
+<text x="0" y="609" font-size="16" style="fill:#627784" font-weight="400">A3 已在流水中，照常写回 C1。</text>
+<line x1="0" y1="645" x2="635" y2="645" stroke="#c8d6db"/>
+<text x="0" y="676" font-size="20" style="fill:#17394a" font-weight="650">地址已收到，A4 仍缺 ACT</text>
+<text x="0" y="704" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="704" font-size="15" style="fill:#17394a" font-weight="400">weight_raddr_i=0x03；store_weight=1。</text>
+<text x="0" y="729" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="729" font-size="15" style="fill:#17394a" font-weight="400">packet_weight_address ← 0x03，weight_available ← 1。</text>
+<text x="0" y="754" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="754" font-size="15" style="fill:#17394a" font-weight="400">forward_weight=1，地址 MUX 选 0x03。</text>
+<text x="0" y="779" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="779" font-size="15" style="fill:#17394a" font-weight="400">issue=0、ren=0，SRAM 行保持 0x02。</text>
+<text x="0" y="804" font-size="15" style="fill:#00755c" font-weight="650" class="mono">A3</text>
+<text x="29" y="804" font-size="15" style="fill:#17394a" font-weight="400">cim_odata 捕获局部和，cim_odata_valid ← 1。</text>
+</g>
+<line x1="1340" y1="134" x2="1340" y2="788" stroke="#c8d6db"/>
+<g id="C142" transform="translate(1352 0)">
+<text x="0" y="163" font-size="34" style="fill:#17394a" font-weight="650" class="mono">C142</text>
+<text x="93" y="162" font-size="23" style="fill:#17394a" font-weight="650">A4 的 ACT 到达，当拍发射</text>
+<text x="0" y="228" font-size="16" style="fill:#17394a" font-weight="650" class="mono">cmd_i</text>
+<text x="0" y="254" font-size="17" style="fill:#627784" font-weight="650" class="mono">—    0/1</text>
+<text x="0" y="330" font-size="16" style="fill:#17394a" font-weight="650" class="mono">act_data_i</text>
+<text x="0" y="356" font-size="17" style="fill:#285ab0" font-weight="650" class="mono">A4   1/1</text>
+<text x="0" y="431" font-size="16" style="fill:#17394a" font-weight="650" class="mono">weight_raddr_i</text>
+<text x="0" y="457" font-size="17" style="fill:#627784" font-weight="650" class="mono">—    0/0</text>
+<rect x="151" y="207" width="156" height="60" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="159" y="229" font-size="16" style="fill:#627784" font-weight="650">当前任务 A4</text>
+<text x="159" y="251" font-size="14" style="fill:#627784" font-weight="400">同 ctrl</text>
+<rect x="151" y="310" width="156" height="62" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="159" y="332" font-size="16" style="fill:#627784" font-weight="650">ACT 缓冲保持</text>
+<text x="159" y="354" font-size="14" style="fill:#627784" font-weight="400">act_buffer_we = 0</text>
+<rect x="151" y="411" width="156" height="63" rx="3" fill="#e8f0fd" stroke="#285ab0" stroke-width="2"/>
+<text x="159" y="433" font-size="16" style="fill:#285ab0" font-weight="650">读 A4 · 0x03</text>
+<text x="159" y="455" font-size="14" style="fill:#285ab0" font-weight="400">C139 已写入</text>
+<rect x="354" y="310" width="98" height="62" rx="3" fill="#e8f0fd" stroke="#285ab0" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="362" y="332" font-size="16" style="fill:#285ab0" font-weight="650">ACT 选择</text>
+<text x="362" y="354" font-size="14" style="fill:#285ab0" font-weight="400">选直通</text>
+<rect x="354" y="411" width="98" height="63" rx="3" fill="#e8f0fd" stroke="#285ab0" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="362" y="433" font-size="16" style="fill:#285ab0" font-weight="650">地址选择</text>
+<text x="362" y="455" font-size="14" style="fill:#285ab0" font-weight="400">选缓冲</text>
+<rect x="499" y="308" width="137" height="63" rx="3" fill="#e8f0fd" stroke="#285ab0" stroke-width="2"/>
+<text x="507" y="330" font-size="16" style="fill:#285ab0" font-weight="650">写 A4 输入</text>
+<text x="507" y="352" font-size="14" style="fill:#285ab0" font-weight="400">activation_in</text>
+<text x="502" y="426" font-size="16" style="fill:#285ab0" font-weight="650">权重 SRAM</text>
+<text x="502" y="449" font-size="16" style="fill:#285ab0" font-weight="650">读 0x03 · A4</text>
+<rect x="499" y="500" width="137" height="53" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="507" y="522" font-size="16" style="fill:#627784" font-weight="650">Macro 运算</text>
+<rect x="499" y="572" width="137" height="55" rx="3" fill="#f5f7f8" stroke="#bac5c9" stroke-width="1.5"/>
+<text x="507" y="594" font-size="15" style="fill:#627784" font-weight="650">C1 · 结果 DFF</text>
+<text x="507" y="616" font-size="14" style="fill:#627784" font-weight="400">无有效结果</text>
+<path d="M115 239 H149" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M115 341 H127" fill="none" stroke="#285ab0" stroke-width="3"/>
+<path d="M127 341 H149" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M124 442 H149" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M307 341 H352" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M307 442 H352" fill="none" stroke="#285ab0" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-b)"/>
+<path d="M127 341 V394 H337 V354 H352" fill="none" stroke="#285ab0" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-b)"/>
+<text x="158" y="389" font-size="14" style="fill:#285ab0" font-weight="400" class="mono">forward_act = 1</text>
+<path d="M127 442 V495 H337 V455 H352" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<text x="158" y="490" font-size="14" style="fill:#627784" font-weight="400" class="mono">forward_weight = 0</text>
+<path d="M452 341 H497" fill="none" stroke="#285ab0" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-b)"/>
+<path d="M452 442 H497" fill="none" stroke="#285ab0" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-b)"/>
+<path d="M637 341 H643 V482 H549 V498" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M565 456 V498" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<path d="M565 553 V570" fill="none" stroke="#bac5c9" stroke-width="1.4" stroke-linejoin="round" marker-end="url(#arr-idle)"/>
+<text x="0" y="551" font-size="23" style="fill:#285ab0" font-weight="650" class="mono">issue = 1   ·   A4</text>
+<text x="0" y="583" font-size="17" style="fill:#17394a" font-weight="400">ACT 直通 Macro，Cluster 的 ACT 缓冲保持。</text>
+<text x="0" y="609" font-size="16" style="fill:#627784" font-weight="400">A4 在此沿完成唯一一次 issue。</text>
+<line x1="0" y1="645" x2="635" y2="645" stroke="#c8d6db"/>
+<text x="0" y="676" font-size="20" style="fill:#17394a" font-weight="650">ACT 直通，配对 C139 缓存的地址</text>
+<text x="0" y="704" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="704" font-size="15" style="fill:#17394a" font-weight="400">forward_act=1，Macro 当沿锁存 ACT；in_valid ← 1。</text>
+<text x="0" y="729" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="729" font-size="15" style="fill:#17394a" font-weight="400">store_act=1，act_buffer_we=0，ACT 接收计数减至 0。</text>
+<text x="0" y="754" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="754" font-size="15" style="fill:#17394a" font-weight="400">Cluster 四路 plane 时钟为 0000，Macro 0 的 ACT 门控时钟为 011。</text>
+<text x="0" y="779" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="779" font-size="15" style="fill:#17394a" font-weight="400">地址缓冲供给 0x03；held_address ← 0x03。</text>
+<text x="0" y="804" font-size="15" style="fill:#285ab0" font-weight="650" class="mono">A4</text>
+<text x="29" y="804" font-size="15" style="fill:#17394a" font-weight="400">weight_available ← 0，pipe_meta[0].valid ← 1。</text>
+</g>
+<line x1="36" y1="823" x2="1974" y2="823" stroke="#c8d6db"/>
+<text x="36" y="859" font-size="18" style="fill:#17394a" font-weight="650">输出采样沿</text>
+<text x="174" y="859" font-size="18" style="fill:#17394a" font-weight="400">C138 的 psum_valid = 0x0000FFFF 对应 A2。A3 和 A4 的有效 lane 分别在 C141、C145 被下游采样。</text>
+<text x="1639" y="858" font-size="15" style="fill:#627784" font-weight="400" class="mono">ModelSim  /  W4A4  /  OS = WS = AS = 1</text>
+</svg>

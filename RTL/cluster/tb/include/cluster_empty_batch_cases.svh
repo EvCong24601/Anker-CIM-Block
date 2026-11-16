@@ -13,13 +13,15 @@ task automatic empty_boundary_frame(input int precision_id, input bit empty);
   cmd_i.cim_macro_oc_mask = empty ? 0 : 32'hffffffff;
   cmd_i.cim_reduce_split_mask = macro_count == 2 ? 7 : macro_count == 4 ? 1 : 0;
   cmd_i.cim_act_slot_sel = macro_count == 2 ? 24'h8 : macro_count == 4 ? 24'h688 : 24'hfac688;
-  cmd_valid_i = 1;
-  act_data_i = {256{4'h1}};
-  @(negedge clock);
-  cmd_valid_i = 0;
-  act_data_i = 0;
-  repeat (abits(precision_id) / 4 - 1) @(negedge clock);
-  while (!cmd_ready_o) @(negedge clock);
+  channel_cmd(cmd_i);
+  fork
+    channel_weight(0);
+    begin
+      channel_act({256{4'h1}});
+      for (int ph = 1; ph < abits(precision_id) / 4; ph++) channel_act(0);
+    end
+  join
+
 endtask
 
 task automatic run_empty_batch_suite();
@@ -34,8 +36,7 @@ task automatic run_empty_batch_suite();
       empty_boundary_frame(6, 0);
       for (int p = 0; p < 7; p++) begin
         $display(string'({"[CASE_START] time=%0.3f ns suite=empty_batch ",
-                          "description=empty-to-live-earliest-ready precision=%0d"}),
-                 $realtime, p);
+                          "description=empty-to-live-earliest-ready precision=%0d"}), $realtime, p);
         empty_boundary_frame(p, 1);
         empty_boundary_frame(6, 0);
       end
@@ -48,7 +49,7 @@ task automatic run_empty_batch_suite();
         if (psum_valid != 0) begin
           if (psum_valid !== 32'hf) $fatal(1, "Empty boundary output mask mismatch");
           for (int c = 0; c < 4; c++)
-            if (raw_psum[32*c+:32] !== 32'd256) $fatal(1, "Empty boundary numeric mismatch");
+          if (raw_psum[32*c+:32] !== 32'd256) $fatal(1, "Empty boundary numeric mismatch");
           outputs++;
         end
         if (driver_done && !dut.batch_active && psum_valid == 0) break;

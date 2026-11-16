@@ -59,7 +59,7 @@ task automatic write_row(input logic [7:0] address, input logic [1023:0] data, i
 endtask
 task automatic send_phase(input logic [2:0] precision, input logic [1:0] phase, input logic signed_en,
                           input logic [3:0] mask, input logic [7:0] address, input logic station,
-                          input logic [511:0] data);
+                          input logic [511:0] data, input bit compact = 0);
   display_case($sformatf(
                "%s/phase W%0dA%0d signed=%0d phase=%0d oc_mask=%h row=%0d refresh=%0d",
                case_description,
@@ -79,6 +79,7 @@ task automatic send_phase(input logic [2:0] precision, input logic [1:0] phase, 
   cim_ren = 1;
   sram_wen = 0;
   cim_precision = precision;
+  cim_dw_compact = compact;
   cim_phase = phase;
   cim_signed_en = signed_en;
   cim_oc_mask = mask;

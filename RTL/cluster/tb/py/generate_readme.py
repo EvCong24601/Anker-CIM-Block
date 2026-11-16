@@ -4,7 +4,9 @@ from buffer_schedule import COUNTS, NAMES, ABITS, STANDARD_DELAY, sequence, stan
 
 REPO = Path(__file__).resolve().parents[4]
 
-BODY = r"""# Cluster 标准逐拍表
+BODY = r"""> 历史逐拍表。C0 同沿接收 Command 与 A0 的假设对应旧版命令包。三通道版的输入和输出拍点见[当前接口契约](Cluster_Raw_Output.md)。
+
+# Cluster 标准逐拍表
 
 [返回项目入口](../README.md) · [调度与容量说明](Cluster_Input_Overlap.md)
 

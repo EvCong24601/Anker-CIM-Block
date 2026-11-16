@@ -1,4 +1,4 @@
-> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
+> 历史设计记录。本文的输入时序对应旧版命令包，当前 cmd、weight 和 ACT 的三路握手及输出拍点见[当前接口契约](Cluster_Raw_Output.md)。
 
 # Cluster 调度、输入时序与容量
 

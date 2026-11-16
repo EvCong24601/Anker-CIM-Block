@@ -5,10 +5,10 @@ always @(posedge clock) begin : gemm_scoreboard
   cycle++;
   if (reset_n && monitoring) begin
     if (|psum_activity) $fatal(1, "GEMM: OS1 WS32 must bypass the depth16 Psum buffer");
-    if (cmd_valid_i && (&cmd_ready_o)) begin
+    if (act_valid_i && act_ready_o && g_cluster[0].dut.external_phase == 0) begin
       if (first_accept[active_tile] < 0) first_accept[active_tile] = cycle;
-      if (cycle != first_accept[active_tile] + 5 * accepted[active_tile])
-        $fatal(1, "GEMM: Command spacing is not five cycles");
+      if (cycle != first_accept[active_tile] + 4 * accepted[active_tile])
+        $fatal(1, "GEMM: Command spacing is not four cycles");
       $fdisplay(trace_fd, "%0d,%0d,command,%0d,%0d,0,-1,-1,0", cycle, cycle - first_accept[active_tile], active_tile,
                 accepted[active_tile]);
       accepted[active_tile]++;
@@ -18,7 +18,7 @@ always @(posedge clock) begin : gemm_scoreboard
       row = issues[active_tile] / 4;
       ph  = issues[active_tile] % 4;
       if (issue_context[c] != row || issue_phase[c] != ph || issue_address[c] !== WEIGHT_ADDR + 8'(active_tile) ||
-        issue_plane[c] !== act_planes[4 * row + ph] || cycle != first_accept[active_tile] + 5 * row + 1 + ph)
+      issue_plane[c] !== act_planes[4 * row + ph] || cycle != first_accept[active_tile] + 4 * row + ph)
         $fatal(1, "GEMM: internal issue schedule/data mismatch cluster=%0d row=%0d slice=%0d", c, row, ph);
       for (int macro = 0; macro < 8; macro++)
       if (ren[c][macro]) begin
@@ -32,13 +32,12 @@ always @(posedge clock) begin : gemm_scoreboard
   #1;
   if (reset_n && monitoring)
     for (int c = 0; c < CLUSTERS; c++) begin
-      if ((out_valid_o[c] & 32'hfffffff0) != 0)
-        $fatal(1, "GEMM: output on inactive group lane cluster=%0d", c);
+      if ((out_valid_o[c] & 32'hfffffff0) != 0) $fatal(1, "GEMM: output on inactive group lane cluster=%0d", c);
       for (int lane = 0; lane < 4; lane++) begin
         n = 4 * active_tile + lane;
         if (out_valid_o[c][lane]) begin
           row = raw_rows[active_tile][lane];
-          if (row >= M || cycle != first_accept[active_tile] + 5 * row + 9)
+          if (row >= M || cycle != first_accept[active_tile] + 4 * row + 8)
             $fatal(1, "GEMM: raw row/order/latency mismatch cluster=%0d lane=%0d row=%0d", c, lane, row);
           if (psum_data_o[c][32*lane+:32] !== raw_golden[row*N+n])
             $fatal(

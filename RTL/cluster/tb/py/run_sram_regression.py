@@ -40,7 +40,7 @@ def main():
     r=command(['vlog','-sv','-svinputport=var','+incdir+.','+define+SINGLE_MACRO_ASSERTIONS','-work','work',*[s.name for s in sources]],dest/'compile.log')
     if r.returncode:raise RuntimeError(f'Compile failed: {dest / "compile.log"}')
     names=args.case or (list(catalog.CASES) if args.full else [
-        'cluster_default','reduce_tree','macro_gate1','input_overlap','os_count_limit','gate_equiv_default',
+        'cluster_default','reduce_tree','macro_gate1','input_overlap','channels','os_count_limit','gate_equiv_default',
         *[n for n in catalog.CASES if n.startswith('gemm_')]])
     summaries=[]
     for name in names:

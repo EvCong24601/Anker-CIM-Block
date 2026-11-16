@@ -11,6 +11,9 @@ module ClusterGemmOs1Ws32;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
+  logic [7:0] weight_raddr_i = 0;
+  logic weight_valid_i = 0, act_valid_i = 0;
+  wire weight_ready_o, act_ready_o;
   wire [CLUSTERS - 1:0] cmd_ready_o, sram_rd_valid;
   logic [1023:0] act_data_i = '0;
   logic sram_cs_en = 0, sram_wr_en = 0, sram_macro_group = 0;
@@ -33,6 +36,11 @@ module ClusterGemmOs1Ws32;
       .cmd_i(cmd_i),
       .cmd_valid_i(cmd_valid_i),
       .cmd_ready_o(cmd_ready_o[c]),
+      .weight_raddr_i(weight_raddr_i),
+      .weight_valid_i(weight_valid_i),
+      .weight_ready_o(weight_ready_o),
+      .act_valid_i(act_valid_i),
+      .act_ready_o(act_ready_o),
       .act_data_i(act_data_i),
       .sram_cs_en(sram_cs_en),
       .sram_wr_en(sram_wr_en),
@@ -55,7 +63,7 @@ module ClusterGemmOs1Ws32;
     assign ren[c] = dut.ren;
     assign station[c] = dut.station;
     assign issue_plane[c] = dut.plane;
-    assign issue_address[c] = dut.command.cim_weight_raddr;
+    assign issue_address[c] = dut.issue_weight_address;
     always_comb begin
       issue_phase[c]   = dut.phase;
       issue_context[c] = dut.context_idx;
@@ -67,7 +75,7 @@ module ClusterGemmOs1Ws32;
   logic [7:0] w_q[0:K * N - 1];
   logic [31:0] raw_golden[0:M * N - 1];
   logic [1023:0] weight_rows[0:31], act_planes[0:M * 4 - 1];
-  logic [31:0] observed_raw  [0:M * N - 1];
+  logic [31:0] observed_raw[0:M * N - 1];
   string data_dir;
   int cycle = 0, active_tile = 0, raw_checks = 0;
   int first_accept[N_TILES], accepted[N_TILES], issues[N_TILES], refreshes[N_TILES][8];

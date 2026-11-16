@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 `default_nettype none
-// V0.2: SRAM read and all arithmetic share one R_in -> R_out cycle.
+// Issue at n, local phase sum at n+2; accepts one request per cycle.
 module SingleMacro #(
   // Functional ICG; set to 0 to use register enables on the ordinary clock.
   parameter bit USE_CLOCK_GATING = 1'b1
@@ -27,7 +27,8 @@ module SingleMacro #(
   output logic [  71:0] cim_odata,
   output logic          cim_odata_valid,
   output logic [   3:0] cim_odata_oc_mask,
-  output logic [   1:0] cim_odata_phase
+  output logic [   1:0] cim_odata_phase,
+  input  logic          cim_dw_compact = 1'b0  // Compact input uses 32 ACT digits at every W precision.
 );
   import single_macro_pkg::*;
   `include "single_macro_func.sv"
@@ -35,22 +36,29 @@ module SingleMacro #(
   logic         in_valid;  // Valid request at the input boundary.
   logic [511:0] activation_in;  // Registered ACT digits shared by all OCs.
   logic [  1:0] weight_mode_in;  // Decoded W2/W4/W8 weight mode.
+  logic         dw_compact_in;  // Aligned with the ACT and weight mode consumed by the multipliers.
   logic         signed_en_in;  // Signed interpretation of weight digits.
   logic         activation_signed_in;  // Signed interpretation of this ACT digit.
   logic [  3:0] mask_in;  // Enabled OCs for this request.
-  logic [  3:0] result_mask_in;  // Registered one edge before result capture.
+  logic [  3:0] result_mask_in;  // Consumer demand sampled on issue.
   logic [  1:0] phase_in;  // ACT digit phase returned with the result.
+
+  // Behavioral timing boundary. The implementation of the two compute cycles
+  // is local to the physical macro. The interface accepts a request every edge.
+  logic         stage_valid;
+  logic [3:0]   stage_mask, stage_result_mask;
+  logic [1:0]   stage_phase;
 
   wire          issue;
   wire          write_active;
   wire macro_clock, memory_clock;
   wire memory_active;
-  // Include output valid to preserve the final valid-clearing edge n+2.
+  // Include output valid to preserve the final valid-clearing edge n+3.
   wire clock_active;
   assign issue = cim_ren && (|cim_oc_mask);
   assign write_active = sram_wen && !(&sram_wmask);
   assign memory_active = write_active || sram_ren || (issue && cim_station);
-  assign clock_active = issue || in_valid || cim_odata_valid;
+  assign clock_active = issue || in_valid || stage_valid || cim_odata_valid;
   generate
     if (USE_CLOCK_GATING) begin : g_icg
       MacroClockGate u_clock_gate (
@@ -76,7 +84,9 @@ module SingleMacro #(
   wire [1:0] input_weight_mode;
   wire [2:0] act_capture_en;
   assign input_weight_mode = decode_weight_mode(cim_precision);
-  assign act_capture_en = {issue && input_weight_mode == W_MODE_2, issue && input_weight_mode != W_MODE_8, issue};
+  wire capture_wide_act = issue && !cim_dw_compact;
+  assign act_capture_en = {capture_wide_act && input_weight_mode == W_MODE_2,
+                           capture_wide_act && input_weight_mode != W_MODE_8, issue};
   wire [2:0] act_clock;
   for (genvar bank = 0; bank < 3; bank++) begin : g_act_bank
     localparam int FIRST = bank == 0 ? 0 : bank == 1 ? 128 : 256;
@@ -150,7 +160,11 @@ module SingleMacro #(
     for (genvar c = 0; c < 4; c++) begin : g_oc
       wire result_clock;
       wire result_enable;
-      assign result_enable = in_valid && mask_in[c] && result_mask_in[c];
+      logic signed [17:0] stage_data;
+      always_ff @(posedge macro_clock)
+        if (in_valid && mask_in[c] && result_mask_in[c]) stage_data <= sum_l5[c];
+
+      assign result_enable = stage_valid && stage_mask[c] && stage_result_mask[c];
       if (USE_CLOCK_GATING) begin : g_result_icg
         MacroClockGate u_clock_gate (
           .clock(clock),
@@ -162,20 +176,21 @@ module SingleMacro #(
       end
       // Masked OC payload holds. Valid/mask identify which values belong to
       // this request; shared ACT and SRAM retained output serve active OCs.
-      // Parent-blocked OC results also hold; local valid/phase/Hold semantics
-      // stay aligned, so no extra pipeline stage is introduced.
       always_ff @(posedge result_clock or negedge reset_n)
         if (!reset_n) cim_odata[18*c+:18] <= '0;
-        else if (result_enable) cim_odata[18*c+:18] <= sum_l5[c];
+        else if (result_enable) cim_odata[18*c+:18] <= stage_data;
       for (genvar s = 0; s < 32; s++) begin : g_slice
+        // Each slice consumes 4, 2 or 1 ACT digits for W2, W4 or W8.
+        // Compact requests use just the first 32 digits, even when higher banks hold old data.
+        wire slice_enabled = in_valid && mask_in[c] &&
+                             (!dw_compact_in || s < 8 || weight_mode_in == W_MODE_8 ||
+                              (s < 16 && weight_mode_in == W_MODE_4));
         for (genvar t = 0; t < 4; t++) begin : g_submul
-          wire enabled_oc;
           wire [1:0] weight_bits;
           wire [3:0] activation_bits;
           wire weight_signed;
-          assign enabled_oc = in_valid && mask_in[c];
-          assign weight_bits = enabled_oc ? compute_weight[256*c+8*s+2*t+:2] : 2'b0;
-          assign activation_bits = !enabled_oc ? 4'b0
+          assign weight_bits = slice_enabled ? compute_weight[256*c+8*s+2*t+:2] : 2'b0;
+          assign activation_bits = !slice_enabled ? 4'b0
                         : (weight_mode_in == W_MODE_2) ? activation_in[4 * (4 * s + t) +: 4]
                         : (weight_mode_in == W_MODE_4) ? activation_in[4 * (2 * s + t / 2) +: 4]
                         : activation_in[4 * s +: 4];
@@ -233,12 +248,16 @@ module SingleMacro #(
     end
   endgenerate
 
-  // Only two compute boundaries: n samples input; n+1 registers its result.
-  // Nonblocking updates preserve the previous request for output/Hold capture.
+  // n samples ACT and reads/reuses the weight. The result is visible after n+2.
   always_ff @(posedge macro_clock or negedge reset_n) begin
     if (!reset_n) begin
       in_valid <= 1'b0;
+      stage_valid <= 1'b0;
+      stage_mask <= '0;
+      stage_result_mask <= '0;
+      stage_phase <= '0;
       weight_mode_in <= W_MODE_2;
+      dw_compact_in <= 1'b0;
       signed_en_in <= 1'b0;
       activation_signed_in <= 1'b0;
       mask_in <= '0;
@@ -249,9 +268,11 @@ module SingleMacro #(
       cim_odata_phase <= '0;
     end else begin
       in_valid <= issue;
-      cim_odata_valid <= in_valid;
+      stage_valid <= in_valid;
+      cim_odata_valid <= stage_valid;
       if (issue) begin
-        weight_mode_in <= decode_weight_mode(cim_precision);
+        weight_mode_in <= input_weight_mode;
+        dw_compact_in <= cim_dw_compact;
         signed_en_in <= cim_signed_en;
         activation_signed_in <= digit_is_signed(cim_precision, cim_phase, cim_signed_en);
         mask_in <= cim_oc_mask;
@@ -259,8 +280,13 @@ module SingleMacro #(
         phase_in <= cim_phase;
       end
       if (in_valid) begin
-        cim_odata_oc_mask <= mask_in;
-        cim_odata_phase   <= phase_in;
+        stage_mask <= mask_in;
+        stage_result_mask <= result_mask_in;
+        stage_phase <= phase_in;
+      end
+      if (stage_valid) begin
+        cim_odata_oc_mask <= stage_mask;
+        cim_odata_phase   <= stage_phase;
       end
     end
   end
@@ -276,7 +302,7 @@ module SingleMacro #(
       if (sram_ren && (cim_ren || in_valid || sram_wen)) $fatal(1, "SM_PROTOCOL: regular read overlaps compute/write");
       if (sram_wen) begin
         if (cim_ren) $fatal(1, "SM_PROTOCOL: simultaneous read/write");
-        // Output valid alone is completed work: n+2 writes are legal.
+        // At n+2 the pending output uses stage_data and the SRAM port is free.
         if (in_valid) $fatal(1, "SM_PROTOCOL: write before pipeline drain");
         // Reduction catches X/Z without simulator-specific handling of
         // $isunknown on a wide, temporary concatenation.
@@ -285,7 +311,7 @@ module SingleMacro #(
       end
       if (issue) begin
         if ((^{cim_precision, cim_phase, cim_signed_en, cim_raddr, cim_station, cim_oc_mask,
-               cim_result_mask, cim_idata}) === 1'bx)
+               cim_result_mask, cim_dw_compact, cim_idata}) === 1'bx)
           $fatal(1, "SM_PROTOCOL: unknown compute input");
         if (!legal_phase(cim_precision, cim_phase)) $fatal(1, "SM_PROTOCOL: illegal precision/phase");
         if (!cim_station) begin

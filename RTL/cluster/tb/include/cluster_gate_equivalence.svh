@@ -2,7 +2,7 @@
 // The reference bypasses every Cluster/Macro ICG while retaining register CEs.
 // Invalid-lane payload/holding state is compared too, not only final results.
 if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
-  wire reference_ready, reference_sram_valid;
+  wire reference_ready, reference_sram_valid, reference_weight_ready, reference_act_ready;
   wire [1023:0] reference_sram;
   wire [1023:0] reference_raw;
   wire [  31:0] reference_valid;
@@ -15,6 +15,8 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
     .USE_CLOCK_GATING(0)
   ) dut_ungated (
     .cmd_ready_o(reference_ready),
+    .weight_ready_o(reference_weight_ready),
+    .act_ready_o(reference_act_ready),
     .sram_rd_data(reference_sram),
     .sram_rd_valid(reference_sram_valid),
     .raw_psum(reference_raw),
@@ -30,15 +32,15 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
   end
   always @(posedge clock) begin
     #0.003;
-    if (reference_ready !== cmd_ready_o || reference_sram !== sram_rd_data || reference_sram_valid !== sram_rd_valid ||
-      reference_raw !== raw_psum || reference_valid !== psum_valid)
+    if (reference_weight_ready !== weight_ready_o || reference_act_ready !== act_ready_o || reference_ready !== cmd_ready_o || reference_sram !== sram_rd_data || reference_sram_valid !== sram_rd_valid ||
+    reference_raw !== raw_psum || reference_valid !== psum_valid)
       $fatal(1, "CLUSTER_GATE_EQUIVALENCE: external data/valid/ready mismatch");
     if (dut_ungated.raw_data !== dut.raw_data || dut_ungated.raw_valid !== dut.raw_valid ||
-      dut_ungated.act_buffer !== dut.act_buffer || dut_ungated.issue !== dut.issue ||
-      dut_ungated.phase != dut.phase || dut_ungated.context_idx != dut.context_idx ||
-      dut_ungated.tile != dut.tile || dut_ungated.completion_path_done !== dut.completion_path_done ||
-      dut_ungated.batch_active !== dut.batch_active || dut_ungated.macro_data !== dut.macro_data ||
-      dut_ungated.macro_valid !== dut.macro_valid)
+    dut_ungated.act_buffer !== dut.act_buffer || dut_ungated.issue !== dut.issue ||
+    dut_ungated.phase != dut.phase || dut_ungated.context_idx != dut.context_idx ||
+    dut_ungated.tile != dut.tile || dut_ungated.drain_safe !== dut.drain_safe ||
+    dut_ungated.batch_active !== dut.batch_active || dut_ungated.macro_data !== dut.macro_data ||
+    dut_ungated.macro_valid !== dut.macro_valid)
       $fatal(1, "CLUSTER_GATE_EQUIVALENCE: raw/Macro/schedule mismatch");
     for (int l = 0; l < 32; l++) begin
       if (dut_ungated.raw_context[l] != dut.raw_context[l] || dut_ungated.tmp_result[l] !== dut.tmp_result[l])

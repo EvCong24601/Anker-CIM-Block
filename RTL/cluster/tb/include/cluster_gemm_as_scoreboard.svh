@@ -2,14 +2,18 @@ always @(posedge clock) begin : as_gemm_scoreboard
   bit check_history[4];
   logic [31:0] wanted_history[4];
   int hc[4], tile, cx, ph, index, n;
+  int tmp_steps[4];
   cycle++;
   for (int l = 0; l < 4; l++) check_history[l] = 0;
   if (reset_n && monitoring) begin
-    if (cmd_valid_i && cmd_ready_o) begin
+    if (cmd_valid_i && cmd_ready_o) foreach (tmp_steps[l]) tmp_steps[l] = 0;
+    if (weight_valid_i && weight_ready_o) begin
       if (first_accept < 0) first_accept = cycle;
       tile = row_commands / AS;
       cx   = row_commands % AS;
-      if (cycle != first_accept + TILE_CYCLES * tile + cx || cmd_i.cim_weight_raddr !== BASE_ADDR + 8'(AS * tile + logical_context(active_m, cx)))
+      if (cycle != first_accept + TILE_CYCLES * tile + cx - int'(tile > 0) || weight_raddr_i !== BASE_ADDR + 8'(AS * tile + logical_context(
+          active_m, cx
+        )))
         $fatal(1, "AS GEMM: external Command schedule/address mismatch");
       $fdisplay(trace_fd, "%0d,%0d,command,%0d,%0d,%0d,-1,-1,0", cycle, cycle - first_accept, active_m, tile, cx);
       row_commands++;
@@ -19,9 +23,10 @@ always @(posedge clock) begin : as_gemm_scoreboard
       tile = row_issues / (4 * AS);
       ph   = (row_issues % (4 * AS)) / AS;
       cx   = row_issues % AS;
-      if (cycle != first_accept + TILE_CYCLES * tile + 1 + AS * ph + cx || dut.tile != tile || dut.phase != ph ||
-          dut.context_idx != cx || dut.command.cim_weight_raddr !== BASE_ADDR + 8'(AS * tile + logical_context(active_m, cx)) ||
-          dut.plane !== act_planes[(active_m * OS + tile) * 4 + ph])
+      if (cycle != first_accept + TILE_CYCLES * tile + AS * ph + cx || dut.tile != tile || dut.phase != ph ||
+        dut.context_idx != cx || dut.issue_weight_address !== BASE_ADDR + 8'(AS * tile + logical_context(
+          active_m, cx
+        )) || dut.plane !== act_planes[(active_m*OS+tile)*4+ph])
         $fatal(1, "AS GEMM: internal issue order/data/address mismatch");
       if (dut.ren !== 8'hff || dut.station !== 8'hff)
         $fatal(1, "AS GEMM: each Context switch must refresh all eight weights");
@@ -31,9 +36,13 @@ always @(posedge clock) begin : as_gemm_scoreboard
     end
     for (int l = 0; l < 4; l++)
     if (dut.tmp_valid[l]) begin
-      tile = dut.tmp_tag[l].kt;
-      ph   = dut.tmp_tag[l].ph;
-      cx   = dut.tmp_tag[l].ctx;
+      tile = tmp_steps[l] / (4 * AS);
+      ph   = (tmp_steps[l] / AS) % 4;
+      cx   = tmp_steps[l] % AS;
+      tmp_steps[l]++;
+      if (dut.tmp_tag[l].first_tile !== (tile == 0) || dut.tmp_tag[l].last_tile !== (tile == OS - 1) ||
+          dut.tmp_tag[l].ph !== ph || dut.tmp_tag[l].ctx !== cx)
+        $fatal(1, "AS GEMM: tmp tag mismatch tile=%0d phase=%0d ctx=%0d lane=%0d", tile, ph, cx, l);
       if (!dut.psum_write[l]) $fatal(1, "AS GEMM: missing AS partial-sum update");
       index = ((((active_m * OS + tile) * 4 + ph) * AS + logical_context(active_m, cx)) * 4 + l);
       wanted_history[l] = history_golden[index];
@@ -51,8 +60,7 @@ always @(posedge clock) begin : as_gemm_scoreboard
         $fatal(1, "AS GEMM: per-phase Psum history mismatch m=%0d ctx=%0d lane=%0d", active_m, hc[l], l);
       psum_checks++;
     end
-    if ((out_valid_o & 32'hfffffff0) != 0)
-      $fatal(1, "AS GEMM: inactive output lane valid");
+    if ((out_valid_o & 32'hfffffff0) != 0) $fatal(1, "AS GEMM: inactive output lane valid");
     for (int l = 0; l < 4; l++) begin
       if (out_valid_o[l]) begin
         cx = raw_next[l];

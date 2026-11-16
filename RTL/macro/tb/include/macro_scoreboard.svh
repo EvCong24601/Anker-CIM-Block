@@ -1,4 +1,4 @@
-// Per-OC write mirror, hold tracking and single-cycle result checks; sample the
+// Per-OC write mirror, hold tracking and two-cycle result checks; sample the
 // request on the rising edge and compare outputs after NBA.
 // This file is included inside the parent TB module scope and is not a stand-alone
 // compilation unit.
@@ -58,7 +58,7 @@ always @(posedge clock or negedge reset_n) begin : scoreboard
           $fatal(1, "TB: legal stimulus reused invalid reference hold");
         row = reference_hold;
       end
-      expected_data[0]  = golden_phase(row, cim_idata, cim_precision, cim_signed_en, cim_phase, cim_oc_mask);
+      expected_data[0]  = golden_phase(row, cim_idata, cim_precision, cim_signed_en, cim_phase, cim_oc_mask, cim_dw_compact);
       expected_mask[0]  = cim_oc_mask;
       expected_phase[0] = cim_phase;
     end else if (cim_ren) zero_mask_count++;
@@ -108,7 +108,7 @@ for (genvar bank = 0; bank < 3; bank++) begin : g_act_capture_check
         $fatal(1, "ACT bank asynchronous reset_n failed bank=%0d", bank);
     end else if (!negative_mode) begin
       want = cim_ren && (|cim_oc_mask) &&
-             (bank == 0 || (bank == 1 && cim_precision <= 4) || (bank == 2 && cim_precision <= 1));
+             (bank == 0 || (!cim_dw_compact && (bank == 1 ? cim_precision <= 4 : cim_precision <= 1)));
       saved = dut.activation_in[FIRST +: WIDTH];
       expected_act = cim_idata[FIRST +: WIDTH];
       #0.002;

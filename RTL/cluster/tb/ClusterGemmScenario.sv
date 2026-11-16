@@ -10,6 +10,9 @@ module ClusterGemmScenario #(
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
+  logic [7:0] weight_raddr_i = 0;
+  logic weight_valid_i = 0, act_valid_i = 0;
+  wire weight_ready_o, act_ready_o;
   wire cmd_ready_o;
   wire sram_rd_valid;
   logic [1023:0] act_data_i = '0;
@@ -26,6 +29,11 @@ module ClusterGemmScenario #(
     .cmd_i(cmd_i),
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),
+    .weight_raddr_i(weight_raddr_i),
+    .weight_valid_i(weight_valid_i),
+    .weight_ready_o(weight_ready_o),
+    .act_valid_i(act_valid_i),
+    .act_ready_o(act_ready_o),
     .act_data_i(act_data_i),
     .sram_cs_en(sram_cs_en),
     .sram_wr_en(sram_wr_en),
@@ -50,7 +58,7 @@ module ClusterGemmScenario #(
   logic [7:0] w_q[0:2047];
   logic [31:0] raw_golden[0:127];
   logic [1023:0] weight_rows[0:15], act_planes[0:63];
-  logic [31:0] observed_raw  [0:127];
+  logic [31:0] observed_raw[0:127];
   logic [31:0] active_mask;
   int cycle = 0, active_tile = 0, first_accept = -1, commands = 0, issues = 0;
   int total_commands = 0, total_issues = 0, raw_checks = 0;

@@ -8,12 +8,15 @@ module ClusterGemmOs2As4;
   parameter logic [7:0] BASE_ADDR = 8'h60;
   parameter bit CHECK_SWITCH = 0;
   localparam int K = 256 * OS, N = 4 * AS;
-  localparam int TILE_CYCLES = 4 * AS + 1;
+  localparam int TILE_CYCLES = 4 * AS;
   localparam int FIRST_RAW = (OS - 1) * TILE_CYCLES + 3 * AS + 6;
   logic clock = 0, reset_n = 0;
   always #5 clock = ~clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0;
+  logic [7:0] weight_raddr_i = 0;
+  logic weight_valid_i = 0, act_valid_i = 0;
+  wire weight_ready_o, act_ready_o;
   wire cmd_ready_o;
   wire sram_rd_valid;
   logic [1023:0] act_data_i = '0;
@@ -30,6 +33,11 @@ module ClusterGemmOs2As4;
     .cmd_i(cmd_i),
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),
+    .weight_raddr_i(weight_raddr_i),
+    .weight_valid_i(weight_valid_i),
+    .weight_ready_o(weight_ready_o),
+    .act_valid_i(act_valid_i),
+    .act_ready_o(act_ready_o),
     .act_data_i(act_data_i),
     .sram_cs_en(sram_cs_en),
     .sram_wr_en(sram_wr_en),
@@ -52,7 +60,7 @@ module ClusterGemmOs2As4;
   logic [31:0] raw_golden[0:M * N - 1];
   logic [31:0] history_golden[0:M * OS * 4 * AS * 4 - 1];
   logic [1023:0] weight_rows[0:OS * AS * 8 - 1], act_planes[0:M * OS * 4 - 1];
-  logic [31:0] observed_raw  [0:M * N - 1];
+  logic [31:0] observed_raw[0:M * N - 1];
   string data_dir;
   int cycle = 0, active_m = 0, first_accept = -1;
   int row_commands = 0, row_issues = 0, row_raw = 0;

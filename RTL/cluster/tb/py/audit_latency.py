@@ -1,4 +1,6 @@
-"""Check measured Context output times against the six configured schedules.
+"""Check archived Context timings for the combined command/A0 interface.
+
+For the three-channel interface use the channels case and audit_channels.py.
 
 Standard-library-only checker: no external DOCX file or Python package needed.
 """
