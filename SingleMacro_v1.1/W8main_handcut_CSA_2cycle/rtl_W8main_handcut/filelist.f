@@ -1,0 +1,11 @@
+rtl_W8main_handcut/single_macro_pkg.sv
+rtl_W8main_handcut/MacroClockGate.sv
+rtl_W8main_handcut/MacroWeightSRAM.sv
+rtl_W8main_handcut/MacroCompress42.sv
+rtl_W8main_handcut/MacroFullWeightPairLUT.sv
+rtl_W8main_handcut/MacroW8MainEntry.sv
+rtl_W8main_handcut/MacroW8MainTreeCSA.sv
+rtl_W8main_handcut/MacroW8MainTree.sv
+rtl_W8main_handcut/MacroW8MainCorrection.sv
+rtl_W8main_handcut/MacroW8MainOC.sv
+rtl_W8main_handcut/SingleMacro.sv

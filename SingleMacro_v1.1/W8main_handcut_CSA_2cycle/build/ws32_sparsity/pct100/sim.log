@@ -1,0 +1,19 @@
+Command: /home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/sdf/simv_handcut_2cycle_sparsity -exitstatus -l /home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/ws32_sparsity/pct100/sim.log +WS=32 +TOTAL_ACT=256 +PRECISION=5 +SIGNED=1 +SEED=20261114 +SPARSITY_PCT=100 +CLK_PERIOD_NS=3.906 +SAIF=/home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/ws32_sparsity/pct100/activity.saif +no_notifier
+Chronologic VCS simulator copyright 1991-2020
+Contains Synopsys proprietary information.
+Compiler version Q-2020.03-SP2_Full64; Runtime version Q-2020.03-SP2_Full64;  Nov 15 11:56 2026
+Doing SDF annotation ...... Done
+WS_CONFIG ws=32 total_act=256 phase_issues=512 windows=16 precision=5 signed=1 clock_ns=3.906000 latency=2
+WS_STIM mode=sparsity act_sparsity_pct=100 wgt_sparsity_pct=100 act_elements_per_vector=32 act_bits=8 wgt_elements_per_row=128 wgt_bits=8 seed=20261114
+WS_MEASURE_BEGIN ns=1020.466000
+SAIF /home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/ws32_sparsity/pct100/activity.saif
+WS_SPARSITY ACT vectors=256 elements=8192 zeros=8192 pct=100.000000 target_pct=100
+WS_SPARSITY WGT_REFRESH rows=16 elements=2048 zeros=2048 pct=100.000000 target_pct=100
+WS_MEASURE_END ns=3032.056000 duration_ns=2011.590000
+PASS WS=32 TOTAL_ACT=256 issued=512 received=512 completed_act=256 refresh=16 reuse=496 weight_changes=15 act_digest=00000000
+$finish called from file "tb/tb_WeightStationary2cycle_Sparsity.sv", line 369.
+$finish at simulation time              3032056
+           V C S   S i m u l a t i o n   R e p o r t 
+Time: 3032056 ps
+CPU Time:      5.790 seconds;       Data structure size:  13.7Mb
+Sun Nov 15 11:56:15 2026

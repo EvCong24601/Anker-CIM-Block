@@ -1,0 +1,20 @@
+Command: /home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/sdf/simv_handcut_2cycle_toggle -exitstatus -l /home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/ws32_toggle/pct5/sim.log +WS=32 +TOTAL_ACT=256 +PRECISION=5 +SIGNED=1 +SEED=20261114 +STIM_MODE=toggle +ACT_TOGGLE_PCT=5 +WGT_TOGGLE_PCT=5 +CLK_PERIOD_NS=3.906 +SAIF=/home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/ws32_toggle/pct5/activity.saif +no_notifier
+Chronologic VCS simulator copyright 1991-2020
+Contains Synopsys proprietary information.
+Compiler version Q-2020.03-SP2_Full64; Runtime version Q-2020.03-SP2_Full64;  Nov 14 15:38 2026
+Doing SDF annotation ...... Done
+WS_CONFIG ws=32 total_act=256 phase_issues=512 windows=16 precision=5 signed=1 clock_ns=3.906000 latency=2
+WS_STIM mode=toggle act_toggle_pct=5 wgt_refresh_toggle_pct=5 act_width=128 seed=20261114
+WS_MEASURE_BEGIN ns=1020.466000
+SAIF /home/zhiyifan/share/WorkSpace/AnkerCIM_Macro/SingleMacro_v1.1/build/ws32_toggle/pct5/activity.saif
+WS_TOGGLE ACT samples=512 width=128 flips=3270 opportunities=65408 pct=4.999388 ones_pct=48.483276
+WS_TOGGLE WGT_REFRESH samples=16 width=1024 flips=768 opportunities=15360 pct=5.000000 ones_pct=51.391602
+WS_TOGGLE WGT_PER_ISSUE flips=768 opportunities=523264 pct=0.146771
+WS_MEASURE_END ns=3032.056000 duration_ns=2011.590000
+PASS WS=32 TOTAL_ACT=256 issued=512 received=512 completed_act=256 refresh=16 reuse=496 weight_changes=15 act_digest=50f641b2
+$finish called from file "tb/tb_WeightStationary2cycle_Toggle.sv", line 399.
+$finish at simulation time              3032056
+           V C S   S i m u l a t i o n   R e p o r t 
+Time: 3032056 ps
+CPU Time:      5.790 seconds;       Data structure size:  13.7Mb
+Sat Nov 14 15:39:01 2026

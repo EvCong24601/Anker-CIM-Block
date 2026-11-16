@@ -1,0 +1,8 @@
+build/
+__pycache__/
+*.pyc
+work_W8main_handcut_3ns/
+reports_SingleMacro/
+syn_files_SingleMacro/
+*.log
+*.svf

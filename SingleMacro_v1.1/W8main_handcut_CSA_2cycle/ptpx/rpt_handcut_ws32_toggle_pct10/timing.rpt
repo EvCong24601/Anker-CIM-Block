@@ -1,0 +1,99 @@
+****************************************
+Report : timing
+	-path_type full
+	-delay_type max
+	-max_paths 1
+	-sort_by slack
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Sat Nov 14 15:41:50 2026
+****************************************
+
+
+  Startpoint: weight_mode_in_reg[0]
+               (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: g_oc[2].u_compute/u_main_tree/carry_row_q_reg[11]
+               (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Point                                                   Incr       Path
+  ------------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  weight_mode_in_reg[0]/CP (EDFCNQD1BWP30P140HVT)         0.00       0.20 r
+  weight_mode_in_reg[0]/Q (EDFCNQD1BWP30P140HVT)          0.12       0.32 f
+  g_oc[2].u_compute/U2/ZN (INVD1BWP30P140HVT)             0.02       0.34 r
+  g_oc[2].u_compute/U3/ZN (INVD1BWP30P140HVT)             0.18       0.52 f
+  g_oc[2].u_compute/U12/ZN (NR2D1BWP30P140HVT)            0.34       0.87 r
+  g_oc[2].u_compute/U198/ZN (INVD1BWP30P140HVT)           0.11       0.97 f
+  g_oc[2].u_compute/U7/ZN (INVD3BWP30P140HVT)             0.22       1.20 r
+  g_oc[2].u_compute/U452/ZN (IOA21D1BWP30P140HVT)         0.09       1.29 r
+  g_oc[2].u_compute/g_pair[7].u_lut/U102/ZN (INVD1BWP30P140HVT)
+                                                          0.02       1.31 f
+  g_oc[2].u_compute/g_pair[7].u_lut/U103/ZN (NR2D1BWP30P140HVT)
+                                                          0.03       1.34 r
+  g_oc[2].u_compute/g_pair[7].u_lut/U186/ZN (AOI222D1BWP30P140HVT)
+                                                          0.04       1.38 f
+  g_oc[2].u_compute/g_pair[7].u_lut/U187/ZN (NR2D1BWP30P140HVT)
+                                                          0.03       1.41 r
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/U40/ZN (INVD1BWP30P140HVT)
+                                                          0.02       1.43 f
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/U41/ZN (NR2D1BWP30P140HVT)
+                                                          0.03       1.46 r
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/g_w2_first[1].u_42/g_column[1].u_42/U1/S (FA1D1BWP30P140HVT)
+                                                          0.10       1.56 f
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/g_w2_first[1].u_42/g_column[1].u_42/U2/S (FA1D1BWP30P140HVT)
+                                                          0.09       1.65 f
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/U75/ZN (MOAI22D1BWP30P140HVT)
+                                                          0.05       1.70 f
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/u_shared_42/g_column[1].u_42/U1/S (FA1D1BWP30P140HVT)
+                                                          0.12       1.82 r
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/u_shared_42/g_column[1].u_42/U2/S (FA1D1BWP30P140HVT)
+                                                          0.09       1.90 f
+  g_oc[2].u_compute/g_plane[1].g_group[3].u_entry/U62/ZN (MOAI22D1BWP30P140HVT)
+                                                          0.05       1.95 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U296/CO (FA1D1BWP30P140HVT)
+                                                          0.09       2.04 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U312/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.11 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U320/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.18 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U330/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.25 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U342/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.32 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U360/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.39 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U367/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.46 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U375/CO (FA1D1BWP30P140HVT)
+                                                          0.06       2.51 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U450/CO (FA1D1BWP30P140HVT)
+                                                          0.06       2.57 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U462/S (FA1D1BWP30P140HVT)
+                                                          0.11       2.68 r
+  g_oc[2].u_compute/u_main_tree/u_csa/U509/S (FA1D1BWP30P140HVT)
+                                                          0.09       2.77 f
+  g_oc[2].u_compute/u_main_tree/u_csa/U21/S (FA1D1BWP30P140HVT)
+                                                          0.09       2.86 r
+  g_oc[2].u_compute/u_main_tree/carry_row_q_reg[11]/D (EDFQD1BWP30P140HVT)
+                                                          0.00       2.86 r
+  data arrival time                                                  2.86
+
+  clock clock (rise edge)                                 3.00       3.00
+  clock network delay (ideal)                             0.20       3.20
+  clock reconvergence pessimism                           0.00       3.20
+  clock uncertainty                                      -0.12       3.08
+  g_oc[2].u_compute/u_main_tree/carry_row_q_reg[11]/CP (EDFQD1BWP30P140HVT)
+                                                                     3.08 r
+  library setup time                                     -0.04       3.04
+  data required time                                                 3.04
+  ------------------------------------------------------------------------------
+  data required time                                                 3.04
+  data arrival time                                                 -2.86
+  ------------------------------------------------------------------------------
+  slack (MET)                                                        0.18
+
+
+1

@@ -1,0 +1,27 @@
+ 
+****************************************
+Report : clock_gating
+        -gating_elements
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Fri Nov 13 23:02:08 2026
+****************************************
+
+
+ Information:  No Clock Gating Cell Found.
+
+
+                             Clock Gating Summary
+          ------------------------------------------------------------
+          |    Number of Clock gating elements    |        0         |
+          |                                       |                  |
+          |    Number of Gated registers          |     0 (0.00%)    |
+          |                                       |                  |
+          |    Number of Ungated registers        |   758 (100.00%)  |
+          |                                       |                  |
+          |    Total number of registers          |      758         |
+          ------------------------------------------------------------
+
+
+
+1

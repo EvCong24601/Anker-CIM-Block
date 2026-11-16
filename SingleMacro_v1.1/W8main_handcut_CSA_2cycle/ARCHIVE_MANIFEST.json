@@ -1,0 +1,1240 @@
+{
+  "schema_version": 2,
+  "updated_date": "2026-11-16",
+  "branch": "codex/w8main-handcut-csa-experiments",
+  "base_commit": "7a5065adad631a3589e8f913ec66071f0522f326",
+  "source_root": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1",
+  "file_count_excluding_manifest": 138,
+  "total_bytes_excluding_manifest": 197362922,
+  "inventory_scope": "All current archive files except ARCHIVE_MANIFEST.json itself",
+  "layout": {
+    "rtl": "rtl_W8main_handcut/",
+    "tb": "tb/",
+    "vcs": "build/",
+    "ptpx": "ptpx/",
+    "synthesis": "syn/"
+  },
+  "excluded": [
+    "build/ws_256_handcut_2cycle/**",
+    "deleted historical verification drivers and metadata"
+  ],
+  "missing_local_synthesis_dependencies": [],
+  "external_dependencies": [
+    "PDK standard-cell library/models",
+    "prepared simulation netlist build/sdf/SingleMacro.handcut.sim.v",
+    "SDF_FILE compile definition",
+    "VCS compilation environment",
+    "PTPX analysis Tcl/environment"
+  ],
+  "adapted_files": [
+    "ARCHIVE_MANIFEST.json",
+    "README.md",
+    "rtl_W8main_handcut/.gitignore",
+    "rtl_W8main_handcut/README.md",
+    "tb/SPARSITY_CONTROL.md",
+    "tb/TOGGLE_CONTROL.md"
+  ],
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 73,
+      "archive_sha256": "1487af8dbbc9ec07d814da762cd7d58c9d4df7e9d62c4f40ad8ff350ddecc4fd",
+      "provenance": "archive_support_file"
+    },
+    {
+      "path": "build/ws32_sparsity/pct100/activity.saif",
+      "bytes": 11835128,
+      "archive_sha256": "383311ca02fd39ce1b8d929d4d22bbec1c4488f453c546ca6bd23a22053e7f4e",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\activity.saif",
+      "source_sha256": "383311ca02fd39ce1b8d929d4d22bbec1c4488f453c546ca6bd23a22053e7f4e",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct100/sim.log",
+      "bytes": 1702,
+      "archive_sha256": "432baee5008f1929d95ab176658a1104bd69d44ab78ab45b3fdacc3fbca2784d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\sim.log",
+      "source_sha256": "432baee5008f1929d95ab176658a1104bd69d44ab78ab45b3fdacc3fbca2784d",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct100/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct50/activity.saif",
+      "bytes": 11950825,
+      "archive_sha256": "e6be961a49409dbb7408e4e9f977b68f384cca10cefb2937ab5349babd90dc2d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct50\\activity.saif",
+      "source_sha256": "e6be961a49409dbb7408e4e9f977b68f384cca10cefb2937ab5349babd90dc2d",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct50/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct50/sim.log",
+      "bytes": 1692,
+      "archive_sha256": "2cd232b0b6e2fc7537932254a8e6cb1b0fee43ce3f0c78d8146b76d30c335266",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct50\\sim.log",
+      "source_sha256": "2cd232b0b6e2fc7537932254a8e6cb1b0fee43ce3f0c78d8146b76d30c335266",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct50/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct50/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct70/activity.saif",
+      "bytes": 11930097,
+      "archive_sha256": "feb1ca427cbbfb6da439af2551e6b1f6ba3a54f4eadc46d08903898bf56d05ed",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct70\\activity.saif",
+      "source_sha256": "feb1ca427cbbfb6da439af2551e6b1f6ba3a54f4eadc46d08903898bf56d05ed",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct70/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct70/sim.log",
+      "bytes": 1692,
+      "archive_sha256": "73a4f8839ff0e26f4c8aa6440000ce6eb048c97b1db5584c7a7057c94a45caf6",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct70\\sim.log",
+      "source_sha256": "73a4f8839ff0e26f4c8aa6440000ce6eb048c97b1db5584c7a7057c94a45caf6",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct70/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct70/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct90/activity.saif",
+      "bytes": 11881915,
+      "archive_sha256": "b0728039b1b76a5fe3a1a04f625d422ba5b1441bbb46893805c6e126b51f193c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct90\\activity.saif",
+      "source_sha256": "b0728039b1b76a5fe3a1a04f625d422ba5b1441bbb46893805c6e126b51f193c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct90/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct90/sim.log",
+      "bytes": 1692,
+      "archive_sha256": "3d0bcc05cc885e6c54e5c23de94c599faf0e33c598b8b21b24a1482948d84ae5",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct90\\sim.log",
+      "source_sha256": "3d0bcc05cc885e6c54e5c23de94c599faf0e33c598b8b21b24a1482948d84ae5",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct90/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_sparsity/pct90/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct10/activity.saif",
+      "bytes": 11937957,
+      "archive_sha256": "ed8c8c9c19e68b4d4545d922a346d48889812225bbcfb96c352043bef28ff708",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct10\\activity.saif",
+      "source_sha256": "ed8c8c9c19e68b4d4545d922a346d48889812225bbcfb96c352043bef28ff708",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct10/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct10/sim.log",
+      "bytes": 1773,
+      "archive_sha256": "693e3df538ef370d35289e4cbd3894b847094f697ecca12fb309a4cb774e1243",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct10\\sim.log",
+      "source_sha256": "693e3df538ef370d35289e4cbd3894b847094f697ecca12fb309a4cb774e1243",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct10/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct10/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct20/activity.saif",
+      "bytes": 11952847,
+      "archive_sha256": "3376daf7906ba13b68aef9b93bf29923371af750f7d9f6e5175a31fa38250516",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct20\\activity.saif",
+      "source_sha256": "3376daf7906ba13b68aef9b93bf29923371af750f7d9f6e5175a31fa38250516",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct20/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct20/sim.log",
+      "bytes": 1775,
+      "archive_sha256": "b38f388ace1a67b00694ce0608513580f6b92920e0d3fe78fe64506a5915acdd",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct20\\sim.log",
+      "source_sha256": "b38f388ace1a67b00694ce0608513580f6b92920e0d3fe78fe64506a5915acdd",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct20/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct20/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct5/activity.saif",
+      "bytes": 11931610,
+      "archive_sha256": "e560a5eac69519c65366b7f52e965cf499c447e84b61b864af777955c621a64d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct5\\activity.saif",
+      "source_sha256": "e560a5eac69519c65366b7f52e965cf499c447e84b61b864af777955c621a64d",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct5/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct5/sim.log",
+      "bytes": 1763,
+      "archive_sha256": "82229d467c190f982005cd4f2235604de3b2ce4d1dce29ba1828d8a2d380f059",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct5\\sim.log",
+      "source_sha256": "82229d467c190f982005cd4f2235604de3b2ce4d1dce29ba1828d8a2d380f059",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct5/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct5/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct50/activity.saif",
+      "bytes": 11970607,
+      "archive_sha256": "bb6afc893115bc87b4134a75d7c3d359a1fe71d93565bca78ae34e4aac8e2666",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct50\\activity.saif",
+      "source_sha256": "bb6afc893115bc87b4134a75d7c3d359a1fe71d93565bca78ae34e4aac8e2666",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct50/activity.saif",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct50/sim.log",
+      "bytes": 1775,
+      "archive_sha256": "4f909584553a2cc313ce35cf3f687d5a07b5a81261f6fd6880cf2a1c266d7b38",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_toggle\\pct50\\sim.log",
+      "source_sha256": "4f909584553a2cc313ce35cf3f687d5a07b5a81261f6fd6880cf2a1c266d7b38",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_toggle/pct50/sim.log",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "build/ws32_toggle/pct50/ucli.key",
+      "bytes": 0,
+      "archive_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\build\\ws32_sparsity\\pct100\\ucli.key",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/build/ws32_sparsity/pct100/ucli.key",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws16/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "d370e5b5c978737bbcb68244c03647f856f4cbb02a7d8f47185f605fa36128d7",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_power.rpt",
+      "source_sha256": "d370e5b5c978737bbcb68244c03647f856f4cbb02a7d8f47185f605fa36128d7",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws16/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "1f628a5ec9d13df8f17024c7f8740d44064b09e01597a7160d16b41c7d097b17",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_power_hier.rpt",
+      "source_sha256": "1f628a5ec9d13df8f17024c7f8740d44064b09e01597a7160d16b41c7d097b17",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws16/module_power.rpt",
+      "bytes": 3777,
+      "archive_sha256": "731c9dc0f39881cdf657d99d51ad5031a3d565d7fd087cf060610cd0234dbc33",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\module_power.rpt",
+      "source_sha256": "731c9dc0f39881cdf657d99d51ad5031a3d565d7fd087cf060610cd0234dbc33",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws16/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "3c9c79f26f1dc98aa8d54cf4169248da524bdada493db5c4e3d4bc8540b993bd",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\switching_activity.rpt",
+      "source_sha256": "3c9c79f26f1dc98aa8d54cf4169248da524bdada493db5c4e3d4bc8540b993bd",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws16/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "5d48e765d81dda3c834f0895b27002df57b42ff62649ac84131889fe8eed79eb",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\timing.rpt",
+      "source_sha256": "5d48e765d81dda3c834f0895b27002df57b42ff62649ac84131889fe8eed79eb",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws2/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws2/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "e5142176c3d5de3dce03c706e5e8975169e7ae0bdcad9686bd0d812fa8e56db0",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws2\\averaged_power.rpt",
+      "source_sha256": "e5142176c3d5de3dce03c706e5e8975169e7ae0bdcad9686bd0d812fa8e56db0",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws2/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws2/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "079d0d00129ee4eb99e77b9b0cbd2662feee97c7421a9b1cb97e955c76e2d0cd",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws2\\averaged_power_hier.rpt",
+      "source_sha256": "079d0d00129ee4eb99e77b9b0cbd2662feee97c7421a9b1cb97e955c76e2d0cd",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws2/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws2/module_power.rpt",
+      "bytes": 3775,
+      "archive_sha256": "05687643369a27f8dfe0ad23eee9b28ba14e3043fa8d39b6d363d32c8f3bc784",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws2\\module_power.rpt",
+      "source_sha256": "05687643369a27f8dfe0ad23eee9b28ba14e3043fa8d39b6d363d32c8f3bc784",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws2/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws2/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "94686791ace4e1f119a8788e4de79ac05b3e9a4caea2ff29d1466ed19191cede",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws2\\switching_activity.rpt",
+      "source_sha256": "94686791ace4e1f119a8788e4de79ac05b3e9a4caea2ff29d1466ed19191cede",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws2/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws2/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "07b809d4d80c08259b38f926da0b2e50b27444f369423f3bab07c22c7f998ac3",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws2\\timing.rpt",
+      "source_sha256": "07b809d4d80c08259b38f926da0b2e50b27444f369423f3bab07c22c7f998ac3",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws2/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws32/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws32/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "d95bb88995d4f502a798575c222626ecad8c752139647b48840b6f95beb30db0",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws32\\averaged_power.rpt",
+      "source_sha256": "d95bb88995d4f502a798575c222626ecad8c752139647b48840b6f95beb30db0",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws32/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws32/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "2dcda2d39b4dd3c401330f881e821f9c41dce0bf47f324aa342658cca9e8fd33",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws32\\averaged_power_hier.rpt",
+      "source_sha256": "2dcda2d39b4dd3c401330f881e821f9c41dce0bf47f324aa342658cca9e8fd33",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws32/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws32/module_power.rpt",
+      "bytes": 3777,
+      "archive_sha256": "850e06911577cf8bb1959fadb4dc6bbf1fa4a60f3be9385c99f4c324ae3850be",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws32\\module_power.rpt",
+      "source_sha256": "850e06911577cf8bb1959fadb4dc6bbf1fa4a60f3be9385c99f4c324ae3850be",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws32/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws32/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "d9bd485b5b58ebee3e90e335e3537ccd656e33dee0a42507c1054780b01d1b08",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws32\\switching_activity.rpt",
+      "source_sha256": "d9bd485b5b58ebee3e90e335e3537ccd656e33dee0a42507c1054780b01d1b08",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws32/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws32/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "40a4ea4086514ad1b6326fd2df2e48e6a7a9a189f36595e994774f2d8639e43b",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws32\\timing.rpt",
+      "source_sha256": "40a4ea4086514ad1b6326fd2df2e48e6a7a9a189f36595e994774f2d8639e43b",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws32/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws8/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws8/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "16ae3783b6118dd143204696141839be87c6c471fb132430329208c462a29e64",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws8\\averaged_power.rpt",
+      "source_sha256": "16ae3783b6118dd143204696141839be87c6c471fb132430329208c462a29e64",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws8/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws8/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "38efa3528ad36929bc9fc7f01503179c2e5f7265ae9eccc0ce58e76c9cc05c7c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws8\\averaged_power_hier.rpt",
+      "source_sha256": "38efa3528ad36929bc9fc7f01503179c2e5f7265ae9eccc0ce58e76c9cc05c7c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws8/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws8/module_power.rpt",
+      "bytes": 3775,
+      "archive_sha256": "468207ce9dec02fd0ae64fb3abacde31cbab13b348a4e42dc7e0555b3296a956",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws8\\module_power.rpt",
+      "source_sha256": "468207ce9dec02fd0ae64fb3abacde31cbab13b348a4e42dc7e0555b3296a956",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws8/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws8/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "e2f80732065fdcdceb04f4a9bedcc260d8a1fcb918049a17edc3da14fe5abc78",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws8\\switching_activity.rpt",
+      "source_sha256": "e2f80732065fdcdceb04f4a9bedcc260d8a1fcb918049a17edc3da14fe5abc78",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws8/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_2cycle_256_ws8/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "b3fe69e6087da45a77a41cd6d6997f8634910c72e8fe264078cff1501d89fd07",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws8\\timing.rpt",
+      "source_sha256": "b3fe69e6087da45a77a41cd6d6997f8634910c72e8fe264078cff1501d89fd07",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws8/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct100/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct100/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "4898c6f941b4d7924b12c7942db57e79a79b669c6469029936c269c1832990f4",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct100\\averaged_power.rpt",
+      "source_sha256": "4898c6f941b4d7924b12c7942db57e79a79b669c6469029936c269c1832990f4",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct100/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct100/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "41803b9b6652cd552f0764c8889e97aacfb92f499eda3fa862c51e1cb51ad850",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct100\\averaged_power_hier.rpt",
+      "source_sha256": "41803b9b6652cd552f0764c8889e97aacfb92f499eda3fa862c51e1cb51ad850",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct100/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct100/module_power.rpt",
+      "bytes": 3766,
+      "archive_sha256": "674b6c7663e970685fe71464861d9c2f474dc0dcaaf02b9fe359deb02eeb174f",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct100\\module_power.rpt",
+      "source_sha256": "674b6c7663e970685fe71464861d9c2f474dc0dcaaf02b9fe359deb02eeb174f",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct100/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct100/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "57bc501198f2c7e4316137db31fc061c929a358387d4fe2e12db698a32f59722",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct100\\switching_activity.rpt",
+      "source_sha256": "57bc501198f2c7e4316137db31fc061c929a358387d4fe2e12db698a32f59722",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct100/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct100/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "2b44d9c188bfe5a654c9e23ff4b6fec348e00ba3272831d2b996c8bbdf3dcded",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct100\\timing.rpt",
+      "source_sha256": "2b44d9c188bfe5a654c9e23ff4b6fec348e00ba3272831d2b996c8bbdf3dcded",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct100/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct50/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct50/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "ac2035733479d6cd1effdc6c22b8b7d65370d67c85fcb8d8f07ce86b61efb77c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct50\\averaged_power.rpt",
+      "source_sha256": "ac2035733479d6cd1effdc6c22b8b7d65370d67c85fcb8d8f07ce86b61efb77c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct50/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct50/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "b6d44565960fd9aa773c2b7499dd0a5d76ccb16ee084ede3705127f0751d9bbc",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct50\\averaged_power_hier.rpt",
+      "source_sha256": "b6d44565960fd9aa773c2b7499dd0a5d76ccb16ee084ede3705127f0751d9bbc",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct50/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct50/module_power.rpt",
+      "bytes": 3765,
+      "archive_sha256": "85684950243e67f3aceba044561a74219e90ebfd05fc32b727db46d909f3710c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct50\\module_power.rpt",
+      "source_sha256": "85684950243e67f3aceba044561a74219e90ebfd05fc32b727db46d909f3710c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct50/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct50/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "4fa3b1932f3bdad7f67d8732d746c3a0afea34e8fa485b15b386127efc3b8f81",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct50\\switching_activity.rpt",
+      "source_sha256": "4fa3b1932f3bdad7f67d8732d746c3a0afea34e8fa485b15b386127efc3b8f81",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct50/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct50/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "4b660ba473fcd04693f250f02a7ae7f2be6b436c3f26d61ecd7e87bfbc618871",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct50\\timing.rpt",
+      "source_sha256": "4b660ba473fcd04693f250f02a7ae7f2be6b436c3f26d61ecd7e87bfbc618871",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct50/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct70/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct70/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "9549c930b0ff086fa79948d51739ea4bd0241936c28060fe3d7054edba04f587",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct70\\averaged_power.rpt",
+      "source_sha256": "9549c930b0ff086fa79948d51739ea4bd0241936c28060fe3d7054edba04f587",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct70/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct70/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "ae23c6fdd1f6aaed22736a66480468b44bcd328cb71c0e4b0e026f05b7db97c9",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct70\\averaged_power_hier.rpt",
+      "source_sha256": "ae23c6fdd1f6aaed22736a66480468b44bcd328cb71c0e4b0e026f05b7db97c9",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct70/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct70/module_power.rpt",
+      "bytes": 3765,
+      "archive_sha256": "c7906503d33d450848dbbea1955b16f499edd068a151d1324a548f438c9472c8",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct70\\module_power.rpt",
+      "source_sha256": "c7906503d33d450848dbbea1955b16f499edd068a151d1324a548f438c9472c8",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct70/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct70/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "57917484c6e45dfe34639792028b908b839bdf762958ac429fa1a30c872930bd",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct70\\switching_activity.rpt",
+      "source_sha256": "57917484c6e45dfe34639792028b908b839bdf762958ac429fa1a30c872930bd",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct70/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct70/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "9c581fcb0c121a41ce5838f393c14f9c4b9ab50796b9a502c65eaddb0c5ec384",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct70\\timing.rpt",
+      "source_sha256": "9c581fcb0c121a41ce5838f393c14f9c4b9ab50796b9a502c65eaddb0c5ec384",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct70/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct90/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct90/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "ac7cf92e8d34ef15e999afdda1b4a7d20f39092931ccdb445801eaa6dae2b687",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct90\\averaged_power.rpt",
+      "source_sha256": "ac7cf92e8d34ef15e999afdda1b4a7d20f39092931ccdb445801eaa6dae2b687",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct90/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct90/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "5833b10c08e16a3103450cb7ace61c90fce92237604d235d3ae4938f54800a9d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct90\\averaged_power_hier.rpt",
+      "source_sha256": "5833b10c08e16a3103450cb7ace61c90fce92237604d235d3ae4938f54800a9d",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct90/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct90/module_power.rpt",
+      "bytes": 3765,
+      "archive_sha256": "a33a84114a17622b77c8b29a1cd7bf81b7b7a96770426ded047c4854fbd39d25",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct90\\module_power.rpt",
+      "source_sha256": "a33a84114a17622b77c8b29a1cd7bf81b7b7a96770426ded047c4854fbd39d25",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct90/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct90/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "1d69752fc6d039fe59d92354128519d5468045bc1c355aaffe3b9b07415ff013",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct90\\switching_activity.rpt",
+      "source_sha256": "1d69752fc6d039fe59d92354128519d5468045bc1c355aaffe3b9b07415ff013",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct90/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_sparsity_pct90/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "56214725ef00fd3b8afd5c28bdd9b99e9b86d23531a17725b31394f607f61df9",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_sparsity_pct90\\timing.rpt",
+      "source_sha256": "56214725ef00fd3b8afd5c28bdd9b99e9b86d23531a17725b31394f607f61df9",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_sparsity_pct90/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct10/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct10/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "7710f7188395a2fa5645946ff0b956de204b02c85b2dd7451de6ec5041ec1b7b",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct10\\averaged_power.rpt",
+      "source_sha256": "7710f7188395a2fa5645946ff0b956de204b02c85b2dd7451de6ec5041ec1b7b",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct10/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct10/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "1b8771d8d8e24eeea6184c108db88bfdab11cac702e1d1e80d5fa3bc2658f114",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct10\\averaged_power_hier.rpt",
+      "source_sha256": "1b8771d8d8e24eeea6184c108db88bfdab11cac702e1d1e80d5fa3bc2658f114",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct10/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct10/module_power.rpt",
+      "bytes": 3763,
+      "archive_sha256": "1fb93fa93553ded1d1dd7e52ed34f461969030e9256d10e41ead7ff31a262c89",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct10\\module_power.rpt",
+      "source_sha256": "1fb93fa93553ded1d1dd7e52ed34f461969030e9256d10e41ead7ff31a262c89",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct10/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct10/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "ba547066ac7cd946f7799f8b6564dfa28144b6077c3649b09645fe2c230ab721",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct10\\switching_activity.rpt",
+      "source_sha256": "ba547066ac7cd946f7799f8b6564dfa28144b6077c3649b09645fe2c230ab721",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct10/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct10/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "8afa3d4c766c79567d21bfb6bab9a530fbb0023b1c8575b1df75d7189205c789",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct10\\timing.rpt",
+      "source_sha256": "8afa3d4c766c79567d21bfb6bab9a530fbb0023b1c8575b1df75d7189205c789",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct10/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct20/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct20/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "c8d935d90a1fcb66bfa14b650c29102af1d5bf2cfe6d70697b10da5ead92e80c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct20\\averaged_power.rpt",
+      "source_sha256": "c8d935d90a1fcb66bfa14b650c29102af1d5bf2cfe6d70697b10da5ead92e80c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct20/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct20/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "e7fe4e88801f291a676ba9a8ba02991d972597076818d7dd91264e2ae111f5e8",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct20\\averaged_power_hier.rpt",
+      "source_sha256": "e7fe4e88801f291a676ba9a8ba02991d972597076818d7dd91264e2ae111f5e8",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct20/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct20/module_power.rpt",
+      "bytes": 3763,
+      "archive_sha256": "619d6676a46deb59c9fd9bcac5d700303f566f20536e578316ff7b3efb550a17",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct20\\module_power.rpt",
+      "source_sha256": "619d6676a46deb59c9fd9bcac5d700303f566f20536e578316ff7b3efb550a17",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct20/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct20/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "90fa564f437a68f78c2b6ff209361a35bd318d83242f346444514b53e6762125",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct20\\switching_activity.rpt",
+      "source_sha256": "90fa564f437a68f78c2b6ff209361a35bd318d83242f346444514b53e6762125",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct20/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct20/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "3201b69ddcdda814e63a77e3cc843a7a82055a9f1473906bbe76e6faa5c4cd99",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct20\\timing.rpt",
+      "source_sha256": "3201b69ddcdda814e63a77e3cc843a7a82055a9f1473906bbe76e6faa5c4cd99",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct20/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct5/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct5/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "239f6322854a63f57191447e676479bd437feee9247e29060e3866a784b038c2",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct5\\averaged_power.rpt",
+      "source_sha256": "239f6322854a63f57191447e676479bd437feee9247e29060e3866a784b038c2",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct5/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct5/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "ede04745f5ed115bc875fa49ac3e4c5bd888eae6fde8483ec9d7dbfcc3147745",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct5\\averaged_power_hier.rpt",
+      "source_sha256": "ede04745f5ed115bc875fa49ac3e4c5bd888eae6fde8483ec9d7dbfcc3147745",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct5/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct5/module_power.rpt",
+      "bytes": 3762,
+      "archive_sha256": "d40f8ea7db46a2a437cfb967b08e539d5cbf10c672ec60be88e9e5851660de9d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct5\\module_power.rpt",
+      "source_sha256": "d40f8ea7db46a2a437cfb967b08e539d5cbf10c672ec60be88e9e5851660de9d",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct5/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct5/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "94ffc1446c5196015b2dc96e928afd4e9a21324d878075ab9db82e718066f37d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct5\\switching_activity.rpt",
+      "source_sha256": "94ffc1446c5196015b2dc96e928afd4e9a21324d878075ab9db82e718066f37d",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct5/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct5/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "e726997327bd43b7f2bb7a5e641c30d3647eba53376a58b18c676dcc2abd5e59",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct5\\timing.rpt",
+      "source_sha256": "e726997327bd43b7f2bb7a5e641c30d3647eba53376a58b18c676dcc2abd5e59",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct5/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct50/averaged_check_power.rpt",
+      "bytes": 1317988,
+      "archive_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_2cycle_256_ws16\\averaged_check_power.rpt",
+      "source_sha256": "0dccc1519b6445c806b44c4c8be116a22031e510b95d833749f86d609650511c",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_2cycle_256_ws16/averaged_check_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct50/averaged_power.rpt",
+      "bytes": 339207,
+      "archive_sha256": "0d0099b1429fbf8c433b2b805e94e4d304b3ab3c7489ce855b6784cc350348c8",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct50\\averaged_power.rpt",
+      "source_sha256": "0d0099b1429fbf8c433b2b805e94e4d304b3ab3c7489ce855b6784cc350348c8",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct50/averaged_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct50/averaged_power_hier.rpt",
+      "bytes": 71204,
+      "archive_sha256": "66e9f7a5be52db6bcb13a0df57d81907903099ba24402d956851e038395430d8",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct50\\averaged_power_hier.rpt",
+      "source_sha256": "66e9f7a5be52db6bcb13a0df57d81907903099ba24402d956851e038395430d8",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct50/averaged_power_hier.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct50/module_power.rpt",
+      "bytes": 3763,
+      "archive_sha256": "044d8573eae7b60c5ac8f3b61c536de4d12271b5d98d2f113299694b66765089",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct50\\module_power.rpt",
+      "source_sha256": "044d8573eae7b60c5ac8f3b61c536de4d12271b5d98d2f113299694b66765089",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct50/module_power.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct50/switching_activity.rpt",
+      "bytes": 6109,
+      "archive_sha256": "0bf01ac3e5eeff4a85ce6fec83674b02c6a43cc0922fc151ac7ee3ec3fdf4ac8",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct50\\switching_activity.rpt",
+      "source_sha256": "0bf01ac3e5eeff4a85ce6fec83674b02c6a43cc0922fc151ac7ee3ec3fdf4ac8",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct50/switching_activity.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "ptpx/rpt_handcut_ws32_toggle_pct50/timing.rpt",
+      "bytes": 6246,
+      "archive_sha256": "26942d43f1c7ac8a8d246976cec3336dd5bd5bebf5941060f3a78ce8f6254236",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\ptpx\\rpt_handcut_ws32_toggle_pct50\\timing.rpt",
+      "source_sha256": "26942d43f1c7ac8a8d246976cec3336dd5bd5bebf5941060f3a78ce8f6254236",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/ptpx/rpt_handcut_ws32_toggle_pct50/timing.rpt",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4283,
+      "archive_sha256": "62c6ddf1b042cb72cf5d7a64aae09ba45193dd08558341fc8ac3ca58a4f58cbc",
+      "provenance": "adapted_for_current_layout"
+    },
+    {
+      "path": "rtl_W8main_handcut/.gitignore",
+      "bytes": 107,
+      "archive_sha256": "3a27e86bf8ea2e115530799e91e18e2f16b73be15c982c6a00f91308c8be7479",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\.gitignore",
+      "source_sha256": "47c15e8689d23636bc26dac8e29079c0428915cef1159b7018a5d74ae06dbeb6",
+      "provenance": "adapted_for_current_layout"
+    },
+    {
+      "path": "rtl_W8main_handcut/blackbox/MacroWeightSRAM.sv",
+      "bytes": 730,
+      "archive_sha256": "cf24f7fd57432f8f88f6f73f9df88f4d9de1aa7e731fee37b45580fc1d13ae65",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\blackbox\\MacroWeightSRAM.sv",
+      "source_sha256": "cf24f7fd57432f8f88f6f73f9df88f4d9de1aa7e731fee37b45580fc1d13ae65",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/check_csa.tcl",
+      "bytes": 2096,
+      "archive_sha256": "a7399084de2fd6e86a721b443046b35fa146523885a0ac945d7c059c5d50d9b6",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\check_csa.tcl",
+      "source_sha256": "a7399084de2fd6e86a721b443046b35fa146523885a0ac945d7c059c5d50d9b6",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/filelist.f",
+      "bytes": 440,
+      "archive_sha256": "d5489bc2e926a1dc42d5f1075a02611561483a63eed81f242b7d537d8d8a80c3",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\filelist.f",
+      "source_sha256": "d5489bc2e926a1dc42d5f1075a02611561483a63eed81f242b7d537d8d8a80c3",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroClockGate.sv",
+      "bytes": 1325,
+      "archive_sha256": "913af4552ee4b3848fce100440248677a548977979e6570b496f5acd827661e0",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroClockGate.sv",
+      "source_sha256": "913af4552ee4b3848fce100440248677a548977979e6570b496f5acd827661e0",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroCompress42.sv",
+      "bytes": 2907,
+      "archive_sha256": "349539ee6b1f9ae2fa277f56410d2fd3edd24828c66b27c604469c72a4d21331",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroCompress42.sv",
+      "source_sha256": "349539ee6b1f9ae2fa277f56410d2fd3edd24828c66b27c604469c72a4d21331",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroFullWeightPairLUT.sv",
+      "bytes": 4112,
+      "archive_sha256": "939778d140fea8cca4f77826330a12cb6015a19142ee777667d36e47c9b00f0d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroFullWeightPairLUT.sv",
+      "source_sha256": "939778d140fea8cca4f77826330a12cb6015a19142ee777667d36e47c9b00f0d",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroW8MainCorrection.sv",
+      "bytes": 1376,
+      "archive_sha256": "2e6df42c3e928c30f7ded0825b2c8951864f595bd899fa70bcfe2902dc1265de",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroW8MainCorrection.sv",
+      "source_sha256": "2e6df42c3e928c30f7ded0825b2c8951864f595bd899fa70bcfe2902dc1265de",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroW8MainEntry.sv",
+      "bytes": 2248,
+      "archive_sha256": "ba8173c18af1d67b1ad3e6c53333b16f20b313b13b3ec76a8cb200588095204c",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroW8MainEntry.sv",
+      "source_sha256": "ba8173c18af1d67b1ad3e6c53333b16f20b313b13b3ec76a8cb200588095204c",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroW8MainOC.sv",
+      "bytes": 2105,
+      "archive_sha256": "7b8c6f0ad880907d9e03ec2a8fecde43da187ef92145651307309c4d7b38fb37",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroW8MainOC.sv",
+      "source_sha256": "7b8c6f0ad880907d9e03ec2a8fecde43da187ef92145651307309c4d7b38fb37",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroW8MainTree.sv",
+      "bytes": 1207,
+      "archive_sha256": "42be3d76ed8452dfce40a19d62f2001c8de79787237845337ec51751bfdd8dfd",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroW8MainTree.sv",
+      "source_sha256": "42be3d76ed8452dfce40a19d62f2001c8de79787237845337ec51751bfdd8dfd",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroW8MainTreeCSA.sv",
+      "bytes": 62034,
+      "archive_sha256": "e2c18047febdeecc1b407c84928de524d5b1efbb7f8762a7293023412f64efa6",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroW8MainTreeCSA.sv",
+      "source_sha256": "e2c18047febdeecc1b407c84928de524d5b1efbb7f8762a7293023412f64efa6",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/MacroWeightSRAM.sv",
+      "bytes": 909,
+      "archive_sha256": "783d9ee4a5ad494953adcca298a1d9a3b81d924378b4740aad5cbf1db19cc5a1",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\MacroWeightSRAM.sv",
+      "source_sha256": "783d9ee4a5ad494953adcca298a1d9a3b81d924378b4740aad5cbf1db19cc5a1",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/preserve_csa.tcl",
+      "bytes": 761,
+      "archive_sha256": "aca47ee1871d8af6218e8abaffc690facf5712eb9862a3b6dca0eececfe7645e",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\preserve_csa.tcl",
+      "source_sha256": "aca47ee1871d8af6218e8abaffc690facf5712eb9862a3b6dca0eececfe7645e",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/README.md",
+      "bytes": 2268,
+      "archive_sha256": "98492941003170ebcf82a2963da6f30da883bb551f8b8bceded972187e97808d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\README.md",
+      "source_sha256": "fa56124d0b7129b4ab39d4d31f47b08b54837aea8968b7874ec378cda4075208",
+      "provenance": "adapted_for_current_layout"
+    },
+    {
+      "path": "rtl_W8main_handcut/single_macro_pkg.sv",
+      "bytes": 1663,
+      "archive_sha256": "bcef4edfd20ff1542d349d4cf1693bd311fa88d39bdceb99cddccc0fa298a27f",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\single_macro_pkg.sv",
+      "source_sha256": "bcef4edfd20ff1542d349d4cf1693bd311fa88d39bdceb99cddccc0fa298a27f",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "rtl_W8main_handcut/SingleMacro.sv",
+      "bytes": 11321,
+      "archive_sha256": "7f4f71d2b70cea4f227a31ec4b58a2000ada582257e0c728d044511283e35f18",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\SingleMacro.sv",
+      "source_sha256": "7f4f71d2b70cea4f227a31ec4b58a2000ada582257e0c728d044511283e35f18",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/blackbox/MacroWeightSRAM.sv",
+      "bytes": 730,
+      "archive_sha256": "cf24f7fd57432f8f88f6f73f9df88f4d9de1aa7e731fee37b45580fc1d13ae65",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\blackbox\\MacroWeightSRAM.sv",
+      "source_sha256": "cf24f7fd57432f8f88f6f73f9df88f4d9de1aa7e731fee37b45580fc1d13ae65",
+      "previous_archive_path": "rtl_W8main_handcut/blackbox/MacroWeightSRAM.sv",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/dc_SingleMacro_hvt_W8main_handcut_3ns.tcl",
+      "bytes": 4595,
+      "archive_sha256": "6b332f89c76852eb18d608317e9e45afc4d40638127684ef2e651750b506845d",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\dc_SingleMacro_hvt_W8main_handcut_3ns.tcl",
+      "source_sha256": "6b332f89c76852eb18d608317e9e45afc4d40638127684ef2e651750b506845d",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.area",
+      "bytes": 386875,
+      "archive_sha256": "6e5110159e0bb9cfa69c9f49c88a607443120fbe4452ba0278a39d80530c4783",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.area",
+      "source_sha256": "6e5110159e0bb9cfa69c9f49c88a607443120fbe4452ba0278a39d80530c4783",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.constraint",
+      "bytes": 14071,
+      "archive_sha256": "dea4f13805a9dd637de509259054440b6ed0feb2b072edc3bfe1507cb0cd585b",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.constraint",
+      "source_sha256": "dea4f13805a9dd637de509259054440b6ed0feb2b072edc3bfe1507cb0cd585b",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.elements.icg",
+      "bytes": 950,
+      "archive_sha256": "0aca8069b74af560e7829af0ec01115cf2fddc807412504c024d6ce4a178f306",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.elements.icg",
+      "source_sha256": "0aca8069b74af560e7829af0ec01115cf2fddc807412504c024d6ce4a178f306",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.hierarchy.power",
+      "bytes": 463213,
+      "archive_sha256": "9c8772aeb2b85ef3df18be967c2d7a047ed673184977fe37c5244a5e4a789636",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.hierarchy.power",
+      "source_sha256": "9c8772aeb2b85ef3df18be967c2d7a047ed673184977fe37c5244a5e4a789636",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.icg",
+      "bytes": 898,
+      "archive_sha256": "913192d7d606f78a4cf1edb3e2afe460c77c69b0ec0ba6b09d6f7fdd4c76362b",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.icg",
+      "source_sha256": "913192d7d606f78a4cf1edb3e2afe460c77c69b0ec0ba6b09d6f7fdd4c76362b",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.max.timing",
+      "bytes": 13786,
+      "archive_sha256": "cf04dfae86351ab53bc64be68b53c1d441f8e9f10e63ae9600411e65194d257f",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.max.timing",
+      "source_sha256": "cf04dfae86351ab53bc64be68b53c1d441f8e9f10e63ae9600411e65194d257f",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.min.timing",
+      "bytes": 2256,
+      "archive_sha256": "8306d983c22d6ee0f6878537bc7247f46c561f4d89d371e5a294ff42811bb4ba",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.min.timing",
+      "source_sha256": "8306d983c22d6ee0f6878537bc7247f46c561f4d89d371e5a294ff42811bb4ba",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.power",
+      "bytes": 183197,
+      "archive_sha256": "e66de9a6477fc39d0d59ecfa4fc27cdedfa01e7f5aa6ccf7e61716441a33f3dc",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.power",
+      "source_sha256": "e66de9a6477fc39d0d59ecfa4fc27cdedfa01e7f5aa6ccf7e61716441a33f3dc",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.violation",
+      "bytes": 122067,
+      "archive_sha256": "6ff25d444c752ecd5e9749b221c7ea7f24307b13bc52f51761cbb7cb26a5aba8",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.violation",
+      "source_sha256": "6ff25d444c752ecd5e9749b221c7ea7f24307b13bc52f51761cbb7cb26a5aba8",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro_check.rpt",
+      "bytes": 226217,
+      "archive_sha256": "5d1426e209bf5f6abca1078d55037b916f20fc5a2bf4dfe6fdfc7fe4f3a23f58",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro_check.rpt",
+      "source_sha256": "5d1426e209bf5f6abca1078d55037b916f20fc5a2bf4dfe6fdfc7fe4f3a23f58",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro_clock.rpt",
+      "bytes": 601,
+      "archive_sha256": "26e728be211e6d29d6592af36e623c95cbab4e2617c94af0678757bf8c23cc81",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro_clock.rpt",
+      "source_sha256": "26e728be211e6d29d6592af36e623c95cbab4e2617c94af0678757bf8c23cc81",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/reports/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro_port_verbose.rpt",
+      "bytes": 890290,
+      "archive_sha256": "4c83558565c31e312bb303f908e1e76364a864dd9ae08c647e16be008d962e39",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\reports\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro_port_verbose.rpt",
+      "source_sha256": "4c83558565c31e312bb303f908e1e76364a864dd9ae08c647e16be008d962e39",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/syn_files/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.db",
+      "bytes": 9076736,
+      "archive_sha256": "ffe320f6fb9ca1d8d5c4858633bb44dd61b25677035c1259589ece5b9a2ead92",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\syn_files\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.db",
+      "source_sha256": "ffe320f6fb9ca1d8d5c4858633bb44dd61b25677035c1259589ece5b9a2ead92",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/syn_files/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.ddc",
+      "bytes": 9076736,
+      "archive_sha256": "5c5a8786d6525333508a59f7ece02456841031851a7027e4fd18ff4071e4d187",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\syn_files\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.ddc",
+      "source_sha256": "5c5a8786d6525333508a59f7ece02456841031851a7027e4fd18ff4071e4d187",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/syn_files/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.sdc",
+      "bytes": 817,
+      "archive_sha256": "a8c877d5a42455f84f895a62523e46fbdf179a86c83ff6969372512ae2a4a03e",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\syn_files\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.sdc",
+      "source_sha256": "a8c877d5a42455f84f895a62523e46fbdf179a86c83ff6969372512ae2a4a03e",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/syn_files/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.syn.sdf",
+      "bytes": 55801152,
+      "archive_sha256": "8404c1620faf6da53c3e0687aa47e6bcdb75512d765d14a10dac0f1da8e44d67",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\syn_files\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.syn.sdf",
+      "source_sha256": "8404c1620faf6da53c3e0687aa47e6bcdb75512d765d14a10dac0f1da8e44d67",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "syn/syn_files/20261113_221702_333MHz_22nmHVT_TT_W8main_handcut/SingleMacro.syn.v",
+      "bytes": 4607151,
+      "archive_sha256": "723827013b287a6e326ee0255707da13c9a082c4088729c1689379e808e5b550",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\syn\\syn_files\\20261113_221702_333MHz_22nmHVT_TT_W8main_handcut\\SingleMacro.syn.v",
+      "source_sha256": "723827013b287a6e326ee0255707da13c9a082c4088729c1689379e808e5b550",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "tb/SPARSITY_CONTROL.md",
+      "bytes": 4980,
+      "archive_sha256": "0897ee6ce22126f1705509d81cb07d5f633d11c8fb714017b42460aeb1f06f06",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\SPARSITY_CONTROL.md",
+      "source_sha256": "b1f2d766d74e1f0617a8113fef487d186bc280e7c8934d5b10f4fe66c1c162a2",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/SPARSITY_CONTROL.md",
+      "provenance": "adapted_for_current_layout"
+    },
+    {
+      "path": "tb/tb_WeightStationary2cycle_Sparsity.sv",
+      "bytes": 18992,
+      "archive_sha256": "bf76c27ffae4282bc5cfc492a1e2bd4ecfe23d65478060fecb6cebc64ef53d26",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\tb_WeightStationary2cycle_Sparsity.sv",
+      "source_sha256": "bf76c27ffae4282bc5cfc492a1e2bd4ecfe23d65478060fecb6cebc64ef53d26",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/tb_WeightStationary2cycle_Sparsity.sv",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "tb/tb_WeightStationary2cycle_Toggle.sv",
+      "bytes": 20428,
+      "archive_sha256": "622af7c89c6975f89b01fd30889d6c19f2d73bb5f7ec90df9688cbbca187dc0a",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\tb_WeightStationary2cycle_Toggle.sv",
+      "source_sha256": "622af7c89c6975f89b01fd30889d6c19f2d73bb5f7ec90df9688cbbca187dc0a",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/tb_WeightStationary2cycle_Toggle.sv",
+      "provenance": "source_bytes_preserved"
+    },
+    {
+      "path": "tb/TOGGLE_CONTROL.md",
+      "bytes": 5105,
+      "archive_sha256": "f4209a71cf23acc25e59733f6cae1a147ea81374db489c69eca5d8a719333cde",
+      "source": "D:\\Project\\AnkerCIM\\SingleMacro_v1.1\\rtl_W8main_handcut\\verification\\ws\\TOGGLE_CONTROL.md",
+      "source_sha256": "47d4533d48eccc762ec9956efa7ab1465bf7b271a530078f2c57f64bdab5ba9e",
+      "previous_archive_path": "rtl_W8main_handcut/verification/ws/TOGGLE_CONTROL.md",
+      "provenance": "adapted_for_current_layout"
+    }
+  ]
+}

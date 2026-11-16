@@ -1,0 +1,2 @@
+# Preserve archived source and report bytes, including CRLF/LF.
+** -text
