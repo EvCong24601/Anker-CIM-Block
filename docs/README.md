@@ -4,7 +4,8 @@
 
 当前控制/数据寄存器复位统一为低有效异步 `reset_n`，SRAM wrapper没有复位端口或复位访问保护；上层须在复位期间保持SRAM访问无效，见[SRAM接口说明](Cluster_Weight_SRAM_Interface.md)。Word规格、旧日志及本地备份中的原 `reset` 极性不适用于当前接口。
 
-- [当前两拍 Macro 流水、ICG 和 W8A8 逐拍示例](Cluster_Pipeline_ICG.svg)
+- [当前计算流水总览、51 bit 配置对齐与写入拍点](Cluster_Pipeline.svg) · [PNG](Cluster_Pipeline.png)
+- [两拍 Macro 的 ICG 和 W8A8 逐拍示例](Cluster_Pipeline_ICG.svg)
 - [raw接口、数值及迁移](Cluster_Raw_Output.md)
 - [总体控制切换 README](Cluster_Control_Switching_README.md) · [case 切换与 bubble 详细表](Cluster_Control_Switching_README.md#switch-cases)
 - [三通道改版前的资源声明统计](Cluster_DFF_Usage.md)
