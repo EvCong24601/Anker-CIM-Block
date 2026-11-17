@@ -1,5 +1,3 @@
-> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
-
 # Cluster 常规权重 SRAM 读写
 
 单个 Cluster 有 8 个 Macro。每个 Macro 为 256 行 × 128 B，四个本地 OC 共用同一个 8-bit 行地址，每 OC 每行占 32 B。Cluster 总容量为 256 KiB。
@@ -35,7 +33,7 @@ group=0 选择 Macro0…3，group=1 选择 Macro4…7；bank_sel 不表示 Macro
 
 例如C0接受Macro0/row1，C0沿后返回该行且valid=1；C0到C1之间准备Macro1/row2，响应仍为Macro0；C1沿后才切换到Macro1。接收端在valid=1时取数，无响应反压。
 
-CIM刷新在Macro接受输入的边沿同步读SRAM，同沿寄存ACT，下一沿捕获计算结果，保持1T/II1。SRAM访问时钟与计算时钟独立；常规读也必须打开访问时钟。实际SRAM IP替换须满足这个固定读时序。
+CIM 刷新在 Macro 接受输入的 C0 沿同步读 SRAM 并寄存 ACT，C1 保存 CSA 中间结果，C2 保存 CPA 与符号修正后的结果，两拍延迟、II=1。SRAM访问时钟与计算时钟独立；常规读也必须打开访问时钟。实际SRAM IP替换须满足这个固定读时序。
 
 常规访问与 CIM 计算分阶段使用同一 SRAM，无并发双端口能力。片选期间 cmd_ready_o 为零；若常规访问与有效 Command、活动计算批次重叠，仿真报告 CLUSTER_SRAM_PROTOCOL 错误，禁止将其当作静默仲裁。
 
@@ -59,4 +57,4 @@ VCS 从 vcs-rtl 目录执行 `make sram`；或在已完成编译后执行 `make 
 
 TB 文件拆分和采样说明见 [Testbench 阅读指南](Testbench_Guide.md)。
 
-同地址复用依赖SRAM输出在无新读期间保持稳定。常规读恰好读入下一计算地址时，可直接复用；新读取其他地址则覆盖保持行。有效写入后的旧读出不能视为新权重，必须先重新读取。1T/II1与常规口sram_rd_valid时序不变。
+同地址复用依赖SRAM输出在无新读期间保持稳定。常规读恰好读入下一计算地址时，可直接复用；新读取其他地址则覆盖保持行。有效写入后的旧读出不能视为新权重，必须先重新读取。权重刷新或复用均采用相同的两拍计算延迟、II=1；常规口 sram_rd_valid 仍在同步读请求采样沿后生效，不因计算流水增加一级。

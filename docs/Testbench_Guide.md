@@ -1,81 +1,27 @@
-> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前契约见[原始Psum输出](Cluster_Raw_Output.md)。
-
 # Testbench 文件与检查职责
 
-功能源码位于 `RTL/cluster/rtl/` 和 `RTL/macro/rtl/`；TB、include、golden和观察器位于对应的 `tb/`。`.svh` 在module内include，不单独编译，也不形成硬件层次。
+当前正式结果为 raw_psum[1023:0]、psum_valid[31:0]，最多32个物理 lane 有效，无输出反压。TB 通过公开端口检查 signed32 点积、物理 lane 和准确采样沿。RTL 不包含 Requant 参数、运算或 INT8 输出。
 
-## 顶层与观察接口
+## 当前入口
 
-`cluster_top.sv` 是Cluster功能参考顶层，默认启用Requant。正式结果端口为 `requant_data_o[255:0]` 和 `requant_valid_o[31:0]`，最多4个物理lane有效，无下游反压。
+- `tb_Cluster.sv`：七精度、归约分组、OC/enable mask、OS/WS/AS、tmp/Psum、容量及实际门控。
+- `tb_ClusterChannels.sv`：三路独立握手、缺数直通、每路输入归属、任务交接及全部在途约束；输出 `channel_events.csv` 和 `channel_cycles.csv`。
+- `tb_ClusterReduceTree.sv`：组合端点、pair/quad 转发、祖先 mask 消费需求及真实 ICG 保持。
+- `tb_SingleMacro.sv`：完整权重行、ACT 输入、两拍结果、刷新/复用、模式、OC/result mask 及门控。
+- 七个具体 GEMM TB：通过常规 SRAM 口加载权重，输出 raw 矩阵并与 Python 整数点积逐坐标精确比较，见[GEMM 说明](Cluster_GEMM.md)。
 
-raw Psum属于内部计算状态。RTL端口表中的 `psum_data_o/out_valid_o` 声明仅以注释说明，不是可连接端口。四个Cluster TB通过 `dut.raw_data/raw_valid` 建立同名TB别名，用于数值、时序及Psum检查；产品集成无需这些观察信号。
+## 流水检查
 
-- `tb_Cluster.sv`：共享连接、参数和状态；raw-only suite设置ENABLE_REQUANT=0，量化专项覆盖为1。
-- `tb_ClusterReduceTree.sv`：208个归约树、mask和转发ICG检查；独立消费路径模型覆盖父节点屏蔽时的子节点关钟。
-- `tb_ClusterRequant.sv`：17908个整数向量与512个四通道映射向量。
-- 七个具体GEMM TB（三套共用驱动）：13个正向矩阵case与5个AS参数负向case，配置和源文件分工见 [GEMM](Cluster_GEMM.md)。
+SingleMacro 在 n 捕获输入、n+1 捕获 CSA、n+2 捕获结果。相对末次 issue，归约端点在 +3/+4/+5 写 tmp；Psum 路径 +4/+5/+6 写回，下游采样再晚一沿。scoreboard 按 split 结构端点计算，不能按 W 精度或 enable popcount 代替。逐笔配置为51 bit，各级 cfg/phase/Context/Tile 与数据对齐。
 
-## Cluster include
+`pipeline_config` 检查兼容字段及计数切换；`mask_pipeline` 检查 enable/OC 全零、恢复和旧深路径占用；`path_class` 检查同类跨 split、Reduce-1↔2、Reduce-4 和空任务后的在途保护。混合宽度保持同 split 规则。独立点积模型及采样沿检查不从 DUT 存储生成预期值。
 
-- `cluster_reference.svh`：随机输入、精度边界、独立树分组、OC贡献与lane时延。
-- `cluster_driver.svh`：Command握手、完整ACT流、AS地址和 `load_weight_row`；权重逐Macro通过常规WLC口写入并读回校验。
-- `cluster_compute_cases.svh`：case开始日志、矩阵生成与独立点积golden、WLC加载、输入、等待输出、计数和排空。
-- `cluster_scoreboards.svh`：ACT bank、tmp/Psum ICG与保持、逐phase算术历史、Command和内部raw发布。
-- `cluster_requant_cases.svh`：量化golden、参数profile、固定OC索引、1T延迟、输出保持、复位与批次参数边界。
-- `cluster_sram_cases.svh`：逐字节独立镜像、8×256行和16种mask、片选/地址隔离、连续访问、复位保留、写后计算和Hold刷新。
-- `cluster_suites.svh`：默认计算、OC merge、ACT容量、完整ACT、混合Context和输入重叠等场景枚举。
-- `cluster_regression.svh`：initial入口、plusarg分派、CSV创建/关闭、覆盖计数和watchdog。SRAM专项先于默认计算CSV分派。
+## 文件与复现
 
-`monitoring`仅限定计算检查窗口。`expected/lane_due/raw_seen`等是TB状态，不是产品硬件寄存器。golden不读取DUT权重存储来生成预期值。
+`.svh` 在 TB module 内 include，不单独编译；当前文件清单见[源码索引](Source_Map.md)。`*_tb/py` 生成向量和检查结果，不属于功能 RTL。`buffer_schedule.py`、`audit_latency.py` 和 `latency_audit.sv` 属于旧包调度辅助工具，不用于当前三通道拍点结论。
 
-`latency_audit.sv` 通过TB层次观察命令、内部发射与raw完成周期，输出 `latency_audit.csv` 供 `audit_latency.py` 核对，不属于功能RTL。
+当前逐拍表由 `python RTL/cluster/tb/py/generate_readme.py` 生成；该生成器使用 issue 相对拍点，不依赖旧输入包公式。
 
-## SingleMacro include
+本地运行 `python RTL/cluster/tb/py/run_sram_regression.py --csa-golden --case channels --sim-dir ../cluster_tb_work/local_sim/docs_pipeline_20261117`。`--full` 运行目录化全部用例。无工艺库时仅以数学 golden 替换固定 CSA，LUT、CSA 寄存、CPA、配置流水及 ICG 保持真实 RTL；不构成固定单元连线仿真或 STA。
 
-- `macro_reference.svh`：随机输入与完整整数权重解码点积。
-- `macro_driver.svh`：常规写行、Phase输入、气泡、排空、复位和case日志。
-- `macro_scoreboard.svh`：逐OC写镜像、Hold历史、固定一拍结果与数据/标签保持。
-- `macro_negative_cases.svh`：15类协议负向检查，必须命中指定SM_PROTOCOL诊断。
-- `macro_regression.svh`：primitive穷举、256行、七精度、符号/phase/mask、极值、Hold和随机场景。
-
-逐OC SRAM初始化检查位于RTL的仿真检查分支，受SINGLE_MACRO_ASSERTIONS控制，综合时排除。
-
-## 采样、日志与运行
-
-驱动在下降沿更新输入；上升沿前预测握手和运算，NBA后检查寄存器。TB中的短延迟用于避开采样竞争，不代表硬件流水。每个case输出英文 `[CASE_START] time=... ns suite=... description=...`；CMD_SEND和CMD_ACCEPT分别记录驱动时间与真正接受时间。
-
-从 `vcs-rtl/` 执行 `make run CASE=...`，或用 `make regression` 运行135项，其中90项为预期拒绝。`requant_context`覆盖OS1/OS2、两种scale模式和串行批次之间的独立Context参数。完整变量、文件列表、精确检查规则和FSDB命名由 [VCS说明](../vcs-rtl/README.md) 统一定义。
-
-协议与容量见 [输入时序](Cluster_Input_Overlap.md)，常规读写见 [SRAM接口](Cluster_Weight_SRAM_Interface.md)，量化参数及输出寄存规则见 [Requant](Cluster_Requant.md)。
-
-## Context与时钟检查
-
-`cluster_context_buffer_cases.svh`检查固定Context参数槽、七精度AS16/AS8、两种scale模式及接收未结束时已经发射。`cluster_gate_checks.svh`检查Macro三个时钟域、共享路径标签及INT8逐lane时钟，以及per-tensor关闭的三组scale寄存器保持。地址深度1的A4专项独立验证旁路；所有AS精度均有AS17容量拒绝。
-
-常规SRAM驱动在下降沿给地址，上升沿采样后比较读回；计算Macro延迟保持1T。所有AS采用Slice→Context，OS1 A8/A16也校验Psum历史。
-
-完整验证条件、门控开关对照及证据见[验证清单](Cluster_Verification.md)。
-
-`cluster_gate_equivalence.svh`在CHECK_GATE_EQUIVALENCE=1时实例化全ICG旁路镜像，逐拍比较调度、Macro/归约、tmp/Psum、量化参数和raw/INT8，包含无效lane保持值。八个gate_equiv用例同时运行原有golden检查。
-
-cluster_completion_checks.svh独立维护逐Context/lane预留与完成状态，检查重复发布、未预留输出和提前结束批次；这些数组只属于TB。cluster_top使用三条归约路径的末Context完成位关闭批次，TB同时核对所有Context/lane均完成。
-
-cluster_gate_checks.svh检查每OC共享加法器的fusion/acc请求互斥及空闲操作数隔离。tb_ClusterRequant.sv明确驱动内部group_sel_i，覆盖高位置组、OC0屏蔽、空mask和per-tensor/per-channel参数顺序。归约树独立测试及门控镜像仍核对提前一拍的OC请求。
-
-`cluster_empty_batch_cases.svh`负责零输出批次与有效批次连续切换，捕获沿的门控请求由`cluster_gate_checks.svh`与实际消费逐lane比对。`requant_full_shift`复用Context参数测试，参考计算采用TB专用576位整数；独立Python向量覆盖全部INT10编码。
-
-## Per-tensor外部ZP修正
-
-`requant_tb_helpers.svh`提供TB专用signed扩位加ZP及INT8饱和。三个GEMM scoreboard先逐元素核对`cim_golden.hex`，仅per-tensor再按真实输出列n取`zp[n]`修正，与`quant_golden.hex`对比。observed矩阵与quant事件记录的是TB修正值，CIM输出保持检查仍直接读取DUT。per-channel直接比较DUT输出，数值流程不变。
-
-`tb_ClusterRequant.sv`对每个原始整数向量分别验证per-channel原公式、忽略X ZP的per-tensor输出，以及TB外部修正结果；四通道向量仍覆盖稀疏mask及高位置组。AS Context测试在per-tensor后续K Tile把未使用ZP改为X，验证不会误拒绝或串入数据；per-channel继续检查跨Tile ZP一致性。
-
-Per-tensor整个zero-point buffer关钟：AS Context ZP使用`deep_zp_clock`（复用现有`channel_scale_clock`门控域），批次ZP使用`batch_zp_clock`（复用`batch_channel_clock`）。mode=0两者均无时钟脉冲；共享第0项scale仍使用自己的时钟，不受影响。mode=1维持原ZP加载、保持和算术结果；异步复位仍有效。不新增ICG或修改配置容量。TB检查实际ZP时钟电平及存储保持，门控/旁路镜像继续逐拍对照。
-
-## Requant 补偿参数的整数定义和检查顺序
-
-两种模式的merged ZP均为生成端已round的signed INT32输出域补偿：`ZP_n=Z_y_reference[n]+R((-ACT_zp×sum(Wq[:,n]))×S_hat_n)`。per-tensor TB在CIM饱和INT8输出之后，按逻辑channel取ZP，符号扩位至longint signed相加、再次clip；没有额外round。per-channel由RTL在缩放round后加ZP并clip，TB不重复补偿。
-
-检查顺序为raw对raw_golden、CIM端口对cim_golden、per-tensor TB修正结果对quant_golden；per-channel直接对quant_golden。保留original_quant_reference作算法差异统计，不将原算法差异当作新接口的容差。DUT的valid、时序、复位和保持始终直接检查硬件信号，observed矩阵及quant事件中的per-tensor值为TB修正值。
-
-INT32 ZP不先clip成INT8，TB加法先扩位以避免回绕；不能将ZP移入round改变半值跨零语义，也不能把累加器域D误作输出域ZP。完整数学推导及参考C++的指数到RTL shift转换见Block Spec第6.2节与[Requant说明](Cluster_Requant.md)。
+实测图使用同一编译快照运行 `vsim -c -lib work tb_ClusterChannels +TIMING_FIGURE +DATA_DIR=<输出目录> -do "run -all; quit -code 0"`，需在快照目录执行。C133～C154 来自该定向激励，不能作为任意驱动的固定绝对周期。

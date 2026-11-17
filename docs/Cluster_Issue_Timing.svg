@@ -1,368 +1,299 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="990" viewBox="0 0 1600 990" role="img" aria-labelledby="title desc"><title id="title">Cluster 的逐 issue 流水与 ready/valid 握手</title><desc id="desc">同一段仿真中先后出现连续发射、缺权重地址、缺激活以及不同配置排空。每一行只跟踪一次 issue，实线框表示寄存器写入。</desc><style>text{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif}</style>
-<rect x="0" y="0" width="1600" height="990" rx="0" fill="#fff"/>
-<text x="38" y="53" fill="#153348" font-size="36" font-weight="700" text-anchor="start">Cluster 逐拍流水图</text>
-<text x="39" y="88" fill="#153348" font-size="18" font-weight="400" text-anchor="start">A1–A4 共用相同 ctrl：W4A4，双 Macro 归约，OS=1。B1 切换为四 Macro 归约，OS=2。两种配置均为 WS=AS=1。</text>
-<text x="1561" y="51" fill="#526978" font-size="17" font-weight="400" text-anchor="end" style="font-family:Consolas,monospace">ModelSim  /  C133–C152</text>
-<line x1="39" y1="107" x2="1564" y2="107" stroke="#dce5e9" stroke-width="1"/>
-<text x="39" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="start">上升沿 / cycle</text>
-<text x="237" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">133</text>
-<line x1="237" y1="154" x2="237" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="305" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">134</text>
-<line x1="305" y1="154" x2="305" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="373" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">135</text>
-<line x1="373" y1="154" x2="373" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="441" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">136</text>
-<line x1="441" y1="154" x2="441" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="509" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">137</text>
-<line x1="509" y1="154" x2="509" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="577" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">138</text>
-<line x1="577" y1="154" x2="577" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="645" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">139</text>
-<line x1="645" y1="154" x2="645" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="713" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">140</text>
-<line x1="713" y1="154" x2="713" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="781" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">141</text>
-<line x1="781" y1="154" x2="781" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="849" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">142</text>
-<line x1="849" y1="154" x2="849" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="917" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">143</text>
-<line x1="917" y1="154" x2="917" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="985" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">144</text>
-<line x1="985" y1="154" x2="985" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1053" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">145</text>
-<line x1="1053" y1="154" x2="1053" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1121" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">146</text>
-<line x1="1121" y1="154" x2="1121" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1189" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">147</text>
-<line x1="1189" y1="154" x2="1189" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1257" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">148</text>
-<line x1="1257" y1="154" x2="1257" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1325" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">149</text>
-<line x1="1325" y1="154" x2="1325" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1393" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">150</text>
-<line x1="1393" y1="154" x2="1393" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1461" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">151</text>
-<line x1="1461" y1="154" x2="1461" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1529" y="142" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">152</text>
-<line x1="1529" y1="154" x2="1529" y2="509" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="39" y="179" fill="#153348" font-size="17" font-weight="700" text-anchor="start">前端状态</text>
-<rect x="205" y="156" width="64" height="32" rx="0" fill="#eaf0f4"/>
-<text x="237" y="178" fill="#526978" font-size="14" font-weight="600" text-anchor="middle">装入</text>
-<rect x="273" y="156" width="132" height="32" rx="0" fill="#e4f3ee"/>
-<text x="339" y="178" fill="#08785d" font-size="14" font-weight="600" text-anchor="middle">连续 issue</text>
-<rect x="409" y="156" width="132" height="32" rx="0" fill="#fff1d9"/>
-<text x="475" y="178" fill="#8d5a16" font-size="14" font-weight="600" text-anchor="middle">缺 weight</text>
-<rect x="545" y="156" width="64" height="32" rx="0" fill="#e4f3ee"/>
-<text x="577" y="178" fill="#08785d" font-size="14" font-weight="600" text-anchor="middle">A4 cmd</text>
-<rect x="613" y="156" width="64" height="32" rx="0" fill="#eaf0f4"/>
-<text x="645" y="178" fill="#526978" font-size="14" font-weight="600" text-anchor="middle">A4 地址</text>
-<rect x="681" y="156" width="132" height="32" rx="0" fill="#fff1d9"/>
-<text x="747" y="178" fill="#8d5a16" font-size="14" font-weight="600" text-anchor="middle">缺 ACT</text>
-<rect x="817" y="156" width="64" height="32" rx="0" fill="#e4f3ee"/>
-<text x="849" y="178" fill="#08785d" font-size="14" font-weight="600" text-anchor="middle">A 直通</text>
-<rect x="885" y="156" width="200" height="32" rx="0" fill="#f1e9f5"/>
-<text x="985" y="178" fill="#795488" font-size="14" font-weight="600" text-anchor="middle">A → B 排空</text>
-<rect x="1089" y="156" width="132" height="32" rx="0" fill="#e4f3ee"/>
-<text x="1155" y="178" fill="#08785d" font-size="14" font-weight="600" text-anchor="middle">连续 issue</text>
-<rect x="1225" y="156" width="336" height="32" rx="0" fill="#f2f5f6"/>
-<text x="1393" y="178" fill="#526978" font-size="14" font-weight="600" text-anchor="middle">发射结束，B1 继续写回</text>
-<text x="39" y="214" fill="#153348" font-size="17" font-weight="700" text-anchor="start" style="font-family:Consolas,monospace">issue</text>
-<text x="237" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="305" y="214" fill="#08785d" font-size="16" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="373" y="214" fill="#08785d" font-size="16" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="441" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="509" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="577" y="214" fill="#08785d" font-size="16" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="645" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="713" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="781" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="849" y="214" fill="#08785d" font-size="16" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="917" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="985" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1053" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1121" y="214" fill="#08785d" font-size="16" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1189" y="214" fill="#08785d" font-size="16" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1257" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1325" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1393" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1461" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1529" y="214" fill="#94a6b0" font-size="16" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<line x1="39" y1="228" x2="1564" y2="228" stroke="#dce5e9" stroke-width="1"/>
-<text x="39" y="258" fill="#153348" font-size="18" font-weight="700" text-anchor="start">A1</text>
-<text x="83" y="258" fill="#526978" font-size="15" font-weight="400" text-anchor="start" style="font-family:Consolas,monospace">tile 0  ·  C134</text>
-<rect x="278" y="240" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="305" y="258" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">IN</text>
-<rect x="346" y="240" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="373" y="258" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">MAC</text>
-<rect x="414" y="240" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="441" y="258" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">TMP</text>
-<line x1="441" y1="271" x2="509" y2="271" stroke="#08785d" stroke-width="3"/>
-<circle cx="509" cy="271" r="3.7" fill="#08785d"/>
-<text x="39" y="303" fill="#153348" font-size="18" font-weight="700" text-anchor="start">A2</text>
-<text x="83" y="303" fill="#526978" font-size="15" font-weight="400" text-anchor="start" style="font-family:Consolas,monospace">tile 0  ·  C135</text>
-<rect x="346" y="285" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="373" y="303" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">IN</text>
-<rect x="414" y="285" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="441" y="303" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">MAC</text>
-<rect x="482" y="285" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="509" y="303" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">TMP</text>
-<line x1="509" y1="316" x2="577" y2="316" stroke="#08785d" stroke-width="3"/>
-<circle cx="577" cy="316" r="3.7" fill="#08785d"/>
-<text x="39" y="348" fill="#153348" font-size="18" font-weight="700" text-anchor="start">A3</text>
-<text x="83" y="348" fill="#526978" font-size="15" font-weight="400" text-anchor="start" style="font-family:Consolas,monospace">tile 0  ·  C138</text>
-<rect x="550" y="330" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="577" y="348" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">IN</text>
-<rect x="618" y="330" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="645" y="348" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">MAC</text>
-<rect x="686" y="330" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="713" y="348" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">TMP</text>
-<line x1="713" y1="361" x2="781" y2="361" stroke="#08785d" stroke-width="3"/>
-<circle cx="781" cy="361" r="3.7" fill="#08785d"/>
-<text x="39" y="393" fill="#153348" font-size="18" font-weight="700" text-anchor="start">A4</text>
-<text x="83" y="393" fill="#526978" font-size="15" font-weight="400" text-anchor="start" style="font-family:Consolas,monospace">tile 0  ·  C142</text>
-<rect x="822" y="375" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="849" y="393" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">IN</text>
-<rect x="890" y="375" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="917" y="393" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">MAC</text>
-<rect x="958" y="375" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="985" y="393" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">TMP</text>
-<line x1="985" y1="406" x2="1053" y2="406" stroke="#08785d" stroke-width="3"/>
-<circle cx="1053" cy="406" r="3.7" fill="#08785d"/>
-<text x="39" y="438" fill="#153348" font-size="18" font-weight="700" text-anchor="start">B1</text>
-<text x="83" y="438" fill="#526978" font-size="15" font-weight="400" text-anchor="start" style="font-family:Consolas,monospace">tile 0  ·  C146</text>
-<rect x="1094" y="420" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="1121" y="438" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">IN</text>
-<rect x="1162" y="420" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="1189" y="438" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">MAC</text>
-<rect x="1230" y="420" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="1257" y="438" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">PAIR</text>
-<rect x="1298" y="420" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="1325" y="438" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">TMP</text>
-<rect x="1366" y="420" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="1393" y="438" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">PSUM</text>
-<text x="39" y="483" fill="#153348" font-size="18" font-weight="700" text-anchor="start">B1</text>
-<text x="83" y="483" fill="#526978" font-size="15" font-weight="400" text-anchor="start" style="font-family:Consolas,monospace">tile 1  ·  C147</text>
-<rect x="1162" y="465" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="1189" y="483" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">IN</text>
-<rect x="1230" y="465" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="1257" y="483" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">MAC</text>
-<rect x="1298" y="465" width="54" height="25" rx="2" fill="#edf4f8" stroke="#5e8198" stroke-width="1.8"/>
-<text x="1325" y="483" fill="#225b84" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">PAIR</text>
-<rect x="1366" y="465" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="1393" y="483" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">TMP</text>
-<rect x="1434" y="465" width="54" height="25" rx="2" fill="#e8f5ee" stroke="#388168" stroke-width="1.8"/>
-<text x="1461" y="483" fill="#08785d" font-size="15" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">PSUM</text>
-<line x1="1461" y1="496" x2="1529" y2="496" stroke="#08785d" stroke-width="3"/>
-<circle cx="1529" cy="496" r="3.7" fill="#08785d"/>
-<line x1="39" y1="510" x2="1564" y2="510" stroke="#dce5e9" stroke-width="1"/>
-<text x="39" y="541" fill="#153348" font-size="17" font-weight="700" text-anchor="start">实线方框仅表示该沿写入的 DFF。</text>
-<text x="316" y="541" fill="#153348" font-size="16" font-weight="400" text-anchor="start">IN · Macro 输入</text>
-<text x="493" y="541" fill="#153348" font-size="16" font-weight="400" text-anchor="start">MAC · Macro 局部结果</text>
-<text x="727" y="541" fill="#153348" font-size="16" font-weight="400" text-anchor="start">PAIR · 两路部分和</text>
-<text x="933" y="541" fill="#153348" font-size="16" font-weight="400" text-anchor="start">TMP / PSUM · 对应累加存储</text>
-<line x1="39" y1="561" x2="80" y2="561" stroke="#08785d" stroke-width="3"/>
-<circle cx="80" cy="561" r="3.7" fill="#08785d"/>
-<text x="95" y="567" fill="#526978" font-size="16" font-weight="400" text-anchor="start">绿色横线标出本行的 psum_valid 有效区间，右端圆点为接收方采样沿。B1 的 tile 0 只更新部分和。</text>
-<text x="39" y="618" fill="#153348" font-size="24" font-weight="700" text-anchor="start">输入握手与输出有效位</text>
-<text x="363" y="618" fill="#526978" font-size="17" font-weight="400" text-anchor="start">输入行取上升沿前的值。ready 行的蓝点表示该通道在此沿完成握手。</text>
-<text x="39" y="656" fill="#153348" font-size="16" font-weight="700" text-anchor="start">上升沿 / cycle</text>
-<text x="237" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">133</text>
-<line x1="237" y1="667" x2="237" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="305" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">134</text>
-<line x1="305" y1="667" x2="305" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="373" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">135</text>
-<line x1="373" y1="667" x2="373" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="441" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">136</text>
-<line x1="441" y1="667" x2="441" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="509" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">137</text>
-<line x1="509" y1="667" x2="509" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="577" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">138</text>
-<line x1="577" y1="667" x2="577" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="645" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">139</text>
-<line x1="645" y1="667" x2="645" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="713" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">140</text>
-<line x1="713" y1="667" x2="713" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="781" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">141</text>
-<line x1="781" y1="667" x2="781" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="849" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">142</text>
-<line x1="849" y1="667" x2="849" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="917" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">143</text>
-<line x1="917" y1="667" x2="917" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="985" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">144</text>
-<line x1="985" y1="667" x2="985" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1053" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">145</text>
-<line x1="1053" y1="667" x2="1053" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1121" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">146</text>
-<line x1="1121" y1="667" x2="1121" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1189" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">147</text>
-<line x1="1189" y1="667" x2="1189" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1257" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">148</text>
-<line x1="1257" y1="667" x2="1257" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1325" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">149</text>
-<line x1="1325" y1="667" x2="1325" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1393" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">150</text>
-<line x1="1393" y1="667" x2="1393" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1461" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">151</text>
-<line x1="1461" y1="667" x2="1461" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="1529" y="656" fill="#526978" font-size="15" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">152</text>
-<line x1="1529" y1="667" x2="1529" y2="879" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 5"/>
-<text x="39" y="688" fill="#153348" font-size="17" font-weight="600" text-anchor="start" style="font-family:Consolas,monospace">cmd_valid_i</text>
-<text x="237" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="305" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="373" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="441" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="509" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="577" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="645" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="713" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="781" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="849" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="917" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="985" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1053" y="688" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1121" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1189" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1257" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1325" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1393" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1461" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1529" y="688" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="39" y="715" fill="#153348" font-size="17" font-weight="600" text-anchor="start" style="font-family:Consolas,monospace">cmd_ready_o</text>
-<text x="237" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="249" cy="710" r="3" fill="#225b84"/>
-<text x="305" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="317" cy="710" r="3" fill="#225b84"/>
-<text x="373" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="385" cy="710" r="3" fill="#225b84"/>
-<text x="441" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="509" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="577" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="589" cy="710" r="3" fill="#225b84"/>
-<text x="645" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="713" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="781" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="849" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="917" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="985" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1053" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="1065" cy="710" r="3" fill="#225b84"/>
-<text x="1121" y="715" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1189" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1257" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1325" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1393" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1461" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1529" y="715" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<line x1="39" y1="725" x2="1564" y2="725" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 4"/>
-<text x="39" y="747" fill="#153348" font-size="17" font-weight="600" text-anchor="start" style="font-family:Consolas,monospace">weight_valid_i</text>
-<text x="237" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="305" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="373" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="441" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="509" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="577" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="645" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="713" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="781" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="849" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="917" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="985" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1053" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1121" y="747" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1189" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1257" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1325" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1393" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1461" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1529" y="747" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="39" y="774" fill="#153348" font-size="17" font-weight="600" text-anchor="start" style="font-family:Consolas,monospace">weight_ready_o</text>
-<text x="237" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="249" cy="769" r="3" fill="#225b84"/>
-<text x="305" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="317" cy="769" r="3" fill="#225b84"/>
-<text x="373" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="441" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="509" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="577" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="589" cy="769" r="3" fill="#225b84"/>
-<text x="645" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="657" cy="769" r="3" fill="#225b84"/>
-<text x="713" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="781" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="849" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="917" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="985" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1053" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="1065" cy="769" r="3" fill="#225b84"/>
-<text x="1121" y="774" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="1133" cy="769" r="3" fill="#225b84"/>
-<text x="1189" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1257" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1325" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1393" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1461" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1529" y="774" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<line x1="39" y1="784" x2="1564" y2="784" stroke="#dce5e9" stroke-width="1" stroke-dasharray="2 4"/>
-<text x="39" y="806" fill="#153348" font-size="17" font-weight="600" text-anchor="start" style="font-family:Consolas,monospace">act_valid_i</text>
-<text x="237" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="305" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="373" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="441" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="509" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="577" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="645" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="713" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="781" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="849" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="917" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="985" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1053" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1121" y="806" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="1189" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1257" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1325" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1393" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1461" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1529" y="806" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="39" y="833" fill="#153348" font-size="17" font-weight="600" text-anchor="start" style="font-family:Consolas,monospace">act_ready_o</text>
-<text x="237" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="249" cy="828" r="3" fill="#225b84"/>
-<text x="305" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="317" cy="828" r="3" fill="#225b84"/>
-<text x="373" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="385" cy="828" r="3" fill="#225b84"/>
-<text x="441" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="509" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="577" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="645" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="713" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="781" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<text x="849" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="861" cy="828" r="3" fill="#225b84"/>
-<text x="917" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="985" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1053" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="1065" cy="828" r="3" fill="#225b84"/>
-<text x="1121" y="833" fill="#153348" font-size="17" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">1</text>
-<circle cx="1133" cy="828" r="3" fill="#225b84"/>
-<text x="1189" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1257" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1325" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1393" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1461" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="1529" y="833" fill="#94a6b0" font-size="17" font-weight="400" text-anchor="middle" style="font-family:Consolas,monospace">0</text>
-<text x="39" y="878" fill="#153348" font-size="17" font-weight="700" text-anchor="start" style="font-family:Consolas,monospace">psum_valid[31:0]</text>
-<text x="475" y="851" fill="#08785d" font-size="14" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">FFFF</text>
-<circle cx="509" cy="856" r="3" fill="#08785d"/>
-<text x="543" y="851" fill="#08785d" font-size="14" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">FFFF</text>
-<circle cx="577" cy="856" r="3" fill="#08785d"/>
-<text x="747" y="851" fill="#08785d" font-size="14" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">FFFF</text>
-<circle cx="781" cy="856" r="3" fill="#08785d"/>
-<text x="1019" y="851" fill="#08785d" font-size="14" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">FFFF</text>
-<circle cx="1053" cy="856" r="3" fill="#08785d"/>
-<text x="1495" y="851" fill="#08785d" font-size="14" font-weight="700" text-anchor="middle" style="font-family:Consolas,monospace">FF</text>
-<circle cx="1529" cy="856" r="3" fill="#08785d"/>
-<path d="M 237 879 V879 H305 V879 H373 V879 H441 V856 H509 V856 H577 V879 H645 V879 H713 V856 H781 V879 H849 V879 H917 V879 H985 V856 H1053 V879 H1121 V879 H1189 V879 H1257 V879 H1325 V879 H1393 V879 H1461 V856 H1529 V879 H1569" fill="none" stroke="#08785d" stroke-width="2.4"/>
-<text x="39" y="915" fill="#153348" font-size="17" font-weight="400" text-anchor="start">输出行按沿后电平绘制，掩码为十六进制。C136–C138 连续有效两个周期，A1、A2 分别在 C137、C138 采样。</text>
-<text x="39" y="949" fill="#153348" font-size="17" font-weight="400" text-anchor="start">C138 同沿接收 A4 的 cmd，并用迟到的地址发射 A3。C139 接收 A4 自己的地址，C142 收到 ACT 并发射 A4。C145 采样 A4 后切换到 B1。</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="2160" height="1180" viewBox="0 0 2160 1180" role="img"><title>Cluster 三通道实测流水与交接</title>
+<defs><marker id="a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#486271"/></marker></defs>
+<style>text{font-family:"Microsoft YaHei","Segoe UI",sans-serif;fill:#17394a}.title{font-size:36px;font-weight:700}.sub{font-size:18px}.head{font-size:23px;font-weight:700}.body{font-size:18px}.small{font-size:16px}.mono{font:17px Consolas,"Microsoft YaHei",monospace}.stage{font:600 17px Consolas,"Microsoft YaHei",monospace}.dff{fill:#eaf3f8;stroke:#386885;stroke-width:1.7}.comb{fill:#fafbfa;stroke:#657a82;stroke-width:1.7;stroke-dasharray:6 4}.cell{fill:#eff4f7}.write{fill:#e3f3ed}.psum{fill:#fbefdb}.sample{fill:#dcebe5}.panel{fill:#fafcfc;stroke:#d5dfe4}.data{fill:none;stroke:#486271;stroke-width:2}.rule{stroke:#d5dfe4;stroke-width:1}</style>
+<rect width="2160" height="1180" fill="white"/>
+<text x="40" y="55" class="title" text-anchor="start">Cluster 三通道实测流水与交接</text>
+<text x="40" y="94" class="sub" text-anchor="start">A1–A4：W4A4、两路归约、OS=WS=AS=1；B1：四路归约、OS=2。命令均为 102 bit。</text>
+<line x1="40" y1="118" x2="2120" y2="118" class="rule"/>
+<text x="40" y="159" class="body" text-anchor="start">实线方格标出寄存器写入沿；SAMP 标出下游采样沿。绝对周期来自当前 TIMING_FIGURE 激励。</text>
+<text x="323" y="202" class="stage" text-anchor="middle">C133</text>
+<text x="405" y="202" class="stage" text-anchor="middle">C134</text>
+<text x="487" y="202" class="stage" text-anchor="middle">C135</text>
+<text x="569" y="202" class="stage" text-anchor="middle">C136</text>
+<text x="651" y="202" class="stage" text-anchor="middle">C137</text>
+<text x="733" y="202" class="stage" text-anchor="middle">C138</text>
+<text x="815" y="202" class="stage" text-anchor="middle">C139</text>
+<text x="897" y="202" class="stage" text-anchor="middle">C140</text>
+<text x="979" y="202" class="stage" text-anchor="middle">C141</text>
+<text x="1061" y="202" class="stage" text-anchor="middle">C142</text>
+<text x="1143" y="202" class="stage" text-anchor="middle">C143</text>
+<text x="1225" y="202" class="stage" text-anchor="middle">C144</text>
+<text x="1307" y="202" class="stage" text-anchor="middle">C145</text>
+<text x="1389" y="202" class="stage" text-anchor="middle">C146</text>
+<text x="1471" y="202" class="stage" text-anchor="middle">C147</text>
+<text x="1553" y="202" class="stage" text-anchor="middle">C148</text>
+<text x="1635" y="202" class="stage" text-anchor="middle">C149</text>
+<text x="1717" y="202" class="stage" text-anchor="middle">C150</text>
+<text x="1799" y="202" class="stage" text-anchor="middle">C151</text>
+<text x="1881" y="202" class="stage" text-anchor="middle">C152</text>
+<text x="1963" y="202" class="stage" text-anchor="middle">C153</text>
+<text x="2045" y="202" class="stage" text-anchor="middle">C154</text>
+<text x="40" y="247" class="head" text-anchor="start">A1</text>
+<text x="40" y="269" class="small" text-anchor="start">issue C134</text>
+<rect x="367" y="220" width="76" height="42" rx="4" class="cell"/>
+<text x="405" y="247" class="stage" text-anchor="middle">IN</text>
+<rect x="449" y="220" width="76" height="42" rx="4" class="cell"/>
+<text x="487" y="247" class="stage" text-anchor="middle">CSA</text>
+<rect x="531" y="220" width="76" height="42" rx="4" class="cell"/>
+<text x="569" y="247" class="stage" text-anchor="middle">MAC</text>
+<rect x="613" y="220" width="76" height="42" rx="4" class="write"/>
+<text x="651" y="247" class="stage" text-anchor="middle">TMP</text>
+<rect x="695" y="220" width="76" height="42" rx="4" class="sample"/>
+<text x="733" y="247" class="stage" text-anchor="middle">SAMP</text>
+<text x="40" y="310" class="head" text-anchor="start">A2</text>
+<text x="40" y="332" class="small" text-anchor="start">issue C135</text>
+<rect x="449" y="283" width="76" height="42" rx="4" class="cell"/>
+<text x="487" y="310" class="stage" text-anchor="middle">IN</text>
+<rect x="531" y="283" width="76" height="42" rx="4" class="cell"/>
+<text x="569" y="310" class="stage" text-anchor="middle">CSA</text>
+<rect x="613" y="283" width="76" height="42" rx="4" class="cell"/>
+<text x="651" y="310" class="stage" text-anchor="middle">MAC</text>
+<rect x="695" y="283" width="76" height="42" rx="4" class="write"/>
+<text x="733" y="310" class="stage" text-anchor="middle">TMP</text>
+<rect x="777" y="283" width="76" height="42" rx="4" class="sample"/>
+<text x="815" y="310" class="stage" text-anchor="middle">SAMP</text>
+<text x="40" y="373" class="head" text-anchor="start">A3</text>
+<text x="40" y="395" class="small" text-anchor="start">issue C138</text>
+<rect x="695" y="346" width="76" height="42" rx="4" class="cell"/>
+<text x="733" y="373" class="stage" text-anchor="middle">IN</text>
+<rect x="777" y="346" width="76" height="42" rx="4" class="cell"/>
+<text x="815" y="373" class="stage" text-anchor="middle">CSA</text>
+<rect x="859" y="346" width="76" height="42" rx="4" class="cell"/>
+<text x="897" y="373" class="stage" text-anchor="middle">MAC</text>
+<rect x="941" y="346" width="76" height="42" rx="4" class="write"/>
+<text x="979" y="373" class="stage" text-anchor="middle">TMP</text>
+<rect x="1023" y="346" width="76" height="42" rx="4" class="sample"/>
+<text x="1061" y="373" class="stage" text-anchor="middle">SAMP</text>
+<text x="40" y="436" class="head" text-anchor="start">A4</text>
+<text x="40" y="458" class="small" text-anchor="start">issue C142</text>
+<rect x="1023" y="409" width="76" height="42" rx="4" class="cell"/>
+<text x="1061" y="436" class="stage" text-anchor="middle">IN</text>
+<rect x="1105" y="409" width="76" height="42" rx="4" class="cell"/>
+<text x="1143" y="436" class="stage" text-anchor="middle">CSA</text>
+<rect x="1187" y="409" width="76" height="42" rx="4" class="cell"/>
+<text x="1225" y="436" class="stage" text-anchor="middle">MAC</text>
+<rect x="1269" y="409" width="76" height="42" rx="4" class="write"/>
+<text x="1307" y="436" class="stage" text-anchor="middle">TMP</text>
+<rect x="1351" y="409" width="76" height="42" rx="4" class="sample"/>
+<text x="1389" y="436" class="stage" text-anchor="middle">SAMP</text>
+<text x="40" y="499" class="head" text-anchor="start">B1 · Tile0</text>
+<text x="40" y="521" class="small" text-anchor="start">issue C147</text>
+<rect x="1433" y="472" width="76" height="42" rx="4" class="cell"/>
+<text x="1471" y="499" class="stage" text-anchor="middle">IN</text>
+<rect x="1515" y="472" width="76" height="42" rx="4" class="cell"/>
+<text x="1553" y="499" class="stage" text-anchor="middle">CSA</text>
+<rect x="1597" y="472" width="76" height="42" rx="4" class="cell"/>
+<text x="1635" y="499" class="stage" text-anchor="middle">MAC</text>
+<rect x="1679" y="472" width="76" height="42" rx="4" class="cell"/>
+<text x="1717" y="499" class="stage" text-anchor="middle">PAIR</text>
+<rect x="1761" y="472" width="76" height="42" rx="4" class="write"/>
+<text x="1799" y="499" class="stage" text-anchor="middle">TMP</text>
+<rect x="1843" y="472" width="76" height="42" rx="4" class="psum"/>
+<text x="1881" y="499" class="stage" text-anchor="middle">PSUM</text>
+<text x="40" y="562" class="head" text-anchor="start">B1 · Tile1</text>
+<text x="40" y="584" class="small" text-anchor="start">issue C148</text>
+<rect x="1515" y="535" width="76" height="42" rx="4" class="cell"/>
+<text x="1553" y="562" class="stage" text-anchor="middle">IN</text>
+<rect x="1597" y="535" width="76" height="42" rx="4" class="cell"/>
+<text x="1635" y="562" class="stage" text-anchor="middle">CSA</text>
+<rect x="1679" y="535" width="76" height="42" rx="4" class="cell"/>
+<text x="1717" y="562" class="stage" text-anchor="middle">MAC</text>
+<rect x="1761" y="535" width="76" height="42" rx="4" class="cell"/>
+<text x="1799" y="562" class="stage" text-anchor="middle">PAIR</text>
+<rect x="1843" y="535" width="76" height="42" rx="4" class="write"/>
+<text x="1881" y="562" class="stage" text-anchor="middle">TMP</text>
+<rect x="1925" y="535" width="76" height="42" rx="4" class="psum"/>
+<text x="1963" y="562" class="stage" text-anchor="middle">PSUM</text>
+<rect x="2007" y="535" width="76" height="42" rx="4" class="sample"/>
+<text x="2045" y="562" class="stage" text-anchor="middle">SAMP</text>
+<text x="40" y="631" class="small" text-anchor="start">IN：Macro 输入；CSA：中间暂存；MAC：CPA 结果；PAIR：归约转发；TMP / PSUM：对应存储写入。</text>
+<line x1="40" y1="650" x2="2120" y2="650" class="rule"/>
+<text x="40" y="689" class="head" text-anchor="start">输入沿前的握手值与输出采样</text>
+<text x="700" y="689" class="body" text-anchor="start">1/1 表示该路在本沿握手；输出行显示本沿采样的 mask。</text>
+<text x="323" y="731" class="stage" text-anchor="middle">133</text>
+<text x="405" y="731" class="stage" text-anchor="middle">134</text>
+<text x="487" y="731" class="stage" text-anchor="middle">135</text>
+<text x="569" y="731" class="stage" text-anchor="middle">136</text>
+<text x="651" y="731" class="stage" text-anchor="middle">137</text>
+<text x="733" y="731" class="stage" text-anchor="middle">138</text>
+<text x="815" y="731" class="stage" text-anchor="middle">139</text>
+<text x="897" y="731" class="stage" text-anchor="middle">140</text>
+<text x="979" y="731" class="stage" text-anchor="middle">141</text>
+<text x="1061" y="731" class="stage" text-anchor="middle">142</text>
+<text x="1143" y="731" class="stage" text-anchor="middle">143</text>
+<text x="1225" y="731" class="stage" text-anchor="middle">144</text>
+<text x="1307" y="731" class="stage" text-anchor="middle">145</text>
+<text x="1389" y="731" class="stage" text-anchor="middle">146</text>
+<text x="1471" y="731" class="stage" text-anchor="middle">147</text>
+<text x="1553" y="731" class="stage" text-anchor="middle">148</text>
+<text x="1635" y="731" class="stage" text-anchor="middle">149</text>
+<text x="1717" y="731" class="stage" text-anchor="middle">150</text>
+<text x="1799" y="731" class="stage" text-anchor="middle">151</text>
+<text x="1881" y="731" class="stage" text-anchor="middle">152</text>
+<text x="1963" y="731" class="stage" text-anchor="middle">153</text>
+<text x="2045" y="731" class="stage" text-anchor="middle">154</text>
+<text x="40" y="775" class="mono" text-anchor="start">cmd V/R</text>
+<rect x="285" y="750" width="76" height="35" rx="4" class="write"/>
+<text x="323" y="774" class="mono" text-anchor="middle">1/1</text>
+<rect x="367" y="750" width="76" height="35" rx="4" class="write"/>
+<text x="405" y="774" class="mono" text-anchor="middle">1/1</text>
+<rect x="449" y="750" width="76" height="35" rx="4" class="write"/>
+<text x="487" y="774" class="mono" text-anchor="middle">1/1</text>
+<rect x="531" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="569" y="774" class="mono" text-anchor="middle">1/0</text>
+<rect x="613" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="651" y="774" class="mono" text-anchor="middle">1/0</text>
+<rect x="695" y="750" width="76" height="35" rx="4" class="write"/>
+<text x="733" y="774" class="mono" text-anchor="middle">1/1</text>
+<rect x="777" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="815" y="774" class="mono" text-anchor="middle">0/0</text>
+<rect x="859" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="897" y="774" class="mono" text-anchor="middle">0/0</text>
+<rect x="941" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="979" y="774" class="mono" text-anchor="middle">0/0</text>
+<rect x="1023" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1061" y="774" class="mono" text-anchor="middle">0/1</text>
+<rect x="1105" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1143" y="774" class="mono" text-anchor="middle">1/0</text>
+<rect x="1187" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1225" y="774" class="mono" text-anchor="middle">1/0</text>
+<rect x="1269" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1307" y="774" class="mono" text-anchor="middle">1/0</text>
+<rect x="1351" y="750" width="76" height="35" rx="4" class="write"/>
+<text x="1389" y="774" class="mono" text-anchor="middle">1/1</text>
+<rect x="1433" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1471" y="774" class="mono" text-anchor="middle">0/0</text>
+<rect x="1515" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1553" y="774" class="mono" text-anchor="middle">0/1</text>
+<rect x="1597" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1635" y="774" class="mono" text-anchor="middle">0/1</text>
+<rect x="1679" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1717" y="774" class="mono" text-anchor="middle">0/1</text>
+<rect x="1761" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1799" y="774" class="mono" text-anchor="middle">0/1</text>
+<rect x="1843" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1881" y="774" class="mono" text-anchor="middle">0/1</text>
+<rect x="1925" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="1963" y="774" class="mono" text-anchor="middle">0/1</text>
+<rect x="2007" y="750" width="76" height="35" rx="4" class="cell"/>
+<text x="2045" y="774" class="mono" text-anchor="middle">0/1</text>
+<text x="40" y="824" class="mono" text-anchor="start">weight V/R</text>
+<rect x="285" y="799" width="76" height="35" rx="4" class="write"/>
+<text x="323" y="823" class="mono" text-anchor="middle">1/1</text>
+<rect x="367" y="799" width="76" height="35" rx="4" class="write"/>
+<text x="405" y="823" class="mono" text-anchor="middle">1/1</text>
+<rect x="449" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="487" y="823" class="mono" text-anchor="middle">0/1</text>
+<rect x="531" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="569" y="823" class="mono" text-anchor="middle">0/1</text>
+<rect x="613" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="651" y="823" class="mono" text-anchor="middle">0/1</text>
+<rect x="695" y="799" width="76" height="35" rx="4" class="write"/>
+<text x="733" y="823" class="mono" text-anchor="middle">1/1</text>
+<rect x="777" y="799" width="76" height="35" rx="4" class="write"/>
+<text x="815" y="823" class="mono" text-anchor="middle">1/1</text>
+<rect x="859" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="897" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="941" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="979" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="1023" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1061" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="1105" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1143" y="823" class="mono" text-anchor="middle">1/0</text>
+<rect x="1187" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1225" y="823" class="mono" text-anchor="middle">1/0</text>
+<rect x="1269" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1307" y="823" class="mono" text-anchor="middle">1/0</text>
+<rect x="1351" y="799" width="76" height="35" rx="4" class="write"/>
+<text x="1389" y="823" class="mono" text-anchor="middle">1/1</text>
+<rect x="1433" y="799" width="76" height="35" rx="4" class="write"/>
+<text x="1471" y="823" class="mono" text-anchor="middle">1/1</text>
+<rect x="1515" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1553" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="1597" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1635" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="1679" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1717" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="1761" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1799" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="1843" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1881" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="1925" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="1963" y="823" class="mono" text-anchor="middle">0/0</text>
+<rect x="2007" y="799" width="76" height="35" rx="4" class="cell"/>
+<text x="2045" y="823" class="mono" text-anchor="middle">0/0</text>
+<text x="40" y="873" class="mono" text-anchor="start">ACT V/R</text>
+<rect x="285" y="848" width="76" height="35" rx="4" class="write"/>
+<text x="323" y="872" class="mono" text-anchor="middle">1/1</text>
+<rect x="367" y="848" width="76" height="35" rx="4" class="write"/>
+<text x="405" y="872" class="mono" text-anchor="middle">1/1</text>
+<rect x="449" y="848" width="76" height="35" rx="4" class="write"/>
+<text x="487" y="872" class="mono" text-anchor="middle">1/1</text>
+<rect x="531" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="569" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="613" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="651" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="695" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="733" y="872" class="mono" text-anchor="middle">0/1</text>
+<rect x="777" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="815" y="872" class="mono" text-anchor="middle">0/1</text>
+<rect x="859" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="897" y="872" class="mono" text-anchor="middle">0/1</text>
+<rect x="941" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="979" y="872" class="mono" text-anchor="middle">0/1</text>
+<rect x="1023" y="848" width="76" height="35" rx="4" class="write"/>
+<text x="1061" y="872" class="mono" text-anchor="middle">1/1</text>
+<rect x="1105" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1143" y="872" class="mono" text-anchor="middle">1/0</text>
+<rect x="1187" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1225" y="872" class="mono" text-anchor="middle">1/0</text>
+<rect x="1269" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1307" y="872" class="mono" text-anchor="middle">1/0</text>
+<rect x="1351" y="848" width="76" height="35" rx="4" class="write"/>
+<text x="1389" y="872" class="mono" text-anchor="middle">1/1</text>
+<rect x="1433" y="848" width="76" height="35" rx="4" class="write"/>
+<text x="1471" y="872" class="mono" text-anchor="middle">1/1</text>
+<rect x="1515" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1553" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="1597" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1635" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="1679" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1717" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="1761" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1799" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="1843" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1881" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="1925" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="1963" y="872" class="mono" text-anchor="middle">0/0</text>
+<rect x="2007" y="848" width="76" height="35" rx="4" class="cell"/>
+<text x="2045" y="872" class="mono" text-anchor="middle">0/0</text>
+<text x="40" y="926" class="mono" text-anchor="start">issue</text>
+<text x="40" y="974" class="mono" text-anchor="start">输出采样</text>
+<rect x="367" y="902" width="76" height="35" rx="4" class="write"/>
+<text x="405" y="926" class="stage" text-anchor="middle">1</text>
+<rect x="449" y="902" width="76" height="35" rx="4" class="write"/>
+<text x="487" y="926" class="stage" text-anchor="middle">1</text>
+<rect x="695" y="902" width="76" height="35" rx="4" class="write"/>
+<text x="733" y="926" class="stage" text-anchor="middle">1</text>
+<rect x="695" y="950" width="76" height="35" rx="4" class="sample"/>
+<text x="733" y="974" class="stage" text-anchor="middle">FFFF</text>
+<rect x="777" y="950" width="76" height="35" rx="4" class="sample"/>
+<text x="815" y="974" class="stage" text-anchor="middle">FFFF</text>
+<rect x="1023" y="902" width="76" height="35" rx="4" class="write"/>
+<text x="1061" y="926" class="stage" text-anchor="middle">1</text>
+<rect x="1023" y="950" width="76" height="35" rx="4" class="sample"/>
+<text x="1061" y="974" class="stage" text-anchor="middle">FFFF</text>
+<rect x="1351" y="950" width="76" height="35" rx="4" class="sample"/>
+<text x="1389" y="974" class="stage" text-anchor="middle">FFFF</text>
+<rect x="1433" y="902" width="76" height="35" rx="4" class="write"/>
+<text x="1471" y="926" class="stage" text-anchor="middle">1</text>
+<rect x="1515" y="902" width="76" height="35" rx="4" class="write"/>
+<text x="1553" y="926" class="stage" text-anchor="middle">1</text>
+<rect x="2007" y="950" width="76" height="35" rx="4" class="sample"/>
+<text x="2045" y="974" class="stage" text-anchor="middle">FF</text>
+<text x="40" y="1022" class="body" text-anchor="start">C138：A3 用迟到的地址 issue，同时接收 A4 cmd；该沿 weight 属于 A3。C139 才接收 A4 地址，并捕获 A3 的 CSA。</text>
+<text x="40" y="1058" class="body" text-anchor="start">C142：A4 的 ACT 到达并直通 issue，同沿采样 A3。C145 写 A4 tmp，C146 采样 A4，同沿接收不兼容 B1 cmd。</text>
+<text x="40" y="1094" class="body" text-anchor="start">B1 两次 issue 为 C147/C148；Psum 分别在 C152/C153 写入，末 Tile 最终值在 C153 沿后有效，C154 采样。</text>
+<text x="40" y="1130" class="small" text-anchor="start">数据：docs/timing_data/channel_cycles.csv 与 channel_events.csv；复现入口见 Testbench_Guide.md。</text>
+<text x="2120" y="1162" class="small" text-anchor="end">RTL e737282 · 2026-11-17 · CSA arithmetic golden</text>
 </svg>

@@ -26,7 +26,7 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <text x="1147" y="158" class="group" text-anchor="start">归约树</text>
 <text x="1488" y="158" class="group" text-anchor="start">融合与累加</text>
 <text x="1800" y="158" class="group" text-anchor="start">结果发布</text>
-<text x="40" y="223" class="io" text-anchor="start">命令 · 103 bit</text>
+<text x="40" y="223" class="io" text-anchor="start">命令 · 102 bit</text>
 <text x="40" y="249" class="mono" text-anchor="start">cmd_i</text>
 <text x="40" y="370" class="io" text-anchor="start">ACT · 1024 bit</text>
 <text x="40" y="396" class="mono" text-anchor="start">act_data_i</text>
@@ -63,13 +63,13 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <g data-module="命令准入">
 <rect x="525" y="194" width="201" height="73" class="logic" rx="7"/>
 <text x="538" y="220" class="node" text-anchor="start">命令准入</text>
-<text x="538" y="244" class="body" text-anchor="start">配置比较与排空检查</text>
+<text x="538" y="244" class="body" text-anchor="start">全在途兼容与排空检查</text>
 </g>
 <g data-module="ACT 选择与分发">
 <rect x="525" y="334" width="201" height="99" class="logic" rx="7"/>
 <text x="538" y="360" class="node" text-anchor="start">ACT 选择与分发</text>
 <text x="538" y="384" class="body" text-anchor="start">缓冲 / 当拍直通</text>
-<text x="538" y="407" class="body" text-anchor="start">按精度 / DW 模式选槽</text>
+<text x="538" y="407" class="body" text-anchor="start">按 W 精度选择完整 ACT 槽</text>
 </g>
 <g data-module="权重行地址选择">
 <rect x="525" y="525" width="201" height="78" class="logic" rx="7"/>
@@ -119,11 +119,12 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <text x="854" y="513" class="gateText" text-anchor="middle">ICG × 8</text>
 <text x="901" y="513" class="detail" text-anchor="start">每 Macro 一门</text>
 </g>
-<g data-module="I1 · 局部和暂存">
+<g data-module="I1 · CSA 暂存">
 <rect x="803" y="563" width="251" height="66" class="dff" rx="7"/>
-<text x="816" y="589" class="node" text-anchor="start">I1 · 局部和暂存</text>
-<text x="816" y="613" class="body" text-anchor="start">乘积、融合、求和后暂存</text>
+<text x="816" y="589" class="node" text-anchor="start">I1 · CSA 暂存</text>
+<text x="816" y="613" class="body" text-anchor="start">每 OC ICG · 共 32 门</text>
 </g>
+<text x="816" y="648" class="small">CPA + 符号修正</text>
 <g data-module="I2 · Macro 结果">
 <rect x="803" y="657" width="251" height="94" class="dff" rx="7"/>
 <text x="816" y="683" class="node" text-anchor="start">I2 · Macro 结果</text>
@@ -139,7 +140,7 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <path d="M931 528V561" class="data" marker-end="url(#datatip)"/>
 <path d="M931 629V655" class="data" marker-end="url(#datatip)"/>
 <path d="M1054 706H1102V236H1145" class="data" marker-end="url(#datatip)"/>
-<text x="812" y="771" class="small" text-anchor="start">普通 W8/W4/W2 开 1/2/3 个 bank；DW 仅开低 bank</text>
+<text x="812" y="771" class="small" text-anchor="start">W8/W4/W2 分别开 1/2/3 个 ACT bank；K256 使用完整槽</text>
 <g data-module="1 / 2 路组">
 <rect x="1147" y="195" width="220" height="82" class="logic" rx="7"/>
 <text x="1160" y="221" class="node" text-anchor="start">1 / 2 路组</text>
@@ -227,7 +228,7 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <text x="1800" y="767" class="mono" text-anchor="start">psum_valid[31:0]</text>
 <rect x="40" y="791" width="1968" height="111" class="band" rx="8"/>
 <text x="57" y="821" class="node" text-anchor="start">随数据对齐的控制</text>
-<text x="57" y="848" class="body" text-anchor="start">issue 时生成首 / 末 Tile 标志，</text>
+<text x="57" y="848" class="body" text-anchor="start">issue 捕获 51 bit cfg 与元数据，</text>
 <text x="57" y="872" class="body" text-anchor="start">随 5 级流水标签前移。</text>
 <text x="469" y="821" class="node" text-anchor="start">Psum 写请求</text>
 <text x="469" y="848" class="body" text-anchor="start">每深度提前一拍寄存 3 路请求，</text>
@@ -235,11 +236,11 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <rect x="915" y="805" width="73" height="23" class="gate" rx="4"/>
 <text x="951.5" y="822" class="gateText" text-anchor="middle">ICG × 3</text>
 <text x="1000" y="823" class="node" text-anchor="start">tmp 路径标签</text>
-<text x="915" y="855" class="body" text-anchor="start">每条路径分别捕获 phase、Context 和 Tile 标志。</text>
+<text x="915" y="855" class="body" text-anchor="start">分别保存 cfg、phase、Context 和 Tile 标志。</text>
 <rect x="1503" y="805" width="73" height="23" class="gate" rx="4"/>
 <text x="1539.5" y="822" class="gateText" text-anchor="middle">ICG × 3</text>
-<text x="1588" y="823" class="node" text-anchor="start">raw Context</text>
-<text x="1503" y="855" class="body" text-anchor="start">每条路径仅在发布 Psum 结果时更新。</text>
+<text x="1588" y="823" class="node" text-anchor="start">raw 配置 / Context</text>
+<text x="1503" y="855" class="body" text-anchor="start">Psum 发布时保存本笔 51 bit cfg 与 Context。</text>
 <text x="40" y="950" class="title2" text-anchor="start">8 路归约的实际时序</text>
 <text x="333" y="948" class="sub" text-anchor="start">W8A8  ·  OS = WS = AS = 1  ·  C0 同沿接收 cmd、权重地址和 A0  ·  A1 连续送入</text>
 <text x="282" y="993" class="cycle" text-anchor="middle">C0</text>
@@ -257,7 +258,7 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <rect x="388" y="1008" width="195" height="36" class="cell" rx="4"/>
 <text x="485" y="1033" class="tt" text-anchor="middle">issue A0</text>
 <rect x="591" y="1008" width="195" height="36" class="cell" rx="4"/>
-<text x="688" y="1033" class="tt" text-anchor="middle">Macro 中间拍</text>
+<text x="688" y="1033" class="tt" text-anchor="middle">CSA 暂存</text>
 <rect x="794" y="1008" width="195" height="36" class="cell" rx="4"/>
 <text x="891" y="1033" class="tt" text-anchor="middle">Macro 结果</text>
 <rect x="997" y="1008" width="195" height="36" class="cell" rx="4"/>
@@ -272,7 +273,7 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <rect x="591" y="1055" width="195" height="36" class="cell" rx="4"/>
 <text x="688" y="1080" class="tt" text-anchor="middle">issue A1</text>
 <rect x="794" y="1055" width="195" height="36" class="cell" rx="4"/>
-<text x="891" y="1080" class="tt" text-anchor="middle">Macro 中间拍</text>
+<text x="891" y="1080" class="tt" text-anchor="middle">CSA 暂存</text>
 <rect x="997" y="1055" width="195" height="36" class="cell" rx="4"/>
 <text x="1094" y="1080" class="tt" text-anchor="middle">Macro 结果</text>
 <rect x="1200" y="1055" width="195" height="36" class="cell" rx="4"/>
@@ -290,5 +291,5 @@ text{font-family:'Microsoft YaHei','Noto Sans CJK SC','Segoe UI',sans-serif;fill
 <text x="1906" y="1127" class="tt" text-anchor="middle">采样 raw_psum</text>
 <path d="M40 1160H2008" class="line"/>
 <text x="40" y="1191" class="small" text-anchor="start">默认参数   ·   Psum 深度 16   /   最大 Context 数 64   /   USE_CLOCK_GATING = 1</text>
-<text x="2008" y="1191" class="small" text-anchor="end">RTL 门控实例   555（Cluster 本体） + 72（8 个 Macro） + 24（归约树） = 651</text>
+<text x="2008" y="1191" class="small" text-anchor="end">RTL 门控实例   555（Cluster 本体） + 104（8 个 Macro） + 24（归约树） = 683</text>
 </svg>

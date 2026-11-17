@@ -1,0 +1,15 @@
+{
+  "rtl_commit": "e73728216876875ae7c5dcfb5371f467604b6246",
+  "date": "2026-11-17",
+  "model": "arithmetic CSA golden; actual LUT, registers, CPA and ICG",
+  "stimulus": "tb_ClusterChannels +TIMING_FIGURE",
+  "files": {
+    "RTL/cluster/rtl/cluster_pkg.sv": "d250d747a1d4dfe2c9f8bfeecb8dfe589a8d8d9afaf4930f0ca8fe4cd5f00b85",
+    "RTL/cluster/rtl/cluster_func.sv": "1f186cced3f3dc916e745a7c2958b47b101a8692833a62a9d5d86fc3326ecf95",
+    "RTL/cluster/rtl/cluster_top.sv": "9556290e2514332c207776a5d5aeba91b7de8bf7d066089dd552cafab26eea89",
+    "RTL/cluster/rtl/ClusterReduceTree.sv": "0dc94bbe56266f28615977fecea528a634febe444a05368f3c279c50530a0545",
+    "RTL/macro/rtl/SingleMacro.sv": "4b0c70f7789ff5e0f1c9f63ce8280b7027426ecf155825712bce69d477b67ae5",
+    "RTL/cluster/tb/tb_ClusterChannels.sv": "4234f1565e82984373b3b598f5414e1fcd08747f673434468c7d92eb69f11e54",
+    "RTL/cluster/tb/include/cluster_channel_driver.svh": "a4291ddd8e53376ec96493c6af8fcd55ca291f3e0548aa5931ca04d9db1b7368"
+  }
+}

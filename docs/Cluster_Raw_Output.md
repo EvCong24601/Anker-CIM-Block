@@ -23,7 +23,7 @@ raw_psum 组合读取现有 tmp/Psum。tmp 路径在最终结果写入 tmp 后�
 - **权重地址**通过 `weight_valid_i && weight_ready_o` 传输。每个 Tile 接收 AS 个地址，共 OS × AS 个。WS 的多个 Context 和各 phase 复用同一地址。AS 的各 Context 使用各自的地址，多 phase 时复用已有 Context 地址表。
 - **ACT** 通过 `act_valid_i && act_ready_o` 传输。设 P 为激活位宽除以 4，每个任务接收 OS × WS × P 个 1024 bit plane，顺序为 Tile、WS Context、从低到高的 phase。AS 的各 Context 复用同一 plane，最后一个使用者 issue 后该槽可接收新数据。
 - **Issue** 优先读取当前 phase 和 Context 已缓冲的操作数。已经接收 cmd 的任务若仍缺其中一路，且该路当前握手的正是所需数据，可同沿直通到 Macro。两路也可同时直通。AS 复用的 ACT、WS 复用的地址和多 phase AS 的 Context 地址按后续需求保留。当前操作数尚未到齐时，只有 issue 等待，在途结果仍按原定拍点发布。
-- **连续任务**按实际流水路径类别、A 位宽及累加模式判定是否兼容，并保留原有同 split 兼容规则。兼容配置最早可在旧任务最后一次 issue 沿接收下一 cmd。配置改变时，发送端保持新 cmd，直至旧任务所有有效 lane 已排出，最早可在采样最后一个旧结果的同一沿接收。有效输出掩码为空时只需完成旧任务的 issue。输入调度端仅持有当前 cmd；下游各级单独保存随事务传递的 51 bit 配置。
+- **连续任务**按实际流水路径类别、A 位宽及累加模式判定是否兼容，并保留原有同 split 兼容规则。兼容配置最早可在旧任务最后一次 issue 沿接收下一 cmd。不兼容配置切换时，发送端保持新 cmd，直至旧任务所有有效 lane 已排出，最早可在采样最后一个旧结果的同一沿接收。有效输出掩码为空时只需完成旧任务的 issue。输入调度端仅持有当前 cmd；下游各级单独保存随事务传递的 51 bit 配置。
 
 发送端按任务顺序驱动每一路，每次握手前进一个地址或 plane。上一任务在该路的输入已全部握手后，可提前呈现新任务的首个输入。新 cmd 实际握手的 C0 沿，可同时接收任意已有效的首个操作数。两路均在 C0 握手时，首次 issue 为 C1。若地址在 C0 握手而 ACT 到 C6 才握手，首次 issue 就是 C6。先等待 cmd 握手再发送操作数的驱动也受支持。
 
@@ -31,9 +31,9 @@ raw_psum 组合读取现有 tmp/Psum。tmp 路径在最终结果写入 tmp 后�
 
 同沿接收新 cmd 时，按各操作数通道剩余的输入数量判定归属。旧任务还缺的最后一个 beat 直通给旧任务；该路要到下一沿才能接收新任务的 beat。旧任务已经收齐的另一路可以在 cmd 握手沿接收新任务的首个 beat。两路都属于旧任务时，新 cmd 仍可握手，新任务的两个操作数从下一沿开始接收。
 
-[单拍 Macro 版本的逐拍记录](Cluster_Issue_Timing.svg) 展示了地址晚到的情况。以下绝对拍号对应当时的仿真。C138 最后一次发射 A3 并接收同配置的 A4 cmd，该沿的权重地址归 A3。C139 接收 A4 自己的地址，C142 A4 的 ACT 到达并当拍 issue。发送端可以在旧任务最后一个操作数到达前呈现新 cmd 并保持到握手。在 tb_ClusterChannels 上使用 `+TIMING_FIGURE` 可复现图中激励。
+[当前两拍 Macro 的实测逐拍图](Cluster_Issue_Timing.svg)展示缺地址、缺 ACT 及不兼容切换。C138 发射 A3 并接收兼容 A4 cmd，该沿地址归 A3；C139 接收 A4 地址并捕获 A3 的 CSA，C140 才产生 A3 Macro 结果。C142 A4 ACT 到达并当拍 issue，同时采样 A3 最终结果。A4 在 C145 写 tmp，C146 采样；同沿接收不兼容 B1 cmd。绝对拍号来自当前源码的 `+TIMING_FIGURE` 激励，图中同时区分写入/沿后 valid 与下游采样。
 
-每个 1024 bit plane 容纳 256 个 ACT 各自的一段 4 bit。A4、A8、A16 每帧分别传 1、2、4 个 plane。Cluster 原有的 4096 bit 缓冲按 phase 分为四个槽，后续 phase 可在之前的 phase 用完前接收。每个槽使用独立 ICG，写入条件是 `act_buffer_we && external_phase == p`。若直通的 ACT 在同沿用完，接收计数照常推进，四路时钟均关闭。AS 的后续 Context 还需该 plane 时，直通和缓存写入同沿完成。旧缓存数据最后一次被读取时，也可在同沿写入下一份 ACT。SingleMacro 的 ACT bank 仍由独立的 `act_capture_en` 控制。[C138、C139、C142 数据流](Cluster_Pipeline_A3_A4.svg)
+每个 1024 bit plane 容纳 256 个 ACT 各自的一段 4 bit。A4、A8、A16 每帧分别传 1、2、4 个 plane。Cluster 原有的 4096 bit 缓冲按 phase 分为四个槽，后续 phase 可在之前的 phase 用完前接收。每个槽使用独立 ICG，写入条件是 `act_buffer_we && external_phase == p`。若直通的 ACT 在同沿用完，接收计数照常推进，四路时钟均关闭。AS 的后续 Context 还需该 plane 时，直通和缓存写入同沿完成。旧缓存数据最后一次被读取时，也可在同沿写入下一份 ACT。SingleMacro 的 ACT bank 仍由独立的 `act_capture_en` 控制。[当前 C138、C139、C142 数据流](Cluster_Pipeline_A3_A4.svg)
 
 ## 逐级配置和任务交接
 

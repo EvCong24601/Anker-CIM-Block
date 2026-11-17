@@ -1,0 +1,6 @@
+job,precision,os,ws,as,split,cmd_accept,first_issue,last_issue,last_output,next_cmd_gap,next_issue_bubbles,same_config,prior_drain
+0,2,1,1,1,07,133,134,134,138,0,0,1,0
+1,2,1,1,1,07,134,135,135,139,0,2,1,134
+2,2,1,1,1,07,135,138,138,142,0,3,1,135
+3,2,1,1,1,07,138,142,142,146,4,4,0,138
+4,2,2,1,1,01,146,147,148,154,-1,-1,0,146
