@@ -10,4 +10,6 @@ rtl/ 包含 cluster_top.sv、ClusterReduceTree.sv、cluster_pkg.sv 和 cluster_f
 
 从本目录使用 rtl/filelist.f；从 tb/ 使用 filelist.f；从仓库 vcs-rtl/ 使用 verilog_file_*.f。所有 include 搜索路径已在对应清单中配置。SYNTHESIS 定义排除 RTL 中的仿真协议检查。
 
-OS/WS/AS count 各9bit、范围1～511，Command 共103bit，最低位为 cim_dw_compact。每个任务握手一次 cmd，weight 和 ACT 各自按序传输。两路的首个操作数可在 cmd 握手沿接收。默认OUTPUT_PSUM_DEPTH=16统一设置Psum及权重地址深度；MAX_CONTEXTS默认64。WS/AS不能同时大于1，容量限制继续有效。
+OS/WS/AS count 各9bit、范围1～511，Command 共102bit，最低位为 cim_signed_en。DW 按 K=256，W2/W4/W8 分别使用2/4/8个完整ACT槽和Macro，由OC、split、enable mask控制。每个任务握手一次 cmd，weight 和 ACT 各自按序传输。两路的首个操作数可在 cmd 握手沿接收。默认OUTPUT_PSUM_DEPTH=16统一设置Psum及权重地址深度；MAX_CONTEXTS默认64。WS/AS不能同时大于1，容量限制继续有效。
+
+下游使用随事务传递的51bit pipeline_cfg_t，各级独立控制归约、ICG、累加和输出。单宽度任务按实际路径类别（Reduce-1/2、Reduce-4、Reduce-8）、A位宽和累加模式判断跨split交接；原有同split的mask兼容保留。检查覆盖所有实际在途事务及待写回Psum，空任务不能掩盖旧类别。enable/OC、兼容计数、ACT slot、符号和同A精度的W变化仍可重叠在途结果。

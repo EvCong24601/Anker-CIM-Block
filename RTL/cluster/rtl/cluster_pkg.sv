@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 package cluster_pkg;
-  // Whole-job configuration, 103 bits. Weight addresses use a separate channel.
+  // Whole-job configuration, 102 bits. Weight addresses use a separate channel.
   typedef struct packed {
     // All counts are >=1. ws>1 selects WS, as>1 selects AS;
     // ws=as=1 is a single Context, with no cross-Context reuse.
@@ -13,7 +13,15 @@ package cluster_pkg;
     logic [23:0] cim_act_slot_sel;
     logic [2:0] cim_precision;
     logic cim_signed_en;
-    logic cim_dw_compact;  // Eight independent 32-digit ACT slots for depthwise convolution.
   } cluster_ctrl_t;
+
+  // Shared downstream interpretation; input-only changes can overlap retirement.
+  typedef struct packed {
+    logic [6:0] split_mask;
+    logic [7:0] macro_en_mask;
+    logic [31:0] macro_oc_mask;
+    logic [1:0] last_phase;
+    logic [1:0] accum_mode;  // 0=TMP, 1=OS Psum, 2=AS Psum.
+  } pipeline_cfg_t;  // 51 bits; not an additional external command.
 
 endpackage

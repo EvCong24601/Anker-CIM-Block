@@ -17,14 +17,14 @@ initial begin : regression
 
   if ($bits(
       cluster_ctrl_t
-    ) != 103 || $bits(
+    ) != 102 || $bits(
       cmd_i.cim_os_cnt
     ) != 9 || $bits(
       cmd_i.cim_ws_cnt
     ) != 9 || $bits(
       cmd_i.cim_as_cnt
     ) != 9)
-    $fatal(1, "TB: descriptor must contain three nine-bit counts and total 103 bits");
+    $fatal(1, "TB: descriptor must contain three nine-bit counts and total 102 bits");
   if ($value$plusargs("ZERO_COUNT=%d", zero_count)) begin
     repeat (4) @(negedge clock);
     reset_n = 1;

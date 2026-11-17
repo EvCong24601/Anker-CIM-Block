@@ -196,13 +196,19 @@ module cluster_top #(
   // ===== 5. Pipeline tags and tmp/Psum storage declarations =====
   typedef struct packed {
     logic valid;
+    pipeline_cfg_t cfg;
     logic [1:0] ph;
     logic [CONTEXT_W - 1:0] ctx;
     logic first_tile, last_tile;
+`ifndef SYNTHESIS
+    // Checker provenance only; input-only modes need no downstream HW state.
+    cluster_ctrl_t check_cmd;
+`endif
   } txn_meta_t;
   // Expanded views retain checker access; only compact metadata is registered.
   typedef struct packed {
     logic valid;
+    pipeline_cfg_t cfg;
     cluster_ctrl_t cmd;
     int ph, ctx;
     logic first_tile, last_tile;
@@ -211,6 +217,8 @@ module cluster_top #(
   txn_meta_t pipe_meta[0:4];
   txn_meta_t tmp_path_meta[0:2];
   logic [CONTEXT_W - 1:0] raw_path_context[0:2];
+  pipeline_cfg_t raw_path_cfg[0:2];
+  logic [31:0] tmp_path_lanes[0:2], raw_path_lanes[0:2];
   logic [31:0] path_lanes[0:2];
   tag_t early_tag, macro_tag, red1_tag, red2_tag;
   tag_t tap_tag[0:2];
@@ -270,9 +278,9 @@ module cluster_top #(
     ws_tile_commit_inc = 0;
     a4_acc_inc = 0;
     for (int l = 0; l < 32; l++) begin
-      if (capture_valid[l] && capture_tag[l].ph > 0 && !batch_is_as) ws_fusion_inc++;
+      if (capture_valid[l] && capture_tag[l].ph > 0 && capture_tag[l].cfg.accum_mode != 2) ws_fusion_inc++;
       if (tmp_valid[l]) begin
-        if (batch_is_as) begin
+        if (tmp_tag[l].cfg.accum_mode == 2) begin
           if (tmp_tag[l].ph > 0) as_fusion_inc++;
           else if (acc_enable[l]) as_acc_inc++;
           else if (psum_write[l]) as_seed_inc++;
@@ -310,7 +318,8 @@ module cluster_top #(
   // No output backpressure: each fixed-latency path returns Contexts in
   // issue order. The last Context completing a path also drains all earlier
   // Contexts on that path. Per-lane reservation/duplicate checks live in TB.
-  logic [2:0] completion_path_required;
+  logic pending_psum;
+  logic [4:0] pipe_live;
   // Psum publication is registered; tmp publication uses its capture metadata.
   logic [31:0] raw_valid;
   wire [31:0] psum_raw_valid;
@@ -326,21 +335,35 @@ module cluster_top #(
     tag_t result;
     result = '0;
     result.valid = meta.valid;
-    result.cmd = batch_command;
+    result.cfg = meta.cfg;
+    result.cmd.cim_reduce_split_mask = meta.cfg.split_mask;
+    result.cmd.cim_macro_en_mask = meta.cfg.macro_en_mask;
+    result.cmd.cim_macro_oc_mask = meta.cfg.macro_oc_mask;
+    result.cmd.cim_as_cnt = meta.cfg.accum_mode == 2 ? 2 : 1;
+    result.cmd.cim_os_cnt = meta.cfg.accum_mode == 1 ? 2 : 1;
+    result.cmd.cim_ws_cnt = 1;
+    result.cmd.cim_precision = meta.cfg.last_phase == 0 ? 0 : meta.cfg.last_phase == 1 ? 1 : 4;
+`ifndef SYNTHESIS
+    result.cmd = meta.check_cmd;
+`endif
     result.ph = int'(meta.ph);
     result.ctx = int'(meta.ctx);
     result.first_tile = meta.first_tile;
     result.last_tile = meta.last_tile;
-    result.mask = batch_lane_mask;
+    result.mask = pipeline_lanes(meta.cfg,0) | pipeline_lanes(meta.cfg,1) | pipeline_lanes(meta.cfg,2);
     return result;
   endfunction
   function automatic txn_meta_t compact_tag(input tag_t tag);
     txn_meta_t result;
     result.valid = tag.valid;
+    result.cfg = tag.cfg;
     result.ph = 2'(tag.ph);
     result.ctx = CONTEXT_W'(tag.ctx);
     result.first_tile = tag.first_tile;
     result.last_tile = tag.last_tile;
+`ifndef SYNTHESIS
+    result.check_cmd = tag.cmd;
+`endif
     return result;
   endfunction
   always_comb begin : decode_batch
@@ -351,8 +374,9 @@ module cluster_top #(
     batch_phase_count = batch_activation_bits / 4;
     batch_last_phase = batch_phase_count - 1;
     batch_last_tile = int'(batch_command.cim_os_cnt) - 1;
-    // Compact DW shares the W8 window geometry for every weight precision.
-    case (batch_command.cim_dw_compact ? 8 : batch_weight_bits)
+    // Each Macro uses its full 256-bit OC row: 128/64/32 ACT digits.
+    // K=256 uses 2/4/8 distinct slots in W2/W4/W8; masks set participation.
+    case (batch_weight_bits)
       2: batch_act_digits = 128;
       4: batch_act_digits = 64;
       8: batch_act_digits = 32;
@@ -381,19 +405,26 @@ module cluster_top #(
       path_lanes[batch_group_path[g]][4*g+:4] = batch_lane_mask[4*g+:4];
     end
   end
-  always_comb begin : completion_paths
-    for (int path = 0; path < 3; path++) begin
-      completion_path_required[path] = |path_lanes[path];
-    end
-  end
   always_comb begin : shared_metadata_views
     early_tag = expand_meta(pipe_meta[1]);
     macro_tag = expand_meta(pipe_meta[2]);
     red1_tag = expand_meta(pipe_meta[3]);
     red2_tag = expand_meta(pipe_meta[4]);
+    for (int path = 0; path < 3; path++) begin
+      tmp_path_lanes[path] = pipeline_lanes(tmp_path_meta[path].cfg,path);
+      raw_path_lanes[path] = pipeline_lanes(raw_path_cfg[path],path);
+    end
     for (int l = 0; l < 32; l++) begin
-      tmp_tag[l] = expand_meta(tmp_path_meta[int'(batch_group_path[l/4])]);
-      raw_context[l] = batch_uses_psum ? int'(raw_path_context[int'(batch_group_path[l/4])]) : tmp_tag[l].ctx;
+      tmp_tag[l] = '0;
+      raw_context[l] = 0;
+      for (int path = 0; path < 3; path++) begin
+        if (tmp_path_valid[path] && tmp_path_lanes[path][l]) begin
+          tmp_tag[l] = expand_meta(tmp_path_meta[path]);
+          raw_context[l] = int'(tmp_path_meta[path].ctx);
+        end
+        if (psum_path_valid[path] && raw_path_lanes[path][l])
+          raw_context[l] = int'(raw_path_context[path]);
+      end
     end
   end
   // ===== 8. Independent channel reception and issue scheduling =====
@@ -424,14 +455,30 @@ module cluster_top #(
   assign release_plane = issue && (!batch_is_as || context_idx == contexts - 1);
   assign release_weight = a4_packet ? issue : tile_end;
   assign input_slot_free = !packet_active || job_end;
-  // Ignore unused deeper metadata stages: endpoint groups have different tails.
-  // A current RAW pulse is sampled on this edge, so it does not block turnover.
-  assign upstream_busy = (issue && (|issue_mask)) || pipe_meta[0].valid || pipe_meta[1].valid || pipe_meta[2].valid ||
-      ((completion_path_required[1] || completion_path_required[2]) && pipe_meta[3].valid) ||
-      (completion_path_required[2] && pipe_meta[4].valid);
-  assign drain_safe = !upstream_busy && !(batch_uses_psum && (|tmp_valid));
+  // Count each in-flight issue using its OWN route and enabled lanes. A newer
+  // empty/shallow mask must not hide an older deep result. Ignore tag stages
+  // beyond that issue's actual endpoint. Current RAW is sampled on this edge.
+  assign pipe_live[2:0] = {pipe_meta[2].valid,pipe_meta[1].valid,pipe_meta[0].valid};
+  assign pipe_live[3] = pipe_meta[3].valid && (|(pipeline_lanes(pipe_meta[3].cfg,1) | pipeline_lanes(pipe_meta[3].cfg,2)));
+  assign pipe_live[4] = pipe_meta[4].valid && (|pipeline_lanes(pipe_meta[4].cfg,2));
+  assign upstream_busy = (issue && (|issue_mask)) || (|pipe_live);
+  always_comb begin
+    pending_psum = 0;
+    for (int path = 0; path < 3; path++)
+      pending_psum |= tmp_path_valid[path] && tmp_path_meta[path].cfg.accum_mode != 0;
+  end
+  assign drain_safe = !upstream_busy && !pending_psum;
   // Ready is a capacity promise; reset qualification belongs to the protocol.
-  assign cmd_ready_o = !sram_cs_en && input_slot_free && (!batch_active || cmd_i == batch_command || drain_safe);
+  logic pipeline_compatible;
+  always_comb begin : compatible_inflight
+    pipeline_compatible = compatible_pipeline(pipeline_config(cmd_i),pipeline_config(batch_command));
+    for (int s = 0; s < 5; s++)
+      if (pipe_live[s]) pipeline_compatible &= compatible_pipeline(pipeline_config(cmd_i),pipe_meta[s].cfg);
+    for (int path = 0; path < 3; path++)
+      if (tmp_path_valid[path] && tmp_path_meta[path].cfg.accum_mode != 0)
+        pipeline_compatible &= compatible_pipeline(pipeline_config(cmd_i),tmp_path_meta[path].cfg);
+  end
+  assign cmd_ready_o = !sram_cs_en && input_slot_free && (!batch_active || pipeline_compatible || drain_safe);
   // Each stream is ordered independently. The old job has first claim on
   // its last missing beat; a stream already finished may start the next job.
   assign act_ready_o = cmd_accept || (!sram_cs_en && packet_active && act_tiles_left != 0 &&
@@ -444,10 +491,10 @@ module cluster_top #(
   assign raw_psum = raw_data;
   assign psum_valid = raw_valid;
   always_comb begin
-    for (int l = 0; l < 32; l++) raw_valid[l] = batch_uses_psum ? psum_raw_valid[l] : result_done[l];
+    for (int l = 0; l < 32; l++) raw_valid[l] = psum_raw_valid[l] || (result_done[l] && tmp_tag[l].cfg.accum_mode == 0);
   end
   for (genvar l = 0; l < 32; l++) begin : g_output_lane
-    assign raw_data[32*l+:32] = batch_uses_psum ? psum[raw_context[l]][l] : tmp_result[l];
+    assign raw_data[32*l+:32] = psum_raw_valid[l] ? psum[raw_context[l]][l] : tmp_result[l];
   end
   for (genvar m = 0; m < 8; m++) begin : g_macro
     logic [511:0] idata;
@@ -475,7 +522,6 @@ module cluster_top #(
       .cim_oc_mask(command.cim_macro_oc_mask[4*m+:4]),
       .cim_result_mask(result_mask),
       .cim_precision(command.cim_precision),
-      .cim_dw_compact(command.cim_dw_compact),
       .cim_signed_en(command.cim_signed_en),
       .cim_phase(2'(phase)),
       .sram_wen(memory_wen[m]),
@@ -529,9 +575,9 @@ module cluster_top #(
     return (lanes[0] & {32{requests[0]}}) | (lanes[1] & {32{requests[1]}}) | (lanes[2] & {32{requests[2]}});
   endfunction
   // The aligned pipeline valid already reaches each tap before its tmp write edge.
-  assign tmp_input_cg_en = expand_path_mask({red2_tag.valid, red1_tag.valid, macro_tag.valid}, path_lanes);
-  assign tmp_valid = expand_path_mask(tmp_path_valid, path_lanes);
-  assign psum_raw_valid = expand_path_mask(psum_path_valid, path_lanes);
+  assign tmp_input_cg_en = tap_mask[0] | tap_mask[1] | tap_mask[2];
+  assign tmp_valid = expand_path_mask(tmp_path_valid, tmp_path_lanes);
+  assign psum_raw_valid = expand_path_mask(psum_path_valid, raw_path_lanes);
   for (genvar l = 0; l < 32; l++) begin : g_tmp_input
     MacroClockGate #(
       .ENABLE_GATING(USE_CLOCK_GATING)
@@ -555,8 +601,9 @@ module cluster_top #(
   for (genvar path = 0; path < 3; path++) begin : g_shared_meta
     wire tmp_meta_clock, raw_meta_clock;
     wire tmp_meta_req, raw_meta_req;
-    assign tmp_meta_req = |(tmp_input_cg_en & path_lanes[path]);
-    assign raw_meta_req = batch_uses_psum && (|(result_done & path_lanes[path]));
+    assign tmp_meta_req = tap_valid[path] && (|tap_mask[path]);
+    assign raw_meta_req = tmp_path_valid[path] && tmp_path_meta[path].cfg.accum_mode != 0 &&
+                          (|(result_done & tmp_path_lanes[path]));
     always_ff @(posedge clock or negedge reset_n) begin
       if (!reset_n) begin
         tmp_path_valid[path] <= 1'b0;
@@ -584,21 +631,29 @@ module cluster_top #(
       if (!reset_n) tmp_path_meta[path] <= '0;
       else if (tmp_meta_req) tmp_path_meta[path] <= compact_tag(tap_tag[path]);
     always_ff @(posedge raw_meta_clock or negedge reset_n)
-      if (!reset_n) raw_path_context[path] <= '0;
-      else if (raw_meta_req) raw_path_context[path] <= tmp_path_meta[path].ctx;
+      if (!reset_n) begin
+        raw_path_context[path] <= '0;
+        raw_path_cfg[path] <= '0;
+      end else if (raw_meta_req) begin
+        raw_path_context[path] <= tmp_path_meta[path].ctx;
+        raw_path_cfg[path] <= tmp_path_meta[path].cfg;
+      end
   end
   for (genvar d = 0; d < OUTPUT_BUFFER_DEPTH; d++) begin : g_psum_depth
     // Register each tap's write request at tmp capture, one edge before Psum
-    // writeback. The batch holds its lane mapping until these writes drain.
+    // writeback. The shared lane mapping is held until these writes drain.
     logic [2:0] path_write_req;
     for (genvar path = 0; path < 3; path++) begin : g_path_req
       always_ff @(posedge clock or negedge reset_n)
         if (!reset_n) path_write_req[path] <= 1'b0;
         else path_write_req[path] <= tap_valid[path] && tap_tag[path].ctx == d &&
-            (batch_is_as || (batch_command.cim_os_cnt > 1 && tap_tag[path].ph == batch_last_phase));
+            (tap_tag[path].cfg.accum_mode == 2 || (tap_tag[path].cfg.accum_mode == 1 &&
+             tap_tag[path].ph == int'(tap_tag[path].cfg.last_phase)));
     end
-    assign psum_cg_en[d] = expand_path_mask(path_write_req, path_lanes);
-    assign psum_depth_open[d] = batch_active && batch_uses_psum && d < contexts;
+    assign psum_cg_en[d] = expand_path_mask(path_write_req, tmp_path_lanes);
+    // A retiring old Context may exceed the NEW job's Context count.
+    // The aligned request already selects a legal physical entry and its lanes.
+    assign psum_depth_open[d] = (|psum_cg_en[d]);
     for (genvar l = 0; l < 32; l++) begin : g_lane
       MacroClockGate #(
         .ENABLE_GATING(USE_CLOCK_GATING)
@@ -628,8 +683,11 @@ module cluster_top #(
     for (int l = 0; l < 32; l++) begin
       longint signed shift_data;
       logic [1:0] shift_phase;
-      shift_data = batch_is_as ? longint'($signed(tmp_result[l])) : capture_data[l];
-      shift_phase = batch_is_as ? 2'(tmp_tag[l].ph) : 2'(capture_tag[l].ph);
+      bit tmp_is_as, capture_is_as;
+      tmp_is_as = tmp_tag[l].cfg.accum_mode == 2;
+      capture_is_as = capture_tag[l].cfg.accum_mode == 2;
+      shift_data = tmp_is_as ? longint'($signed(tmp_result[l])) : capture_data[l];
+      shift_phase = tmp_is_as ? 2'(tmp_tag[l].ph) : 2'(capture_tag[l].ph);
       fusion_enable[l] = 0;
       acc_enable[l] = 0;
       psum_write[l] = 0;
@@ -637,21 +695,21 @@ module cluster_top #(
       fusion_b[l] = 0;
       acc_a[l] = 0;
       acc_b[l] = 0;
-      if (capture_valid[l] && !batch_is_as && capture_tag[l].ph > 0) begin
+      if (capture_valid[l] && !capture_is_as && capture_tag[l].ph > 0) begin
         fusion_enable[l] = 1;
         fusion_a[l] = tmp_result[l];
       end
-      if (tmp_valid[l] && batch_is_as && tmp_tag[l].ph > 0) begin
+      if (tmp_valid[l] && tmp_is_as && tmp_tag[l].ph > 0) begin
         fusion_enable[l] = 1;
         fusion_a[l] = psum[tmp_tag[l].ctx][l];
       end
       if (fusion_enable[l]) fusion_b[l] = shift_data <<< {shift_phase, 2'b00};
       if (tmp_valid[l]) begin
-        if (batch_is_as) begin
+        if (tmp_is_as) begin
           psum_write[l] = 1;
           acc_enable[l] = tmp_tag[l].ph == 0 && !tmp_tag[l].first_tile;
         end else begin
-          psum_write[l] = tmp_tag[l].cmd.cim_os_cnt > 1 && tmp_tag[l].ph == batch_last_phase;
+          psum_write[l] = tmp_tag[l].cfg.accum_mode == 1 && tmp_tag[l].ph == int'(tmp_tag[l].cfg.last_phase);
           acc_enable[l] = psum_write[l] && !tmp_tag[l].first_tile;
         end
         if (acc_enable[l]) begin
@@ -664,12 +722,12 @@ module cluster_top #(
       shared_add_result[l] = shared_add_a[l] + shared_add_b[l];
       fusion_result[l] = fusion_enable[l] ? shared_add_result[l] : 0;
       acc_result[l] = acc_enable[l] ? shared_add_result[l] : 0;
-      tmp_store_data[l] = (capture_valid[l] && !batch_is_as && capture_tag[l].ph > 0) ?
+      tmp_store_data[l] = (capture_valid[l] && !capture_is_as && capture_tag[l].ph > 0) ?
           fusion_result[l] : capture_data[l];
       arithmetic_result[l] = acc_enable[l] ? acc_result[l] :
-        (tmp_valid[l] && batch_is_as && tmp_tag[l].ph > 0) ?
+        (tmp_valid[l] && tmp_is_as && tmp_tag[l].ph > 0) ?
         fusion_result[l] : tmp_result[l];
-      result_done[l] = tmp_valid[l] && tmp_tag[l].ph == batch_last_phase && tmp_tag[l].last_tile;
+      result_done[l] = tmp_valid[l] && tmp_tag[l].ph == int'(tmp_tag[l].cfg.last_phase) && tmp_tag[l].last_tile;
     end
   end
   // ===== 11. Main pipeline state machine =====
@@ -724,17 +782,12 @@ module cluster_top #(
         if (cmd_i.cim_precision > 6 || !canonical(cmd_i.cim_reduce_split_mask) ||
             (cmd_i.cim_ws_cnt > 1 && cmd_i.cim_as_cnt > 1))
           $fatal(1, "Invalid descriptor / context capacity");
-        if (cmd_i.cim_dw_compact && cmd_i.cim_reduce_split_mask != 7'h7f)
-          $fatal(1, "Compact DW requires independent g1 Macros");
         for (int m = 0; m < 8; m++)
         if (cmd_i.cim_macro_en_mask[m]) begin
-          if (cmd_i.cim_dw_compact && !$onehot(cmd_i.cim_macro_oc_mask[4*m+:4]))
-            $fatal(1, "Compact DW requires one OC per enabled Macro");
-          if (!cmd_i.cim_dw_compact && int'(cmd_i.cim_act_slot_sel[3*m+:3]) >= wbits(int'(cmd_i.cim_precision)))
+          if (int'(cmd_i.cim_act_slot_sel[3*m+:3]) >= wbits(int'(cmd_i.cim_precision)))
             $fatal(1, "ACT slot outside plane");
           for (int n = 0; n < m; n++)
           if (cmd_i.cim_macro_en_mask[n] && cmd_i.cim_act_slot_sel[3*m+:3] == cmd_i.cim_act_slot_sel[3*n+:3]) begin
-            if (cmd_i.cim_dw_compact) $fatal(1, "Repeated ACT slot in compact DW issue");
             if (group_of(cmd_i.cim_reduce_split_mask, n) == group_of(cmd_i.cim_reduce_split_mask, m))
               $fatal(1, "Repeated K slot in one reduction group");
           end
@@ -786,10 +839,14 @@ module cluster_top #(
         if (forward_act && !act_accept || forward_weight && !weight_accept)
           $fatal(1, "Internal issue forwarded an operand without a handshake");
 `endif
+        pipe_meta[0].cfg <= pipeline_config(command);
         pipe_meta[0].ph  <= 2'(phase);
         pipe_meta[0].ctx <= CONTEXT_W'(context_idx);
         pipe_meta[0].first_tile <= tile == 0;
         pipe_meta[0].last_tile <= issue_last_tile;
+`ifndef SYNTHESIS
+        pipe_meta[0].check_cmd <= command;
+`endif
         if (command.cim_as_cnt > 1) begin
           if (context_idx == contexts - 1) begin
             context_idx <= 0;
@@ -833,13 +890,13 @@ module cluster_top #(
       if (|tap_conflict) $fatal(1, "Concurrent tree taps target same channel");
       for (int path = 0; path < 3; path++)
       if (tap_valid[path]) begin
-        if (!tap_tag[path].valid || tap_mask[path] !== path_lanes[path])
+        if (!tap_tag[path].valid || tap_mask[path] !== pipeline_lanes(tap_tag[path].cfg,path))
           $fatal(1, "Terminal tap metadata mismatch path=%0d", path);
       end
 `endif
       // Short endpoints may leave valid bits in unused deeper tag stages.
       // They must not be reinterpreted with a newly installed deeper route.
-      if (cmd_accept && (!batch_active || cmd_i != batch_command))
+      if (cmd_accept && (!batch_active || !pipeline_compatible))
         foreach (pipe_meta[s]) pipe_meta[s].valid <= 0;
     end
   end

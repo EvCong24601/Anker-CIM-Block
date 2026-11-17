@@ -16,6 +16,47 @@
       default: return 0;
     endcase
   endfunction
+  function automatic pipeline_cfg_t pipeline_config(input cluster_ctrl_t cmd);
+    pipeline_cfg_t cfg;
+    cfg.split_mask = cmd.cim_reduce_split_mask;
+    cfg.macro_en_mask = cmd.cim_macro_en_mask;
+    cfg.macro_oc_mask = cmd.cim_macro_oc_mask;
+    cfg.last_phase = 2'(abits(int'(cmd.cim_precision))/4-1);
+    cfg.accum_mode = cmd.cim_as_cnt > 1 ? 2 : cmd.cim_os_cnt > 1 ? 1 : 0;
+    return cfg;
+  endfunction
+  // Full split/masks travel with each issue. A uniform active reduction width
+  // may change split without draining when its physical pipeline class agrees.
+  function automatic bit compatible_pipeline(input pipeline_cfg_t a, input pipeline_cfg_t b);
+    logic [2:0] a_class, b_class;
+    a_class = pipeline_route_class(a);
+    b_class = pipeline_route_class(b);
+    return a.last_phase == b.last_phase && a.accum_mode == b.accum_mode &&
+      (a.split_mask == b.split_mask || a_class == 3 || b_class == 3 ||
+       (a_class < 3 && a_class == b_class));
+  endfunction
+
+  // 0=Reduce-1/2, 1=Reduce-4, 2=Reduce-8, 3=no effective output,
+  // 4=mixed active widths (legacy same-split compatibility only).
+  function automatic logic [2:0] pipeline_route_class(input pipeline_cfg_t cfg);
+    logic [3:0] widths;
+    int width_index;
+    widths = 0;
+    for (int m = 0; m < 8; m++) begin
+      width_index = !cfg.split_mask[0] ? 3 : !cfg.split_mask[1+m/4] ? 2 :
+                    !cfg.split_mask[3+m/2] ? 1 : 0;
+      for (int c = 0; c < 4; c++)
+        if (cfg.macro_en_mask[m] && merge_contributes(cfg.split_mask,cfg.macro_oc_mask,m,c))
+          widths[width_index] = 1;
+    end
+    case (widths)
+      4'b0000: return 3;
+      4'b0001,4'b0010: return 0;
+      4'b0100: return 1;
+      4'b1000: return 2;
+      default: return 4;
+    endcase
+  endfunction
   function automatic int first_leaf(input logic [6:0] s, input int m);
     if (!s[0]) return 0;
     if (!s[1+m/4]) return (m / 4) * 4;
@@ -39,4 +80,22 @@
     if (!split[1+m/4] && !oc[4*((m/4)*4)+c]) return 0;
     if (!split[0] && !oc[c]) return 0;
     return 1;
+  endfunction
+
+  // Decode only this transaction's physical endpoint lanes.
+  function automatic logic [31:0] pipeline_lanes(input pipeline_cfg_t cfg, input int path);
+    logic [31:0] mask;
+    int count, g, endpoint;
+    mask = 0;
+    for (int m = 0; m < 8; m++) begin
+      count = 0;
+      for (int n = 0; n < 8; n++)
+        if (first_leaf(cfg.split_mask,n) == first_leaf(cfg.split_mask,m)) count++;
+      endpoint = count <= 2 ? 0 : count == 4 ? 1 : 2;
+      g = group_of(cfg.split_mask,m);
+      for (int c = 0; c < 4; c++)
+        if (endpoint == path && cfg.macro_en_mask[m] && merge_contributes(cfg.split_mask,cfg.macro_oc_mask,m,c))
+          mask[4*g+c] = 1;
+    end
+    return mask;
   endfunction

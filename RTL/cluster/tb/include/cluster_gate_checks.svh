@@ -29,11 +29,13 @@ for (genvar lane = 0; lane < 32; lane++) begin : g_check_output_gate
     logic [31:0] wanted_raw;
     int wanted_context;
     if (reset_n) begin
-      raw_req = dut.batch_uses_psum ? dut.result_done[lane] :
-        (dut.capture_valid[lane] && dut.capture_tag[lane].ph == dut.batch_last_phase &&
-         dut.capture_tag[lane].last_tile);
-      wanted_raw = dut.batch_uses_psum ? 32'(dut.arithmetic_result[lane]) : 32'(dut.tmp_store_data[lane]);
-      wanted_context = dut.batch_uses_psum ? dut.tmp_tag[lane].ctx : dut.capture_tag[lane].ctx;
+      raw_req = (dut.tmp_tag[lane].cfg.accum_mode != 0 && dut.result_done[lane]) ||
+        (dut.capture_valid[lane] && dut.capture_tag[lane].cfg.accum_mode == 0 &&
+         dut.capture_tag[lane].ph == int'(dut.capture_tag[lane].cfg.last_phase) && dut.capture_tag[lane].last_tile);
+      wanted_raw = dut.tmp_valid[lane] && dut.tmp_tag[lane].cfg.accum_mode != 0 ?
+                   32'(dut.arithmetic_result[lane]) : 32'(dut.tmp_store_data[lane]);
+      wanted_context = dut.tmp_valid[lane] && dut.tmp_tag[lane].cfg.accum_mode != 0 ?
+                       dut.tmp_tag[lane].ctx : dut.capture_tag[lane].ctx;
       #0.002;
       if (reset_n) begin
         if (psum_valid[lane] !== raw_req) $fatal(1, "Output lane clock mismatch lane=%0d", lane);
@@ -56,8 +58,7 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_act_bank_gat
           $fatal(1, "Cluster ACT bank reset_n failed macro=%0d bank=%0d", macro_id, bank);
       end else begin
         want = dut.ren[macro_id] &&
-               (bank == 0 || (!dut.command.cim_dw_compact &&
-                             (bank == 1 ? dut.command.cim_precision <= 4 : dut.command.cim_precision <= 1)));
+               (bank == 0 || (bank == 1 ? dut.command.cim_precision <= 4 : dut.command.cim_precision <= 1));
         saved = dut.g_macro[macro_id].u_macro.activation_in[FIRST+:WIDTH];
         expected_act = dut.g_macro[macro_id].idata[FIRST+:WIDTH];
         #0.002;
@@ -82,7 +83,7 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
       if (reset_n) begin
         if (dut.g_macro[macro_id].u_macro.g_oc[oc].u_compute.u_main_tree.u_csa.correction !== 18'b0)
           $fatal(1, "Fixed CSA correction is not zero macro=%0d OC=%0d", macro_id, oc);
-        consumer = expected_result_demand(dut.command, macro_id, oc);
+        consumer = expected_result_demand(dut.pipe_meta[0].check_cmd, macro_id, oc);
         if (dut.g_macro[macro_id].u_macro.in_valid && dut.g_macro[macro_id].u_macro.result_mask_in[oc] !== consumer)
           $fatal(1, "Macro consumer request not aligned ahead of result macro=%0d OC=%0d", macro_id, oc);
         want_csa = dut.g_macro[macro_id].u_macro.in_valid &&
@@ -114,19 +115,17 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
   always @(posedge clock) begin
     bit compute_req, memory_req;
     bit correction_req;
-    logic [4:0] saved_correction_mode, incoming_correction_mode;
+    logic [3:0] saved_correction_mode, incoming_correction_mode;
     if (reset_n) begin
       correction_req = dut.g_macro[macro_id].u_macro.in_valid &&
                        (|(dut.g_macro[macro_id].u_macro.mask_in &
                           dut.g_macro[macro_id].u_macro.result_mask_in));
       saved_correction_mode = {dut.g_macro[macro_id].u_macro.weight_mode_cpa,
                                dut.g_macro[macro_id].u_macro.signed_en_cpa,
-                               dut.g_macro[macro_id].u_macro.activation_signed_cpa,
-                               dut.g_macro[macro_id].u_macro.dw_compact_cpa};
+                               dut.g_macro[macro_id].u_macro.activation_signed_cpa};
       incoming_correction_mode = {dut.g_macro[macro_id].u_macro.weight_mode_in,
                                   dut.g_macro[macro_id].u_macro.signed_en_in,
-                                  dut.g_macro[macro_id].u_macro.activation_signed_in,
-                                  dut.g_macro[macro_id].u_macro.dw_compact_in};
+                                  dut.g_macro[macro_id].u_macro.activation_signed_in};
       compute_req = dut.ren[macro_id] || dut.g_macro[macro_id].u_macro.in_valid ||
                 dut.g_macro[macro_id].u_macro.csa_valid || dut.g_macro[macro_id].u_macro.cim_odata_valid;
       memory_req = dut.memory_wen[macro_id] || (dut.regular_read && dut.regular_macro_id == macro_id) ||
@@ -134,8 +133,7 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
       #0.002;
       if (reset_n && {dut.g_macro[macro_id].u_macro.weight_mode_cpa,
                       dut.g_macro[macro_id].u_macro.signed_en_cpa,
-                      dut.g_macro[macro_id].u_macro.activation_signed_cpa,
-                      dut.g_macro[macro_id].u_macro.dw_compact_cpa} !==
+                      dut.g_macro[macro_id].u_macro.activation_signed_cpa} !==
           (correction_req ? incoming_correction_mode : saved_correction_mode))
         $fatal(1, "Shared CPA mode capture/hold mismatch macro=%0d", macro_id);
       if (reset_n && (dut.g_macro[macro_id].u_macro.macro_clock !== compute_req ||
@@ -176,10 +174,11 @@ for (genvar path = 0; path < 3; path++) begin : g_check_shared_meta
     logic [$bits(dut.tmp_path_meta[0]) - 1:0] saved_tmp;
     int want_ph, want_ctx, raw_ctx, saved_raw_ctx;
     logic want_first_tile, want_last_tile;
+    pipeline_cfg_t wanted_cfg, saved_raw_cfg, wanted_raw_cfg;
     if (reset_n) begin
-      tmp_req = |(dut.capture_valid & dut.path_lanes[path]);
-      raw_req = (dut.batch_command.cim_os_cnt > 1 || dut.batch_command.cim_as_cnt > 1) &&
-          (|(dut.result_done & dut.path_lanes[path]));
+      tmp_req = dut.tap_valid[path] && (|dut.tap_mask[path]);
+      raw_req = dut.tmp_path_valid[path] && dut.tmp_path_meta[path].cfg.accum_mode != 0 &&
+          (|(dut.result_done & dut.tmp_path_lanes[path]));
       want_ph = dut.tap_tag[path].ph;
       want_ctx = dut.tap_tag[path].ctx;
       want_first_tile = dut.tap_tag[path].first_tile;
@@ -187,6 +186,9 @@ for (genvar path = 0; path < 3; path++) begin : g_check_shared_meta
       raw_ctx = int'(dut.tmp_path_meta[path].ctx);
       saved_tmp = dut.tmp_path_meta[path];
       saved_raw_ctx = int'(dut.raw_path_context[path]);
+      wanted_cfg = dut.tap_tag[path].cfg;
+      saved_raw_cfg = dut.raw_path_cfg[path];
+      wanted_raw_cfg = dut.tmp_path_meta[path].cfg;
       #0.002;
       if (reset_n) begin
         if (dut.g_shared_meta[path].tmp_meta_clock !== tmp_req || dut.g_shared_meta[path].raw_meta_clock !== raw_req)
@@ -196,6 +198,10 @@ for (genvar path = 0; path < 3; path++) begin : g_check_shared_meta
           $fatal(1, "Shared tmp metadata alignment mismatch path=%0d", path);
         if (!tmp_req && dut.tmp_path_meta[path] !== saved_tmp)
           $fatal(1, "Inactive shared metadata changed path=%0d", path);
+        if (tmp_req && dut.tmp_path_meta[path].cfg !== wanted_cfg)
+          $fatal(1,"TMP configuration capture mismatch path=%0d",path);
+        if (dut.raw_path_cfg[path] !== (raw_req ? wanted_raw_cfg : saved_raw_cfg))
+          $fatal(1,"Output configuration capture/hold mismatch path=%0d",path);
         if (dut.raw_path_context[path] != (raw_req ? raw_ctx : saved_raw_ctx))
           $fatal(1, "Shared result Context mismatch path=%0d", path);
       end

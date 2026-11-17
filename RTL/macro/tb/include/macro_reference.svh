@@ -49,7 +49,7 @@ endfunction
 // product. It deliberately does not reproduce slice routing or bit fusion.
 function automatic logic [71:0] golden_phase(input logic [1023:0] row, input logic [511:0] activation,
                                              input logic [2:0] precision, input logic signed_en,
-                                             input logic [1:0] phase, input logic [3:0] mask, input bit compact);
+                                             input logic [1:0] phase, input logic [3:0] mask);
   int bw, ba, w, a, sum;
   logic [71:0] result;
   bw = weight_bits(int'(precision));
@@ -58,7 +58,7 @@ function automatic logic [71:0] golden_phase(input logic [1023:0] row, input log
   for (int c = 0; c < 4; c++) begin
     sum = 0;
     if (mask[c]) begin
-      for (int j = 0; j < (compact ? 32 : 256 / bw); j++) begin
+      for (int j = 0; j < 256 / bw; j++) begin
         case (bw)
           2: w = int'({1'b0, row[256*c+2*j+:2]});
           4: w = int'({1'b0, row[256*c+4*j+:4]});

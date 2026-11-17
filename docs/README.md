@@ -6,6 +6,7 @@
 
 - [当前两拍 Macro 流水、ICG 和 W8A8 逐拍示例](Cluster_Pipeline_ICG.svg)
 - [raw接口、数值及迁移](Cluster_Raw_Output.md)
+- [总体控制切换 README](Cluster_Control_Switching_README.md) · [case 切换与 bubble 详细表](Cluster_Control_Switching_README.md#switch-cases)
 - [三通道改版前的资源声明统计](Cluster_DFF_Usage.md)
 - [VCS仿真入口](../vcs-rtl/README.md)
 - [Macro规格](../RTL/macro/README.md)

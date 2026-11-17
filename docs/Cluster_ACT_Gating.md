@@ -1,4 +1,4 @@
-> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前两拍版本的普通模式和紧凑 DW 门控见[SingleMacro 集成约定](../RTL/macro/README.md#集成约定)。
+> 历史设计记录：当前版本已移除Requant；正式输出为raw_psum[1023:0]和psum_valid[31:0]。旧INT8接口、参数表及量化相关验证已失效。当前两拍版本按 W 精度进行的完整 ACT bank 门控见[SingleMacro 集成约定](../RTL/macro/README.md#集成约定)。
 
 # Macro ACT 按精度分区门控
 

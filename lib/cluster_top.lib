@@ -9,16 +9,15 @@
  * Intended for interface/black-box linking; not a signoff timing model.
  * RTL has no explicit power/ground ports; no PG pins are invented.
  *
- * cmd_i[102:94] = cim_os_cnt
- * cmd_i[93:85] = cim_ws_cnt
- * cmd_i[84:76] = cim_as_cnt
- * cmd_i[75:69] = cim_reduce_split_mask
- * cmd_i[68:61] = cim_macro_en_mask
- * cmd_i[60:29] = cim_macro_oc_mask
- * cmd_i[28:5] = cim_act_slot_sel
- * cmd_i[4:2] = cim_precision
- * cmd_i[1] = cim_signed_en
- * cmd_i[0] = cim_dw_compact
+ * cmd_i[101:93] = cim_os_cnt
+ * cmd_i[92:84] = cim_ws_cnt
+ * cmd_i[83:75] = cim_as_cnt
+ * cmd_i[74:68] = cim_reduce_split_mask
+ * cmd_i[67:60] = cim_macro_en_mask
+ * cmd_i[59:28] = cim_macro_oc_mask
+ * cmd_i[27:4] = cim_act_slot_sel
+ * cmd_i[3:1] = cim_precision
+ * cmd_i[0] = cim_signed_en
  */
 library (cluster_top_interface) {
   technology (cmos);
@@ -83,11 +82,11 @@ library (cluster_top_interface) {
     downto : true;
   }
 
-  type (bus_103) {
+  type (bus_102) {
     base_type : array;
     data_type : bit;
-    bit_width : 103;
-    bit_from : 102;
+    bit_width : 102;
+    bit_from : 101;
     bit_to : 0;
     downto : true;
   }
@@ -126,9 +125,9 @@ library (cluster_top_interface) {
     }
 
     bus ("cmd_i") {
-      bus_type : bus_103;
+      bus_type : bus_102;
       direction : input;
-      pin ("cmd_i[102:0]") {
+      pin ("cmd_i[101:0]") {
         direction : input;
         max_transition : 0.871500;
         min_transition : 0.000000;

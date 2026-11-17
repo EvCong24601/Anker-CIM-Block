@@ -6,12 +6,18 @@ TB 通过正式端口 raw_psum[1023:0]、psum_valid[31:0] 检查 signed32 原始
 
 用 `--case channels` 单独运行控制切换与缺操作数测试。用例驱动真实权重和 ACT，对每个输出 lane 检查点积和采样沿，并检查新 cmd 的最早握手沿。用例目录的 `data/channel_audit.json` 汇总了缺数据时仍有输出的周期数和切换空泡分布。
 
-定向用例 `dw_compact_w2`、`dw_compact_w4`、`dw_compact_w8` 通过三通道发数，覆盖各支持的 A 精度、缓存、直通、八槽置换、符号模式、OS/WS/AS 和仅切换 DW 位的任务交接。逐 issue 比较完整 512 bit Macro 输入，检查 DW 的三个 ACT 时钟为 001 及高位 Q 保持，逐 lane 核对 signed32 点积和采样沿。单 Macro 的门控和旁路测试还覆盖普通请求写入非零高位后连续进入 DW、再回到普通模式。四个 `dw_compact_invalid_*` 用例核对非法分组、零 OC、多 OC 和槽号重复的诊断。
+定向用例 `dw_k256_w2`、`dw_k256_w4`、`dw_k256_w8` 通过三通道发数，分别启用 2/4/8 个 Macro 覆盖 K=256。覆盖全部支持的 A 精度、符号、OS/WS/AS、物理 Macro 置换和全部合法 ACT 槽。逐 issue 核对完整 512 bit Macro 输入、真实 ACT bank 时钟及保持，逐 lane 核对完整点积与采样沿，并比较门控开关。还覆盖 zero/multi OC、enable mask 变化、独立与合并归约、空有效工作及同配置交接。`dw_k256_invalid_slot` 和 `dw_k256_invalid_duplicate` 分别核对越界槽和同组重复槽拒绝。
 
 从仓库运行 python RTL/cluster/tb/py/run_sram_regression.py；--full 运行全部目录化用例，--case 选择用例，--sim-dir 指定仓库外快照。脚本读取与 VCS 相同的 filelist 和 cases.py，用 sources.json 记录快照文件散列。
 
-当前 Macro 使用两拍 LUT/CSA 实现。没有 HVT FA/HA 库时，加 `--csa-golden`，仅将固定 CSA 文件替换为无工艺依赖的数学 golden model。其余 LUT、DW、CSA 寄存、CPA 和 ICG 保持真实 RTL。`summary.log` 标注验证模型。此模式验证功能与接口时序，不验证固定门连接或 PPA，详见 [Macro 说明](../../macro/README.md#无工艺库的-golden-model-仿真)。
+当前 Macro 使用两拍 LUT/CSA 实现。没有 HVT FA/HA 库时，加 `--csa-golden`，仅将固定 CSA 文件替换为无工艺依赖的数学 golden model。其余 LUT、精度译码、CSA 寄存、CPA 和 ICG 保持真实 RTL。`summary.log` 标注验证模型。此模式验证功能与接口时序，不验证固定门连接或 PPA，详见 [Macro 说明](../../macro/README.md#无工艺库的-golden-model-仿真)。
 
-固定/golden CSA 的 correction 输入均接零。Macro 在 n+1 保存共享的 5 bit 模式信息，第二拍译码 correction 并直接加到 CPA。Cluster 检查共享模式的捕获与保持，以及原有每 OC 的 CSA/结果门控，数值仍由独立整数点积逐 lane 核对。
+固定/golden CSA 的 correction 输入均接零。Macro 在 n+1 保存共享的 4 bit 模式信息，第二拍译码 correction 并直接加到 CPA。Cluster 检查共享模式的捕获与保持，以及原有每 OC 的 CSA/结果门控，数值仍由独立整数点积逐 lane 核对。
 
 从 vcs-rtl 运行 make list、make run CASE=cluster_default、make gemm-regression。详见 [VCS说明](../../../vcs-rtl/README.md) 和 [raw输出契约](../../../docs/Cluster_Raw_Output.md)。
+
+`pipeline_config` 定向用例逐字段及组合切换 ACT slot、符号、同 A 精度下的 W 精度和兼容计数。414 对任务均要求 next_cmd_accept=old_last_issue、next_first_issue=old_last_issue+1；独立整数点积核对全部有效 lane 和采样沿，门控开关逐拍对照。覆盖 WS64→1、AS8→2 及反向扩展；额外核对各级 51 bit 来源、tmp/发布级配置捕获保持和真实 Psum Context 时钟。split、A位宽或累加模式变化的用例继续验证资源保护要求的排空。
+
+`mask_pipeline` 覆盖七精度、三种累加模式及独立/两路/四路/八路/混合深度归约的 enable/OC mask 切换；逐对要求末次 issue 同沿接收下一 cmd、下一沿连续 issue。包括 enable 单独全零、OC 单独全零、组合清空与恢复、交替 mask、Context 数缩小，以及旧深路径→空/浅路径→不兼容配置的连续任务。检查真实 Macro/归约/tmp/Psum 时钟与保持、各级配置来源、逐 lane 数值及准确采样沿。`channel_cycles.csv` 的 `prior_drain` 为所有不兼容旧任务的最晚输出采样沿与前任务末次issue沿的较大值，不能只看最近一个可能为空的任务。
+
+`path_class` 在每个任务只有一种有效归约宽度的约束下，遍历 canonical split 和七精度/三种模式；关闭其他宽度的组，覆盖 Reduce-1↔2、Reduce-4 同类跨 split、Reduce-8 同类保持、OC/组关闭、Context 数缩小及21条三任务链。独立树遍历与整数点积核对类别、lane映射、数值及采样沿，真实 ICG 与配置保持检查继续开启；深任务→不同 split 的空任务→不兼容类别验证全在途保护，空任务不能成为新类别的绕过入口。混合宽度仍由原有回归覆盖，不作为本用例的快速路径输入。

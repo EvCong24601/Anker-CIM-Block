@@ -90,41 +90,30 @@ initial begin : stimulus
   end
   drain();
 
-  // Back-to-back ordinary -> compact -> ordinary. Row 1 has nonzero
-  // weights at every index, so stale ACT in any excluded slice is observable.
-  case_description = "first-compact-DW/nonzero-high-banks";
+  // Nonzero upper ACT must contribute in W2/W4, including after W8.
+  // The integer oracle checks every full-row result and exact two-edge timing.
+  case_description = "full-row-ACT/precision-switch/upper-bank-capture";
   for (int p = 0; p < 7; p++) begin
-    send_phase(0, 0, 0, 1, 1, 1, {128{4'h1}});  // Seed all 512 bits in W2.
-    send_phase(3'(p), 0, 0, 1, 1, 0, {128{4'h1}});
-    send_phase(3'(p), 0, 0, 1, 1, 0, {{96{4'h2}}, 128'b0}, 1);
-    @(posedge clock);
-    #0.002;
-    if (dut.act_clock !== (CLOCK_GATING ? 3'b001 : 3'b111) ||
-        dut.activation_in !== {{96{4'h1}}, 128'b0})
-      $fatal(1, "First compact issue lost retained ACT or clocked an upper bank precision=%0d", p);
-    send_phase(3'(p), 0, 0, 1, 1, 0, {{96{4'h3}}, {32{4'h2}}}, 1);
+    send_phase(5, 0, 0, 1, 1, 1, '0);
+    send_phase(3'(p), 0, 0, 1, 1, 0, {{96{4'h2}}, 128'b0});
+    send_phase(3'(p), 0, 1, 1, 1, 0, {{96{4'h3}}, {32{4'h2}}});
     send_phase(3'(p), 0, 0, 1, 1, 0, {128{4'h4}});
-    @(posedge clock);
-    #2;
-    if (cim_odata_valid !== 1'b1 || cim_odata[17:0] !== '0)
-      $fatal(1, "Stale high ACT contributed to first compact result precision=%0d", p);
   end
   drain();
-  $display("PASS first_compact_dw gating=%0d precisions=7 retained_high=384 first_result=0", CLOCK_GATING);
 
-  // Identical W/sign/phase but different DW flags require different pooled
-  // corrections. Alternate on every issue to expose a missing DW stage bit.
-  case_description = "CPA-correction/signed-normal-DW/II1";
+  // Switch weight precision, sign and phase on each issue to check that the
+  // shared correction mode follows the CSA rows through the n+1 boundary.
+  case_description = "CPA-correction/precision-sign-phase/II1";
   for (int p = 0; p < 7; p++) begin
     for (int ph = 0; ph < activation_bits(p)/4; ph++) begin
-      send_phase(3'(p), 2'(ph), 1, 15, 1, 1, random_activation(), 0);
-      send_phase(3'(p), 2'(ph), 1, 4'b0001 << ((p+ph)%4), 1, 0, random_activation(), 1);
-      send_phase(3'(p), 2'(ph), 1, 15, 1, 0, random_activation(), 0);
-      send_phase(3'(p), 2'(ph), 1, 15, 1, 0, random_activation(), 1);
+      send_phase(3'(p), 2'(ph), 1, 15, 1, 1, random_activation());
+      send_phase(3'((p+1)%7), 0, 0, 4'b0001 << ((p+ph)%4), 1, 0, random_activation());
+      send_phase(3'(p), 2'(ph), 1, 15, 1, 0, random_activation());
+      send_phase(3'(p), 2'(ph), 0, 15, 1, 0, random_activation());
     end
   end
   drain();
-  $display("PASS cpa_correction_mode gating=%0d signed_normal_dw=64 II=1", CLOCK_GATING);
+  $display("PASS cpa_correction_mode gating=%0d mode_transitions=64 II=1", CLOCK_GATING);
 
   // Hold preserves masked-off OC data and ignores zero-mask refreshes.
   case_description = "Hold-preservation/zero-compute-mask";

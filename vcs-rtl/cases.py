@@ -126,21 +126,25 @@ add('gate_equiv_empty_batch', 'cluster', 'Empty raw batch gated/ungated comparis
 
 
 add('channels', 'channels', 'Independent cmd/weight/ACT, control switches and drain under operand stalls', 'PASS channels jobs=', '', '', '', False, False)
+add('pipeline_config', 'channels', 'Pipelined 51-bit configuration and zero-bubble input-only changes',
+    'PASS pipeline_config pairs=', '+PIPELINE_CONFIG_TEST')
+add('mask_pipeline', 'channels', 'Zero-bubble enable/OC changes and retiring path occupancy',
+    'PASS mask_pipeline pairs=', '+MASK_PIPELINE_TEST')
+add('path_class', 'channels', 'Uniform active reduction widths and same-class split turnover',
+    'PASS path_class pairs=', '+PATH_CLASS_TEST')
 add('act_buffer_write_enable', 'channels', 'ACT last-use bypass, AS reuse and same-edge plane replacement',
     'PASS ACT buffer last-use/reuse/replacement', '+TIMING_FIGURE +ACT_BUFFER_WE_TEST', '', '', False, False)
 
 
 for width in (2, 4, 8):
-    add(f'dw_compact_w{width}', 'channels', f'Compact DW W{width} ACT routing, turnover and dot products',
-        f'PASS compact DW W{width} ', f'+DW_WIDTH={width}')
+    add(f'dw_k256_w{width}', 'channels', f'K256 DW W{width}, full ACT slots, masks and dot products',
+        f'PASS K256 DW W{width} ', f'+DW_WIDTH={width}')
 
 for invalid, diagnostic in (
-    ('split', 'Compact DW requires independent g1 Macros'),
-    ('no_oc', 'Compact DW requires one OC per enabled Macro'),
-    ('multi_oc', 'Compact DW requires one OC per enabled Macro'),
-    ('duplicate', 'Repeated ACT slot in compact DW issue'),
+    ('slot', 'ACT slot outside plane'),
+    ('duplicate', 'Repeated K slot in one reduction group'),
 ):
-    add('dw_compact_invalid_' + invalid, 'channels', 'Reject compact DW ' + invalid,
+    add('dw_k256_invalid_' + invalid, 'channels', 'Reject K256 DW ' + invalid,
         diagnostic, '+DW_WIDTH=4 +DW_INVALID=' + invalid, negative=True)
 
 

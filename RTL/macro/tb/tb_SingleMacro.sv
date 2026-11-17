@@ -8,7 +8,6 @@ module tb_SingleMacro;
   always #5 clock = ~clock;
   logic reset_n = 1'b1;
   logic cim_ren = 0, cim_station = 1, cim_signed_en = 0, sram_wen = 0;
-  logic cim_dw_compact = 0;
   logic [511:0] cim_idata = '0;
   logic [7:0] cim_raddr = '0, sram_waddr = '0;
   logic [3:0] cim_oc_mask = '0;

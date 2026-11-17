@@ -85,8 +85,8 @@ always @(posedge clock) begin : buffer_clock_scoreboard
       for (int d = 0; d < OUTPUT_BUFFER_DEPTH; d++) begin
         if (dut.psum_clock[d][l] !== want_p[d][l]) $fatal(1, "Psum ICG mismatch");
         if (dut.psum_clock[d][l]) writes++;
-        if (dut.batch_active && d >= dut.contexts) begin
-          if (dut.psum_depth_open[d] || dut.psum_clock[d][l]) $fatal(1, "High Context entry not gated");
+        if (!want_p[d][l]) begin
+          if (dut.psum_clock[d][l]) $fatal(1, "Unrequested Context entry not gated");
           high_depth_checks++;
         end
         buffer_gate_checks++;

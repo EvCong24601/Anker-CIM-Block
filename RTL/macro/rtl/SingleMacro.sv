@@ -28,15 +28,13 @@ module SingleMacro #(
   output logic [  71:0] cim_odata,
   output logic          cim_odata_valid,
   output logic [   3:0] cim_odata_oc_mask,
-  output logic [   1:0] cim_odata_phase,
-  input  logic          cim_dw_compact = 1'b0  // Use 32 ACT digits at every W precision.
+  output logic [   1:0] cim_odata_phase
 );
   import single_macro_pkg::*;
 
   logic         in_valid;  // Valid request at the input boundary.
   logic [511:0] activation_in;  // Registered ACT digits shared by all OCs.
   logic [  1:0] weight_mode_in;  // Decoded W2/W4/W8 weight mode.
-  logic         dw_compact_in;  // Captured with the ACT and weight mode.
   logic         signed_en_in;  // Signed interpretation of weight digits.
   logic         activation_signed_in;  // Signed interpretation of this ACT digit.
   logic [  3:0] mask_in;  // Enabled OCs for this request.
@@ -83,9 +81,8 @@ module SingleMacro #(
   wire [1:0] input_weight_mode;
   wire [2:0] act_capture_en;
   assign input_weight_mode = decode_weight_mode(cim_precision);
-  wire capture_wide_act = issue && !cim_dw_compact;
-  assign act_capture_en = {capture_wide_act && input_weight_mode == W_MODE_2,
-                           capture_wide_act && input_weight_mode != W_MODE_8, issue};
+  assign act_capture_en = {issue && input_weight_mode == W_MODE_2,
+                           issue && input_weight_mode != W_MODE_8, issue};
   wire [2:0] act_clock;
   for (genvar bank = 0; bank < 3; bank++) begin : g_act_bank
     localparam int FIRST = bank == 0 ? 0 : bank == 1 ? 128 : 256;
@@ -146,10 +143,10 @@ module SingleMacro #(
 
   wire [17:0] correction_cpa;
   wire signed [17:0] phase_sum [0:3];
-  // Only the five shared mode bits cross n+1. Decode correction in the CPA
+  // Only the four shared mode bits cross n+1. Decode correction in the CPA
   // cycle instead of storing an 18-bit correction payload for that cycle.
   logic [1:0] weight_mode_cpa;
-  logic signed_en_cpa, activation_signed_cpa, dw_compact_cpa;
+  logic signed_en_cpa, activation_signed_cpa;
   wire cpa_mode_capture_en = in_valid && (|(mask_in & result_mask_in));
   // No payload reset: valid/masks cancel pending work across reset_n.
   always_ff @(posedge macro_clock) begin
@@ -157,12 +154,11 @@ module SingleMacro #(
       weight_mode_cpa <= weight_mode_in;
       signed_en_cpa <= signed_en_in;
       activation_signed_cpa <= activation_signed_in;
-      dw_compact_cpa <= dw_compact_in;
     end
   end
   MacroW8MainCorrection u_sign_control (
     .weight_mode(weight_mode_cpa), .signed_en(signed_en_cpa),
-    .activation_signed(activation_signed_cpa), .dw_compact(dw_compact_cpa),
+    .activation_signed(activation_signed_cpa),
     .correction(correction_cpa)
   );
   generate
@@ -200,7 +196,6 @@ module SingleMacro #(
         .weights(sram_read_data[256*c +: 256]), .activations(activation_in),
         .weight_mode(weight_mode_in), .weight_signed(signed_en_in),
         .activation_signed(activation_signed_in), .enable(enabled_oc),
-        .dw_compact(dw_compact_in),
         .correction(oc_correction), .result(phase_sum[c])
       );
     end
@@ -215,7 +210,6 @@ module SingleMacro #(
       result_mask_csa <= '0;
       phase_csa <= '0;
       weight_mode_in <= W_MODE_2;
-      dw_compact_in <= 1'b0;
       signed_en_in <= 1'b0;
       activation_signed_in <= 1'b0;
       mask_in <= '0;
@@ -230,7 +224,6 @@ module SingleMacro #(
       cim_odata_valid <= csa_valid;
       if (issue) begin
         weight_mode_in <= decode_weight_mode(cim_precision);
-        dw_compact_in <= cim_dw_compact;
         signed_en_in <= cim_signed_en;
         activation_signed_in <= digit_is_signed(cim_precision, cim_phase, cim_signed_en);
         mask_in <= cim_oc_mask;
@@ -269,7 +262,7 @@ module SingleMacro #(
       end
       if (issue) begin
         if ((^{cim_precision, cim_phase, cim_signed_en, cim_raddr, cim_station, cim_oc_mask,
-               cim_result_mask, cim_dw_compact, cim_idata}) === 1'bx)
+               cim_result_mask, cim_idata}) === 1'bx)
           $fatal(1, "SM_PROTOCOL: unknown compute input");
         if (!legal_phase(cim_precision, cim_phase)) $fatal(1, "SM_PROTOCOL: illegal precision/phase");
         if (!cim_station) begin

@@ -3,7 +3,6 @@
 module MacroW8MainCorrection (
     input wire [1:0] weight_mode,
     input wire signed_en, activation_signed,
-    input wire dw_compact,
     output reg [17:0] correction
 );
     import single_macro_pkg::*;
@@ -33,15 +32,6 @@ module MacroW8MainCorrection (
             endcase
             default: correction=18'd0;
         endcase
-        if (dw_compact) begin
-            // Compact DW has 16 logical pairs instead of 64/32/16 in W2/W4/W8.
-            // Sign-extend the negative table value before scaling modulo 2**18.
-            case (weight_mode)
-                W_MODE_2: correction=$signed(correction) >>> 2;
-                W_MODE_4: correction=$signed(correction) >>> 1;
-                default: begin end
-            endcase
-        end
     end
 endmodule
 `default_nettype wire

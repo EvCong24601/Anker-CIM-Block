@@ -58,7 +58,7 @@ always @(posedge clock or negedge reset_n) begin : scoreboard
           $fatal(1, "TB: legal stimulus reused invalid reference hold");
         row = reference_hold;
       end
-      expected_data[0]  = golden_phase(row, cim_idata, cim_precision, cim_signed_en, cim_phase, cim_oc_mask, cim_dw_compact);
+      expected_data[0]  = golden_phase(row, cim_idata, cim_precision, cim_signed_en, cim_phase, cim_oc_mask);
       expected_mask[0]  = cim_oc_mask;
       expected_phase[0] = cim_phase;
     end else if (cim_ren) zero_mask_count++;
@@ -94,22 +94,22 @@ always @(posedge clock or negedge reset_n) begin : scoreboard
   end
 end
 
-// Five shared mode bits cross the SAME n+1 edge as the CSA rows. Check
+// Four shared mode bits cross the SAME n+1 edge as the CSA rows. Check
 // capture/hold and independently derive the CPA-cycle correction formula.
 always @(posedge clock) begin : shared_correction_check
   bit capture;
-  logic [4:0] saved, incoming;
+  logic [3:0] saved, incoming;
   logic [17:0] expected_correction;
   int width, pairs, pair_offset;
   if (reset_n && !negative_mode) begin
     capture = dut.in_valid && (|(dut.mask_in & dut.result_mask_in));
     saved = {dut.weight_mode_cpa, dut.signed_en_cpa,
-             dut.activation_signed_cpa, dut.dw_compact_cpa};
+             dut.activation_signed_cpa};
     incoming = {dut.weight_mode_in, dut.signed_en_in,
-                dut.activation_signed_in, dut.dw_compact_in};
+                dut.activation_signed_in};
     if (capture) begin
       width = 2 << int'(dut.weight_mode_in);
-      pairs = dut.dw_compact_in ? 16 : 128/width;
+      pairs = 128/width;
       pair_offset = 15*(1 << width)*int'(dut.signed_en_in) +
                     8*((1 << (width+1))-1)*int'(dut.activation_signed_in) -
                     16*(1 << width)*int'(dut.signed_en_in)*int'(dut.activation_signed_in);
@@ -118,7 +118,7 @@ always @(posedge clock) begin : shared_correction_check
     #0.002;
     if (reset_n) begin
       if ({dut.weight_mode_cpa, dut.signed_en_cpa,
-           dut.activation_signed_cpa, dut.dw_compact_cpa} !== (capture ? incoming : saved))
+           dut.activation_signed_cpa} !== (capture ? incoming : saved))
         $fatal(1, "Shared CPA mode capture/hold mismatch");
       if (capture && dut.correction_cpa !== expected_correction)
         $fatal(1, "CPA correction formula mismatch expected=%h got=%h",
@@ -147,7 +147,7 @@ for (genvar bank = 0; bank < 3; bank++) begin : g_act_capture_check
         $fatal(1, "ACT bank asynchronous reset_n failed bank=%0d", bank);
     end else if (!negative_mode) begin
       want = cim_ren && (|cim_oc_mask) &&
-             (bank == 0 || (!cim_dw_compact && (bank == 1 ? cim_precision <= 4 : cim_precision <= 1)));
+             (bank == 0 || (bank == 1 ? cim_precision <= 4 : cim_precision <= 1));
       saved = dut.activation_in[FIRST +: WIDTH];
       expected_act = cim_idata[FIRST +: WIDTH];
       #0.002;

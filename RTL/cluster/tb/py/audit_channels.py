@@ -115,7 +115,11 @@ def audit(directory):
     for index, j in enumerate(jobs[:-1]):
         bubbles = int(j['next_issue_bubbles'])
         (same if int(j['same_config']) else switched)[bubbles] += 1
-        if not int(j['same_config']) and int(j['last_output']) >= 0:
+        if 'prior_drain' in jobs[index+1]:
+            horizon = int(jobs[index+1]['prior_drain'])
+            if horizon > int(j['last_issue']):
+                acceptance_after_last_output[int(jobs[index+1]['cmd_accept']) - horizon] += 1
+        elif not int(j['same_config']) and int(j['last_output']) >= 0:
             acceptance_after_last_output[int(jobs[index+1]['cmd_accept']) - int(j['last_output'])] += 1
     # The source holds the next differing command before drain completes.
     assert set(acceptance_after_last_output) == {0}, acceptance_after_last_output

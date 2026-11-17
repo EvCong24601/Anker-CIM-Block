@@ -43,9 +43,11 @@ module tb_ClusterChannels;
     end
   end
   `include "include/cluster_channel_driver.svh"
-  localparam int JOBS = 1024, QUEUE = 4096;
+  localparam int JOBS = 4096, QUEUE = 4096;
   cluster_ctrl_t configs[JOBS];
   int cmd_cycle[JOBS], cmd_offer_cycle[JOBS], first_issue[JOBS], last_issue[JOBS], last_output[JOBS];
+  int prior_drain[JOBS];
+  int last_due[JOBS];
   int offered_job = -1, accepted_jobs = 0, issue_job = 0, issue_index = 0, cycle = 0;
   longint signed expected[32][QUEUE];
   int expected_job[32][QUEUE], expected_context[32][QUEUE], due[32][QUEUE];
@@ -70,6 +72,14 @@ module tb_ClusterChannels;
       1, 3, 5: return 8;
       default: return 16;
     endcase
+  endfunction
+  // Independent semantic oracle: do not call the RTL key function.
+  function automatic bit compatible(cluster_ctrl_t a, cluster_ctrl_t b);
+    return ab(int'(a.cim_precision)) == ab(int'(b.cim_precision)) &&
+           (a.cim_as_cnt > 1) == (b.cim_as_cnt > 1) &&
+           (a.cim_os_cnt > 1 || a.cim_as_cnt > 1) == (b.cim_os_cnt > 1 || b.cim_as_cnt > 1) &&
+           (a.cim_reduce_split_mask == b.cim_reduce_split_mask || channel_route_class(a) == 3 ||
+            channel_route_class(b) == 3 || (channel_route_class(a) < 3 && channel_route_class(a) == channel_route_class(b)));
   endfunction
   function automatic int contexts(cluster_ctrl_t c);
     return c.cim_ws_cnt > 1 ? int'(c.cim_ws_cnt) : int'(c.cim_as_cnt);
@@ -132,7 +142,7 @@ module tb_ClusterChannels;
     bit mask[32];
     int width, kr, l, addr, slot;
     width = wb(int'(cfg.cim_precision));
-    kr = cfg.cim_dw_compact ? 32 : 256 / width;
+    kr = 256 / width;
     for (int cx = 0; cx < contexts(cfg); cx++) begin
       for (int i = 0; i < 32; i++) begin
         value[i] = 0;
@@ -264,8 +274,8 @@ module tb_ClusterChannels;
             job, kt, configs[job].cim_as_cnt > 1 ? 0 : cx, p
           ))
           $fatal(1, "CHANNELS: issue binding mismatch job=%0d idx=%0d", job, issue_index);
-        if (configs[job].cim_dw_compact)
-          check_compact_issue(configs[job], make_plane(job, kt, configs[job].cim_as_cnt > 1 ? 0 : cx, p));
+        if (dw_width != 0)
+          check_k256_issue(configs[job], make_plane(job, kt, configs[job].cim_as_cnt > 1 ? 0 : cx, p));
         if (first_issue[job] < 0) first_issue[job] = cycle;
         if (p == phase_count - 1 && kt == int'(configs[job].cim_os_cnt) - 1)
           for (int l = 0; l < 32; l++)
@@ -279,6 +289,7 @@ module tb_ClusterChannels;
             if (expected_job[l][reserved[l]%QUEUE] != job || expected_context[l][reserved[l]%QUEUE] != cx)
               $fatal(1, "CHANNELS: reservation order mismatch");
             due[l][reserved[l]%QUEUE] = cycle + latency + 1;
+            if (cycle + latency + 1 > last_due[job]) last_due[job] = cycle + latency + 1;
             reserved[l]++;
           end
         issue_index++;
@@ -293,12 +304,18 @@ module tb_ClusterChannels;
         if (job != accepted_jobs || (job > 0 && last_issue[job-1] < 0)) $fatal(1, "CHANNELS: pending command accepted");
         outstanding = 0;
         for (int l = 0; l < 32; l++) if (head[l] != tail[l]) outstanding = 1;
-        if (job > 0 && cmd_i != configs[job-1]) begin
+        if (job > 0 && !compatible(cmd_i,configs[job-1])) begin
           switches++;
-          if (outstanding) $fatal(1, "CHANNELS: changed config before old outputs sampled");
         end else if (outstanding) overlap++;
         if (job > 0) begin
-          earliest = cmd_i == configs[job-1] || last_output[job-1] < 0 ? last_issue[job-1] : last_output[job-1];
+          // Check the complete job history, not just the preceding (possibly
+          // empty) command. Output due dates come from the independent oracle.
+          prior_drain[job] = last_issue[job-1];
+          for (int old = 0; old < job; old++)
+            if (last_due[old] > prior_drain[job] && !compatible(cmd_i,configs[old]))
+              prior_drain[job] = last_due[old];
+          if (cycle < prior_drain[job]) $fatal(1,"CHANNELS: incompatible in-flight job not drained");
+          earliest = prior_drain[job];
           if (cmd_offer_cycle[job] > earliest) earliest = cmd_offer_cycle[job];
           if (cycle != earliest)
             $fatal(
@@ -373,7 +390,7 @@ module tb_ClusterChannels;
     job = offered_job + 1;
     send_job(cfg, wait_for_weight ? 10 : 0, wait_for_weight ? 0 : 10);
     while (first_issue[job] < 0) @(negedge clock);
-    if (configs[job-1] == cfg || first_issue[job] != cmd_cycle[job] + 11)
+    if (first_issue[job] != cmd_cycle[job] + 11)
       $fatal(1, "CHANNELS: config switch with missing operand job=%0d weight_delayed=%0b cmd=%0d issue=%0d",
              job, wait_for_weight, cmd_cycle[job], first_issue[job]);
   endtask
@@ -448,7 +465,11 @@ module tb_ClusterChannels;
     end
     return cfg;
   endfunction
-  `include "include/cluster_dw_compact_cases.svh"
+  `include "include/cluster_dw_k256_cases.svh"
+  `include "include/cluster_pipeline_cases.svh"
+  `include "include/cluster_mask_cases.svh"
+  `include "include/cluster_path_cases.svh"
+  `include "include/cluster_gate_checks.svh"
   initial begin : run
     cluster_ctrl_t cfg;
     string directory;
@@ -471,6 +492,8 @@ module tb_ClusterChannels;
       first_issue[j] = -1;
       last_issue[j] = -1;
       last_output[j] = -1;
+      last_due[j] = 0;
+      prior_drain[j] = 0;
     end
     repeat (4) @(negedge clock);
     reset_n = 1;
@@ -488,7 +511,11 @@ module tb_ClusterChannels;
     sram_cs_en = 0;
     sram_wr_en = 0;
     checking = 1;
-    if ($value$plusargs("DW_WIDTH=%d", dw_width)) run_compact_cases(dw_width);
+    if ($bits(cluster_ctrl_t) != 102) $fatal(1, "CHANNELS: command must be 102 bits");
+    if ($value$plusargs("DW_WIDTH=%d", dw_width)) run_k256_cases(dw_width);
+    else if ($test$plusargs("PIPELINE_CONFIG_TEST")) run_pipeline_cases();
+    else if ($test$plusargs("MASK_PIPELINE_TEST")) run_mask_cases();
+    else if ($test$plusargs("PATH_CLASS_TEST")) run_path_cases();
     else if ($test$plusargs("TIMING_FIGURE")) begin
       cfg = config_for(2, 1, 0, 1, 1);
       send_job(cfg, 0, 0);
@@ -547,11 +574,26 @@ module tb_ClusterChannels;
     if (head[l] != tail[l] || reserved[l] != tail[l]) $fatal(1, "CHANNELS: missing lane outputs");
     if (dw_width != 0) begin
       if (!dw_buffered || !dw_forwarded || !overlap || switches < 2 || !results)
-        $fatal(1, "Compact DW missing buffered, bypass, turnover or output coverage");
+        $fatal(1, "K256 DW missing buffered, bypass, turnover or output coverage");
       for (int m = 0; m < 8; m++)
-        if (dw_slots_seen[m] !== 8'hff) $fatal(1, "Missing DW slot coverage macro=%0d", m);
-      $display("PASS compact DW W%0d jobs=%0d results=%0d buffered=%0d forwarded=%0d",
+        if (dw_slots_seen[m] !== 8'((1 << dw_width)-1)) $fatal(1, "Missing DW slot coverage macro=%0d", m);
+      $display("PASS K256 DW W%0d jobs=%0d results=%0d buffered=%0d forwarded=%0d",
                dw_width, accepted_jobs, results, dw_buffered, dw_forwarded);
+    end else if ($test$plusargs("PATH_CLASS_TEST")) begin
+      if (compatible_pairs < 1000 || !path_split_changes || !path_r1_r2 || !path_r4 || !path_empty_barriers)
+        $fatal(1,"PATH: missing uniform-width split/empty-barrier coverage");
+      $display("PASS path_class pairs=%0d chains=%0d split_changes=%0d r1_r2=%0d r4=%0d empty_waits=%0d jobs=%0d results=%0d",
+        compatible_pairs,path_chains,path_split_changes,path_r1_r2,path_r4,path_empty_barriers,accepted_jobs,results);
+    end else if ($test$plusargs("MASK_PIPELINE_TEST")) begin
+      if (compatible_pairs < 500 || !retiring_high_contexts || !mask_empty_handoffs || !mask_hidden_deep || !mask_pending_psum)
+        $fatal(1,"MASK: missing overlap/empty/deep/Psum coverage");
+      $display("PASS mask_pipeline pairs=%0d empty=%0d hidden_deep=%0d pending_psum=%0d jobs=%0d results=%0d",
+        compatible_pairs,mask_empty_handoffs,mask_hidden_deep,mask_pending_psum,accepted_jobs,results);
+    end else if ($test$plusargs("PIPELINE_CONFIG_TEST")) begin
+      if (compatible_pairs < 200 || !overlap || !results || !retiring_high_contexts)
+        $fatal(1,"PIPELINE: missing compatible overlap/high Context coverage");
+      $display("PASS pipeline_config pairs=%0d high_context_retire=%0d jobs=%0d results=%0d",
+               compatible_pairs,retiring_high_contexts,accepted_jobs,results);
     end else if(!overlap || !switches || !switch_waits || !weight_stalls || !act_stalls || !drain_during_stall ||
        (!$test$plusargs("TIMING_FIGURE") && (!weight_backpressure || !act_backpressure)))
       $fatal(
@@ -568,11 +610,11 @@ module tb_ClusterChannels;
       );
     $fdisplay(
       metrics,
-      "job,precision,os,ws,as,split,cmd_accept,first_issue,last_issue,last_output,next_cmd_gap,next_issue_bubbles,same_config");
+      "job,precision,os,ws,as,split,cmd_accept,first_issue,last_issue,last_output,next_cmd_gap,next_issue_bubbles,same_config,prior_drain");
     for (int j = 0; j < accepted_jobs; j++)
     $fdisplay(
       metrics,
-      "%0d,%0d,%0d,%0d,%0d,%02h,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
+      "%0d,%0d,%0d,%0d,%0d,%02h,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
       j,
       configs[j].cim_precision,
       configs[j].cim_os_cnt,
@@ -585,7 +627,8 @@ module tb_ClusterChannels;
       last_output[j],
       j + 1 < accepted_jobs ? cmd_cycle[j+1] - last_issue[j] : -1,
       j + 1 < accepted_jobs ? first_issue[j+1] - last_issue[j] - 1 : -1,
-      j + 1 < accepted_jobs ? configs[j] == configs[j+1] : 0
+      j + 1 < accepted_jobs ? compatible(configs[j],configs[j+1]) : 0,
+      prior_drain[j]
     );
     $fclose(metrics);
     $fclose(events);

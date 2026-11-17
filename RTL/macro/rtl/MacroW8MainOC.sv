@@ -6,7 +6,6 @@ module MacroW8MainOC (
     input wire [511:0] activations,
     input wire [1:0] weight_mode,
     input wire weight_signed, activation_signed, enable,
-    input wire dw_compact,
     input wire [17:0] correction,
     output wire signed [17:0] result
 );
@@ -15,12 +14,8 @@ module MacroW8MainOC (
     wire [15:0] pair_extension [0:15];
     for (genvar k=0; k<16; k=k+1) begin : g_pair
         localparam integer X=2*k, Y=2*k+1;
-        // Each physical pair covers 8/4/2 ACT digits in W2/W4/W8. Compact
-        // DW keeps 4/8/16 pairs, all within the low 128-bit ACT bank.
-        // Mask encoded LUT outputs after sign inversion; zero ACT alone
-        // still has a nonzero encoding offset in signed modes.
-        wire pair_enable = enable && (!dw_compact || k < 4 ||
-            weight_mode == W_MODE_8 || (k < 8 && weight_mode == W_MODE_4));
+        // Every issue uses all 16 physical pairs: 128/64/32 ACT digits.
+        // OC enable isolates encoded LUT outputs after sign inversion.
         wire [15:0] act0,act1;
         for (genvar t=0; t<4; t=t+1) begin : g_address
             assign act0[4*t+:4]=(weight_mode == W_MODE_2) ? activations[4*(4*X+t)+:4]
@@ -34,7 +29,7 @@ module MacroW8MainOC (
             .weight0(weights[8*X+:8]),.weight1(weights[8*Y+:8]),
             .activation0(act0),.activation1(act1),.weight_mode(weight_mode),
             .weight_signed(weight_signed),.activation_signed(activation_signed),
-            .enable(pair_enable),.body_planes(pair_body[k]),
+            .enable(enable),.body_planes(pair_body[k]),
             .extension_planes(pair_extension[k]));
     end
     wire [575:0] query_rows;

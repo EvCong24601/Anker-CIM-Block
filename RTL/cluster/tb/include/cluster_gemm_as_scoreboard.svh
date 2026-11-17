@@ -52,8 +52,8 @@ always @(posedge clock) begin : as_gemm_scoreboard
   end
   #1;
   if (reset_n && monitoring) begin
-    if (dut.batch_active && dut.psum_depth_open !== 16'((1 << AS) - 1))
-      $fatal(1, "AS GEMM: incorrect Psum Context enable mask");
+    if ((dut.psum_depth_open & ~16'((1 << AS)-1)) != 0)
+      $fatal(1, "AS GEMM: out-of-range Psum Context write request");
     for (int l = 0; l < 4; l++)
     if (check_history[l]) begin
       if (dut.psum[hc[l]][l] !== wanted_history[l])
