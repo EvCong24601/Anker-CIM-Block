@@ -3,6 +3,7 @@
 +incdir+../RTL/macro/tb
 ../RTL/macro/rtl/single_macro_pkg.sv
 ../RTL/macro/rtl/MacroClockGate.sv
+../RTL/macro/rtl/hdsram256w512btop.sv
 ../RTL/macro/rtl/MacroWeightSRAM.sv
 ../RTL/macro/rtl/MacroMul2x4.sv
 ../RTL/macro/rtl/MacroSliceFusion.sv

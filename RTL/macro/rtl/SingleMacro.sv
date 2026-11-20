@@ -48,13 +48,14 @@ module SingleMacro #(
   wire          write_active;
   wire macro_clock, memory_clock;
   wire memory_active;
+  wire sram_read_enable;
   // Drain both stages and preserve the final valid-clearing edge n+3.
   wire clock_active;
   assign issue = cim_ren && (|cim_oc_mask);
   assign write_active = sram_wen && !(&sram_wmask);
   // The caller keeps SRAM/compute requests inactive during reset_n. Reset is
   // not part of the combinational request or ICG-enable decode.
-  assign memory_active = write_active || sram_ren || (issue && cim_station);
+  assign memory_active = write_active || sram_ren || sram_read_enable;
   assign clock_active = issue || in_valid || csa_valid || cim_odata_valid;
   generate
     if (USE_CLOCK_GATING) begin : g_icg
@@ -101,9 +102,12 @@ module SingleMacro #(
 
   logic [7:0] held_address;
   logic hold_valid;
+  logic [3:0] held_oc_mask;
   wire [1023:0] sram_read_data;
-  wire sram_read_enable;
-  assign sram_read_enable = issue && cim_station;
+  wire same_held_row = hold_valid && (held_address == cim_raddr);
+  wire [3:0] missing_ocs = cim_oc_mask & ~held_oc_mask;
+  assign sram_read_enable = issue && (cim_station || (same_held_row && (|missing_ocs)));
+  wire [3:0] sram_read_oc_mask = sram_ren ? 4'hf : cim_station ? cim_oc_mask : missing_ocs;
   // Both refresh and reuse consume the SRAM's retained read output.
   // There is no second 1024-bit weight data register after the SRAM.
   // Keep precompute inputs stable across bubbles. Query outputs are isolated
@@ -116,6 +120,7 @@ module SingleMacro #(
     .write_mask(sram_wmask),
     .read_enable(sram_read_enable || sram_ren),
     .read_address(sram_ren ? sram_raddr : cim_raddr),
+    .read_oc_mask(sram_read_oc_mask),
     .read_data(sram_read_data)
   );
   // Align local read qualification with the sampled request, not the next
@@ -126,18 +131,21 @@ module SingleMacro #(
     else sram_response_valid <= sram_ren;
   assign sram_rdata = sram_response_valid ? sram_read_data : 1024'b0;
 
-  // Tags describe the actual SRAM output, including ordinary reads. Writes
-  // invalidate the tag because read_data retains the old contents on a write.
-  // Only address/valid state is stored here, not another copy of the row.
+  // Only the selected OC slices of the SRAM output update on a compute read.
+  // Track slices for the current row so a same-row OC change can fetch any
+  // missing slice at the issue edge. A write invalidates the retained row.
   always_ff @(posedge memory_clock or negedge reset_n) begin
     if (!reset_n) begin
       held_address <= '0;
       hold_valid <= 1'b0;
+      held_oc_mask <= '0;
     end else if (write_active) begin
       hold_valid <= 1'b0;
+      held_oc_mask <= '0;
     end else if (sram_ren || sram_read_enable) begin
       held_address <= sram_ren ? sram_raddr : cim_raddr;
       hold_valid <= 1'b1;
+      held_oc_mask <= (!sram_ren && same_held_row ? held_oc_mask : 4'b0) | sram_read_oc_mask;
     end
   end
 
@@ -269,8 +277,7 @@ module SingleMacro #(
           if (!hold_valid) $fatal(1, "SM_PROTOCOL: reuse invalid hold");
           if (cim_raddr != held_address) $fatal(1, "SM_PROTOCOL: reuse address mismatch");
         end
-        // A partial write initializes only its unmasked OCs, even
-        // when an earlier refresh already captured the whole row.
+        // A bank write initializes only the two unmasked OCs.
         if ((initialized_ocs[cim_raddr] & cim_oc_mask) != cim_oc_mask)
           $fatal(1, "SM_PROTOCOL: read uninitialized row");
       end
