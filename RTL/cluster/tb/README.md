@@ -16,6 +16,13 @@ TB 通过正式端口 raw_psum[1023:0]、psum_valid[31:0] 检查 signed32 原始
 
 从 vcs-rtl 运行 make list、make run CASE=cluster_default、make gemm-regression。详见 [VCS说明](../../../vcs-rtl/README.md) 和 [raw输出契约](../../../docs/Cluster_Raw_Output.md)。
 
+两个定向用例均使用 `tb_ClusterChannels`，先从公开 SRAM 口写入权重，再发送 signed、AS=WS=1 的命令。下一条命令仅在 `cmd_ready_o` 的可接收窗口送出，按上升沿的 `cmd_valid_i && cmd_ready_o` 计入握手。
+
+- `w8a8_os128_to_w4a8_os64`：W8A8 OS=128 的最后一个 phase 与 W4A8 OS=64 的命令握手同沿，下一拍 issue W4A8 的第一个 phase。检查 384 个连续 issue 和 8 个有效 lane 结果。
+- `w8a8_os1_128_cmds`：128 条 W8A8 OS=1 命令，每条两个 phase；逐个检查 127 个边界、256 个连续 issue 和 512 个有效 lane 结果。
+
+在 `vcs-rtl/` 用 `make run CASE=<用例名>` 运行。在 `data/channel_cycles.csv` 查看 `next_issue_bubbles`；除最后一条没有后继命令（记为 −1），其余各行应为 0。
+
 `pipeline_config` 定向用例逐字段及组合切换 ACT slot、符号、同 A 精度下的 W 精度和兼容计数。414 对任务均要求 next_cmd_accept=old_last_issue、next_first_issue=old_last_issue+1；独立整数点积核对全部有效 lane 和采样沿，门控开关逐拍对照。覆盖 WS64→1、AS8→2 及反向扩展；额外核对各级 51 bit 来源、tmp/发布级配置捕获保持和真实 Psum Context 时钟。不兼容路径、A位宽或累加模式变化时验证排空；同类跨 split 的快速交接由下述 path_class 覆盖。
 
 `mask_pipeline` 覆盖七精度、三种累加模式及独立/两路/四路/八路/混合深度归约的 enable/OC mask 切换；逐对要求末次 issue 同沿接收下一 cmd、下一沿连续 issue。包括 enable 单独全零、OC 单独全零、组合清空与恢复、交替 mask、Context 数缩小，以及旧深路径→空/浅路径→不兼容配置的连续任务。检查真实 Macro/归约/tmp/Psum 时钟与保持、各级配置来源、逐 lane 数值及准确采样沿。`channel_cycles.csv` 的 `prior_drain` 为所有不兼容旧任务的最晚输出采样沿与前任务末次issue沿的较大值，不能只看最近一个可能为空的任务。

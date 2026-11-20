@@ -1,5 +1,5 @@
 int compatible_pairs = 0, retiring_high_contexts = 0;
-// Independent streams offer the next command before the old final operand,
+// Independent streams queue the next command before the old final operand,
 // including A4 AS where the final address can issue on its acceptance edge.
 task automatic compatible_pair(cluster_ctrl_t old_cfg, cluster_ctrl_t next_cfg);
   int j;
@@ -33,6 +33,49 @@ task automatic compatible_pair(cluster_ctrl_t old_cfg, cluster_ctrl_t next_cfg);
     $fatal(1,"PIPELINE: compatible pair bubble old=%0d next=%0d cmd=%0d first=%0d",
            last_issue[j],j+1,cmd_cycle[j+1],first_issue[j+1]);
   compatible_pairs++;
+endtask
+
+// A8 supplies two phases per tile. All four OCs share the same reduction route.
+task automatic run_os_commands();
+  cluster_ctrl_t cfg;
+  cfg = config_for(5, 3, 0, os_precision_pair ? 128 : 1, 1);
+  cfg.cim_macro_en_mask = 8'h0f;
+  cfg.cim_act_slot_sel = 24'hfac688;
+  if (os_precision_pair) begin
+    cluster_ctrl_t next_cfg;
+    next_cfg = cfg;
+    next_cfg.cim_precision = 3; // W4A8
+    next_cfg.cim_os_cnt = 64;
+    compatible_pair(cfg, next_cfg);
+  end else begin
+    for (int j = 0; j < 128; j++) configs[j] = cfg;
+    fork
+      for (int j = 0; j < 128; j++) begin
+        offered_job = j;
+        channel_cmd(cfg);
+      end
+      for (int j = 0; j < 128; j++) channel_weight(8'(address(j, 0, 0)));
+      for (int j = 0; j < 128; j++)
+        for (int ph = 0; ph < 2; ph++) channel_act(make_plane(j, 0, 0, ph));
+    join
+  end
+endtask
+
+task automatic check_os_commands();
+  int jobs, issues;
+  jobs = os_precision_pair ? 2 : 128;
+  issues = 0;
+  if (accepted_jobs != jobs || results != 4*jobs)
+    $fatal(1, "OS commands: jobs=%0d lane results=%0d", accepted_jobs, results);
+  for (int j = 0; j < jobs; j++) begin
+    if (last_issue[j] - first_issue[j] + 1 != 2*int'(configs[j].cim_os_cnt))
+      $fatal(1, "OS commands: issue gap within job %0d", j);
+    if (j > 0 && (cmd_cycle[j] != last_issue[j-1] || first_issue[j] != last_issue[j-1]+1))
+      $fatal(1, "OS commands: handoff gap before job %0d", j);
+    issues += last_issue[j] - first_issue[j] + 1;
+  end
+  $display("PASS os_commands jobs=%0d issues=%0d boundaries=%0d bubbles=0 results=%0d",
+           jobs, issues, jobs-1, results);
 endtask
 
 // Check physical per-Context clocks as well as the independent output oracle.

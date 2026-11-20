@@ -92,8 +92,7 @@ def audit(directory):
             totals['output_cycles_while_issue_stalled'] += 1
         if e['issue'] and (not e['act_ready'] or not e['weight_ready']):
             totals['issue_cycles_despite_input_not_ready'] += 1
-        if e['cmd_valid'] and not e['cmd_ready']:
-            totals['command_backpressure_cycles'] += 1
+        assert not e['cmd_valid'] or e['cmd_ready'], 'Command offered outside ready window'
     assert job_index == len(jobs) and acts_left == weights_left == 0
     assert issue_index == issues_due
     assert totals['output_cycles_while_issue_stalled'] > 0
@@ -121,7 +120,7 @@ def audit(directory):
                 acceptance_after_last_output[int(jobs[index+1]['cmd_accept']) - horizon] += 1
         elif not int(j['same_config']) and int(j['last_output']) >= 0:
             acceptance_after_last_output[int(jobs[index+1]['cmd_accept']) - int(j['last_output'])] += 1
-    # The source holds the next differing command before drain completes.
+    # The pending command must enter on the earliest safe edge.
     assert set(acceptance_after_last_output) == {0}, acceptance_after_last_output
     report = dict(jobs=len(jobs), traffic=dict(totals),
                   same_config_issue_bubbles=dict(sorted(same.items())),

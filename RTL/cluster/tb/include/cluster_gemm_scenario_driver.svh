@@ -125,6 +125,7 @@ task automatic load_scenario_weights();
 endtask
 
 task automatic send_scenario_tile(input int tile);
+  cluster_ctrl_t cfg;
   logic [3:0] oc;
   int n;
   oc = 0;
@@ -136,17 +137,17 @@ task automatic send_scenario_tile(input int tile);
       active_mask[lane_base+c] = 1;
     end
   end
-  cmd_i = '0;
-  cmd_i.cim_os_cnt = 1;
-  cmd_i.cim_ws_cnt = 9'(m_count);
-  cmd_i.cim_as_cnt = 1;
-  cmd_i.cim_precision = 3'(precision);
-  cmd_i.cim_signed_en = 1;
-  cmd_i.cim_macro_en_mask = 8'(en);
-  cmd_i.cim_reduce_split_mask = 7'(split);
-  cmd_i.cim_macro_oc_mask = {8{oc}};
-  cmd_i.cim_act_slot_sel = 24'(slots);
-  channel_cmd(cmd_i);
+  cfg = '0;
+  cfg.cim_os_cnt = 1;
+  cfg.cim_ws_cnt = 9'(m_count);
+  cfg.cim_as_cnt = 1;
+  cfg.cim_precision = 3'(precision);
+  cfg.cim_signed_en = 1;
+  cfg.cim_macro_en_mask = 8'(en);
+  cfg.cim_reduce_split_mask = 7'(split);
+  cfg.cim_macro_oc_mask = {8{oc}};
+  cfg.cim_act_slot_sel = 24'(slots);
+  channel_cmd(cfg);
   fork
     channel_weight(8'(base_address + tile));
     begin

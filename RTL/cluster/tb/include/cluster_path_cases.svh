@@ -48,12 +48,12 @@ always @(posedge clock) begin
         if (channel_route_class(cmd_i)==1 && channel_route_class(configs[offered_job-1])==1) path_r4++;
       end
     end
-    if (cmd_valid_i && !cmd_ready_o && channel_route_class(dut.batch_command)==3)
+    if (command_pending && !cmd_valid_i && channel_route_class(dut.batch_command)==3)
       path_empty_barriers++;
   end
 end
 
-// Three independent streams keep both successor commands offered early.
+// Three independent streams queue both successors and present each in its ready window.
 task automatic path_chain(cluster_ctrl_t a,cluster_ctrl_t b,cluster_ctrl_t c,bit same_class);
   int j;
   j=offered_job+1;

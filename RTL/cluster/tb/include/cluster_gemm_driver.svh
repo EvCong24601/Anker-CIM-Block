@@ -1,3 +1,4 @@
+`define TB_COMMAND_DUT g_cluster[0].dut
 `include "include/cluster_channel_driver.svh"
 // Matrix loading and physical packing checks are distinct from DUT checks.
 task automatic load_gemm_os1_ws32_w8a16_vectors();
@@ -73,17 +74,18 @@ task automatic load_gemm_weights();
 endtask
 
 task automatic send_gemm_rows(input int tile);
-  cmd_i = '0;
-  cmd_i.cim_os_cnt = 1;
-  cmd_i.cim_ws_cnt = 32;
-  cmd_i.cim_as_cnt = 1;
-  cmd_i.cim_precision = 6;
-  cmd_i.cim_signed_en = 1;
-  cmd_i.cim_reduce_split_mask = 7'h00;
-  cmd_i.cim_macro_en_mask = 8'hff;
-  cmd_i.cim_macro_oc_mask = 32'hffffffff;
-  cmd_i.cim_act_slot_sel = 24'hfac688;
-  channel_cmd(cmd_i);
+  cluster_ctrl_t cfg;
+  cfg = '0;
+  cfg.cim_os_cnt = 1;
+  cfg.cim_ws_cnt = 32;
+  cfg.cim_as_cnt = 1;
+  cfg.cim_precision = 6;
+  cfg.cim_signed_en = 1;
+  cfg.cim_reduce_split_mask = 7'h00;
+  cfg.cim_macro_en_mask = 8'hff;
+  cfg.cim_macro_oc_mask = 32'hffffffff;
+  cfg.cim_act_slot_sel = 24'hfac688;
+  channel_cmd(cfg);
   fork
     channel_weight(WEIGHT_ADDR + 8'(tile));
     begin

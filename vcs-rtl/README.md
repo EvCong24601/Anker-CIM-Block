@@ -6,6 +6,8 @@
 make list
 make run CASE=cluster_default
 make run CASE=channels
+make run CASE=w8a8_os128_to_w4a8_os64
+make run CASE=w8a8_os1_128_cmds
 make run CASE=gemm_os1_ws32_as1_w8a16_raw
 make gemm-regression
 make regression
@@ -17,7 +19,9 @@ make com使用verilog_file_<TB>.f；Cluster与GEMM清单引用verilog_file_commo
 
 当前默认清单接入两拍 LUT/CSA Macro，固定树的完整展开需要 HVT FA/HA 仿真库。无工艺库的本地功能回归从仓库根目录运行 `python RTL/cluster/tb/py/run_sram_regression.py --csa-golden --full`，仅替换 CSA 为[数学 golden model](../RTL/macro/tb/models/MacroW8MainTreeCSA_golden.sv)。默认 VCS 清单仍使用固定树，golden 模式的结果不等同于固定树门级验证。
 
-当前有117个用例，覆盖三通道握手、配置切换、缺操作数时在途结果排出、默认raw算术、SRAM访问和互斥、count/Context容量拒绝、OS255/256/511、归约门控、Macro协议、空批次、DW及7种GEMM几何。用 `make run CASE=act_buffer_write_enable` 检查 ACT 末次直通时的数据保持、AS 跨 Context 复用和同沿替换 plane。原有round_clip场景名保留输入矩阵几何，当前检查raw点积。
+当前有119个用例，覆盖三通道握手、配置切换、缺操作数时在途结果排出、默认raw算术、SRAM访问和互斥、count/Context容量拒绝、OS255/256/511、归约门控、Macro协议、空批次、DW及7种GEMM几何。用 `make run CASE=act_buffer_write_enable` 检查 ACT 末次直通时的数据保持、AS 跨 Context 复用和同沿替换 plane。原有round_clip场景名保留输入矩阵几何，当前检查raw点积。
+
+两个 OS 交接用例均为 signed、AS=WS=1。`w8a8_os128_to_w4a8_os64` 检查 W8A8 OS=128 切换到 W4A8 OS=64 的 384 个连续 issue 和 8 个输出；`w8a8_os1_128_cmds` 检查 128 条 W8A8 OS=1 命令的 127 次无空拍交接和 512 个输出。运行后，`work/<CASE>/data/channel_cycles.csv` 记录每条命令的握手、首末 issue 和最后输出周期。用 `make wave CASE=<CASE>` 打开对应 FSDB。
 
 GEMM raw结果CSV为m,n,raw；Python按矩阵坐标验证每个signed32结果，拒绝缺失或重复元素。波形含正式raw输出端口，数据无效时不作保持假设。
 

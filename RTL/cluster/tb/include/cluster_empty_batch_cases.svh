@@ -1,19 +1,19 @@
 // Drive the next batch at the earliest ready edge, including zero-output batches.
 task automatic empty_boundary_frame(input int precision_id, input bit empty);
+  cluster_ctrl_t cfg;
   int macro_count;
-  while (!cmd_ready_o) @(negedge clock);
   macro_count = wbits(precision_id);
-  cmd_i = '0;
-  cmd_i.cim_os_cnt = 1;
-  cmd_i.cim_ws_cnt = 1;
-  cmd_i.cim_as_cnt = 1;
-  cmd_i.cim_precision = 3'(precision_id);
-  cmd_i.cim_signed_en = 1;
-  cmd_i.cim_macro_en_mask = 8'((1 << macro_count) - 1);
-  cmd_i.cim_macro_oc_mask = empty ? 0 : 32'hffffffff;
-  cmd_i.cim_reduce_split_mask = macro_count == 2 ? 7 : macro_count == 4 ? 1 : 0;
-  cmd_i.cim_act_slot_sel = macro_count == 2 ? 24'h8 : macro_count == 4 ? 24'h688 : 24'hfac688;
-  channel_cmd(cmd_i);
+  cfg = '0;
+  cfg.cim_os_cnt = 1;
+  cfg.cim_ws_cnt = 1;
+  cfg.cim_as_cnt = 1;
+  cfg.cim_precision = 3'(precision_id);
+  cfg.cim_signed_en = 1;
+  cfg.cim_macro_en_mask = 8'((1 << macro_count) - 1);
+  cfg.cim_macro_oc_mask = empty ? 0 : 32'hffffffff;
+  cfg.cim_reduce_split_mask = macro_count == 2 ? 7 : macro_count == 4 ? 1 : 0;
+  cfg.cim_act_slot_sel = macro_count == 2 ? 24'h8 : macro_count == 4 ? 24'h688 : 24'hfac688;
+  channel_cmd(cfg);
   fork
     channel_weight(0);
     begin

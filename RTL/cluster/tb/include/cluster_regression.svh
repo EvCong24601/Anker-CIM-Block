@@ -6,6 +6,7 @@
 // extra begin/end scope.
 
 initial begin : regression
+  cluster_ctrl_t cfg;
   string data_dir;
   int capacity_precision, capacity_sign, zero_count, capacity_count, capacity_os;
   if ($test$plusargs("EMPTY_BATCH_TEST")) begin
@@ -18,11 +19,11 @@ initial begin : regression
   if ($bits(
       cluster_ctrl_t
     ) != 102 || $bits(
-      cmd_i.cim_os_cnt
+      cfg.cim_os_cnt
     ) != 9 || $bits(
-      cmd_i.cim_ws_cnt
+      cfg.cim_ws_cnt
     ) != 9 || $bits(
-      cmd_i.cim_as_cnt
+      cfg.cim_as_cnt
     ) != 9)
     $fatal(1, "TB: descriptor must contain three nine-bit counts and total 102 bits");
   if ($value$plusargs("ZERO_COUNT=%d", zero_count)) begin
@@ -31,18 +32,17 @@ initial begin : regression
     repeat (2) @(negedge clock);
     $display("[CASE_START] time=%0.3f ns suite=count_range description=reject-zero-count field=%0d", $realtime,
              zero_count);
-    cmd_i = '0;
-    cmd_i.cim_os_cnt = 1;
-    cmd_i.cim_ws_cnt = 1;
-    cmd_i.cim_as_cnt = 1;
+    cfg = '0;
+    cfg.cim_os_cnt = 1;
+    cfg.cim_ws_cnt = 1;
+    cfg.cim_as_cnt = 1;
     case (zero_count)
-      0: cmd_i.cim_os_cnt = 0;
-      1: cmd_i.cim_ws_cnt = 0;
-      2: cmd_i.cim_as_cnt = 0;
+      0: cfg.cim_os_cnt = 0;
+      1: cfg.cim_ws_cnt = 0;
+      2: cfg.cim_as_cnt = 0;
       default: $fatal(1, "TB: zero-count field must be 0..2");
     endcase
-    cmd_valid_i = 1;
-    @(posedge clock);
+    channel_cmd(cfg);
     #1;
     $fatal(1, "TB: missing zero-count rejection");
   end
@@ -57,30 +57,29 @@ initial begin : regression
     repeat (4) @(negedge clock);
     reset_n = 1;
     repeat (2) @(negedge clock);
-    cmd_i = '0;
-    cmd_i.cim_os_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;
-    cmd_i.cim_ws_cnt = 1;
-    cmd_i.cim_as_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 16 :
+    cfg = '0;
+    cfg.cim_os_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 1 : 2;
+    cfg.cim_ws_cnt = 1;
+    cfg.cim_as_cnt = ($test$plusargs("ADDRESS_CAPACITY_TEST") || $test$plusargs("METADATA_CAPACITY_TEST")) ? 16 :
       64;
-    capacity_count = int'(cmd_i.cim_as_cnt);
-    capacity_os = int'(cmd_i.cim_os_cnt);
+    capacity_count = int'(cfg.cim_as_cnt);
+    capacity_os = int'(cfg.cim_os_cnt);
     if ($value$plusargs("CAPACITY_COUNT=%d", capacity_count)) begin
     end
     if ($value$plusargs("CAPACITY_OS=%d", capacity_os)) begin
     end
-    cmd_i.cim_as_cnt = 9'(capacity_count);
-    cmd_i.cim_os_cnt = 9'(capacity_os);
-    cmd_i.cim_precision = 3'(capacity_precision);
-    cmd_i.cim_signed_en = 1'(capacity_sign);
-    cmd_i.cim_macro_en_mask = 8'hff;
-    cmd_i.cim_macro_oc_mask = 32'hffffffff;
+    cfg.cim_as_cnt = 9'(capacity_count);
+    cfg.cim_os_cnt = 9'(capacity_os);
+    cfg.cim_precision = 3'(capacity_precision);
+    cfg.cim_signed_en = 1'(capacity_sign);
+    cfg.cim_macro_en_mask = 8'hff;
+    cfg.cim_macro_oc_mask = 32'hffffffff;
     $display(string'({"[CASE_START] time=%0.3f ns suite=context_capacity ",
                       "description=reject-resource-capacity-overflow W%0dA%0d signed=%0d os=%0d ws=1 as=%0d ",
                       "psum_depth=%0d max_contexts=%0d weight_address_depth=%0d"}), $realtime, wbits(
                capacity_precision), abits(capacity_precision), capacity_sign, capacity_os, capacity_count,
                OUTPUT_BUFFER_DEPTH, MAX_CONTEXTS, WGT_RADDR_BUFFER_DEPTH);
-    cmd_valid_i = 1;
-    @(posedge clock);
+    channel_cmd(cfg);
     #1;
     $fatal(1, "TB: missing resource capacity rejection");
   end
@@ -94,43 +93,29 @@ initial begin : regression
     repeat (4) @(negedge clock);
     reset_n = 1;
     repeat (2) @(negedge clock);
-    if ($test$plusargs("SRAM_CONFLICT_WRITE_COMPUTE")) begin
+    if ($test$plusargs("SRAM_CONFLICT_WRITE_COMPUTE") || $test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
       $display(
-        "[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-write-during-active-compute",
+        "[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-access-during-active-compute",
         $realtime);
       load_weight_row(0, 8'd0, '0);
       @(negedge clock);
-      cmd_i = '0;
-      cmd_i.cim_os_cnt = 1;
-      cmd_i.cim_ws_cnt = 1;
-      cmd_i.cim_as_cnt = 1;
-      cmd_i.cim_macro_en_mask = 1;
-      cmd_i.cim_macro_oc_mask = 1;
-      cmd_i.cim_reduce_split_mask = 7'h7f;
-      cmd_valid_i = 1;
-      @(posedge clock);
-      if (!cmd_ready_o) $fatal(1, "SRAM conflict: compute command not accepted");
-      @(negedge clock);
-      cmd_valid_i = 0;
+      cfg = '0;
+      cfg.cim_os_cnt = 1;
+      cfg.cim_ws_cnt = 1;
+      cfg.cim_as_cnt = 1;
+      cfg.cim_macro_en_mask = 1;
+      cfg.cim_macro_oc_mask = 1;
+      cfg.cim_reduce_split_mask = 7'h7f;
+      channel_cmd(cfg);
       // Target idle Macro1 while Macro0 computes: only the Cluster-wide
       // exclusion rule should reject this access, avoiding a competing
       // local SingleMacro simultaneous-read/write diagnostic.
       sram_bank_sel = 1;
       sram_cs_en = 1;
-      sram_wr_en = 1;
+      sram_wr_en = $test$plusargs("SRAM_CONFLICT_WRITE_COMPUTE");
       @(posedge clock);
       #1;
-      $fatal(1, "Missing SRAM write/active-compute conflict rejection");
-    end
-    if ($test$plusargs("SRAM_CONFLICT_COMPUTE")) begin
-      $display(
-        "[CASE_START] time=%0.3f ns suite=sram_negative description=reject-regular-access-overlapping-compute-command",
-        $realtime);
-      sram_cs_en  = 1;
-      cmd_valid_i = 1;
-      @(posedge clock);
-      #1;
-      $fatal(1, "Missing SRAM/compute conflict rejection");
+      $fatal(1, "Missing SRAM access/active-compute conflict rejection");
     end
     run_sram_cases();
     $finish;
