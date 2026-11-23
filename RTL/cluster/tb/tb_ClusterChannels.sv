@@ -55,6 +55,7 @@ module tb_ClusterChannels;
   int results = 0, overlap = 0, switches = 0, switch_waits = 0, weight_stalls = 0, act_stalls = 0;
   int drain_during_stall = 0, weight_backpressure = 0, act_backpressure = 0, metrics, events;
   int dw_width = 0;
+  bit os_precision_pair, os1_chain;
   bit checking = 0, held_cmd = 0, held_weight = 0, held_act = 0;
   cluster_ctrl_t previous_cmd;
   logic [7:0] previous_weight;
@@ -116,6 +117,8 @@ module tb_ClusterChannels;
     return 1;
   endfunction
   function automatic int address(int job, int kt, int cx);
+    if (os_precision_pair) return (job == 0 ? 0 : 128) + kt;
+    if (os1_chain) return job;
     return (job + 2 * kt + cx) % 16;
   endfunction
   function automatic int row_byte(int addr, int m, int c, int j);
@@ -208,7 +211,7 @@ module tb_ClusterChannels;
     cycle++;
     if (reset_n && checking) begin
       missing = dut.packet_active && !dut.issue;
-      if (cmd_valid_i && cmd_offer_cycle[offered_job] < 0) cmd_offer_cycle[offered_job] = cycle;
+      if (command_pending && cmd_offer_cycle[offered_job] < 0) cmd_offer_cycle[offered_job] = cycle;
       $fdisplay(events, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%08h", cycle, cmd_valid_i, cmd_ready_o,
                 weight_valid_i, weight_ready_o, act_valid_i, act_ready_o, dut.issue, dut.packet_active, dut.phase,
                 dut.context_idx, dut.tile, psum_valid);
@@ -223,7 +226,7 @@ module tb_ClusterChannels;
       previous_weight = weight_raddr_i;
       held_act = act_valid_i && !act_ready_o;
       previous_act = act_data_i;
-      if (held_cmd) switch_waits++;
+      if (command_pending && !cmd_valid_i) switch_waits++;
       if (held_weight) weight_backpressure++;
       if (held_act) act_backpressure++;
       if (missing && dut.act_slice_valid[dut.phase]) weight_stalls++;
@@ -472,7 +475,11 @@ module tb_ClusterChannels;
   `include "include/cluster_gate_checks.svh"
   initial begin : run
     cluster_ctrl_t cfg;
+    int preload_rows;
     string directory;
+    os_precision_pair = $test$plusargs("W8A8_OS128_TO_W4A8_OS64");
+    os1_chain = $test$plusargs("W8A8_OS1_128_CMDS");
+    preload_rows = os_precision_pair ? 192 : os1_chain ? 128 : 16;
     directory = ".";
     if ($value$plusargs("DATA_DIR=%s", directory)) begin
     end
@@ -498,7 +505,7 @@ module tb_ClusterChannels;
     repeat (4) @(negedge clock);
     reset_n = 1;
     // All weights enter through the real public SRAM write port.
-    for (int addr = 0; addr < 16; addr++)
+    for (int addr = 0; addr < preload_rows; addr++)
     for (int m = 0; m < 8; m++) begin
       sram_cs_en = 1;
       sram_wr_en = 1;
@@ -512,7 +519,8 @@ module tb_ClusterChannels;
     sram_wr_en = 0;
     checking = 1;
     if ($bits(cluster_ctrl_t) != 102) $fatal(1, "CHANNELS: command must be 102 bits");
-    if ($value$plusargs("DW_WIDTH=%d", dw_width)) run_k256_cases(dw_width);
+    if (os_precision_pair || os1_chain) run_os_commands();
+    else if ($value$plusargs("DW_WIDTH=%d", dw_width)) run_k256_cases(dw_width);
     else if ($test$plusargs("PIPELINE_CONFIG_TEST")) run_pipeline_cases();
     else if ($test$plusargs("MASK_PIPELINE_TEST")) run_mask_cases();
     else if ($test$plusargs("PATH_CLASS_TEST")) run_path_cases();
@@ -594,6 +602,8 @@ module tb_ClusterChannels;
         $fatal(1,"PIPELINE: missing compatible overlap/high Context coverage");
       $display("PASS pipeline_config pairs=%0d high_context_retire=%0d jobs=%0d results=%0d",
                compatible_pairs,retiring_high_contexts,accepted_jobs,results);
+    end else if (os_precision_pair || os1_chain) begin
+      check_os_commands();
     end else if(!overlap || !switches || !switch_waits || !weight_stalls || !act_stalls || !drain_during_stall ||
        (!$test$plusargs("TIMING_FIGURE") && (!weight_backpressure || !act_backpressure)))
       $fatal(
@@ -638,6 +648,16 @@ module tb_ClusterChannels;
       weight_backpressure, act_backpressure);
     $finish;
   end
+`ifdef CLUSTER_FSDB
+  initial begin : os_command_wave
+    string filename;
+    if ($test$plusargs("W8A8_OS128_TO_W4A8_OS64") || $test$plusargs("W8A8_OS1_128_CMDS")) begin
+      if (!$value$plusargs("FSDB_FILE=%s", filename)) filename = "os_commands.fsdb";
+      $fsdbDumpfile(filename);
+      $fsdbDumpvars(0, tb_ClusterChannels.dut);
+    end
+  end
+`endif
   initial begin
     #2000000;
     $fatal(1, "CHANNELS: watchdog");

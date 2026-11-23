@@ -212,6 +212,8 @@ TMP 在 tmp 捕获最终值后发布；Psum 路径再晚一拍完成写回并发
 | 回归 case | 主要覆盖 |
 |---|---|
 | `pipeline_config` | 414 对 precision/符号/slot/兼容计数切换，WS64→1、AS8→2，逐级配置与 Context 时钟 |
+| `w8a8_os128_to_w4a8_os64` | AS=WS=1；W8A8 OS128 末次 issue 同沿接收 W4A8 OS64，下一拍继续 issue；核对 384 拍和 8 个输出 |
+| `w8a8_os1_128_cmds` | AS=WS=OS=1；128 条 W8A8 命令，逐一检查 127 次交接无空拍，核对 256 拍和 512 个输出 |
 | `mask_pipeline` | 567 对 enable/OC 切换，单独全零、恢复、组合变化和隐藏旧深路径的场景 |
 | `path_class` | 1,092 对同类交接、21 条三任务链；单有效宽度、部分组关闭、同类跨 split 及空任务屏障 |
 | `channels` | 三通道独立握手、旧末 beat 与新 cmd 同沿、缺操作数时排出旧结果、最早合法接收与 issue |

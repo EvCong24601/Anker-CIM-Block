@@ -68,17 +68,18 @@ task automatic load_as_weights();
 endtask
 
 task automatic send_as_row(input int m);
-  cmd_i = '0;
-  cmd_i.cim_os_cnt = 9'(OS);
-  cmd_i.cim_as_cnt = 9'(AS);
-  cmd_i.cim_ws_cnt = 1;
-  cmd_i.cim_precision = 6;
-  cmd_i.cim_signed_en = 1;
-  cmd_i.cim_reduce_split_mask = 0;
-  cmd_i.cim_macro_en_mask = 8'hff;
-  cmd_i.cim_macro_oc_mask = 32'hffffffff;
-  cmd_i.cim_act_slot_sel = 24'hfac688;
-  channel_cmd(cmd_i);
+  cluster_ctrl_t cfg;
+  cfg = '0;
+  cfg.cim_os_cnt = 9'(OS);
+  cfg.cim_as_cnt = 9'(AS);
+  cfg.cim_ws_cnt = 1;
+  cfg.cim_precision = 6;
+  cfg.cim_signed_en = 1;
+  cfg.cim_reduce_split_mask = 0;
+  cfg.cim_macro_en_mask = 8'hff;
+  cfg.cim_macro_oc_mask = 32'hffffffff;
+  cfg.cim_act_slot_sel = 24'hfac688;
+  channel_cmd(cfg);
   fork
     begin
       for (int tile = 0; tile < OS; tile++)
@@ -88,9 +89,8 @@ task automatic send_as_row(input int m);
       for (int tile = 0; tile < OS; tile++) for (int ph = 0; ph < 4; ph++) channel_act(act_planes[(m*OS+tile)*4+ph]);
     end
   join
-  // Poison unqualified pins to prove every operand was captured on its fire.
+  // Poison unqualified operand pins after their transfers.
   if (CHECK_SWITCH) begin
-    cmd_i = '1;
     weight_raddr_i = 8'(cycle);
     act_data_i = '1;
   end

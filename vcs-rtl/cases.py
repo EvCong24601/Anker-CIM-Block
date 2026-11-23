@@ -19,7 +19,7 @@ def add(name, tb, description, marker, args='', params='', generator='', channel
 add('cluster_default', 'cluster', 'Raw arithmetic and standard timing', 'PASS configurations=', '', '', '', False, False)
 add('sram_rw', 'cluster', 'Regular SRAM read write and OC masks', 'PASS sram_rw', '+SRAM_RW_TEST', '', '', False, False)
 add('sram_write_compute_conflict', 'cluster', 'Reject regular SRAM write during active compute', 'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', '+SRAM_CONFLICT_WRITE_COMPUTE', '', '', False, True)
-add('sram_compute_conflict', 'cluster', 'Reject regular SRAM read with compute Command', 'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', '+SRAM_CONFLICT_COMPUTE', '', '', False, True)
+add('sram_compute_conflict', 'cluster', 'Reject regular SRAM read during active compute', 'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', '+SRAM_CONFLICT_COMPUTE', '', '', False, True)
 add('macro_gate0', 'macro', 'SingleMacro clock gating 0', 'PASS clock_gating=', '', 'CLOCK_GATING=0', '', False, False)
 add('macro_gate1', 'macro', 'SingleMacro clock gating 1', 'PASS clock_gating=', '', 'CLOCK_GATING=1', '', False, False)
 add('macro_negative_precision', 'macro', 'Reject precision', 'SM_PROTOCOL: illegal precision/phase', '+NEGATIVE=precision', '', '', False, True)
@@ -126,6 +126,10 @@ add('gate_equiv_empty_batch', 'cluster', 'Empty raw batch gated/ungated comparis
 
 
 add('channels', 'channels', 'Independent cmd/weight/ACT, control switches and drain under operand stalls', 'PASS channels jobs=', '', '', '', False, False)
+add('w8a8_os128_to_w4a8_os64', 'channels', 'Signed W8A8 OS128 to W4A8 OS64, AS1 WS1, zero issue bubbles',
+    'PASS os_commands jobs=2 issues=384 boundaries=1 bubbles=0 results=8', '+W8A8_OS128_TO_W4A8_OS64')
+add('w8a8_os1_128_cmds', 'channels', '128 consecutive signed W8A8 OS1 AS1 WS1 commands',
+    'PASS os_commands jobs=128 issues=256 boundaries=127 bubbles=0 results=512', '+W8A8_OS1_128_CMDS')
 add('pipeline_config', 'channels', 'Pipelined 51-bit configuration and zero-bubble input-only changes',
     'PASS pipeline_config pairs=', '+PIPELINE_CONFIG_TEST')
 add('mask_pipeline', 'channels', 'Zero-bubble enable/OC changes and retiring path occupancy',

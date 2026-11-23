@@ -63,27 +63,23 @@ task automatic sram_read_check(int m, int a, logic [3:0] mask = 0);
   if (sram_rd_valid || sram_rd_data !== 0) $fatal(1, "Read valid did not drain on idle edge");
 endtask
 task automatic sram_compute_check(bit patched);
+  cluster_ctrl_t cfg;
   // Check Hold against the real W4A4 result: the patched Macro5.OC1 is 128, all others
   // are 64.
   int received;
   $display("[CASE_START] time=%0.3f ns suite=sram_compute description=write-to-compute/Hold-refresh W4A4 patched=%0d",
            $realtime, patched);
   @(negedge clock);
-  cmd_i = '0;
-  cmd_i.cim_os_cnt = 1;
-  cmd_i.cim_ws_cnt = 1;
-  cmd_i.cim_as_cnt = 1;
-  cmd_i.cim_reduce_split_mask = 7'h7f;
-  cmd_i.cim_macro_en_mask = 8'hff;
-  cmd_i.cim_macro_oc_mask = 32'hffffffff;
-  cmd_i.cim_precision = 3'd2;  // W4A4, 64 weights per OC, UINT
+  cfg = '0;
+  cfg.cim_os_cnt = 1;
+  cfg.cim_ws_cnt = 1;
+  cfg.cim_as_cnt = 1;
+  cfg.cim_reduce_split_mask = 7'h7f;
+  cfg.cim_macro_en_mask = 8'hff;
+  cfg.cim_macro_oc_mask = 32'hffffffff;
+  cfg.cim_precision = 3'd2;  // W4A4, 64 weights per OC, UINT
   act_data_i = {256{4'h1}};
-  cmd_valid_i = 1;
-  do begin
-    @(posedge clock);
-  end while (!cmd_ready_o);
-  @(negedge clock);
-  cmd_valid_i = 0;
+  channel_cmd(cfg);
   fork
     channel_weight(8'd7);
     channel_act({256{4'h1}});
