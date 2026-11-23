@@ -277,7 +277,7 @@ module SingleMacro #(
           if (!hold_valid) $fatal(1, "SM_PROTOCOL: reuse invalid hold");
           if (cim_raddr != held_address) $fatal(1, "SM_PROTOCOL: reuse address mismatch");
         end
-        // A bank write initializes only the two unmasked OCs.
+        // A masked write initializes only the selected OCs.
         if ((initialized_ocs[cim_raddr] & cim_oc_mask) != cim_oc_mask)
           $fatal(1, "SM_PROTOCOL: read uninitialized row");
       end

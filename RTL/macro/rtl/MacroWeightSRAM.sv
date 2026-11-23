@@ -15,8 +15,10 @@ module MacroWeightSRAM (
   wire [7:0] address = write_enable ? write_address : read_address;
 
   for (genvar bank = 0; bank < 2; bank++) begin : g_bank
+    // The external mask uses 1 to preserve an OC; the SRAM uses 1 to write it.
+    wire [1:0] bank_write_mask = ~write_mask[2*bank+:2];
     wire [1:0] bank_read_mask = read_oc_mask[2*bank+:2];
-    wire bank_write = write_enable && (write_mask[2*bank+:2] == 2'b00);
+    wire bank_write = write_enable && (|bank_write_mask);
     wire bank_read = !write_enable && read_enable && (|bank_read_mask);
 
     hdsram256w512btop u_sram (
@@ -25,6 +27,7 @@ module MacroWeightSRAM (
       .WEN(!bank_write),
       .ADDR(address),
       .DIN(write_data[512*bank+:512]),
+      .write_mask(bank_write_mask),
       .read_mask(bank_read_mask),
       .DOUT(read_data[512*bank+:512]),
       .timing_config(8'b0),
@@ -40,16 +43,5 @@ module MacroWeightSRAM (
       .redsbk3OUT()
     );
   end
-
-`ifndef SYNTHESIS
-  always @(posedge clock) begin
-    if (write_enable) begin
-      case (write_mask)
-        4'h0, 4'h3, 4'hc, 4'hf: ;
-        default: $fatal(1, "SRAM_WRITE_PROTOCOL: write mask must select whole 512-bit banks");
-      endcase
-    end
-  end
-`endif
 endmodule
 `default_nettype wire

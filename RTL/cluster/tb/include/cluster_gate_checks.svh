@@ -112,11 +112,14 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
       end
     end
   end
-  always @(posedge clock) begin
+  logic [3:0] retained_ocs;
+  always @(posedge clock or negedge reset_n) begin
     bit compute_req, memory_req;
     bit correction_req;
+    logic [3:0] read_ocs;
     logic [3:0] saved_correction_mode, incoming_correction_mode;
-    if (reset_n) begin
+    if (!reset_n) retained_ocs <= '0;
+    else begin
       correction_req = dut.g_macro[macro_id].u_macro.in_valid &&
                        (|(dut.g_macro[macro_id].u_macro.mask_in &
                           dut.g_macro[macro_id].u_macro.result_mask_in));
@@ -128,8 +131,20 @@ for (genvar macro_id = 0; macro_id < 8; macro_id++) begin : g_check_macro_gate
                                   dut.g_macro[macro_id].u_macro.activation_signed_in};
       compute_req = dut.ren[macro_id] || dut.g_macro[macro_id].u_macro.in_valid ||
                 dut.g_macro[macro_id].u_macro.csa_valid || dut.g_macro[macro_id].u_macro.cim_odata_valid;
-      memory_req = dut.memory_wen[macro_id] || (dut.regular_read && dut.regular_macro_id == macro_id) ||
-               (dut.ren[macro_id] && dut.station[macro_id]);
+      read_ocs = '0;
+      if (dut.memory_wen[macro_id]) retained_ocs <= '0;
+      else if (dut.regular_read && dut.regular_macro_id == macro_id) begin
+        read_ocs = 4'hf;
+        retained_ocs <= 4'hf;
+      end else if (dut.ren[macro_id]) begin
+        read_ocs = dut.command.cim_macro_oc_mask[4*macro_id+:4];
+        if (dut.station[macro_id]) retained_ocs <= read_ocs;
+        else begin
+          read_ocs &= ~retained_ocs;
+          retained_ocs <= retained_ocs | read_ocs;
+        end
+      end
+      memory_req = dut.memory_wen[macro_id] || (|read_ocs);
       #0.002;
       if (reset_n && {dut.g_macro[macro_id].u_macro.weight_mode_cpa,
                       dut.g_macro[macro_id].u_macro.signed_en_cpa,

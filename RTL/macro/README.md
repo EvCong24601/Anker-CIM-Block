@@ -33,10 +33,10 @@ vlog -sv -f rtl/filelist.f
 - 请求在上升沿 n 接受，同时捕获 ACT、读权重或复用已读出的行。固定 CSA 的 correction 输入为零，n+1 捕获每 OC 原有的 37 bit `sum_row_q/carry_row_q/carry_in_q`，同时捕获四个 OC 共享的 4 bit W 模式/符号信息。第二拍按这组模式译码 correction，直接计算 `sum_row_q + carry_row_q + correction + carry_in_q`。四路 signed18 Phase Sum、phase、OC mask 和 valid 在 n+2 沿后一起可见。可每拍发射一个 phase（II=1），下游上升沿寄存器在 n+3 采样。CSA 数据及新增模式寄存器不复位，由 valid/control 取消复位前的在途请求。不新增 18 bit correction 数据寄存器。
 - `reset_n` 低有效、异步拉低有效；释放须由集成端同步并满足恢复/移除时序。SRAM 内容不复位，Hold-valid 复位。
 - `reset_n` 仅连接有复位状态的子模块，不参与请求、ICG 使能或 SRAM 使能的组合译码。`MacroWeightSRAM` 是无复位 wrapper，阵列和读出保持值均不清零。复位期间上层必须将 `cim_ren`、`sram_wen`、`sram_ren` 置0；wrapper 不会自动阻止使能有效时的读写。
-- `cim_station=1` 在输入沿读取SRAM；0复用SRAM保持输出，不配置独立held_weight数据寄存器。仅保存行号和有效位，支持紧邻刷新后的复用。
+- `cim_station=1` 在输入沿读取选中的 OC。`cim_station=0` 复用该行已读的 OC，并在同一输入沿补读还缺的 OC。Macro 保存行号和已读 OC 掩码，权重数据由 SRAM 保持输出承载。
 - 零 OC mask 不发射。输出无 ready，Cluster 须提前预留接收位置。最后请求 n 后最早 n+2 写；最后写 w 后最早 w+1 发射刷新计算。
 - `USE_CLOCK_GATING` 默认 1，仿真使用功能 ICG 模型，`SYNTHESIS` 分支沿用上游 HVT `CKLNQD8BWP30P140HVT`；置 0 使用普通时钟和寄存器使能。四个 OC 的 CSA 与结果分别门控。
-- `MacroWeightSRAM` 是无复位、上升沿按 32 B OC 掩码写、使能同步读的通用存储描述；计算读和紧邻的权重复用共用其保持输出。综合时可将其替换为 `rtl/blackbox/MacroWeightSRAM.sv`，两者不得同时编译。
+- `MacroWeightSRAM` 以两块 `hdsram256w512btop` 提供逻辑 1024-bit 行，按 OC 掩码写入并同步读取。计算读和权重复用共用其保持输出。综合黑盒的端口同步定义于 `rtl/blackbox/MacroWeightSRAM.sv`。
 
 仿真时定义 `SINGLE_MACRO_ASSERTIONS` 可启用协议检查；定义 `SYNTHESIS` 排除仿真检查器。本次集成的固定树门级仿真、综合和 STA 暂不进行，上游归档的 PPA 不代表适配后的结果。
 
@@ -59,7 +59,7 @@ python RTL/cluster/tb/py/run_sram_regression.py --csa-golden --full
 
 ## 常规 SRAM 访问扩展
 
-SingleMacro 提供 sram_wmask[3:0]、sram_ren、sram_raddr[7:0] 和 sram_rdata[1023:0]；外部实例必须连接这些端口。sram_wmask[c]=1 保持 OC c 的 32 B，=0 写入；全行写入使用 0000。sram_ren 使用现有 SRAM 读路径，不含并发读端口，禁止与计算或写入重叠。有效写入清输出行valid，全屏蔽写保持状态；常规读更新实际输出行号及valid，随后可复用同地址，其他地址须刷新；上层物理 SRAM 时序仍待冻结。详见 [Cluster 常规权重 SRAM 规格](../../docs/Cluster_Weight_SRAM_Interface.md)。
+`sram_wmask[c]` 控制 OC c 的 32 B 写入，`1` 保持、`0` 写入。`sram_ren` 和 `sram_raddr[7:0]` 使用共享读路径，`sram_rdata[1023:0]` 返回整行。有效写入清除读出行记录，全屏蔽写保持状态。常规读更新输出行号并标记全部 OC 可复用。详见 [Cluster 常规权重 SRAM 规格](../../docs/Cluster_Weight_SRAM_Interface.md)。
 
 每个 primitive、写行、计算 phase、复位及负向 case 开始打印 CASE_START、仿真时间 ns 和描述；随机计算包含精度、符号、phase、mask、行号和刷新/复用参数。
 

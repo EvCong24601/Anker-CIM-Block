@@ -19,6 +19,10 @@ module hdsram256w512btop (
     input WEN,
     input [7:0] ADDR,
     input [511:0] DIN,
+    // Write-port selection.  01 writes logical bits [255:0], 10 writes
+    // logical bits [511:256], and 11 writes the complete 512-bit word.
+    // The unselected half keeps its previous SRAM value.  00 is a no-op.
+    input [1:0] write_mask,
     // Read-port selection.  01 exposes logical bits [255:0], 10 exposes
     // logical bits [511:256], and 11 exposes the complete 512-bit word.
     // The unselected half keeps its previous registered DOUT value; 00 is
@@ -79,6 +83,36 @@ module hdsram256w512btop (
         end
     endfunction
 
+    // Return the logical value that should be written for one bit.  When the
+    // bit is outside write_mask, read the old logical value through the same
+    // repair mapping used by the read path.  This lets a partial write update
+    // only one 256-bit half while preserving the other half physically.
+    function automatic write_value;
+        input integer bank;
+        input integer row;
+        input integer logical_bit;
+        input [511:0] write_data;
+        input [1:0] write_sel;
+        integer idx;
+        integer global_bit;
+        reg old_value;
+        begin
+            idx = bank * WORD_LINES + row;
+            global_bit = bank * LOGICAL_BITS_PER_BANK + logical_bit;
+            old_value = mux_select(bank, logical_bit) ?
+                        physical_mem[idx][logical_bit + 1] :
+                        physical_mem[idx][logical_bit];
+            case (write_sel)
+                2'b11: write_value = write_data[global_bit];
+                2'b01: write_value = (global_bit < 256) ?
+                                      write_data[global_bit] : old_value;
+                2'b10: write_value = (global_bit >= 256) ?
+                                      write_data[global_bit] : old_value;
+                default: write_value = old_value;
+            endcase
+        end
+    endfunction
+
     always @(posedge CK) begin
         case (CEN)
             1'b0: begin
@@ -89,20 +123,20 @@ module hdsram256w512btop (
                             physical_index = b * WORD_LINES + ADDR;
 
                             physical_mem[physical_index][0] <=
-                                DIN[b*LOGICAL_BITS_PER_BANK];
+                                write_value(b, ADDR, 0, DIN, write_mask);
 
                             for (p = 1; p < LOGICAL_BITS_PER_BANK; p = p + 1) begin
                                 physical_mem[physical_index][p] <= mux_select(b, p) ?
-                                    DIN[b*LOGICAL_BITS_PER_BANK + p - 1] :
-                                    DIN[b*LOGICAL_BITS_PER_BANK + p];
+                                    write_value(b, ADDR, p - 1, DIN, write_mask) :
+                                    write_value(b, ADDR, p, DIN, write_mask);
                             end
 
                             // Extracted write-MUX behavior for the spare
                             // physical column.
                             physical_mem[physical_index][128] <=
                                 mux_select(b, 127) ?
-                                    DIN[b*LOGICAL_BITS_PER_BANK + 127] :
-                                    DIN[b*LOGICAL_BITS_PER_BANK + 126];
+                                    write_value(b, ADDR, 127, DIN, write_mask) :
+                                    write_value(b, ADDR, 126, DIN, write_mask);
                         end
                     end
 
