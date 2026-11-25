@@ -12,7 +12,15 @@ module MacroWeightSRAM (
   input  logic          read_enable,
   input  logic [   7:0] read_address,
   input  logic [   3:0] read_oc_mask,
-  output logic [1023:0] read_data
+  output logic [1023:0] read_data,
+  input  logic          reset_n,
+  input  logic          mbist_start,
+  input  logic [  63:0] repair_config,
+  output logic          mbist_done,
+  output logic          mbist_busy,
+  output logic          mbist_valid,
+  output logic          mbist_unrepairable,
+  output logic [  63:0] mbist_errors
 );
 
 endmodule
