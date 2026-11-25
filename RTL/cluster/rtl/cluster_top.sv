@@ -173,12 +173,29 @@ module cluster_top #(
   wire [8191:0] regular_read_data;
   // MBIST is issued with the functional interface idle. Capture the entire
   // request on a single start pulse. Ignore further pulses while busy.
-  typedef enum logic [1:0] {BIST_IDLE, BIST_DISPATCH, BIST_WAIT_BUSY, BIST_RUN} bist_state_t;
+  typedef enum logic [2:0] {BIST_IDLE, BIST_DISPATCH, BIST_WAIT_BUSY, BIST_RUN,
+                            BIST_REPORT} bist_state_t;
   bist_state_t bist_state;
   logic [2:0] bist_id;
   logic [63:0] bist_config;
   wire [7:0] bist_done, bist_busy, bist_valid, bist_unrepairable;
   wire [63:0] bist_errors [0:7];
+  // Eight 8-bit BL error registers per Macro. Sample the wrapper outputs at
+  // completion; preserve every Macro's report until its own next test/reset.
+  logic [7:0] bist_error_reg [0:7][0:7];
+  wire bist_capture = bist_state == BIST_RUN && bist_done[bist_id] && !bist_busy[bist_id];
+  wire [63:0] selected_bist_errors;
+  for (genvar m = 0; m < 8; m++) begin : g_bist_error_register
+    for (genvar byte_idx = 0; byte_idx < 8; byte_idx++) begin : g_byte
+      always_ff @(posedge clock or negedge reset_n)
+        if (!reset_n) bist_error_reg[m][byte_idx] <= '0;
+        else if (bist_capture && bist_id == 3'(m))
+          bist_error_reg[m][byte_idx] <= bist_errors[m][8*byte_idx+:8];
+    end
+  end
+  for (genvar byte_idx = 0; byte_idx < 8; byte_idx++) begin : g_selected_bist_error
+    assign selected_bist_errors[8*byte_idx+:8] = bist_error_reg[bist_id][byte_idx];
+  end
   wire [7:0] bist_select = bist_state == BIST_DISPATCH ? (8'b1 << bist_id) : 8'b0;
   logic bist_accept;
   always_comb begin
@@ -210,11 +227,15 @@ module cluster_top #(
       // A previous run's done can still be high while the request travels
       // through the local register. Observe the new busy before taking done.
       BIST_WAIT_BUSY: if (bist_busy[bist_id]) bist_state <= BIST_RUN;
-      BIST_RUN: if (bist_done[bist_id] && !bist_busy[bist_id]) begin
-        mbist_test_done_o <= 1;
+      BIST_RUN: if (bist_capture) begin
         mbist_test_memory_valid_o <= bist_valid[bist_id];
         mbist_out_of_repair_o <= bist_unrepairable[bist_id];
-        mbist_test_error_sbk_o <= bist_errors[bist_id];
+        bist_state <= BIST_REPORT;
+      end
+      // The shared output is driven only by the top-level sampled byte bank.
+      BIST_REPORT: begin
+        mbist_test_error_sbk_o <= selected_bist_errors;
+        mbist_test_done_o <= 1;
         bist_state <= BIST_IDLE;
       end
     endcase

@@ -47,6 +47,7 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
 
   localparam logic [63:0] REPAIR = 64'hbdb6afa8_a19a938c;
   localparam logic [1023:0] ONES = '1;
+  logic [63:0] expected_bank [0:7];
 
   task automatic run_pass(input int id, input logic [63:0] repair_map,
                           input bit expected_valid, input logic [63:0] expected_errors);
@@ -69,8 +70,13 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
       if ($countones(dut.bist_busy) > 1 ||
           (dut.bist_busy & ~(8'b1 << id)) !== 8'b0)
         $fatal(1, "Macro%0d overlapping MBIST busy=%b", id, dut.bist_busy);
-      if (cycles == 10 && dut.bist_busy !== (8'b1 << id))
-        $fatal(1, "Macro%0d not selected, busy=%b", id, dut.bist_busy);
+      if (cycles == 10) begin
+        if (dut.bist_busy !== (8'b1 << id))
+          $fatal(1, "Macro%0d not selected, busy=%b", id, dut.bist_busy);
+        for (int byte_idx = 0; byte_idx < 8; byte_idx++)
+          if (dut.bist_error_reg[id][byte_idx] !== expected_bank[id][8*byte_idx+:8])
+            $fatal(1, "Macro%0d error register changed before retest completed", id);
+      end
       @(negedge clock);
       cycles++;
     end
@@ -81,6 +87,13 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
       $fatal(1, "Macro%0d MBIST report valid=%b out=%b errors=%h expected=%h",
              id, mbist_test_memory_valid_o, mbist_out_of_repair_o,
              mbist_test_error_sbk_o, expected_errors);
+    expected_bank[id] = expected_errors;
+    for (int m = 0; m < 8; m++)
+      for (int byte_idx = 0; byte_idx < 8; byte_idx++)
+        if (dut.bist_error_reg[m][byte_idx] !== expected_bank[m][8*byte_idx+:8])
+          $fatal(1, "Macro%0d byte%0d top-level error register changed: got=%h expected=%h",
+                 m, byte_idx, dut.bist_error_reg[m][byte_idx],
+                 expected_bank[m][8*byte_idx+:8]);
     $display("MBIST Macro%0d %s cycles=%0d valid=%b errors=%h", id,
              expected_valid ? "retest" : "detect", cycles,
              mbist_test_memory_valid_o, mbist_test_error_sbk_o);
@@ -107,8 +120,11 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
   initial begin
     repeat (3) @(negedge clock);
     reset_n = 1;
+    for (int id = 0; id < 8; id++) expected_bank[id] = 0;
+    // Keep all eight detected error maps while testing later Macros, then
+    // clear each bank only when that Macro's repair retest completes.
+    for (int id = 0; id < 8; id++) run_pass(id, 0, 0, REPAIR);
     for (int id = 0; id < 8; id++) begin
-      run_pass(id, 0, 0, REPAIR);
       run_pass(id, REPAIR, 1, 0);
       check_functional_repair(id);
     end
