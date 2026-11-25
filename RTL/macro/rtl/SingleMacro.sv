@@ -28,7 +28,11 @@ module SingleMacro #(
   output logic [  71:0] cim_odata,
   output logic          cim_odata_valid,
   output logic [   3:0] cim_odata_oc_mask,
-  output logic [   1:0] cim_odata_phase
+  output logic [   1:0] cim_odata_phase,
+  input  logic          mbist_select,
+  input  logic [63:0]   mbist_config,
+  output wire           mbist_done, mbist_busy, mbist_valid, mbist_unrepairable,
+  output wire [63:0]    mbist_errors
 );
   import single_macro_pkg::*;
 
@@ -53,9 +57,24 @@ module SingleMacro #(
   wire clock_active;
   assign issue = cim_ren && (|cim_oc_mask);
   assign write_active = sram_wen && !(&sram_wmask);
-  // The caller keeps SRAM/compute requests inactive during reset_n. Reset is
-  // not part of the combinational request or ICG-enable decode.
-  assign memory_active = write_active || sram_ren || sram_read_enable;
+  // Retain each Macro's full repair map through other Macros' tests and
+  // functional accesses. Launch only after the local map is installed.
+  logic [63:0] repair_config;
+  logic mbist_start;
+  always_ff @(posedge clock or negedge reset_n) begin
+    if (!reset_n) begin
+      repair_config <= '0;
+      mbist_start <= 0;
+    end else begin
+      mbist_start <= 0;
+      if (mbist_select) begin
+        repair_config <= mbist_config;
+        mbist_start <= 1;
+      end
+    end
+  end
+  assign memory_active = !reset_n || write_active || sram_ren || sram_read_enable ||
+                         mbist_select || mbist_start || mbist_busy;
   assign clock_active = issue || in_valid || csa_valid || cim_odata_valid;
   generate
     if (USE_CLOCK_GATING) begin : g_icg
@@ -113,7 +132,11 @@ module SingleMacro #(
   // Keep precompute inputs stable across bubbles. Query outputs are isolated
   // after the highest-plane XOR; pooled correction joins after the CSA register.
   MacroWeightSRAM u_weight_sram (
-    .clock(memory_clock),
+    .clock(memory_clock), .reset_n(reset_n),
+    .mbist_start(mbist_start), .repair_config(repair_config),
+    .mbist_done(mbist_done), .mbist_busy(mbist_busy),
+    .mbist_valid(mbist_valid), .mbist_unrepairable(mbist_unrepairable),
+    .mbist_errors(mbist_errors),
     .write_enable(write_active),
     .write_address(sram_waddr),
     .write_data(sram_wdata),
@@ -139,7 +162,7 @@ module SingleMacro #(
       held_address <= '0;
       hold_valid <= 1'b0;
       held_oc_mask <= '0;
-    end else if (write_active) begin
+    end else if (write_active || mbist_start) begin
       hold_valid <= 1'b0;
       held_oc_mask <= '0;
     end else if (sram_ren || sram_read_enable) begin
@@ -257,6 +280,8 @@ module SingleMacro #(
   initial for (int a = 0; a < 256; a++) initialized_ocs[a] = '0;
   always @(posedge clock) begin
     if (reset_n) begin
+      if (mbist_start)
+        initialized_ocs <= '{default:'0};
       if (sram_ren && (cim_ren || in_valid || sram_wen)) $fatal(1, "SM_PROTOCOL: regular read overlaps compute/write");
       if (sram_wen) begin
         if (cim_ren) $fatal(1, "SM_PROTOCOL: simultaneous read/write");

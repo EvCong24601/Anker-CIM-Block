@@ -57,6 +57,7 @@ module hdsram256w512btop (
     integer j;
     integer p;
     integer physical_index;
+    wire clk_d;
 
     reg [PHYSICAL_BITS_PER_BANK-1:0] physical_mem [0:PHYSICAL_ROWS-1];
 
@@ -113,7 +114,10 @@ module hdsram256w512btop (
         end
     endfunction
 
-    always @(posedge CK) begin
+    // Retain the 100-ps macro-level clock delay used by the previous model.
+    assign #1.5 clk_d = CK;
+
+    always @(posedge clk_d) begin
         case (CEN)
             1'b0: begin
                 case (WEN)

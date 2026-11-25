@@ -59,7 +59,7 @@ task automatic load_as_weights();
       sram_macro_group = 1'(macro / 4);
       sram_bank_sel = 2'(macro % 4);
       @(posedge clock);
-      #1;
+      #2ns;  // Sample after the v2 SRAM clock delay.
       if (!sram_rd_valid || sram_rd_data !== weight_rows[address*8+macro])
         $fatal(1, "AS GEMM: SRAM readback mismatch");
       @(negedge clock);

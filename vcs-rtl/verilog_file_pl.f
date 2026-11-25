@@ -2,6 +2,7 @@
 // Kept equal to the Cluster TB list by .tools\svfilelist.ps1 -CheckLists.
 -f verilog_file_common.f
 ../RTL/cluster/tb/tb_Cluster.sv
+../RTL/cluster/tb/tb_ClusterMbist.sv
 ../RTL/cluster/tb/tb_ClusterChannels.sv
 ../RTL/cluster/tb/tb_ClusterReduceTree.sv
 ../RTL/cluster/tb/ClusterGemmOs1Ws32.sv

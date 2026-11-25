@@ -14,6 +14,7 @@ override TB := $(CASE_TB)
 endif
 TOP_cluster := tb_Cluster
 TOP_channels := tb_ClusterChannels
+TOP_mbist := tb_ClusterMbist
 TOP_macro := tb_SingleMacro
 TOP_reduce := tb_ClusterReduceTree
 TOP_gemm_os1_ws32_w8a16 := tb_Cluster_GEMM_OS1_WS32_W8A16
@@ -29,6 +30,7 @@ $(error Unknown TB '$(TB)')
 endif
 FILE_cluster := verilog_file_cluster.f
 FILE_channels := verilog_file_channels.f
+FILE_mbist := verilog_file_mbist.f
 FILE_macro := verilog_file_macro.f
 FILE_reduce := verilog_file_reduce.f
 FILE_gemm_os1_ws32_w8a16 := verilog_file_gemm_os1_ws32_w8a16.f

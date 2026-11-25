@@ -18,7 +18,12 @@ module tb_ClusterChannels;
   wire [1023:0] sram_rd_data, raw_psum;
   wire sram_rd_valid;
   wire [31:0] psum_valid;
-  cluster_top dut (.*);
+  cluster_top dut (
+    .mbist_macro_id_i(3'b0), .mbist_test_red_sbk_i(64'b0), .mbist_test_memory_start_i(1'b0),
+    .mbist_test_error_sbk_o(), .mbist_test_done_o(), .mbist_test_busy_o(),
+    .mbist_test_memory_valid_o(), .mbist_out_of_repair_o(),
+    .*
+  );
   if (CHECK_GATE_EQUIVALENCE) begin : g_mirror
     wire cr, wr, ar, srv;
     wire [1023:0] sr, raw;
@@ -26,6 +31,9 @@ module tb_ClusterChannels;
     cluster_top #(
       .USE_CLOCK_GATING(0)
     ) reference (
+      .mbist_macro_id_i(3'b0), .mbist_test_red_sbk_i(64'b0), .mbist_test_memory_start_i(1'b0),
+      .mbist_test_error_sbk_o(), .mbist_test_done_o(), .mbist_test_busy_o(),
+      .mbist_test_memory_valid_o(), .mbist_out_of_repair_o(),
       .cmd_ready_o(cr),
       .weight_ready_o(wr),
       .act_ready_o(ar),

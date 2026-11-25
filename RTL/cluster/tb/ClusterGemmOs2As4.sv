@@ -30,6 +30,7 @@ module ClusterGemmOs2As4;
   cluster_top dut (
     .clock(clock),
     .reset_n(reset_n),
+    .mbist_macro_id_i(3'b0), .mbist_test_red_sbk_i(64'b0), .mbist_test_memory_start_i(1'b0),
     .cmd_i(cmd_i),
     .cmd_valid_i(cmd_valid_i),
     .cmd_ready_o(cmd_ready_o),

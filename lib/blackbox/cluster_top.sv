@@ -34,6 +34,18 @@ module cluster_top #(
   // Lane l carries signed32 raw_psum[32*l+:32], qualified by psum_valid[l].
   // No output backpressure. Invalid lane payload is unspecified.
   output wire [1023:0] raw_psum,
-  output wire [31:0] psum_valid
+  output wire [31:0] psum_valid,
+  // Idle Cluster only. Pulse start for one cycle with a complete Macro ID
+  // and repair map. Byte 4*bank+sbk selects one 128-column subbank, low
+  // SRAM first. The local map persists until reset or that Macro's next test.
+  // Read the registered result at done && !busy; reload weights after MBIST.
+  input  logic [2:0]  mbist_macro_id_i,
+  input  logic [63:0] mbist_test_red_sbk_i,
+  input  logic        mbist_test_memory_start_i,
+  output logic [63:0] mbist_test_error_sbk_o,
+  output logic        mbist_test_done_o,
+  output logic        mbist_test_busy_o,
+  output logic        mbist_test_memory_valid_o,
+  output logic        mbist_out_of_repair_o
 );
 endmodule

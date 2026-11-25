@@ -109,7 +109,7 @@ task automatic read_row(input logic [7:0] address);
   sram_ren = 1;
   sram_raddr = address;
   @(posedge clock);
-  #1;
+  #2ns;  // Sample after the v2 SRAM clock delay.
   if (!negative_mode && sram_rdata !== reference_memory[address])
     $fatal(1, "TB: ordinary read output mismatch row=%0d", address);
   @(negedge clock);

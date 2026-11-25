@@ -204,14 +204,14 @@ initial begin : stimulus
   sram_ren   = 1;
   sram_raddr = 8'd254;
   @(posedge clock);
-  #1;
+  #2ns;  // Sample after the v2 SRAM clock delay.
   if (sram_rdata !== reference_memory[254]) $fatal(1, "TB: regular raw read mismatch");
   @(negedge clock);
   sram_raddr = 8'd255;
   #1;
   if (sram_rdata !== reference_memory[254]) $fatal(1, "TB: SRAM read changed before its sampling edge");
   @(posedge clock);
-  #1;
+  #2ns;  // Sample after the v2 SRAM clock delay.
   if (sram_rdata !== reference_memory[255]) $fatal(1, "TB: synchronous back-to-back read mismatch");
   @(negedge clock);
   sram_ren = 0;

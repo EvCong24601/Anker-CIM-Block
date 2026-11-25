@@ -2,8 +2,7 @@ initial begin : scenario_regression
   int fd;
   load_scenario_vectors();
   $display(
-    string'({"[CASE_START] time=%0.3f ns suite=gemm_%s description=%s ",
-             "M=%0d K=%0d N=%0d W%0dA%0d first_macro=%0d lane_base=%0d per_channel=%0d"}),
+    "[CASE_START] time=%0.3f ns suite=gemm_%s description=%s M=%0d K=%0d N=%0d W%0dA%0d first_macro=%0d lane_base=%0d per_channel=%0d",
     $realtime, SCENARIO, description, m_count, k_count, n_count, wb, ab, first_macro, lane_base, per_channel);
   trace_fd = $fopen({data_dir, "/gemm_observed_events.csv"}, "w");
   if (!trace_fd) $fatal(1, "GEMM scenario: cannot create event trace");

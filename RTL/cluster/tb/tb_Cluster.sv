@@ -43,6 +43,9 @@ module tb_Cluster;
     .MAX_CONTEXTS(MAX_CONTEXTS),
     .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH)
   ) dut (
+    .mbist_macro_id_i(3'b0), .mbist_test_red_sbk_i(64'b0), .mbist_test_memory_start_i(1'b0),
+    .mbist_test_error_sbk_o(), .mbist_test_done_o(), .mbist_test_busy_o(),
+    .mbist_test_memory_valid_o(), .mbist_out_of_repair_o(),
     .*
   );
   // Scoreboards observe the public raw output pins.

@@ -27,6 +27,12 @@ task automatic sram_write(int m, int a, logic [1023:0] data, logic [3:0] mask, b
   @(posedge clock);
   #0.002;
   for (int b = 0; b < 128; b++) if (selected && !mask[b/32]) sram_reference[m][a][8*b+:8] = data[8*b+:8];
+  // The caller can release every write pin before the SRAM's delayed edge.
+  sram_cs_en = 0;
+  sram_wr_en = 0;
+  sram_row_addr = ~sram_row_addr;
+  sram_wmask = ~mask;
+  sram_wrdata = ~data;
   @(negedge clock);
   sram_cs_en = 0;
   sram_wr_en = 0;
@@ -48,7 +54,7 @@ task automatic sram_read_check(int m, int a, logic [3:0] mask = 0);
   sram_row_addr = 8'(a);
   sram_wmask = mask;
   @(posedge clock);
-  #1;
+  #2ns;  // Sample after the v2 SRAM clock delay.
   if (!sram_rd_valid || sram_rd_data !== sram_reference[m][a])
     $fatal(1, "SRAM read mismatch macro=%0d row=%0d mask=%h", m, a, mask);
   if (cmd_ready_o !== 0) $fatal(1, "Command ready during regular SRAM access");

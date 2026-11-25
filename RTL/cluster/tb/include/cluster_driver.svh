@@ -54,7 +54,7 @@ task automatic load_weight_row(input int macro_id, input logic [7:0] address, in
   @(negedge clock);
   sram_wr_en = 0;
   @(posedge clock);
-  #1;
+  #2ns;  // Sample after the v2 SRAM clock delay.
   if (!sram_rd_valid || sram_rd_data !== data)
     $fatal(1, "Weight load readback mismatch macro=%0d row=%0d", macro_id, address);
   @(negedge clock);

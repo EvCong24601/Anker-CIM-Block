@@ -6,6 +6,7 @@
 ../macro/rtl/single_macro_pkg.sv
 ../macro/rtl/MacroClockGate.sv
 ../macro/rtl/hdsram256w512btop.sv
+../macro/rtl/hdsram256w512b_mbist_top.sv
 ../macro/rtl/MacroWeightSRAM.sv
 ../macro/rtl/MacroMul2x4.sv
 ../macro/rtl/MacroSliceFusion.sv

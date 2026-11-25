@@ -17,6 +17,8 @@ def add(name, tb, description, marker, args='', params='', generator='', channel
 
 
 add('cluster_default', 'cluster', 'Raw arithmetic and standard timing', 'PASS configurations=', '', '', '', False, False)
+add('cluster_mbist', 'mbist', 'Paired SRAM self-test, repair and functional reload', 'PASS cluster MBIST gating=1')
+add('cluster_mbist_ungated', 'mbist', 'Self-test with clock gates bypassed', 'PASS cluster MBIST gating=0', params='USE_CLOCK_GATING=0')
 add('sram_rw', 'cluster', 'Regular SRAM read write and OC masks', 'PASS sram_rw', '+SRAM_RW_TEST', '', '', False, False)
 add('sram_write_compute_conflict', 'cluster', 'Reject regular SRAM write during active compute', 'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', '+SRAM_CONFLICT_WRITE_COMPUTE', '', '', False, True)
 add('sram_compute_conflict', 'cluster', 'Reject regular SRAM read during active compute', 'CLUSTER_SRAM_PROTOCOL: regular access overlaps compute', '+SRAM_CONFLICT_COMPUTE', '', '', False, True)

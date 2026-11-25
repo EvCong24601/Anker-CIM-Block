@@ -49,7 +49,19 @@ module cluster_top #(
   // Lane l carries signed32 raw_psum[32*l+:32], qualified by psum_valid[l].
   // No output backpressure. Invalid lane payload is unspecified.
   output wire [1023:0] raw_psum,
-  output wire [31:0] psum_valid
+  output wire [31:0] psum_valid,
+  // Idle Cluster only. Pulse start for one cycle with a complete Macro ID
+  // and repair map. Byte 4*bank+sbk selects one 128-column subbank, low
+  // SRAM first. The local map persists until reset or that Macro's next test.
+  // Read the registered result at done && !busy; reload weights after MBIST.
+  input  logic [2:0]  mbist_macro_id_i,
+  input  logic [63:0] mbist_test_red_sbk_i,
+  input  logic        mbist_test_memory_start_i,
+  output logic [63:0] mbist_test_error_sbk_o,
+  output logic        mbist_test_done_o,
+  output logic        mbist_test_busy_o,
+  output logic        mbist_test_memory_valid_o,
+  output logic        mbist_out_of_repair_o
 );
   import cluster_pkg::*;
   `include "cluster_func.sv"
@@ -159,13 +171,63 @@ module cluster_top #(
   wire regular_write;
   wire [7:0] memory_wen;
   wire [8191:0] regular_read_data;
+  // MBIST is issued with the functional interface idle. Capture the entire
+  // request on a single start pulse. Ignore further pulses while busy.
+  typedef enum logic [1:0] {BIST_IDLE, BIST_DISPATCH, BIST_WAIT_BUSY, BIST_RUN} bist_state_t;
+  bist_state_t bist_state;
+  logic [2:0] bist_id;
+  logic [63:0] bist_config;
+  wire [7:0] bist_done, bist_busy, bist_valid, bist_unrepairable;
+  wire [63:0] bist_errors [0:7];
+  wire [7:0] bist_select = bist_state == BIST_DISPATCH ? (8'b1 << bist_id) : 8'b0;
+  logic bist_accept;
+  always_comb begin
+    bist_accept = 0;
+    if (mbist_test_memory_start_i)
+      bist_accept = !mbist_test_busy_o && !batch_active && !packet_active && !sram_cs_en;
+  end
+  assign mbist_test_busy_o = bist_state != BIST_IDLE;
+  always_ff @(posedge clock or negedge reset_n) begin
+    if (!reset_n) begin
+      bist_state <= BIST_IDLE;
+      bist_id <= '0;
+      bist_config <= '0;
+      mbist_test_done_o <= 0;
+      mbist_test_memory_valid_o <= 0;
+      mbist_out_of_repair_o <= 0;
+      mbist_test_error_sbk_o <= '0;
+    end else case (bist_state)
+      BIST_IDLE: if (bist_accept) begin
+        bist_id <= mbist_macro_id_i;
+        bist_config <= mbist_test_red_sbk_i;
+        mbist_test_done_o <= 0;
+        mbist_test_memory_valid_o <= 0;
+        mbist_out_of_repair_o <= 0;
+        mbist_test_error_sbk_o <= '0;
+        bist_state <= BIST_DISPATCH;
+      end
+      BIST_DISPATCH: bist_state <= BIST_WAIT_BUSY;
+      // A previous run's done can still be high while the request travels
+      // through the local register. Observe the new busy before taking done.
+      BIST_WAIT_BUSY: if (bist_busy[bist_id]) bist_state <= BIST_RUN;
+      BIST_RUN: if (bist_done[bist_id] && !bist_busy[bist_id]) begin
+        mbist_test_done_o <= 1;
+        mbist_test_memory_valid_o <= bist_valid[bist_id];
+        mbist_out_of_repair_o <= bist_unrepairable[bist_id];
+        mbist_test_error_sbk_o <= bist_errors[bist_id];
+        bist_state <= BIST_IDLE;
+      end
+    endcase
+  end
+
   assign regular_macro_id = {sram_macro_group, sram_bank_sel};
-  assign regular_access = sram_cs_en;
+  assign regular_access = sram_cs_en && !mbist_test_busy_o;
   assign regular_read = regular_access && !sram_wr_en;
   assign regular_write = regular_access && sram_wr_en && !(&sram_wmask);
   assign memory_wen = regular_write ? (8'd1 << regular_macro_id) : 8'd0;
-  // Request and response selection share the SRAM sampling edge. The
-  // next live request must not change an outstanding synchronous response.
+  // Register the response tag at request acceptance. Selected SRAM data
+  // settles after the v2 model's 1.5 ns CK delay in this response cycle.
+  // A synchronous consumer samples valid and data on the next rising edge.
   logic [2:0] sram_response_macro;
   always_ff @(posedge clock or negedge reset_n) begin
     if (!reset_n) begin
@@ -478,7 +540,7 @@ module cluster_top #(
       if (tmp_path_valid[path] && tmp_path_meta[path].cfg.accum_mode != 0)
         pipeline_compatible &= compatible_pipeline(pipeline_config(cmd_i),tmp_path_meta[path].cfg);
   end
-  assign cmd_ready_o = !sram_cs_en && input_slot_free && (!batch_active || pipeline_compatible || drain_safe);
+  assign cmd_ready_o = !mbist_test_busy_o && !bist_accept && !sram_cs_en && input_slot_free && (!batch_active || pipeline_compatible || drain_safe);
   // Each stream is ordered independently. The old job has first claim on
   // its last missing beat; a stream already finished may start the next job.
   assign act_ready_o = cmd_accept || (!sram_cs_en && packet_active && act_tiles_left != 0 &&
@@ -515,6 +577,13 @@ module cluster_top #(
     ) u_macro (
       .clock(clock),
       .reset_n(reset_n),
+      .mbist_select(bist_select[m]),
+      .mbist_config(bist_config),
+      .mbist_busy(bist_busy[m]),
+      .mbist_done(bist_done[m]),
+      .mbist_valid(bist_valid[m]),
+      .mbist_unrepairable(bist_unrepairable[m]),
+      .mbist_errors(bist_errors[m]),
       .cim_ren(ren[m]),
       .cim_idata(idata),
       .cim_raddr(issue_weight_address),
@@ -821,7 +890,7 @@ module cluster_top #(
         end
       end
       for (int m = 0; m < 8; m++) begin
-        if (memory_wen[m]) hold_valid[m] <= 0;
+        if (memory_wen[m] || bist_select[m]) hold_valid[m] <= 0;
         else if (regular_read && regular_macro_id == m) begin
           hold_valid[m] <= 1;
           hold_addr[m]  <= sram_row_addr;

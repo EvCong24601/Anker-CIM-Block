@@ -64,6 +64,24 @@ library (cluster_top_interface) {
     downto : true;
   }
 
+  type (bus_3) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 3;
+    bit_from : 2;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_64) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 64;
+    bit_from : 63;
+    bit_to : 0;
+    downto : true;
+  }
+
   type (bus_8) {
     base_type : array;
     data_type : bit;
@@ -281,6 +299,79 @@ library (cluster_top_interface) {
     }
 
     pin ("sram_rd_valid") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+    }
+
+    bus ("mbist_macro_id_i") {
+      bus_type : bus_3;
+      direction : input;
+      pin ("mbist_macro_id_i[2:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    bus ("mbist_test_red_sbk_i") {
+      bus_type : bus_64;
+      direction : input;
+      pin ("mbist_test_red_sbk_i[63:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    pin ("mbist_test_memory_start_i") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
+    bus ("mbist_test_error_sbk_o") {
+      bus_type : bus_64;
+      direction : output;
+      pin ("mbist_test_error_sbk_o[63:0]") {
+        direction : output;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        max_capacitance : 0.287100;
+        min_capacitance : 0.000150;
+      }
+    }
+
+    pin ("mbist_test_done_o") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+    }
+
+    pin ("mbist_test_busy_o") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+    }
+
+    pin ("mbist_test_memory_valid_o") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+    }
+
+    pin ("mbist_out_of_repair_o") {
       direction : output;
       max_transition : 0.871500;
       min_transition : 0.000000;

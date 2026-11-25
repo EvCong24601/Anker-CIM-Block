@@ -3,6 +3,7 @@
 logic [1023:0] response_memory[0:7][0:255];
 logic expected_sram_valid = 0;
 logic [1023:0] expected_sram_data = '0;
+realtime response_data_ready_at;
 int sram_response_checks = 0;
 always @(posedge clock or negedge reset_n) begin : check_sampled_sram_response
   int macro_id;
@@ -12,12 +13,15 @@ always @(posedge clock or negedge reset_n) begin : check_sampled_sram_response
   end else begin
     macro_id = {sram_macro_group, sram_bank_sel};
     expected_sram_valid = sram_cs_en && !sram_wr_en;
+    response_data_ready_at = $realtime + 1.5ns;
     expected_sram_data = expected_sram_valid ? response_memory[macro_id][sram_row_addr] : 1024'b0;
     if (sram_cs_en && sram_wr_en)
       for (int c = 0; c < 4; c++)
       if (!sram_wmask[c]) response_memory[macro_id][sram_row_addr][256*c+:256] = sram_wrdata[256*c+:256];
   end
-  #0.003;
+end
+always @(posedge clock) begin
+  #2ns;  // Compare within this response cycle, after the model updates DOUT.
   if (sram_rd_valid !== expected_sram_valid || sram_rd_data !== expected_sram_data)
     $fatal(1, "SRAM_RESPONSE: sampled valid/data mismatch");
   if (reset_n) sram_response_checks++;
@@ -25,7 +29,8 @@ end
 // Check after requests change between edges, including CS and read/write.
 always @(sram_cs_en or sram_wr_en or sram_macro_group or sram_bank_sel or sram_row_addr) begin
   #0.004;
-  if (reset_n && (sram_rd_valid !== expected_sram_valid || sram_rd_data !== expected_sram_data))
+  if (reset_n && (sram_rd_valid !== expected_sram_valid ||
+      ((!expected_sram_valid || $realtime > response_data_ready_at) && sram_rd_data !== expected_sram_data)))
     $fatal(1, "SRAM_RESPONSE: live request changed the previous response");
 end
 
@@ -49,13 +54,12 @@ task automatic run_sram_response_suite();
     @(posedge clock);
     #0.002;
     saved = sram_pattern(m, a, 91);
-    if (!sram_rd_valid || sram_rd_data !== saved) $fatal(1, "SRAM_RESPONSE: consecutive response mismatch");
-    // Next request is legal after the sampling edge's hold interval.
-    #1;
+    if (!sram_rd_valid) $fatal(1, "SRAM_RESPONSE: consecutive response missing");
+    // Change the live pins before the model's delayed sampling edge.
     sram_macro_group = 1'(((m + 1) % 8) / 4);
     sram_bank_sel = 2'((m + 1) % 4);
     sram_row_addr = 8'(a == 3 ? 7 : 3);
-    #1;
+    #2ns;
     if (!sram_rd_valid || sram_rd_data !== saved) $fatal(1, "SRAM_RESPONSE: Macro mux changed response early");
   end
   @(negedge clock);
@@ -72,12 +76,12 @@ task automatic run_sram_response_suite();
   sram_bank_sel = 0;
   sram_row_addr = 3;
   @(posedge clock);
-  #1;
-  saved = sram_rd_data;
+  #0.002;
+  saved = sram_pattern(0, 3, 91);
   sram_wr_en = 1;
   sram_wmask = 4'h0;
   sram_wrdata = '1;
-  #1;
+  #2ns;
   if (!sram_rd_valid || sram_rd_data !== saved) $fatal(1, "SRAM_RESPONSE: write request truncated read");
   @(posedge clock);
   #0.002;

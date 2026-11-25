@@ -1,0 +1,3 @@
+# Preserve the exact bytes of the supplied v2 models on Windows checkouts.
+/RTL/macro/rtl/hdsram256w512btop.sv -text
+/RTL/macro/rtl/hdsram256w512b_mbist_top.sv -text

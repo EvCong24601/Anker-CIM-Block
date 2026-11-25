@@ -65,7 +65,7 @@ task automatic load_gemm_weights();
       sram_macro_group = 1'(macro / 4);
       sram_bank_sel = 2'(macro % 4);
       @(posedge clock);
-      #1;
+      #2ns;  // Sample after the v2 SRAM clock delay.
       if (!sram_rd_valid[0] || sram_rd_data[0] !== weight_rows[8*tile+macro])
         $fatal(1, "GEMM: weight readback mismatch tile=%0d macro=%0d", tile, macro);
       @(negedge clock);
