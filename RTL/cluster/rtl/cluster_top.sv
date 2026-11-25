@@ -64,7 +64,8 @@ module cluster_top #(
   input  logic [63:0] mbist_test_red_sbk_i,
   input  logic        mbist_repair_we_i,
   input  logic        mbist_test_memory_start_i,
-  output logic        mbist_repair_done_i,
+  // output logic        mbist_repair_done_i,  // Temporarily disabled.
+  output logic [7:0]  mbist_repair_done_o,
   output logic [63:0] mbist_test_error_sbk_o,
   output logic        mbist_test_done_o,
   output logic        mbist_test_busy_o,
@@ -75,22 +76,29 @@ module cluster_top #(
   // Sample once at the Cluster boundary, then broadcast to all SRAM wrappers.
   logic [7:0] timing_config_q;
   logic waen_q, raen_q;
-  // One common acknowledgement for the Macro selected on the write edge.
-  // A write sampled at edge N produces a one-cycle done pulse at edge N+4.
-  logic [3:0] repair_we_delay;
+  // One completion bit per Macro. A new write clears its bit, and the bit
+  // sets at edge N+3 for a write captured at edge N. New writes to the same
+  // Macro supersede any older completion still in flight.
+  logic [7:0] repair_write_mask;
+  logic [7:0] repair_pending_d1, repair_pending_d2, repair_pending_d3;
+  assign repair_write_mask = mbist_repair_we_i ? (8'b1 << mbist_macro_id_i) : '0;
   always_ff @(posedge clock or negedge rstn_config) begin
     if (!rstn_config) begin
       timing_config_q <= '0;
       waen_q <= 1'b0;
       raen_q <= 1'b0;
-      repair_we_delay <= '0;
-      mbist_repair_done_i <= 1'b0;
+      repair_pending_d1 <= '0;
+      repair_pending_d2 <= '0;
+      repair_pending_d3 <= '0;
+      mbist_repair_done_o <= '0;
     end else begin
       timing_config_q <= timing_config_i;
       waen_q <= waen_i;
       raen_q <= raen_i;
-      repair_we_delay <= {repair_we_delay[2:0], mbist_repair_we_i};
-      mbist_repair_done_i <= repair_we_delay[3];
+      repair_pending_d1 <= repair_write_mask;
+      repair_pending_d2 <= repair_pending_d1 & ~repair_write_mask;
+      repair_pending_d3 <= repair_pending_d2 & ~repair_write_mask;
+      mbist_repair_done_o <= (mbist_repair_done_o | repair_pending_d3) & ~repair_write_mask;
     end
   end
   `include "cluster_func.sv"

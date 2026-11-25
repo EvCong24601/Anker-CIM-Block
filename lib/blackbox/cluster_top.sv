@@ -47,7 +47,8 @@ module cluster_top #(
   input  logic [63:0] mbist_test_red_sbk_i,
   input  logic        mbist_repair_we_i,
   input  logic        mbist_test_memory_start_i,
-  output logic        mbist_repair_done_i,
+  // output logic        mbist_repair_done_i,  // Temporarily disabled.
+  output logic [7:0]  mbist_repair_done_o,
   output logic [63:0] mbist_test_error_sbk_o,
   output logic        mbist_test_done_o,
   output logic        mbist_test_busy_o,

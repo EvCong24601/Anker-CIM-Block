@@ -26,7 +26,8 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
   logic mbist_repair_we_i = 0;
   logic mbist_test_memory_start_i = 0;
   wire [63:0] mbist_test_error_sbk_o;
-  wire mbist_repair_done_i;
+  // wire mbist_repair_done_i;  // Temporarily disabled.
+  wire [7:0] mbist_repair_done_o;
   wire mbist_test_busy_o, mbist_test_done_o;
   wire mbist_test_memory_valid_o, mbist_out_of_repair_o;
 
@@ -55,6 +56,7 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
   localparam logic [1023:0] ONES = '1;
   logic [63:0] expected_bank [0:7];
   logic [63:0] expected_repair [0:7];
+  logic [7:0] expected_repair_done = '0;
   wire [63:0] observed_repair [0:7];
   for (genvar m = 0; m < 8; m++) begin : g_repair_observe
     assign observed_repair[m] = dut.g_macro[m].u_macro.repair_config;
@@ -69,30 +71,27 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
     mbist_repair_we_i = 1;
     @(negedge clock);
     mbist_repair_we_i = 0;
+    expected_repair_done[id] = 0;
+    if (mbist_repair_done_o !== expected_repair_done)
+      $fatal(1, "Macro%0d repair done bit did not clear on write", id);
     expected_repair[id] = repair_map;
     mbist_test_red_sbk_i = ~repair_map;
     // The selected register holds even though the data bus changes.
     @(negedge clock);
+    if (mbist_repair_done_o !== expected_repair_done)
+      $fatal(1, "Macro%0d repair done asserted at N+1", id);
     for (int m = 0; m < 8; m++)
       if (observed_repair[m] !== expected_repair[m])
         $fatal(1, "Macro%0d repair register write/hold mismatch", m);
-    if (mbist_repair_done_i !== 0)
-      $fatal(1, "Macro%0d repair done early", id);
-    repeat (2) begin
-      @(negedge clock);
-      if (mbist_repair_done_i !== 0)
-        $fatal(1, "Macro%0d repair done early", id);
-    end
-    @(negedge clock);
-    if (mbist_repair_done_i !== 1)
-      $fatal(1, "Macro%0d repair done missing after four cycles", id);
-    @(negedge clock);
-    if (mbist_repair_done_i !== 0)
-      $fatal(1, "Macro%0d repair done did not clear", id);
     mbist_test_memory_start_i = 1;
     @(negedge clock);
     mbist_test_memory_start_i = 0;
+    if (mbist_repair_done_o !== expected_repair_done)
+      $fatal(1, "Macro%0d repair done asserted at N+2", id);
     @(negedge clock);
+    expected_repair_done[id] = 1;
+    if (mbist_repair_done_o !== expected_repair_done)
+      $fatal(1, "Macro%0d repair done missing at N+3", id);
     if ({mbist_test_busy_o, mbist_test_done_o} !== 2'b10)
       $fatal(1, "Macro%0d did not accept MBIST", id);
     cycles = 0;

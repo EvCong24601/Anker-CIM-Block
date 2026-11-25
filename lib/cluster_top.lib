@@ -374,12 +374,26 @@ library (cluster_top_interface) {
       capacitance : 0.001821;
     }
 
+    /* mbist_repair_done_i is temporarily disabled.
     pin ("mbist_repair_done_i") {
       direction : output;
       max_transition : 0.871500;
       min_transition : 0.000000;
       max_capacitance : 0.287100;
       min_capacitance : 0.000150;
+    }
+    */
+
+    bus ("mbist_repair_done_o") {
+      bus_type : bus_8;
+      direction : output;
+      pin ("mbist_repair_done_o[7:0]") {
+        direction : output;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        max_capacitance : 0.287100;
+        min_capacitance : 0.000150;
+      }
     }
 
     bus ("mbist_test_error_sbk_o") {
