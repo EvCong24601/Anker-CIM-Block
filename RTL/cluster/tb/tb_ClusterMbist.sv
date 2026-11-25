@@ -21,8 +21,10 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
 
   logic [2:0] mbist_macro_id_i = 0;
   logic [63:0] mbist_test_red_sbk_i = 0;
+  logic mbist_repair_we_i = 0;
   logic mbist_test_memory_start_i = 0;
   wire [63:0] mbist_test_error_sbk_o;
+  wire mbist_repair_done_i;
   wire mbist_test_busy_o, mbist_test_done_o, mbist_test_memory_valid_o, mbist_out_of_repair_o;
   cluster_top #(.USE_CLOCK_GATING(USE_CLOCK_GATING)) dut (.*);
 
@@ -57,6 +59,7 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
   task automatic launch(input logic [2:0] id, input logic [63:0] cfg);
     mbist_macro_id_i = id;
     mbist_test_red_sbk_i = cfg;
+    mbist_repair_we_i = 0;
     mbist_test_memory_start_i = 1;
     @(negedge clock);
     mbist_test_memory_start_i = 0;
@@ -64,6 +67,24 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     // Cluster accepts the sampled start pulse one edge later.
     @(negedge clock);
     if ({mbist_test_busy_o, mbist_test_done_o} !== 2'b10) $fatal(1, "launch status");
+  endtask
+
+  task automatic write_repair(input logic [2:0] id, input logic [63:0] cfg);
+    if (mbist_repair_done_i !== 0) $fatal(1, "repair done before write");
+    mbist_macro_id_i = id;
+    mbist_test_red_sbk_i = cfg;
+    mbist_repair_we_i = 1;
+    @(negedge clock);
+    mbist_repair_we_i = 0;
+    if (mbist_repair_done_i !== 0) $fatal(1, "repair done on write edge");
+    repeat (3) begin
+      @(negedge clock);
+      if (mbist_repair_done_i !== 0) $fatal(1, "repair done before four cycles");
+    end
+    @(negedge clock);
+    if (mbist_repair_done_i !== 1) $fatal(1, "repair done missing at four cycles");
+    @(negedge clock);
+    if (mbist_repair_done_i !== 0) $fatal(1, "repair done was not one cycle");
   endtask
 
   task automatic finish_test(input logic [2:0] id);
@@ -163,15 +184,17 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
 
     // Return the repair code while start remains low, as in the standalone
     // SRAM template. It must take effect before the second MBIST run.
-    mbist_macro_id_i = 5;
-    mbist_test_red_sbk_i = REPAIR5;
-    @(negedge clock);
+    write_repair(5, REPAIR5);
     if (mbist_test_busy_o !== 0 || dut.g_macro[5].u_macro.repair_config !== REPAIR5)
-      $fatal(1, "selected Macro did not sample repair input on the next edge");
+      $fatal(1, "repair write did not update selected Macro");
+    mbist_test_red_sbk_i = ~REPAIR5;
+    @(negedge clock);
+    if (dut.g_macro[5].u_macro.repair_config !== REPAIR5)
+      $fatal(1, "repair register changed while write enable was low");
     access_row(5, 1, 0, ONES);
     access_row(5, 0, 0, ONES);
 
-    launch(5, REPAIR5);
+    launch(5, ~REPAIR5);
     finish_test(5);
     if ({mbist_test_memory_valid_o, mbist_out_of_repair_o, mbist_test_error_sbk_o} !== {2'b10,64'd0})
       $fatal(1, "repair retest");
@@ -196,11 +219,10 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     compute(960, after_latency);
     if (before_latency != after_latency) $fatal(1, "compute latency changed");
 
+    write_repair(7, '1);
     launch(7, '1);
     repeat (20) @(negedge clock);
-    mbist_macro_id_i = 0;
-    mbist_test_red_sbk_i = 64'h9182736455aacc33;
-    repeat (2) @(negedge clock);
+    write_repair(0, 64'h9182736455aacc33);
     if (dut.g_macro[0].u_macro.repair_config !== 64'h9182736455aacc33)
       $fatal(1, "Macro0 repair setup before logic reset");
     reset_n = 0;
@@ -227,6 +249,30 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     finish_test(7);
     if ({mbist_test_memory_valid_o,mbist_out_of_repair_o,mbist_test_error_sbk_o} !== {2'b00,64'h85})
       $fatal(1, "last read missing from final result");
+    // Two consecutive writes produce two consecutive four-cycle responses.
+    mbist_macro_id_i = 0;
+    mbist_test_red_sbk_i = 64'h123456789abcdef0;
+    mbist_repair_we_i = 1;
+    @(negedge clock);
+    if (dut.g_macro[0].u_macro.repair_config !== 64'h123456789abcdef0 ||
+        mbist_repair_done_i !== 0) $fatal(1, "first back-to-back repair write");
+    mbist_macro_id_i = 1;
+    mbist_test_red_sbk_i = 64'hfedcba9876543210;
+    @(negedge clock);
+    mbist_repair_we_i = 0;
+    if (dut.g_macro[1].u_macro.repair_config !== 64'hfedcba9876543210 ||
+        dut.g_macro[0].u_macro.repair_config !== 64'h123456789abcdef0 ||
+        mbist_repair_done_i !== 0) $fatal(1, "second back-to-back repair write");
+    repeat (2) begin
+      @(negedge clock);
+      if (mbist_repair_done_i !== 0) $fatal(1, "back-to-back repair done early");
+    end
+    repeat (2) begin
+      @(negedge clock);
+      if (mbist_repair_done_i !== 1) $fatal(1, "back-to-back repair done missing");
+    end
+    @(negedge clock);
+    if (mbist_repair_done_i !== 0) $fatal(1, "back-to-back repair done stuck high");
     rstn_config = 0;
     #1;
     if (mbist_test_done_o !== 1 || mbist_test_busy_o !== 0 ||

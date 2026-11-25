@@ -45,7 +45,9 @@ module cluster_top #(
   // Read the registered result at done && !busy; reload weights after MBIST.
   input  logic [2:0]  mbist_macro_id_i,
   input  logic [63:0] mbist_test_red_sbk_i,
+  input  logic        mbist_repair_we_i,
   input  logic        mbist_test_memory_start_i,
+  output logic        mbist_repair_done_i,
   output logic [63:0] mbist_test_error_sbk_o,
   output logic        mbist_test_done_o,
   output logic        mbist_test_busy_o,

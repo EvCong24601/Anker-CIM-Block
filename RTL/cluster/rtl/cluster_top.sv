@@ -54,14 +54,17 @@ module cluster_top #(
   // No output backpressure. Invalid lane payload is unspecified.
   output wire [1023:0] raw_psum,
   output wire [31:0] psum_valid,
-  // Pulse start for one cycle while Cluster is idle. The repair map is sampled
-  // directly by the Macro selected by the current Macro ID, independently of
-  // start. Byte 4*bank+sbk selects one 128-column subbank,
+  // Pulse start for one cycle while Cluster is idle. A high repair_we writes
+  // the selected Macro's repair register on the rising edge; low holds all
+  // eight maps. This write is independent of start. Byte 4*bank+sbk selects
+  // one 128-column subbank,
   // low SRAM first. Other Macros retain their maps until selected or rstn_config.
   // Read the registered result at done && !busy; reload weights after MBIST.
   input  logic [2:0]  mbist_macro_id_i,
   input  logic [63:0] mbist_test_red_sbk_i,
+  input  logic        mbist_repair_we_i,
   input  logic        mbist_test_memory_start_i,
+  output logic        mbist_repair_done_i,
   output logic [63:0] mbist_test_error_sbk_o,
   output logic        mbist_test_done_o,
   output logic        mbist_test_busy_o,
@@ -72,15 +75,22 @@ module cluster_top #(
   // Sample once at the Cluster boundary, then broadcast to all SRAM wrappers.
   logic [7:0] timing_config_q;
   logic waen_q, raen_q;
+  // One common acknowledgement for the Macro selected on the write edge.
+  // A write sampled at edge N produces a one-cycle done pulse at edge N+4.
+  logic [3:0] repair_we_delay;
   always_ff @(posedge clock or negedge rstn_config) begin
     if (!rstn_config) begin
       timing_config_q <= '0;
       waen_q <= 1'b0;
       raen_q <= 1'b0;
+      repair_we_delay <= '0;
+      mbist_repair_done_i <= 1'b0;
     end else begin
       timing_config_q <= timing_config_i;
       waen_q <= waen_i;
       raen_q <= raen_i;
+      repair_we_delay <= {repair_we_delay[2:0], mbist_repair_we_i};
+      mbist_repair_done_i <= repair_we_delay[3];
     end
   end
   `include "cluster_func.sv"
@@ -632,7 +642,7 @@ module cluster_top #(
       .waen(waen_q),
       .raen(raen_q),
       .mbist_select(bist_select[m]),
-      .mbist_repair_select(mbist_macro_id_i == 3'(m)),
+      .mbist_repair_we(mbist_repair_we_i && (mbist_macro_id_i == 3'(m))),
       .mbist_config(mbist_test_red_sbk_i),
       .mbist_busy(bist_busy[m]),
       .mbist_done(bist_done[m]),
