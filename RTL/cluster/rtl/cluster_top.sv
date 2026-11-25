@@ -51,7 +51,8 @@ module cluster_top #(
   output wire [1023:0] raw_psum,
   output wire [31:0] psum_valid,
   // Idle Cluster only. Pulse start for one cycle with a complete Macro ID
-  // and repair map. Byte 4*bank+sbk selects one 128-column subbank, low
+  // and repair map; all three inputs are sampled together before arbitration.
+  // Byte 4*bank+sbk selects one 128-column subbank, low
   // SRAM first. The local map persists until reset or that Macro's next test.
   // Read the registered result at done && !busy; reload weights after MBIST.
   input  logic [2:0]  mbist_macro_id_i,
@@ -178,6 +179,25 @@ module cluster_top #(
   bist_state_t bist_state;
   logic [2:0] bist_id;
   logic [63:0] bist_config;
+  // The external MBIST pins only feed input flops. A request launched while
+  // busy or alongside an accepted command is discarded, not queued.
+  logic mbist_start_q, mbist_eligible_q;
+  logic [2:0] mbist_id_q;
+  logic [63:0] mbist_config_q;
+  always_ff @(posedge clock or negedge reset_n) begin
+    if (!reset_n) begin
+      mbist_start_q <= 0;
+      mbist_eligible_q <= 0;
+      mbist_id_q <= '0;
+      mbist_config_q <= '0;
+    end else begin
+      mbist_start_q <= mbist_test_memory_start_i;
+      mbist_id_q <= mbist_macro_id_i;
+      mbist_config_q <= mbist_test_red_sbk_i;
+      mbist_eligible_q <= bist_state == BIST_IDLE && !batch_active &&
+                          !packet_active && !sram_cs_en && !cmd_accept;
+    end
+  end
   wire [7:0] bist_done, bist_busy, bist_valid, bist_unrepairable;
   wire [63:0] bist_errors [0:7];
   // Eight 8-bit BL error registers per Macro. Sample the wrapper outputs at
@@ -197,12 +217,8 @@ module cluster_top #(
     assign selected_bist_errors[8*byte_idx+:8] = bist_error_reg[bist_id][byte_idx];
   end
   wire [7:0] bist_select = bist_state == BIST_DISPATCH ? (8'b1 << bist_id) : 8'b0;
-  logic bist_accept;
-  always_comb begin
-    bist_accept = 0;
-    if (mbist_test_memory_start_i)
-      bist_accept = !mbist_test_busy_o && !batch_active && !packet_active && !sram_cs_en;
-  end
+  wire bist_accept = mbist_start_q && mbist_eligible_q && !mbist_test_busy_o &&
+                     !batch_active && !packet_active && !sram_cs_en;
   assign mbist_test_busy_o = bist_state != BIST_IDLE;
   always_ff @(posedge clock or negedge reset_n) begin
     if (!reset_n) begin
@@ -215,8 +231,8 @@ module cluster_top #(
       mbist_test_error_sbk_o <= '0;
     end else case (bist_state)
       BIST_IDLE: if (bist_accept) begin
-        bist_id <= mbist_macro_id_i;
-        bist_config <= mbist_test_red_sbk_i;
+        bist_id <= mbist_id_q;
+        bist_config <= mbist_config_q;
         mbist_test_done_o <= 0;
         mbist_test_memory_valid_o <= 0;
         mbist_out_of_repair_o <= 0;

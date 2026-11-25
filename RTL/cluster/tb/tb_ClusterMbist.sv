@@ -49,6 +49,8 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     mbist_test_memory_start_i = 0;
     mbist_macro_id_i = ~id;
     mbist_test_red_sbk_i = ~cfg;
+    // Cluster samples the external pulse first, then accepts it one edge later.
+    @(negedge clock);
     if ({mbist_test_busy_o, mbist_test_done_o} !== 2'b10) $fatal(1, "launch status");
   endtask
 
