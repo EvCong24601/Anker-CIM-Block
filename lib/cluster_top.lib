@@ -172,7 +172,7 @@ library (cluster_top_interface) {
       direction : output;
       max_transition : 0.871500;
       min_transition : 0.000000;
-      max_capacitance : 0.287100;
+      max_capacitance : 0.020000;
       min_capacitance : 0.000150;
     }
 
@@ -198,7 +198,7 @@ library (cluster_top_interface) {
       direction : output;
       max_transition : 0.871500;
       min_transition : 0.000000;
-      max_capacitance : 0.287100;
+      max_capacitance : 0.020000;
       min_capacitance : 0.000150;
     }
 
@@ -213,7 +213,7 @@ library (cluster_top_interface) {
       direction : output;
       max_transition : 0.871500;
       min_transition : 0.000000;
-      max_capacitance : 0.287100;
+      max_capacitance : 0.020000;
       min_capacitance : 0.000150;
     }
 
@@ -325,7 +325,7 @@ library (cluster_top_interface) {
         direction : output;
         max_transition : 0.871500;
         min_transition : 0.000000;
-        max_capacitance : 0.287100;
+        max_capacitance : 0.020000;
         min_capacitance : 0.000150;
       }
     }
@@ -334,7 +334,7 @@ library (cluster_top_interface) {
       direction : output;
       max_transition : 0.871500;
       min_transition : 0.000000;
-      max_capacitance : 0.287100;
+      max_capacitance : 0.020000;
       min_capacitance : 0.000150;
     }
 
@@ -447,7 +447,7 @@ library (cluster_top_interface) {
         direction : output;
         max_transition : 0.871500;
         min_transition : 0.000000;
-        max_capacitance : 0.287100;
+        max_capacitance : 0.020000;
         min_capacitance : 0.000150;
       }
     }
@@ -459,7 +459,7 @@ library (cluster_top_interface) {
         direction : output;
         max_transition : 0.871500;
         min_transition : 0.000000;
-        max_capacitance : 0.287100;
+        max_capacitance : 0.020000;
         min_capacitance : 0.000150;
       }
     }

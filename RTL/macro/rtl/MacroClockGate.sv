@@ -16,7 +16,7 @@ module MacroClockGate #(
     if (ENABLE_GATING) begin : g_icg
 `ifdef SYNTHESIS
       (* dont_touch = "true" *)
-      CKLNQD8BWP30P140HVT u_icg (
+      CKLNQD8BWP30P140SVT u_icg (
         .CP(clock),
         .E(enable),
         .TE(1'b0),
