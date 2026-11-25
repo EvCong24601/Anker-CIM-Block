@@ -22,6 +22,7 @@
 ../rtl/cluster_top.sv
 tb_Cluster.sv
 tb_ClusterMbist.sv
+tb_ClusterMbistSerial.sv
 tb_ClusterChannels.sv
 tb_ClusterReduceTree.sv
 ClusterGemmOs1Ws32.sv

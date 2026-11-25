@@ -6,6 +6,8 @@ TB 通过正式端口 raw_psum[1023:0]、psum_valid[31:0] 检查 signed32 原始
 
 用 `--case channels` 单独运行控制切换与缺操作数测试。用例驱动真实权重和 ACT，对每个输出 lane 检查点积和采样沿，并检查新 cmd 的最早握手沿。用例目录的 `data/channel_audit.json` 汇总了缺数据时仍有输出的周期数和切换空泡分布。
 
+`cluster_mbist_serial` 依次对 Macro 0–7 执行故障检测、回灌 64-bit 修复码复测，并在故障保持的条件下检查每个 Macro 的功能读写。VCS 从 `vcs-rtl/` 运行 `make run CASE=cluster_mbist_serial`；无 HVT FA/HA 仿真库时，从仓库根目录运行 `python RTL/cluster/tb/py/run_sram_regression.py --csa-golden --case cluster_mbist_serial`。另有 `cluster_mbist_serial_ungated` 检查关闭门控的路径。`lib/hdsram256w512btop_tt_scalar.lib` 是模板提供的估算时序库，不是经过 PVT 表征的 signoff 库。
+
 定向用例 `dw_k256_w2`、`dw_k256_w4`、`dw_k256_w8` 通过三通道发数，分别启用 2/4/8 个 Macro 覆盖 K=256。覆盖全部支持的 A 精度、符号、OS/WS/AS、物理 Macro 置换和全部合法 ACT 槽。逐 issue 核对完整 512 bit Macro 输入、真实 ACT bank 时钟及保持，逐 lane 核对完整点积与采样沿，并比较门控开关。还覆盖 zero/multi OC、enable mask 变化、独立与合并归约、空有效工作及同配置交接。`dw_k256_invalid_slot` 和 `dw_k256_invalid_duplicate` 分别核对越界槽和同组重复槽拒绝。
 
 从仓库运行 python RTL/cluster/tb/py/run_sram_regression.py；--full 运行全部目录化用例，--case 选择用例，--sim-dir 指定仓库外快照。脚本读取与 VCS 相同的 filelist 和 cases.py，用 sources.json 记录快照文件散列。

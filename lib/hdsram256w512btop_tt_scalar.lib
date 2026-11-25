@@ -1,0 +1,623 @@
+/* Estimated scalar timing model for hdsram256w512btop (256 x 512).
+ * Not characterized: PVT/electrical limits from cluster_top template,
+ * capacitances per pin/bus bit, nominal delays only (no min/max signoff).
+ * No period, pulse width, power, or PG pins.
+ * User-specified: area = 35000.0 um^2, CK-to-DOUT = 0.500 ns (spare
+ * outputs equal), rise/fall_transition = 0.0600 ns,
+ * CEN/WEN/ADDR/write_mask/read_mask hold = 0.1500 ns,
+ * repair0~3 setup 0.0500 / hold 0.1800 ns.
+ * From TT 0.9 V 25 C reference datasheet, applied provisionally to 0.8 V:
+ * WEN/ADDR/DIN setup and DIN hold. timing_config/waen/raen assumed
+ * mapping of max EMA/EMAW/EMAS: setup 0.3846 / hold 0.5810 ns.
+ * Remaining setup/hold are placeholders.
+ * DOUT timing covers all bits during read, irrespective of read_mask.
+ * The RTL model samples 0.5 ns after CK, matching this CK-to-DOUT arc.
+ */
+library (hdsram256w512btop_tt_scalar) {
+  technology (cmos);
+  delay_model : table_lookup;
+  bus_naming_style : "%s[%d]";
+  time_unit : "1ns";
+  voltage_unit : "1V";
+  current_unit : "1mA";
+  pulling_resistance_unit : "1kohm";
+  capacitive_load_unit (1, pf);
+  nom_process : 1.0;
+  nom_voltage : 0.8;
+  nom_temperature : 25.0;
+  operating_conditions (tt0p8v25c) {
+    process : 1.0;
+    voltage : 0.8;
+    temperature : 25.0;
+  }
+  default_operating_conditions : tt0p8v25c;
+  input_threshold_pct_rise : 50.0;
+  input_threshold_pct_fall : 50.0;
+  output_threshold_pct_rise : 50.0;
+  output_threshold_pct_fall : 50.0;
+  slew_lower_threshold_pct_rise : 30.0;
+  slew_lower_threshold_pct_fall : 30.0;
+  slew_upper_threshold_pct_rise : 70.0;
+  slew_upper_threshold_pct_fall : 70.0;
+
+  type (bus_2) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 2;
+    bit_from : 1;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_8) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 8;
+    bit_from : 7;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_128) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 128;
+    bit_from : 127;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (bus_512) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 512;
+    bit_from : 511;
+    bit_to : 0;
+    downto : true;
+  }
+
+  cell (hdsram256w512btop) {
+    area : 35000.0; /* um^2, user-specified */
+    is_macro_cell : true;
+    dont_use : true;
+
+    pin ("CK") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+      clock : true;
+    }
+
+    pin ("CEN") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+      timing () {
+        related_pin : "CK";
+        timing_type : setup_rising;
+        rise_constraint (scalar) {
+          values ("0.100");
+        }
+        fall_constraint (scalar) {
+          values ("0.100");
+        }
+      }
+      timing () {
+        related_pin : "CK";
+        timing_type : hold_rising;
+        rise_constraint (scalar) {
+          values ("0.1500");
+        }
+        fall_constraint (scalar) {
+          values ("0.1500");
+        }
+      }
+    }
+
+    pin ("WEN") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+      timing () {
+        related_pin : "CK";
+        timing_type : setup_rising;
+        when : "!CEN";
+        rise_constraint (scalar) {
+          values ("0.0654");
+        }
+        fall_constraint (scalar) {
+          values ("0.0654");
+        }
+      }
+      timing () {
+        related_pin : "CK";
+        timing_type : hold_rising;
+        when : "!CEN";
+        rise_constraint (scalar) {
+          values ("0.1500");
+        }
+        fall_constraint (scalar) {
+          values ("0.1500");
+        }
+      }
+    }
+
+    bus ("ADDR") {
+      bus_type : bus_8;
+      direction : input;
+      pin ("ADDR[7:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          when : "!CEN";
+          rise_constraint (scalar) {
+            values ("0.0920");
+          }
+          fall_constraint (scalar) {
+            values ("0.0920");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          when : "!CEN";
+          rise_constraint (scalar) {
+            values ("0.1500");
+          }
+          fall_constraint (scalar) {
+            values ("0.1500");
+          }
+        }
+      }
+    }
+
+    bus ("DIN") {
+      bus_type : bus_512;
+      direction : input;
+      pin ("DIN[511:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          when : "!CEN & !WEN";
+          rise_constraint (scalar) {
+            values ("0.0220");
+          }
+          fall_constraint (scalar) {
+            values ("0.0220");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          when : "!CEN & !WEN";
+          rise_constraint (scalar) {
+            values ("0.1834");
+          }
+          fall_constraint (scalar) {
+            values ("0.1834");
+          }
+        }
+      }
+    }
+
+    bus ("write_mask") {
+      bus_type : bus_2;
+      direction : input;
+      pin ("write_mask[1:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          when : "!CEN & !WEN";
+          rise_constraint (scalar) {
+            values ("0.100");
+          }
+          fall_constraint (scalar) {
+            values ("0.100");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          when : "!CEN & !WEN";
+          rise_constraint (scalar) {
+            values ("0.1500");
+          }
+          fall_constraint (scalar) {
+            values ("0.1500");
+          }
+        }
+      }
+    }
+
+    bus ("read_mask") {
+      bus_type : bus_2;
+      direction : input;
+      pin ("read_mask[1:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          when : "!CEN & WEN";
+          rise_constraint (scalar) {
+            values ("0.100");
+          }
+          fall_constraint (scalar) {
+            values ("0.100");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          when : "!CEN & WEN";
+          rise_constraint (scalar) {
+            values ("0.1500");
+          }
+          fall_constraint (scalar) {
+            values ("0.1500");
+          }
+        }
+      }
+    }
+
+    bus ("DOUT") {
+      bus_type : bus_512;
+      direction : output;
+      pin ("DOUT[511:0]") {
+        direction : output;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        max_capacitance : 0.287100;
+        min_capacitance : 0.000150;
+        timing () {
+          related_pin : "CK";
+          timing_type : rising_edge;
+          timing_sense : non_unate;
+          when : "!CEN & WEN";
+          cell_rise (scalar) {
+            values ("0.500");
+          }
+          cell_fall (scalar) {
+            values ("0.500");
+          }
+          rise_transition (scalar) {
+            values ("0.060");
+          }
+          fall_transition (scalar) {
+            values ("0.060");
+          }
+        }
+      }
+    }
+
+    bus ("timing_config") {
+      bus_type : bus_8;
+      direction : input;
+      pin ("timing_config[7:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          rise_constraint (scalar) {
+            values ("0.3846");
+          }
+          fall_constraint (scalar) {
+            values ("0.3846");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          rise_constraint (scalar) {
+            values ("0.5810");
+          }
+          fall_constraint (scalar) {
+            values ("0.5810");
+          }
+        }
+      }
+    }
+
+    bus ("repair3") {
+      bus_type : bus_128;
+      direction : input;
+      pin ("repair3[127:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          rise_constraint (scalar) {
+            values ("0.0500");
+          }
+          fall_constraint (scalar) {
+            values ("0.0500");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          rise_constraint (scalar) {
+            values ("0.1800");
+          }
+          fall_constraint (scalar) {
+            values ("0.1800");
+          }
+        }
+      }
+    }
+
+    bus ("repair2") {
+      bus_type : bus_128;
+      direction : input;
+      pin ("repair2[127:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          rise_constraint (scalar) {
+            values ("0.0500");
+          }
+          fall_constraint (scalar) {
+            values ("0.0500");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          rise_constraint (scalar) {
+            values ("0.1800");
+          }
+          fall_constraint (scalar) {
+            values ("0.1800");
+          }
+        }
+      }
+    }
+
+    bus ("repair1") {
+      bus_type : bus_128;
+      direction : input;
+      pin ("repair1[127:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          rise_constraint (scalar) {
+            values ("0.0500");
+          }
+          fall_constraint (scalar) {
+            values ("0.0500");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          rise_constraint (scalar) {
+            values ("0.1800");
+          }
+          fall_constraint (scalar) {
+            values ("0.1800");
+          }
+        }
+      }
+    }
+
+    bus ("repair0") {
+      bus_type : bus_128;
+      direction : input;
+      pin ("repair0[127:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+        timing () {
+          related_pin : "CK";
+          timing_type : setup_rising;
+          rise_constraint (scalar) {
+            values ("0.0500");
+          }
+          fall_constraint (scalar) {
+            values ("0.0500");
+          }
+        }
+        timing () {
+          related_pin : "CK";
+          timing_type : hold_rising;
+          rise_constraint (scalar) {
+            values ("0.1800");
+          }
+          fall_constraint (scalar) {
+            values ("0.1800");
+          }
+        }
+      }
+    }
+
+    pin ("waen") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+      timing () {
+        related_pin : "CK";
+        timing_type : setup_rising;
+        rise_constraint (scalar) {
+          values ("0.3846");
+        }
+        fall_constraint (scalar) {
+          values ("0.3846");
+        }
+      }
+      timing () {
+        related_pin : "CK";
+        timing_type : hold_rising;
+        rise_constraint (scalar) {
+          values ("0.5810");
+        }
+        fall_constraint (scalar) {
+          values ("0.5810");
+        }
+      }
+    }
+
+    pin ("raen") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+      timing () {
+        related_pin : "CK";
+        timing_type : setup_rising;
+        rise_constraint (scalar) {
+          values ("0.3846");
+        }
+        fall_constraint (scalar) {
+          values ("0.3846");
+        }
+      }
+      timing () {
+        related_pin : "CK";
+        timing_type : hold_rising;
+        rise_constraint (scalar) {
+          values ("0.5810");
+        }
+        fall_constraint (scalar) {
+          values ("0.5810");
+        }
+      }
+    }
+
+    pin ("redsbk0OUT") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+      timing () {
+        related_pin : "CK";
+        timing_type : rising_edge;
+        timing_sense : non_unate;
+        when : "!CEN & WEN";
+        cell_rise (scalar) {
+          values ("0.500");
+        }
+        cell_fall (scalar) {
+          values ("0.500");
+        }
+        rise_transition (scalar) {
+          values ("0.060");
+        }
+        fall_transition (scalar) {
+          values ("0.060");
+        }
+      }
+    }
+
+    pin ("redsbk1OUT") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+      timing () {
+        related_pin : "CK";
+        timing_type : rising_edge;
+        timing_sense : non_unate;
+        when : "!CEN & WEN";
+        cell_rise (scalar) {
+          values ("0.500");
+        }
+        cell_fall (scalar) {
+          values ("0.500");
+        }
+        rise_transition (scalar) {
+          values ("0.060");
+        }
+        fall_transition (scalar) {
+          values ("0.060");
+        }
+      }
+    }
+
+    pin ("redsbk2OUT") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+      timing () {
+        related_pin : "CK";
+        timing_type : rising_edge;
+        timing_sense : non_unate;
+        when : "!CEN & WEN";
+        cell_rise (scalar) {
+          values ("0.500");
+        }
+        cell_fall (scalar) {
+          values ("0.500");
+        }
+        rise_transition (scalar) {
+          values ("0.060");
+        }
+        fall_transition (scalar) {
+          values ("0.060");
+        }
+      }
+    }
+
+    pin ("redsbk3OUT") {
+      direction : output;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      max_capacitance : 0.287100;
+      min_capacitance : 0.000150;
+      timing () {
+        related_pin : "CK";
+        timing_type : rising_edge;
+        timing_sense : non_unate;
+        when : "!CEN & WEN";
+        cell_rise (scalar) {
+          values ("0.500");
+        }
+        cell_fall (scalar) {
+          values ("0.500");
+        }
+        rise_transition (scalar) {
+          values ("0.060");
+        }
+        fall_transition (scalar) {
+          values ("0.060");
+        }
+      }
+    }
+  }
+}
