@@ -73,7 +73,9 @@ module SingleMacro #(
       end
     end
   end
-  assign memory_active = !reset_n || write_active || sram_ren || sram_read_enable ||
+  // Reset reaches the state elements through their asynchronous reset pins.
+  // Keep it out of the memory-clock enable's combinational cone.
+  assign memory_active = write_active || sram_ren || sram_read_enable ||
                          mbist_select || mbist_start || mbist_busy;
   assign clock_active = issue || in_valid || csa_valid || cim_odata_valid;
   generate
