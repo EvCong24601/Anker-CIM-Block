@@ -29,6 +29,9 @@ module cluster_top #(
   input logic [7:0] sram_row_addr,
   input logic [3:0] sram_wmask,
   input logic [1023:0] sram_wrdata,
+  input logic [7:0] timing_config_i,
+  input logic waen_i,
+  input logic raen_i,
   output wire [1023:0] sram_rd_data,
   output logic sram_rd_valid,
   // Lane l carries signed32 raw_psum[32*l+:32], qualified by psum_valid[l].

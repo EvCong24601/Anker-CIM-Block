@@ -14,6 +14,7 @@ if (CHECK_GATE_EQUIVALENCE) begin : g_gate_equivalence
     .OUTPUT_BUFFER_DEPTH(OUTPUT_BUFFER_DEPTH),
     .USE_CLOCK_GATING(0)
   ) dut_ungated (
+    .timing_config_i(8'b0), .waen_i(1'b0), .raen_i(1'b0),
     .mbist_macro_id_i(3'b0), .mbist_test_red_sbk_i(64'b0), .mbist_test_memory_start_i(1'b0),
     .mbist_test_error_sbk_o(), .mbist_test_done_o(), .mbist_test_busy_o(),
     .mbist_test_memory_valid_o(), .mbist_out_of_repair_o(),

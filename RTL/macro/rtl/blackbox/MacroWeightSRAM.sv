@@ -5,6 +5,9 @@
 (* syn_black_box, dont_touch *)
 module MacroWeightSRAM (
   input  logic          clock,
+  input  logic [   7:0] timing_config,
+  input  logic          waen,
+  input  logic          raen,
   input  logic          write_enable,
   input  logic [   7:0] write_address,
   input  logic [1023:0] write_data,

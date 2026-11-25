@@ -44,6 +44,9 @@ module cluster_top #(
   input logic [7:0] sram_row_addr,
   input logic [3:0] sram_wmask,
   input logic [1023:0] sram_wrdata,
+  input logic [7:0] timing_config_i,
+  input logic waen_i,
+  input logic raen_i,
   output wire [1023:0] sram_rd_data,
   output logic sram_rd_valid,
   // Lane l carries signed32 raw_psum[32*l+:32], qualified by psum_valid[l].
@@ -65,6 +68,20 @@ module cluster_top #(
   output logic        mbist_out_of_repair_o
 );
   import cluster_pkg::*;
+  // Sample once at the Cluster boundary, then broadcast to all SRAM wrappers.
+  logic [7:0] timing_config_q;
+  logic waen_q, raen_q;
+  always_ff @(posedge clock or negedge reset_n) begin
+    if (!reset_n) begin
+      timing_config_q <= '0;
+      waen_q <= 1'b0;
+      raen_q <= 1'b0;
+    end else begin
+      timing_config_q <= timing_config_i;
+      waen_q <= waen_i;
+      raen_q <= raen_i;
+    end
+  end
   `include "cluster_func.sv"
 `ifndef SYNTHESIS
   `include "cluster_check_func.sv"
@@ -611,6 +628,9 @@ module cluster_top #(
     ) u_macro (
       .clock(clock),
       .reset_n(reset_n),
+      .timing_config(timing_config_q),
+      .waen(waen_q),
+      .raen(raen_q),
       .mbist_select(bist_select[m]),
       .mbist_repair_select(mbist_id_q == 3'(m)),
       .mbist_config(mbist_config_q),

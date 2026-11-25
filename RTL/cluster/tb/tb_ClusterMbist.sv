@@ -13,6 +13,8 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
   logic [7:0] sram_row_addr = 37;
   logic [3:0] sram_wmask = 0;
   logic [1023:0] sram_wrdata = 0;
+  logic [7:0] timing_config_i = 0;
+  logic waen_i = 0, raen_i = 0;
   wire [1023:0] sram_rd_data, raw_psum;
   wire sram_rd_valid;
   wire [31:0] psum_valid;
@@ -23,6 +25,17 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
   wire [63:0] mbist_test_error_sbk_o;
   wire mbist_test_busy_o, mbist_test_done_o, mbist_test_memory_valid_o, mbist_out_of_repair_o;
   cluster_top #(.USE_CLOCK_GATING(USE_CLOCK_GATING)) dut (.*);
+
+  for (genvar m = 0; m < 8; m++) begin : g_timing_broadcast_check
+    for (genvar bank = 0; bank < 2; bank++) begin : g_bank
+      always @(negedge clock) if (reset_n) begin
+        if (dut.g_macro[m].u_macro.u_weight_sram.g_bank[bank].u_wrapper.timing_config !== dut.timing_config_q ||
+            dut.g_macro[m].u_macro.u_weight_sram.g_bank[bank].u_wrapper.waen !== dut.waen_q ||
+            dut.g_macro[m].u_macro.u_weight_sram.g_bank[bank].u_wrapper.raen !== dut.raen_q)
+          $fatal(1, "SRAM timing control broadcast failed macro=%0d bank=%0d", m, bank);
+      end
+    end
+  end
 
   // Hold physical cells stuck low between write and read edges. Repair
   // bypasses the same physical fault during both retest and functional use.
@@ -122,6 +135,20 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
   initial begin
     repeat (3) @(negedge clock);
     reset_n = 1;
+    timing_config_i = 8'hA5;
+    waen_i = 1;
+    raen_i = 0;
+    if ({dut.timing_config_q, dut.waen_q, dut.raen_q} !== 10'b0)
+      $fatal(1, "timing control changed before sampling edge");
+    @(negedge clock);
+    if ({dut.timing_config_q, dut.waen_q, dut.raen_q} !== {8'hA5, 1'b1, 1'b0})
+      $fatal(1, "timing control sample failed");
+    timing_config_i = 8'h3C;
+    waen_i = 0;
+    raen_i = 1;
+    @(negedge clock);
+    if ({dut.timing_config_q, dut.waen_q, dut.raen_q} !== {8'h3C, 1'b0, 1'b1})
+      $fatal(1, "timing control resample failed");
     access_row(3, 1, 0, ~ONES);
     access_row(5, 1, 0, ONES);
     compute(64, before_latency);

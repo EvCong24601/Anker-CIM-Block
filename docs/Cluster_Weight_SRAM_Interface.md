@@ -15,10 +15,14 @@
 | sram_row_addr | 输入 | 8 | 选中 Macro 的行号 0…255，四个 OC 共用 |
 | sram_wmask | 输入 | 4 | bit c 为 1 时屏蔽 OC c 的 32 B 写入，为 0 时允许写入 |
 | sram_wrdata | 输入 | 1024 | 选中 Macro 的完整 128 B 权重行 |
+| timing_config_i | 输入 | 8 | 广播到全部 16 块 SRAM 的时序配置；顶层上升沿采样，复位为 0 |
+| waen_i | 输入 | 1 | 广播到全部 16 块 SRAM 的写辅助使能；顶层上升沿采样，复位为 0 |
+| raen_i | 输入 | 1 | 广播到全部 16 块 SRAM 的读辅助使能；顶层上升沿采样，复位为 0 |
 | sram_rd_data | 输出 | 1024 | 选中 Macro 的完整 128 B 原始权重行 |
 | sram_rd_valid | 输出 | 1 | 本次同步读响应有效，与锁存的 Macro 编号及读数据对齐 |
 
 `macro_id={sram_macro_group,sram_bank_sel}=4*sram_macro_group+sram_bank_sel`。
+三项广播配置每个 Cluster 时钟沿更新一次，寄存器输出同时送到全部 Macro 的两块 SRAM，不随 `macro_id` 切换。若实体 SRAM 在访问时钟沿采样这些引脚，上层应至少提前一个 Cluster 时钟周期设置配置，并用实际宏时序库检查寄存器到 SRAM 引脚的建立、保持时序及广播扇出。
 group=0 选择 Macro0…3，group=1 选择 Macro4…7；bank_sel 不表示 Macro 内部另一个可寻址 bank。访问 Macro5、row12 时，group=1、bank_sel=01、row_addr=12。
 
 本地 OC c 对应 `sram_wrdata[256*c+:256]` 和 `sram_rd_data[256*c+:256]`。`wmask=0000` 为整行全写，`1111` 全部保持，`1101` 只写 OC1。普通读始终读取两块的完整数据，与 `sram_wmask` 和计算用 `cim_macro_oc_mask` 无关。

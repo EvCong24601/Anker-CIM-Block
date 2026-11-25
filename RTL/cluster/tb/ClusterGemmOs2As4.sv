@@ -28,6 +28,7 @@ module ClusterGemmOs2As4;
   wire [1023:0] sram_rd_data, psum_data_o;
   wire [31:0] out_valid_o;
   cluster_top dut (
+    .timing_config_i(8'b0), .waen_i(1'b0), .raen_i(1'b0),
     .clock(clock),
     .reset_n(reset_n),
     .mbist_macro_id_i(3'b0), .mbist_test_red_sbk_i(64'b0), .mbist_test_memory_start_i(1'b0),

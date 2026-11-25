@@ -8,6 +8,9 @@ module SingleMacro #(
 ) (
   input  logic          clock,
   input  logic          reset_n,
+  input  logic [7:0]    timing_config,
+  input  logic          waen,
+  input  logic          raen,
   input  logic          cim_ren,
   input  logic [ 511:0] cim_idata,
   input  logic [   7:0] cim_raddr,
@@ -134,6 +137,7 @@ module SingleMacro #(
   // after the highest-plane XOR; pooled correction joins after the CSA register.
   MacroWeightSRAM u_weight_sram (
     .clock(memory_clock), .reset_n(reset_n),
+    .timing_config(timing_config), .waen(waen), .raen(raen),
     .mbist_start(mbist_start), .repair_config(repair_config),
     .mbist_done(mbist_done), .mbist_busy(mbist_busy),
     .mbist_valid(mbist_valid), .mbist_unrepairable(mbist_unrepairable),

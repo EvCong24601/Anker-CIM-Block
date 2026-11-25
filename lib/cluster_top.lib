@@ -286,6 +286,31 @@ library (cluster_top_interface) {
       }
     }
 
+    bus ("timing_config_i") {
+      bus_type : bus_8;
+      direction : input;
+      pin ("timing_config_i[7:0]") {
+        direction : input;
+        max_transition : 0.871500;
+        min_transition : 0.000000;
+        capacitance : 0.001821;
+      }
+    }
+
+    pin ("waen_i") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
+    pin ("raen_i") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
     bus ("sram_rd_data") {
       bus_type : bus_1024;
       direction : output;

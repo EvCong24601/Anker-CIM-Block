@@ -3,6 +3,9 @@
 // One logical weight row spans two single-port SRAMs: OC0/1 below OC2/3.
 module MacroWeightSRAM (
   input  logic          clock,
+  input  logic [7:0]    timing_config,
+  input  logic          waen,
+  input  logic          raen,
   input  logic          write_enable,
   input  logic [   7:0] write_address,
   input  logic [1023:0] write_data,
@@ -58,7 +61,7 @@ module MacroWeightSRAM (
       .ADDR(functional_address), .DIN(functional_data),
       .write_mask(functional_write_mask), .read_mask(functional_read_mask),
       .DOUT(read_data[512*bank+:512]),
-      .timing_config(8'b0), .waen(1'b0), .raen(1'b0),
+      .timing_config(timing_config), .waen(waen), .raen(raen),
       .test_red_sbk0(repair_config[32*bank+0+:8]),
       .test_red_sbk1(repair_config[32*bank+8+:8]),
       .test_red_sbk2(repair_config[32*bank+16+:8]),
