@@ -205,14 +205,21 @@ module cluster_top #(
     if (!reset_n) begin
       mbist_start_q <= 0;
       mbist_eligible_q <= 0;
+    end else begin
+      mbist_start_q <= mbist_test_memory_start_i;
+      mbist_eligible_q <= bist_state == BIST_IDLE && !batch_active &&
+                          !packet_active && !sram_cs_en && !cmd_accept;
+    end
+  end
+  // Keep the address/data staging flops in the configuration reset domain;
+  // reset_n must not indirectly overwrite a Macro's retained repair map.
+  always_ff @(posedge clock or negedge rstn_config) begin
+    if (!rstn_config) begin
       mbist_id_q <= '0;
       mbist_config_q <= '0;
     end else begin
-      mbist_start_q <= mbist_test_memory_start_i;
       mbist_id_q <= mbist_macro_id_i;
       mbist_config_q <= mbist_test_red_sbk_i;
-      mbist_eligible_q <= bist_state == BIST_IDLE && !batch_active &&
-                          !packet_active && !sram_cs_en && !cmd_accept;
     end
   end
   wire [7:0] bist_done, bist_busy, bist_valid, bist_unrepairable;

@@ -24,7 +24,7 @@
 
 `macro_id={sram_macro_group,sram_bank_sel}=4*sram_macro_group+sram_bank_sel`。
 三项广播配置每个 Cluster 时钟沿更新一次，寄存器输出同时送到全部 Macro 的两块 SRAM，不随 `macro_id` 切换。若实体 SRAM 在访问时钟沿采样这些引脚，上层应至少提前一个 Cluster 时钟周期设置配置，并用实际宏时序库检查寄存器到 SRAM 引脚的建立、保持时序及广播扇出。
-`rstn_config` 只复位配置存储，不复位 MBIST 控制器及完成状态。释放后，广播配置继续逐拍采样；被 `mbist_macro_id_i` 选中的 Macro 也会继续采样当前修复码。
+`rstn_config` 复位广播配置寄存器、MBIST Macro ID/修复码输入采样寄存器及各 Macro 的修复寄存器，不复位 MBIST 启动、控制器及完成状态。释放后，广播配置继续逐拍采样；被 `mbist_macro_id_i` 选中的 Macro 也会继续采样当前修复码。
 group=0 选择 Macro0…3，group=1 选择 Macro4…7；bank_sel 不表示 Macro 内部另一个可寻址 bank。访问 Macro5、row12 时，group=1、bank_sel=01、row_addr=12。
 
 本地 OC c 对应 `sram_wrdata[256*c+:256]` 和 `sram_rd_data[256*c+:256]`。`wmask=0000` 为整行全写，`1111` 全部保持，`1101` 只写 OC1。普通读始终读取两块的完整数据，与 `sram_wmask` 和计算用 `cim_macro_oc_mask` 无关。

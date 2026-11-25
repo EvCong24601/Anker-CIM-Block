@@ -198,15 +198,22 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
 
     launch(7, '1);
     repeat (20) @(negedge clock);
+    mbist_macro_id_i = 0;
+    mbist_test_red_sbk_i = 64'h9182736455aacc33;
+    repeat (2) @(negedge clock);
+    if (dut.g_macro[0].u_macro.repair_config !== 64'h9182736455aacc33)
+      $fatal(1, "Macro0 repair setup before logic reset");
     reset_n = 0;
     @(negedge clock);
     if ({mbist_test_busy_o, mbist_test_done_o, dut.bist_busy} !== '0 ||
-        dut.g_macro[5].u_macro.repair_config !== REPAIR5)
+        dut.g_macro[5].u_macro.repair_config !== REPAIR5 ||
+        dut.g_macro[0].u_macro.repair_config !== 64'h9182736455aacc33)
       $fatal(1, "logic reset changed independent repair configuration");
     rstn_config = 0;
     @(negedge clock);
     if ({dut.timing_config_q, dut.waen_q, dut.raen_q,
          dut.g_macro[5].u_macro.repair_config,
+         dut.g_macro[0].u_macro.repair_config,
          dut.g_macro[7].u_macro.repair_config} !== '0)
       $fatal(1, "configuration reset did not clear timing and repair registers");
     reset_n = 1;
