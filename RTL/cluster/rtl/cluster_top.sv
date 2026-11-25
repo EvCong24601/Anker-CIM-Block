@@ -54,9 +54,9 @@ module cluster_top #(
   // No output backpressure. Invalid lane payload is unspecified.
   output wire [1023:0] raw_psum,
   output wire [31:0] psum_valid,
-  // Pulse start for one cycle while Cluster is idle. Macro ID and repair map
-  // are sampled every clock; the selected Macro updates its repair registers
-  // independently of start. Byte 4*bank+sbk selects one 128-column subbank,
+  // Pulse start for one cycle while Cluster is idle. The repair map is sampled
+  // directly by the Macro selected by the current Macro ID, independently of
+  // start. Byte 4*bank+sbk selects one 128-column subbank,
   // low SRAM first. Other Macros retain their maps until selected or rstn_config.
   // Read the registered result at done && !busy; reload weights after MBIST.
   input  logic [2:0]  mbist_macro_id_i,
@@ -196,30 +196,21 @@ module cluster_top #(
                             BIST_REPORT} bist_state_t;
   bist_state_t bist_state;
   logic [2:0] bist_id;
-  // The external MBIST pins only feed input flops. A request launched while
-  // busy or alongside an accepted command is discarded, not queued.
+  // Start and its Macro ID are sampled together for MBIST arbitration. Repair
+  // data is captured separately in the selected Macro's local register. A
+  // request launched while busy or alongside an accepted command is discarded.
   logic mbist_start_q, mbist_eligible_q;
   logic [2:0] mbist_id_q;
-  logic [63:0] mbist_config_q;
   always_ff @(posedge clock or negedge reset_n) begin
     if (!reset_n) begin
       mbist_start_q <= 0;
       mbist_eligible_q <= 0;
+      mbist_id_q <= '0;
     end else begin
       mbist_start_q <= mbist_test_memory_start_i;
+      mbist_id_q <= mbist_macro_id_i;
       mbist_eligible_q <= bist_state == BIST_IDLE && !batch_active &&
                           !packet_active && !sram_cs_en && !cmd_accept;
-    end
-  end
-  // Keep the address/data staging flops in the configuration reset domain;
-  // reset_n must not indirectly overwrite a Macro's retained repair map.
-  always_ff @(posedge clock or negedge rstn_config) begin
-    if (!rstn_config) begin
-      mbist_id_q <= '0;
-      mbist_config_q <= '0;
-    end else begin
-      mbist_id_q <= mbist_macro_id_i;
-      mbist_config_q <= mbist_test_red_sbk_i;
     end
   end
   wire [7:0] bist_done, bist_busy, bist_valid, bist_unrepairable;
@@ -641,8 +632,8 @@ module cluster_top #(
       .waen(waen_q),
       .raen(raen_q),
       .mbist_select(bist_select[m]),
-      .mbist_repair_select(mbist_id_q == 3'(m)),
-      .mbist_config(mbist_config_q),
+      .mbist_repair_select(mbist_macro_id_i == 3'(m)),
+      .mbist_config(mbist_test_red_sbk_i),
       .mbist_busy(bist_busy[m]),
       .mbist_done(bist_done[m]),
       .mbist_valid(bist_valid[m]),

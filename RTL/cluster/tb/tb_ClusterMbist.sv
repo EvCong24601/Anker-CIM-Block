@@ -165,9 +165,9 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     // SRAM template. It must take effect before the second MBIST run.
     mbist_macro_id_i = 5;
     mbist_test_red_sbk_i = REPAIR5;
-    repeat (2) @(negedge clock);
+    @(negedge clock);
     if (mbist_test_busy_o !== 0 || dut.g_macro[5].u_macro.repair_config !== REPAIR5)
-      $fatal(1, "repair input did not update independently of start");
+      $fatal(1, "selected Macro did not sample repair input on the next edge");
     access_row(5, 1, 0, ONES);
     access_row(5, 0, 0, ONES);
 
