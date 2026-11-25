@@ -30,6 +30,7 @@ module SingleMacro #(
   output logic [   3:0] cim_odata_oc_mask,
   output logic [   1:0] cim_odata_phase,
   input  logic          mbist_select,
+  input  logic          mbist_repair_select,
   input  logic [63:0]   mbist_config,
   output wire           mbist_done, mbist_busy, mbist_valid, mbist_unrepairable,
   output wire [63:0]    mbist_errors
@@ -57,8 +58,8 @@ module SingleMacro #(
   wire clock_active;
   assign issue = cim_ren && (|cim_oc_mask);
   assign write_active = sram_wen && !(&sram_wmask);
-  // Retain each Macro's full repair map through other Macros' tests and
-  // functional accesses. Launch only after the local map is installed.
+  // The selected Macro samples its repair map independently of MBIST start.
+  // Other Macros retain their maps; launch remains a separate pulse.
   logic [63:0] repair_config;
   logic mbist_start;
   always_ff @(posedge clock or negedge reset_n) begin
@@ -67,10 +68,8 @@ module SingleMacro #(
       mbist_start <= 0;
     end else begin
       mbist_start <= 0;
-      if (mbist_select) begin
-        repair_config <= mbist_config;
-        mbist_start <= 1;
-      end
+      if (mbist_repair_select) repair_config <= mbist_config;
+      if (mbist_select) mbist_start <= 1;
     end
   end
   // Reset reaches the state elements through their asynchronous reset pins.

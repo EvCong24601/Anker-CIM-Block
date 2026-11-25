@@ -24,7 +24,7 @@ module tb_SingleMacro;
   wire [1:0] cim_odata_phase;
   wire [3:0] cim_result_mask = 4'hf;  // Standalone: every enabled OC has a consumer.
   SingleMacro #(.USE_CLOCK_GATING(CLOCK_GATING)) dut (
-    .mbist_select(1'b0), .mbist_config(64'b0),
+    .mbist_select(1'b0), .mbist_repair_select(1'b0), .mbist_config(64'b0),
     .mbist_done(), .mbist_busy(), .mbist_valid(), .mbist_unrepairable(), .mbist_errors(),
     .*
   );

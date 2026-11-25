@@ -47,9 +47,8 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     mbist_test_memory_start_i = 1;
     @(negedge clock);
     mbist_test_memory_start_i = 0;
-    mbist_macro_id_i = ~id;
-    mbist_test_red_sbk_i = ~cfg;
-    // Cluster samples the external pulse first, then accepts it one edge later.
+    // Repair input remains independently applied while this Macro is selected.
+    // Cluster accepts the sampled start pulse one edge later.
     @(negedge clock);
     if ({mbist_test_busy_o, mbist_test_done_o} !== 2'b10) $fatal(1, "launch status");
   endtask
@@ -133,6 +132,16 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
         mbist_test_error_sbk_o !== REPAIR5) $fatal(1, "repairable report %h", mbist_test_error_sbk_o);
     if (dut.hold_valid[5] !== 0 || dut.g_macro[5].u_macro.hold_valid !== 0)
       $fatal(1, "stale functional hold");
+
+    // Return the repair code while start remains low, as in the standalone
+    // SRAM template. It must take effect before the second MBIST run.
+    mbist_macro_id_i = 5;
+    mbist_test_red_sbk_i = REPAIR5;
+    repeat (2) @(negedge clock);
+    if (mbist_test_busy_o !== 0 || dut.g_macro[5].u_macro.repair_config !== REPAIR5)
+      $fatal(1, "repair input did not update independently of start");
+    access_row(5, 1, 0, ONES);
+    access_row(5, 0, 0, ONES);
 
     launch(5, REPAIR5);
     finish_test(5);

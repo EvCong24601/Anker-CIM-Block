@@ -58,9 +58,7 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
     mbist_test_memory_start_i = 1;
     @(negedge clock);
     mbist_test_memory_start_i = 0;
-    // The request must be latched; the external pins need not stay stable.
-    mbist_macro_id_i = ~3'(id);
-    mbist_test_red_sbk_i = ~repair_map;
+    // The selected repair input remains active independently of start.
     @(negedge clock);
     if ({mbist_test_busy_o, mbist_test_done_o} !== 2'b10)
       $fatal(1, "Macro%0d did not accept MBIST", id);

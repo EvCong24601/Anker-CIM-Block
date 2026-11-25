@@ -50,10 +50,10 @@ module cluster_top #(
   // No output backpressure. Invalid lane payload is unspecified.
   output wire [1023:0] raw_psum,
   output wire [31:0] psum_valid,
-  // Idle Cluster only. Pulse start for one cycle with a complete Macro ID
-  // and repair map; all three inputs are sampled together before arbitration.
-  // Byte 4*bank+sbk selects one 128-column subbank, low
-  // SRAM first. The local map persists until reset or that Macro's next test.
+  // Pulse start for one cycle while Cluster is idle. Macro ID and repair map
+  // are sampled every clock; the selected Macro updates its repair registers
+  // independently of start. Byte 4*bank+sbk selects one 128-column subbank,
+  // low SRAM first. Other Macros retain their maps until selected or reset.
   // Read the registered result at done && !busy; reload weights after MBIST.
   input  logic [2:0]  mbist_macro_id_i,
   input  logic [63:0] mbist_test_red_sbk_i,
@@ -178,7 +178,6 @@ module cluster_top #(
                             BIST_REPORT} bist_state_t;
   bist_state_t bist_state;
   logic [2:0] bist_id;
-  logic [63:0] bist_config;
   // The external MBIST pins only feed input flops. A request launched while
   // busy or alongside an accepted command is discarded, not queued.
   logic mbist_start_q, mbist_eligible_q;
@@ -224,7 +223,6 @@ module cluster_top #(
     if (!reset_n) begin
       bist_state <= BIST_IDLE;
       bist_id <= '0;
-      bist_config <= '0;
       mbist_test_done_o <= 0;
       mbist_test_memory_valid_o <= 0;
       mbist_out_of_repair_o <= 0;
@@ -232,7 +230,6 @@ module cluster_top #(
     end else case (bist_state)
       BIST_IDLE: if (bist_accept) begin
         bist_id <= mbist_id_q;
-        bist_config <= mbist_config_q;
         mbist_test_done_o <= 0;
         mbist_test_memory_valid_o <= 0;
         mbist_out_of_repair_o <= 0;
@@ -615,7 +612,8 @@ module cluster_top #(
       .clock(clock),
       .reset_n(reset_n),
       .mbist_select(bist_select[m]),
-      .mbist_config(bist_config),
+      .mbist_repair_select(mbist_id_q == 3'(m)),
+      .mbist_config(mbist_config_q),
       .mbist_busy(bist_busy[m]),
       .mbist_done(bist_done[m]),
       .mbist_valid(bist_valid[m]),
