@@ -24,6 +24,7 @@ module ClusterGemmScenario #(
   wire [1023:0] sram_rd_data, psum_data_o;
   wire [31:0] out_valid_o;
   cluster_top dut (
+    .rstn_config(reset_n),
     .timing_config_i(8'b0), .waen_i(1'b0), .raen_i(1'b0),
     .clock(clock),
     .reset_n(reset_n),

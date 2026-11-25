@@ -29,6 +29,7 @@ module tb_ClusterMbistSerial #(parameter bit USE_CLOCK_GATING = 1);
   wire mbist_test_memory_valid_o, mbist_out_of_repair_o;
 
   cluster_top #(.USE_CLOCK_GATING(USE_CLOCK_GATING)) dut (
+    .rstn_config(reset_n),
     .timing_config_i(8'b0), .waen_i(1'b0), .raen_i(1'b0),
     .*
   );

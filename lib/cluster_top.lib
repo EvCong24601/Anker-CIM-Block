@@ -142,6 +142,13 @@ library (cluster_top_interface) {
       capacitance : 0.001821;
     }
 
+    pin ("rstn_config") {
+      direction : input;
+      max_transition : 0.871500;
+      min_transition : 0.000000;
+      capacitance : 0.001821;
+    }
+
     bus ("cmd_i") {
       bus_type : bus_102;
       direction : input;

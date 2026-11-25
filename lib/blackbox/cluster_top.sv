@@ -13,6 +13,7 @@ module cluster_top #(
 ) (
   input logic clock,
   input logic reset_n,
+  input logic rstn_config,
   input cluster_pkg::cluster_ctrl_t cmd_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,

@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
   import cluster_pkg::*;
-  logic clock = 0, reset_n = 0;
+  logic clock = 0, reset_n = 0, rstn_config = 0;
   always #5 clock = !clock;
   cluster_ctrl_t cmd_i = '0;
   logic cmd_valid_i = 0, act_valid_i = 0, weight_valid_i = 0;
@@ -135,6 +135,7 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
   initial begin
     repeat (3) @(negedge clock);
     reset_n = 1;
+    rstn_config = 1;
     timing_config_i = 8'hA5;
     waen_i = 1;
     raen_i = 0;
@@ -199,9 +200,17 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     repeat (20) @(negedge clock);
     reset_n = 0;
     @(negedge clock);
-    if ({mbist_test_busy_o, mbist_test_done_o, dut.bist_busy, dut.g_macro[5].u_macro.repair_config} !== '0)
-      $fatal(1, "reset during MBIST");
+    if ({mbist_test_busy_o, mbist_test_done_o, dut.bist_busy} !== '0 ||
+        dut.g_macro[5].u_macro.repair_config !== REPAIR5)
+      $fatal(1, "logic reset changed independent repair configuration");
+    rstn_config = 0;
+    @(negedge clock);
+    if ({dut.timing_config_q, dut.waen_q, dut.raen_q,
+         dut.g_macro[5].u_macro.repair_config,
+         dut.g_macro[7].u_macro.repair_config} !== '0)
+      $fatal(1, "configuration reset did not clear timing and repair registers");
     reset_n = 1;
+    rstn_config = 1;
     launch(7, 0);
     finish_test(7);
     if ({mbist_test_memory_valid_o,mbist_out_of_repair_o,mbist_test_error_sbk_o} !== {2'b10,64'd0})
@@ -211,6 +220,11 @@ module tb_ClusterMbist #(parameter bit USE_CLOCK_GATING = 1);
     finish_test(7);
     if ({mbist_test_memory_valid_o,mbist_out_of_repair_o,mbist_test_error_sbk_o} !== {2'b00,64'h85})
       $fatal(1, "last read missing from final result");
+    rstn_config = 0;
+    #1;
+    if (mbist_test_done_o !== 1 || mbist_test_busy_o !== 0 ||
+        {dut.timing_config_q, dut.waen_q, dut.raen_q} !== '0)
+      $fatal(1, "configuration reset changed MBIST status or missed timing registers");
     $display("PASS cluster MBIST gating=%d compute latency=%d", USE_CLOCK_GATING, after_latency);
     $finish;
   end

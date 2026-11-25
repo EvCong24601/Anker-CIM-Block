@@ -28,6 +28,7 @@ module cluster_top #(
 ) (
   input logic clock,
   input logic reset_n,
+  input logic rstn_config,
   input cluster_pkg::cluster_ctrl_t cmd_i,
   input logic cmd_valid_i,
   output wire cmd_ready_o,
@@ -56,7 +57,7 @@ module cluster_top #(
   // Pulse start for one cycle while Cluster is idle. Macro ID and repair map
   // are sampled every clock; the selected Macro updates its repair registers
   // independently of start. Byte 4*bank+sbk selects one 128-column subbank,
-  // low SRAM first. Other Macros retain their maps until selected or reset.
+  // low SRAM first. Other Macros retain their maps until selected or rstn_config.
   // Read the registered result at done && !busy; reload weights after MBIST.
   input  logic [2:0]  mbist_macro_id_i,
   input  logic [63:0] mbist_test_red_sbk_i,
@@ -71,8 +72,8 @@ module cluster_top #(
   // Sample once at the Cluster boundary, then broadcast to all SRAM wrappers.
   logic [7:0] timing_config_q;
   logic waen_q, raen_q;
-  always_ff @(posedge clock or negedge reset_n) begin
-    if (!reset_n) begin
+  always_ff @(posedge clock or negedge rstn_config) begin
+    if (!rstn_config) begin
       timing_config_q <= '0;
       waen_q <= 1'b0;
       raen_q <= 1'b0;
@@ -628,6 +629,7 @@ module cluster_top #(
     ) u_macro (
       .clock(clock),
       .reset_n(reset_n),
+      .rstn_config(rstn_config),
       .timing_config(timing_config_q),
       .waen(waen_q),
       .raen(raen_q),

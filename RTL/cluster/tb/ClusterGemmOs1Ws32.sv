@@ -31,6 +31,7 @@ module ClusterGemmOs1Ws32;
   int issue_phase[CLUSTERS], issue_context[CLUSTERS];
   for (genvar c = 0; c < CLUSTERS; c++) begin : g_cluster
     cluster_top dut (
+      .rstn_config(reset_n),
       .timing_config_i(8'b0), .waen_i(1'b0), .raen_i(1'b0),
       .clock(clock),
       .reset_n(reset_n),

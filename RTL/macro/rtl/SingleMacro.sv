@@ -8,6 +8,7 @@ module SingleMacro #(
 ) (
   input  logic          clock,
   input  logic          reset_n,
+  input  logic          rstn_config,
   input  logic [7:0]    timing_config,
   input  logic          waen,
   input  logic          raen,
@@ -62,16 +63,17 @@ module SingleMacro #(
   assign issue = cim_ren && (|cim_oc_mask);
   assign write_active = sram_wen && !(&sram_wmask);
   // The selected Macro samples its repair map independently of MBIST start.
-  // Other Macros retain their maps; launch remains a separate pulse.
+  // Other Macros retain their maps until rstn_config; launch is a separate pulse.
   logic [63:0] repair_config;
   logic mbist_start;
+  always_ff @(posedge clock or negedge rstn_config) begin
+    if (!rstn_config) repair_config <= '0;
+    else if (mbist_repair_select) repair_config <= mbist_config;
+  end
   always_ff @(posedge clock or negedge reset_n) begin
-    if (!reset_n) begin
-      repair_config <= '0;
+    if (!reset_n) mbist_start <= 0;
+    else begin
       mbist_start <= 0;
-    end else begin
-      mbist_start <= 0;
-      if (mbist_repair_select) repair_config <= mbist_config;
       if (mbist_select) mbist_start <= 1;
     end
   end
