@@ -1,0 +1,21 @@
+Warning: Design 'SingleMacro' has '4' unresolved references. For more detailed information, use the "link" command. (UID-341)
+ 
+****************************************
+Report : clocks
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Thu Nov 26 12:24:18 2026
+****************************************
+
+Attributes:
+    d - dont_touch_network
+    f - fix_hold
+    p - propagated_clock
+    G - generated_clock
+    g - lib_generated_clock
+
+Clock          Period   Waveform            Attrs     Sources
+--------------------------------------------------------------------------------
+clock            3.20   {0 1.6}             f         {clock}
+--------------------------------------------------------------------------------
+1

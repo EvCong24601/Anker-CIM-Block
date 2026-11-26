@@ -1,0 +1,44 @@
+ 
+****************************************
+Report : area
+Design : MacroW8MainTreeCSATop
+Version: P-2019.03-SP5
+Date   : Wed Nov 25 22:18:59 2026
+****************************************
+
+Library(s) Used:
+
+    tcbn22ullbwp30p140hvttt0p8v25c (File: /lamport/shared/hzzhu/techlib/tn22ull/stdcell/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tcbn22ullbwp30p140hvt_110b/tcbn22ullbwp30p140hvttt0p8v25c.db)
+
+Number of ports:                         1245
+Number of nets:                          2939
+Number of cells:                         1211
+Number of combinational cells:            583
+Number of sequential cells:               609
+Number of macros/black boxes:               0
+Number of buf/inv:                          5
+Number of references:                       4
+
+Combinational area:               1183.643978
+Buf/Inv area:                        1.260000
+Noncombinational area:            1151.009991
+Macro/Black Box area:                0.000000
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:                  2334.653970
+Total area:                 undefined
+
+Hierarchical area distribution
+------------------------------
+
+                                  Global cell area          Local cell area
+                                  ------------------  ---------------------------- 
+Hierarchical cell                 Absolute   Percent  Combi-     Noncombi-  Black-
+                                  Total      Total    national   national   boxes   Design
+--------------------------------  ---------  -------  ---------  ---------  ------  ------------------
+MacroW8MainTreeCSATop             2334.6540    100.0     1.3860  1151.0100  0.0000  MacroW8MainTreeCSATop
+u_csa                             1182.2580     50.6  1182.2580     0.0000  0.0000  MacroW8MainTreeCSA
+--------------------------------  ---------  -------  ---------  ---------  ------  ------------------
+Total                                                 1183.6440  1151.0100  0.0000
+
+1

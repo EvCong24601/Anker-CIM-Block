@@ -1,0 +1,205 @@
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Thu Nov 26 20:28:34 2026
+****************************************
+
+ # A fanout number of 1000 was used for high fanout net computations.
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+  Startpoint: weight_mode_in_reg[1]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: g_oc[3].u_compute/u_main_tree/carry_row_q_reg[12]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroClockGate_6   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_127
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_1    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_0    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_2    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_3    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_6 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_7 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_8 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_9 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_10
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_11
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_12
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_13
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_14
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_15
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_16
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_17
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_18
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_19
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_20
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_21
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_22
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_23
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_24
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_25
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_26
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_27
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_28
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_29
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_30
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_31
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroFullWeightPairLUT_6
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_3 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress42Bit_38
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress4to2_INPUT_WIDTH3_OUTPUT_WIDTH4_6
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress42Bit_35
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress4to2_INPUT_WIDTH5_OUTPUT_WIDTH7_3
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainTreeCSA ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainTree_0  ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  weight_mode_in_reg[1]/CP (EDFCNQD1BWP30P140HVT)      0.00000    0.20000 r
+  weight_mode_in_reg[1]/Q (EDFCNQD1BWP30P140HVT)       0.31667    0.51667 f
+  g_oc[3].u_compute/weight_mode[1] (MacroW8MainOC_0)   0.00000    0.51667 f
+  g_oc[3].u_compute/U8/ZN (INVD1BWP30P140HVT)          0.10848    0.62515 r
+  g_oc[3].u_compute/U638/ZN (INVD1BWP30P140HVT)        0.26769    0.89284 f
+  g_oc[3].u_compute/U14/ZN (INR2D2BWP30P140HVT)        0.37181    1.26465 r
+  g_oc[3].u_compute/U7/Z (CKBD1BWP30P140HVT)           0.14358    1.40823 r
+  g_oc[3].u_compute/U2/ZN (INVD1BWP30P140HVT)          0.04972    1.45795 f
+  g_oc[3].u_compute/U6/ZN (INVD1BWP30P140HVT)          0.08373    1.54168 r
+  g_oc[3].u_compute/U399/ZN (AOI22D1BWP30P140HVT)      0.05895    1.60062 f
+  g_oc[3].u_compute/U400/ZN (IOA21D1BWP30P140HVT)      0.04806    1.64868 r
+  g_oc[3].u_compute/g_pair[9].u_lut/activation1[11] (MacroFullWeightPairLUT_6)
+                                                       0.00000    1.64868 r
+  g_oc[3].u_compute/g_pair[9].u_lut/U131/ZN (INR2D1BWP30P140HVT)
+                                                       0.02381    1.67249 f
+  g_oc[3].u_compute/g_pair[9].u_lut/U132/ZN (AOI22D1BWP30P140HVT)
+                                                       0.03017    1.70266 r
+  g_oc[3].u_compute/g_pair[9].u_lut/U133/ZN (OAI31D1BWP30P140HVT)
+                                                       0.03589    1.73855 f
+  g_oc[3].u_compute/g_pair[9].u_lut/U134/ZN (AOI21D1BWP30P140HVT)
+                                                       0.03525    1.77379 r
+  g_oc[3].u_compute/g_pair[9].u_lut/U135/Z (MUX2D0BWP30P140HVT)
+                                                       0.05163    1.82542 f
+  g_oc[3].u_compute/g_pair[9].u_lut/extension_planes[14] (MacroFullWeightPairLUT_6)
+                                                       0.00000    1.82542 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/extension[6] (MacroW8MainEntry_3)
+                                                       0.00000    1.82542 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/U72/Z (CKAN2D1BWP30P140HVT)
+                                                       0.03130    1.85672 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/g_w2_first[1].u_42/operands[8] (MacroCompress4to2_INPUT_WIDTH3_OUTPUT_WIDTH4_6)
+                                                       0.00000    1.85672 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/g_w2_first[1].u_42/g_column[2].u_42/c (MacroCompress42Bit_38)
+                                                       0.00000    1.85672 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/g_w2_first[1].u_42/g_column[2].u_42/U1/S (FA1D1BWP30P140HVT)
+                                                       0.10424    1.96096 r
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/g_w2_first[1].u_42/g_column[2].u_42/U2/S (FA1D1BWP30P140HVT)
+                                                       0.08709    2.04805 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/g_w2_first[1].u_42/g_column[2].u_42/sum (MacroCompress42Bit_38)
+                                                       0.00000    2.04805 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/g_w2_first[1].u_42/sum_row[2] (MacroCompress4to2_INPUT_WIDTH3_OUTPUT_WIDTH4_6)
+                                                       0.00000    2.04805 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/U74/ZN (MOAI22D1BWP30P140HVT)
+                                                       0.04803    2.09608 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/u_shared_42/operands[12] (MacroCompress4to2_INPUT_WIDTH5_OUTPUT_WIDTH7_3)
+                                                       0.00000    2.09608 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/u_shared_42/g_column[2].u_42/c (MacroCompress42Bit_35)
+                                                       0.00000    2.09608 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/u_shared_42/g_column[2].u_42/U1/S (FA1D1BWP30P140HVT)
+                                                       0.12048    2.21656 r
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/u_shared_42/g_column[2].u_42/U2/S (FA1D1BWP30P140HVT)
+                                                       0.08628    2.30284 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/u_shared_42/g_column[2].u_42/sum (MacroCompress42Bit_35)
+                                                       0.00000    2.30284 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/u_shared_42/sum_row[2] (MacroCompress4to2_INPUT_WIDTH5_OUTPUT_WIDTH7_3)
+                                                       0.00000    2.30284 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/U63/ZN (MOAI22D1BWP30P140HVT)
+                                                       0.04666    2.34950 f
+  g_oc[3].u_compute/g_plane[3].g_group[4].u_entry/row0[2] (MacroW8MainEntry_3)
+                                                       0.00000    2.34950 f
+  g_oc[3].u_compute/u_main_tree/query_rows[506] (MacroW8MainTree_0)
+                                                       0.00000    2.34950 f
+  g_oc[3].u_compute/u_main_tree/u_csa/query_rows[506] (MacroW8MainTreeCSA)
+                                                       0.00000    2.34950 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_15/U7/CO (FA1D1BWP30P140HVT)
+                                                       0.08316    2.43266 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_15/U6/CO (FA1D1BWP30P140HVT)
+                                                       0.05563    2.48829 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_15/U5/S (FA1D1BWP30P140HVT)
+                                                       0.09268    2.58097 f
+  g_oc[3].u_compute/u_main_tree/u_csa/U266/CO (FA1D1BWP30P140HVT)
+                                                       0.07268    2.65365 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_31/U2/CO (FA1D1BWP30P140HVT)
+                                                       0.07097    2.72462 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_4/U5/CO (FA1D1BWP30P140HVT)
+                                                       0.06818    2.79280 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_4/U4/CO (FA1D1BWP30P140HVT)
+                                                       0.05510    2.84790 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_4/U3/S (FA1D1BWP30P140HVT)
+                                                       0.09305    2.94095 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_21/U2/CO (FA1D1BWP30P140HVT)
+                                                       0.07316    3.01411 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_2/U3/S (FA1D1BWP30P140HVT)
+                                                       0.08904    3.10315 f
+  g_oc[3].u_compute/u_main_tree/u_csa/intadd_0/U2/S (FA1D1BWP30P140HVT)
+                                                       0.10522    3.20837 r
+  g_oc[3].u_compute/u_main_tree/u_csa/carry_row[12] (MacroW8MainTreeCSA)
+                                                       0.00000    3.20837 r
+  g_oc[3].u_compute/u_main_tree/carry_row_q_reg[12]/D (EDFQD1BWP30P140HVT)
+                                                       0.00000    3.20837 r
+  data arrival time                                               3.20837
+
+  clock clock (rise edge)                              3.20000    3.20000
+  clock network delay (ideal)                          0.20000    3.40000
+  clock uncertainty                                   -0.12500    3.27500
+  g_oc[3].u_compute/u_main_tree/carry_row_q_reg[12]/CP (EDFQD1BWP30P140HVT)
+                                                       0.00000    3.27500 r
+  library setup time                                  -0.03671    3.23829
+  data required time                                              3.23829
+  --------------------------------------------------------------------------
+  data required time                                              3.23829
+  data arrival time                                              -3.20837
+  --------------------------------------------------------------------------
+  slack (MET)                                                     0.02992
+
+
+1

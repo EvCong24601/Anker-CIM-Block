@@ -1,0 +1,235 @@
+ 
+****************************************
+Report : constraint
+        -verbose
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Thu Nov 26 16:49:56 2026
+****************************************
+
+
+  Startpoint: weight_mode_in_reg[1]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: g_oc[1].u_compute/u_main_tree/carry_row_q_reg[12]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroClockGate_6   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_1    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_0    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_2    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainOC_3    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_70
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_71
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_72
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_73
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_74
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_75
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_76
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_77
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_78
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_79
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_80
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_81
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainEntry_82
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroFullWeightPairLUT_46
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress42Bit_786
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress4to2_INPUT_WIDTH3_OUTPUT_WIDTH4_142
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress42Bit_783
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroCompress4to2_INPUT_WIDTH5_OUTPUT_WIDTH7_71
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainTreeCSA ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainTree_2  ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  weight_mode_in_reg[1]/CP (EDFCNQD1BWP30P140HVT)         0.00       0.20 r
+  weight_mode_in_reg[1]/Q (EDFCNQD1BWP30P140HVT)          0.32       0.52 f
+  g_oc[1].u_compute/U6/ZN (INVD1BWP30P140HVT)             0.12       0.63 r
+  g_oc[1].u_compute/U719/ZN (INVD1BWP30P140HVT)           0.22       0.85 f
+  g_oc[1].u_compute/U5/ZN (INR2D1BWP30P140HVT)            0.32       1.17 r
+  g_oc[1].u_compute/U4/Z (CKBD1BWP30P140HVT)              0.11       1.29 r
+  g_oc[1].u_compute/U3/Z (CKBD1BWP30P140HVT)              0.20       1.49 r
+  g_oc[1].u_compute/U708/ZN (AOI22D1BWP30P140HVT)         0.10       1.59 f
+  g_oc[1].u_compute/U716/ZN (IOA21D1BWP30P140HVT)         0.05       1.63 r
+  g_oc[1].u_compute/g_pair[1].u_lut/U159/ZN (INR2D1BWP30P140HVT)
+                                                          0.04       1.68 r
+  g_oc[1].u_compute/g_pair[1].u_lut/U160/ZN (AOI22D1BWP30P140HVT)
+                                                          0.03       1.71 f
+  g_oc[1].u_compute/g_pair[1].u_lut/U161/ZN (OAI31D1BWP30P140HVT)
+                                                          0.02       1.73 r
+  g_oc[1].u_compute/g_pair[1].u_lut/U162/ZN (AOI21D1BWP30P140HVT)
+                                                          0.03       1.76 f
+  g_oc[1].u_compute/g_pair[1].u_lut/U165/ZN (ND3D1BWP30P140HVT)
+                                                          0.02       1.78 r
+  g_oc[1].u_compute/g_pair[1].u_lut/U166/ZN (OAI21D1BWP30P140HVT)
+                                                          0.03       1.81 f
+  g_oc[1].u_compute/g_plane[3].g_group[0].u_entry/U71/Z (CKAN2D1BWP30P140HVT)
+                                                          0.04       1.85 f
+  g_oc[1].u_compute/g_plane[3].g_group[0].u_entry/g_w2_first[1].u_42/g_column[2].u_42/U1/S (FA1D1BWP30P140HVT)
+                                                          0.10       1.95 r
+  g_oc[1].u_compute/g_plane[3].g_group[0].u_entry/g_w2_first[1].u_42/g_column[2].u_42/U2/S (FA1D1BWP30P140HVT)
+                                                          0.09       2.04 f
+  g_oc[1].u_compute/g_plane[3].g_group[0].u_entry/U74/ZN (MOAI22D1BWP30P140HVT)
+                                                          0.05       2.09 f
+  g_oc[1].u_compute/g_plane[3].g_group[0].u_entry/u_shared_42/g_column[2].u_42/U1/S (FA1D1BWP30P140HVT)
+                                                          0.12       2.21 r
+  g_oc[1].u_compute/g_plane[3].g_group[0].u_entry/u_shared_42/g_column[2].u_42/U2/S (FA1D1BWP30P140HVT)
+                                                          0.09       2.30 f
+  g_oc[1].u_compute/g_plane[3].g_group[0].u_entry/U63/ZN (MOAI22D1BWP30P140HVT)
+                                                          0.04       2.34 f
+  g_oc[1].u_compute/u_main_tree/u_csa/U37/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.41 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_15/U6/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.48 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_15/U5/S (FA1D1BWP30P140HVT)
+                                                          0.09       2.57 f
+  g_oc[1].u_compute/u_main_tree/u_csa/U266/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.64 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_31/U2/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.71 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_4/U5/CO (FA1D1BWP30P140HVT)
+                                                          0.07       2.78 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_4/U4/CO (FA1D1BWP30P140HVT)
+                                                          0.06       2.84 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_4/U3/S (FA1D1BWP30P140HVT)
+                                                          0.09       2.93 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_21/U2/CO (FA1D1BWP30P140HVT)
+                                                          0.07       3.00 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_2/U3/S (FA1D1BWP30P140HVT)
+                                                          0.09       3.09 f
+  g_oc[1].u_compute/u_main_tree/u_csa/intadd_0/U2/S (FA1D1BWP30P140HVT)
+                                                          0.11       3.20 r
+  g_oc[1].u_compute/u_main_tree/carry_row_q_reg[12]/D (EDFQD1BWP30P140HVT)
+                                                          0.00       3.20 r
+  data arrival time                                                  3.20
+
+  clock clock (rise edge)                                 3.20       3.20
+  clock network delay (ideal)                             0.20       3.40
+  clock uncertainty                                      -0.12       3.28
+  g_oc[1].u_compute/u_main_tree/carry_row_q_reg[12]/CP (EDFQD1BWP30P140HVT)
+                                                          0.00       3.28 r
+  library setup time                                     -0.04       3.24
+  data required time                                                 3.24
+  --------------------------------------------------------------------------
+  data required time                                                 3.24
+  data arrival time                                                 -3.20
+  --------------------------------------------------------------------------
+  slack (MET)                                                        0.04
+
+
+  Startpoint: repair_config_reg[7]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: u_weight_sram/g_bank[0].u_wrapper/u_sram
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: min
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroClockGate_1_5 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_4 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_3 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_2 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_1 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_0 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_5   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_4   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_3   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_2   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_0   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_6 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_6   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  hdsram256w512b_mbist_top_1
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightSRAM    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  repair_config_reg[7]/CP (EDFCNQD1BWP30P140HVT)          0.00       0.20 r
+  repair_config_reg[7]/Q (EDFCNQD1BWP30P140HVT)           0.12       0.32 f
+  u_weight_sram/g_bank[0].u_wrapper/u_sram/repair0[127] (hdsram256w512btop)
+                                                          0.00       0.32 f
+  data arrival time                                                  0.32
+
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  clock uncertainty                                       0.05       0.25
+  u_weight_sram/g_bank[0].u_wrapper/u_sram/CK (hdsram256w512btop)
+                                                          0.00       0.25 r
+  library hold time                                       0.18       0.43
+  data required time                                                 0.43
+  --------------------------------------------------------------------------
+  data required time                                                 0.43
+  data arrival time                                                 -0.32
+  --------------------------------------------------------------------------
+  slack (VIOLATED)                                                  -0.11
+
+
+    Net: g_oc[0].u_compute/n276
+
+    max_transition         0.40
+  - Transition Time        0.40
+  ------------------------------
+    Slack                  0.00  (MET)
+
+
+    Net: u_weight_sram/g_bank[0].u_wrapper/u_mbist/n3102
+
+    max_capacitance        0.03
+  - Capacitance            0.03
+  ------------------------------
+    Slack                  0.00  (MET)
+
+
+    Net: cim_odata[0]
+
+    Capacitance            0.00
+  - min_capacitance        0.00
+  ------------------------------
+    Slack                  0.00  (VIOLATED: increase significant digits)
+
+
+    Design: SingleMacro
+
+    max_area               0.00
+  - Current Area       109818.02
+  ------------------------------
+    Slack              -109818.02  (VIOLATED)
+
+
+Min pulse width constraints
+
+                       Required      Actual
+  Pin                pulse width   pulse width   Slack           Scenario
+--------------------------------------------------------------------------------
+  repair_config_reg[63]/CP(low)
+                      0.12          1.48          1.35 (MET)
+
+1

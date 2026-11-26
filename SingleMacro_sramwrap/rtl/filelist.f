@@ -1,0 +1,17 @@
++incdir+tb
++incdir+rtl
+rtl/single_macro_pkg.sv
+rtl/MacroClockGate.sv
+rtl/hdsram256w512btop.sv
+rtl/hdsram256w512b_mbist_top.sv
+rtl/MacroWeightSRAM.sv
+rtl/MacroMul2x4.sv
+rtl/MacroSliceFusion.sv
+rtl/MacroCompress42.sv
+rtl/MacroFullWeightPairLUT.sv
+rtl/MacroW8MainEntry.sv
+rtl/MacroW8MainTreeCSA.sv
+rtl/MacroW8MainTree.sv
+rtl/MacroW8MainCorrection.sv
+rtl/MacroW8MainOC.sv
+rtl/SingleMacro.sv

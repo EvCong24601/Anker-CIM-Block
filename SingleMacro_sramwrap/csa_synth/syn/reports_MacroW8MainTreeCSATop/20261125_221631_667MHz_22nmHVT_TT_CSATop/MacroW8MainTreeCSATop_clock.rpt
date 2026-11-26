@@ -1,0 +1,20 @@
+ 
+****************************************
+Report : clocks
+Design : MacroW8MainTreeCSATop
+Version: P-2019.03-SP5
+Date   : Wed Nov 25 22:18:58 2026
+****************************************
+
+Attributes:
+    d - dont_touch_network
+    f - fix_hold
+    p - propagated_clock
+    G - generated_clock
+    g - lib_generated_clock
+
+Clock          Period   Waveform            Attrs     Sources
+--------------------------------------------------------------------------------
+clock            1.50   {0 0.75}            f         {clock}
+--------------------------------------------------------------------------------
+1

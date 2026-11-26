@@ -1,0 +1,53 @@
+ 
+****************************************
+Report : timing
+        -path full
+        -delay min
+        -max_paths 1
+Design : MacroW8MainTreeCSATop
+Version: P-2019.03-SP5
+Date   : Wed Nov 25 22:18:59 2026
+****************************************
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+  Startpoint: query_rows_q_reg[0]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: carry_row_reg[0]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: min
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroW8MainTreeCSATop
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainTreeCSA ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  query_rows_q_reg[0]/CP (DFQD1BWP30P140HVT)           0.00000    0.20000 r
+  query_rows_q_reg[0]/Q (DFQD1BWP30P140HVT)            0.11656    0.31656 f
+  u_csa/query_rows[0] (MacroW8MainTreeCSA)             0.00000    0.31656 f
+  u_csa/intadd_6/U11/S (FA1D1BWP30P140HVT)             0.05879    0.37535 f
+  u_csa/carry_row[0] (MacroW8MainTreeCSA)              0.00000    0.37535 f
+  carry_row_reg[0]/D (DFQD1BWP30P140HVT)               0.00000    0.37535 f
+  data arrival time                                               0.37535
+
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  clock uncertainty                                    0.05000    0.25000
+  carry_row_reg[0]/CP (DFQD1BWP30P140HVT)              0.00000    0.25000 r
+  library hold time                                    0.04388    0.29388
+  data required time                                              0.29388
+  --------------------------------------------------------------------------
+  data required time                                              0.29388
+  data arrival time                                              -0.37535
+  --------------------------------------------------------------------------
+  slack (MET)                                                     0.08148
+
+
+1

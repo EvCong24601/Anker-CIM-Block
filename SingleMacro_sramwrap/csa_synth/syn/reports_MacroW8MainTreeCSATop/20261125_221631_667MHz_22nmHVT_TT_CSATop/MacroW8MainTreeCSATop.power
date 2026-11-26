@@ -1,0 +1,54 @@
+ 
+****************************************
+Report : power
+        -analysis_effort low
+Design : MacroW8MainTreeCSATop
+Version: P-2019.03-SP5
+Date   : Wed Nov 25 22:18:59 2026
+****************************************
+
+
+Library(s) Used:
+
+    tcbn22ullbwp30p140hvttt0p8v25c (File: /lamport/shared/hzzhu/techlib/tn22ull/stdcell/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tcbn22ullbwp30p140hvt_110b/tcbn22ullbwp30p140hvttt0p8v25c.db)
+
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+Design        Wire Load Model            Library
+------------------------------------------------
+MacroW8MainTreeCSATop  ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroW8MainTreeCSA     ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+
+
+Global Operating Voltage = 0.8  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1nW
+
+
+  Cell Internal Power  =   1.1802 mW   (91%)
+  Net Switching Power  = 115.9522 uW    (9%)
+                         ---------
+Total Dynamic Power    =   1.2961 mW  (100%)
+
+Cell Leakage Power     = 577.6530 nW
+
+
+                 Internal         Switching           Leakage            Total
+Power Group      Power            Power               Power              Power   (   %    )  Attrs
+--------------------------------------------------------------------------------------------------
+io_pad             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+memory             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+black_box          0.0000            0.0000            0.0000            0.0000  (   0.00%)
+clock_network      0.0000            0.0000            0.0000            0.0000  (   0.00%)
+register           0.9682        1.5893e-02          345.6012            0.9844  (  75.92%)
+sequential         0.0000            0.0000            0.0000            0.0000  (   0.00%)
+combinational      0.2120            0.1001          232.0462            0.3123  (  24.08%)
+--------------------------------------------------------------------------------------------------
+Total              1.1802 mW         0.1160 mW       577.6473 nW         1.2967 mW
+1

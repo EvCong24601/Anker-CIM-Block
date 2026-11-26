@@ -1,0 +1,72 @@
+Warning: Design 'SingleMacro' has '4' unresolved references. For more detailed information, use the "link" command. (UID-341)
+ 
+****************************************
+Report : timing
+        -path full
+        -delay min
+        -max_paths 1
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Thu Nov 26 12:24:20 2026
+****************************************
+
+ # A fanout number of 1000 was used for high fanout net computations.
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+  Startpoint: repair_config_reg[7]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: u_weight_sram/g_bank[0].u_wrapper/u_sram
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: min
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroClockGate_1_5 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_4 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_3 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_2 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_1 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_0 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_5   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_4   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_3   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_2   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_0   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_6 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_6   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  hdsram256w512b_mbist_top_1
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightSRAM    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  repair_config_reg[7]/CP (EDFCNQD1BWP30P140HVT)       0.00000    0.20000 r
+  repair_config_reg[7]/Q (EDFCNQD1BWP30P140HVT)        0.11926    0.31926 f
+  u_weight_sram/repair_config[7] (MacroWeightSRAM)     0.00000    0.31926 f
+  u_weight_sram/g_bank[0].u_wrapper/test_red_sbk0[7] (hdsram256w512b_mbist_top_1)
+                                                       0.00000    0.31926 f
+  u_weight_sram/g_bank[0].u_wrapper/u_sram/repair0[127] (hdsram256w512btop)
+                                                       0.00000    0.31926 f
+  data arrival time                                               0.31926
+
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  clock uncertainty                                    0.05000    0.25000
+  u_weight_sram/g_bank[0].u_wrapper/u_sram/CK (hdsram256w512btop)
+                                                       0.00000    0.25000 r
+  library hold time                                    0.18000    0.43000
+  data required time                                              0.43000
+  --------------------------------------------------------------------------
+  data required time                                              0.43000
+  data arrival time                                              -0.31926
+  --------------------------------------------------------------------------
+  slack (VIOLATED)                                               -0.11074
+
+
+1

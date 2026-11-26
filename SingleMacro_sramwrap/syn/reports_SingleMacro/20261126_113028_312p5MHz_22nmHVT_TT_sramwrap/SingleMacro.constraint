@@ -1,0 +1,164 @@
+Warning: Design 'SingleMacro' has '4' unresolved references. For more detailed information, use the "link" command. (UID-341)
+ 
+****************************************
+Report : constraint
+        -verbose
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Thu Nov 26 12:24:20 2026
+****************************************
+
+
+  Startpoint: held_address_reg[1]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: u_weight_sram/g_bank[0].functional_cen_reg
+            (negative level-sensitive latch clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroClockGate_5   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SRAM_MBIST_1       ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SRAM_MBIST_0       ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  hdsram256w512b_mbist_top_1
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  hdsram256w512b_mbist_top_0
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightSRAM    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  held_address_reg[1]/CP (DFCNQD1BWP30P140HVT)            0.00 #     0.20 r
+  held_address_reg[1]/Q (DFCNQD1BWP30P140HVT)             0.11       0.31 f
+  U2882/ZN (INVD1BWP30P140HVT)                            0.01       0.33 r
+  U2883/ZN (OAI22D1BWP30P140HVT)                          0.03       0.35 f
+  U2884/ZN (AOI221D1BWP30P140HVT)                         0.04       0.39 r
+  U2885/ZN (ND4D1BWP30P140HVT)                            0.04       0.43 f
+  U2886/ZN (NR2D1BWP30P140HVT)                            0.03       0.46 r
+  U2887/ZN (AOI221D1BWP30P140HVT)                         0.04       0.51 f
+  U2889/ZN (OAI21D1BWP30P140HVT)                          0.05       0.56 r
+  u_weight_sram/U28/ZN (OAI211D1BWP30P140HVT)             0.05       0.60 f
+  u_weight_sram/U31/Z (CKAN2D1BWP30P140HVT)               0.04       0.64 f
+  u_weight_sram/g_bank[0].functional_cen_reg/D (LNQD1BWP30P140HVT)
+                                                          0.00       0.64 f
+  data arrival time                                                  0.64
+
+  clock clock (fall edge)                                 1.60       1.60
+  clock network delay (ideal)                             0.20       1.80
+  clock uncertainty                                      -0.12       1.68
+  u_weight_sram/g_bank[0].functional_cen_reg/EN (LNQD1BWP30P140HVT)
+                                                          0.00       1.68 f
+  time borrowed from endpoint                             0.00       1.68
+  data required time                                                 1.68
+  --------------------------------------------------------------------------
+  data required time                                                 1.68
+  data arrival time                                                 -0.64
+  --------------------------------------------------------------------------
+  slack (MET)                                                        1.03
+
+  Time Borrowing Information
+  --------------------------------------------------------------
+  clock nominal pulse width                               1.60   
+  library setup time                                      0.01   
+  --------------------------------------------------------------
+  max time borrow                                         1.61   
+  actual time borrow                                      0.00   
+  --------------------------------------------------------------
+
+
+  Startpoint: repair_config_reg[7]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: u_weight_sram/g_bank[0].u_wrapper/u_sram
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: min
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroClockGate_1_5 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_4 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_3 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_2 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_1 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_0 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_5   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_4   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_3   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_2   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_0   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_1_6 ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroClockGate_6   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  hdsram256w512b_mbist_top_1
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightSRAM    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  repair_config_reg[7]/CP (EDFCNQD1BWP30P140HVT)          0.00       0.20 r
+  repair_config_reg[7]/Q (EDFCNQD1BWP30P140HVT)           0.12       0.32 f
+  u_weight_sram/g_bank[0].u_wrapper/u_sram/repair0[127] (hdsram256w512btop)
+                                                          0.00       0.32 f
+  data arrival time                                                  0.32
+
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  clock uncertainty                                       0.05       0.25
+  u_weight_sram/g_bank[0].u_wrapper/u_sram/CK (hdsram256w512btop)
+                                                          0.00       0.25 r
+  library hold time                                       0.18       0.43
+  data required time                                                 0.43
+  --------------------------------------------------------------------------
+  data required time                                                 0.43
+  data arrival time                                                 -0.32
+  --------------------------------------------------------------------------
+  slack (VIOLATED)                                                  -0.11
+
+
+    Net: u_weight_sram/g_bank[0].u_wrapper/n6
+
+    max_transition         0.40
+  - Transition Time        0.40
+  ------------------------------
+    Slack                  0.00  (MET)
+
+
+    Net: u_weight_sram/g_bank[0].u_wrapper/u_mbist/n3105
+
+    max_capacitance        0.03
+  - Capacitance            0.03
+  ------------------------------
+    Slack                  0.00  (MET)
+
+
+    Net: cim_odata[0]
+
+    Capacitance            0.00
+  - min_capacitance        0.00
+  ------------------------------
+    Slack                  0.00  (VIOLATED: increase significant digits)
+
+
+    Design: SingleMacro
+
+    max_area               0.00
+  - Current Area       105096.29
+  ------------------------------
+    Slack              -105096.29  (VIOLATED)
+
+
+Min pulse width constraints
+
+                       Required      Actual
+  Pin                pulse width   pulse width   Slack           Scenario
+--------------------------------------------------------------------------------
+  repair_config_reg[63]/CP(low)
+                      0.12          1.48          1.35 (MET)
+
+1

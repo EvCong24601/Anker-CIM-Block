@@ -1,0 +1,80 @@
+Warning: Design 'SingleMacro' has '4' unresolved references. For more detailed information, use the "link" command. (UID-341)
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : SingleMacro
+Version: P-2019.03-SP5
+Date   : Thu Nov 26 12:24:20 2026
+****************************************
+
+ # A fanout number of 1000 was used for high fanout net computations.
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+  Startpoint: held_address_reg[1]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: u_weight_sram/g_bank[0].functional_cen_reg
+            (negative level-sensitive latch clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroClockGate_5   ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SRAM_MBIST_1       ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SRAM_MBIST_0       ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  hdsram256w512b_mbist_top_1
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  hdsram256w512b_mbist_top_0
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  SingleMacro        ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroWeightSRAM    ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                              0.00000    0.00000
+  clock network delay (ideal)                          0.20000    0.20000
+  held_address_reg[1]/CP (DFCNQD1BWP30P140HVT)         0.00000 #  0.20000 r
+  held_address_reg[1]/Q (DFCNQD1BWP30P140HVT)          0.11184    0.31184 f
+  U2882/ZN (INVD1BWP30P140HVT)                         0.01361    0.32545 r
+  U2883/ZN (OAI22D1BWP30P140HVT)                       0.02640    0.35185 f
+  U2884/ZN (AOI221D1BWP30P140HVT)                      0.04112    0.39297 r
+  U2885/ZN (ND4D1BWP30P140HVT)                         0.03738    0.43035 f
+  U2886/ZN (NR2D1BWP30P140HVT)                         0.03315    0.46350 r
+  U2887/ZN (AOI221D1BWP30P140HVT)                      0.04208    0.50558 f
+  U2889/ZN (OAI21D1BWP30P140HVT)                       0.04960    0.55518 r
+  u_weight_sram/read_enable (MacroWeightSRAM)          0.00000    0.55518 r
+  u_weight_sram/U28/ZN (OAI211D1BWP30P140HVT)          0.04844    0.60362 f
+  u_weight_sram/U31/Z (CKAN2D1BWP30P140HVT)            0.03896    0.64258 f
+  u_weight_sram/g_bank[0].functional_cen_reg/D (LNQD1BWP30P140HVT)
+                                                       0.00000    0.64258 f
+  data arrival time                                               0.64258
+
+  clock clock (fall edge)                              1.60000    1.60000
+  clock network delay (ideal)                          0.20000    1.80000
+  clock uncertainty                                   -0.12500    1.67500
+  u_weight_sram/g_bank[0].functional_cen_reg/EN (LNQD1BWP30P140HVT)
+                                                       0.00000    1.67500 f
+  time borrowed from endpoint                          0.00000    1.67500
+  data required time                                              1.67500
+  --------------------------------------------------------------------------
+  data required time                                              1.67500
+  data arrival time                                              -0.64258
+  --------------------------------------------------------------------------
+  slack (MET)                                                     1.03242
+
+  Time Borrowing Information
+  --------------------------------------------------------------
+  clock nominal pulse width                            1.60000   
+  library setup time                                   0.00573   
+  --------------------------------------------------------------
+  max time borrow                                      1.60573   
+  actual time borrow                                   0.00000   
+  --------------------------------------------------------------
+
+
+1

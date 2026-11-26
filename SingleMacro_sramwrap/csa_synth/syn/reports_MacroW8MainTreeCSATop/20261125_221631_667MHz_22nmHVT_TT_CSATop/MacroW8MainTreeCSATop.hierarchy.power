@@ -1,0 +1,41 @@
+ 
+****************************************
+Report : power
+        -hier
+        -analysis_effort low
+Design : MacroW8MainTreeCSATop
+Version: P-2019.03-SP5
+Date   : Wed Nov 25 22:18:58 2026
+****************************************
+
+
+Library(s) Used:
+
+    tcbn22ullbwp30p140hvttt0p8v25c (File: /lamport/shared/hzzhu/techlib/tn22ull/stdcell/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tcbn22ullbwp30p140hvt_110b/tcbn22ullbwp30p140hvttt0p8v25c.db)
+
+
+Operating Conditions: tt0p8v25c   Library: tcbn22ullbwp30p140hvttt0p8v25c
+Wire Load Model Mode: segmented
+
+Design        Wire Load Model            Library
+------------------------------------------------
+MacroW8MainTreeCSATop  ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+MacroW8MainTreeCSA     ZeroWireload      tcbn22ullbwp30p140hvttt0p8v25c
+
+
+Global Operating Voltage = 0.8  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1nW
+
+
+--------------------------------------------------------------------------------
+                                       Switch   Int      Leak     Total
+Hierarchy                              Power    Power    Power    Power    %
+--------------------------------------------------------------------------------
+MacroW8MainTreeCSATop                     0.116    1.180  577.653    1.297 100.0
+  u_csa (MacroW8MainTreeCSA)              0.100    0.212  231.853    0.312  24.1
+1

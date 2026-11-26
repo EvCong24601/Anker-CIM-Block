@@ -1,0 +1,134 @@
+ 
+****************************************
+Report : constraint
+        -verbose
+Design : MacroW8MainTreeCSATop
+Version: P-2019.03-SP5
+Date   : Wed Nov 25 22:18:59 2026
+****************************************
+
+
+  Startpoint: query_rows_q_reg[83]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: carry_row_reg[11]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroW8MainTreeCSATop
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainTreeCSA ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  query_rows_q_reg[83]/CP (DFQD1BWP30P140HVT)             0.00       0.20 r
+  query_rows_q_reg[83]/Q (DFQD1BWP30P140HVT)              0.12       0.32 f
+  u_csa/U238/CO (FA1D1BWP30P140HVT)                       0.07       0.38 f
+  u_csa/U138/CO (FA1D1BWP30P140HVT)                       0.07       0.46 f
+  u_csa/intadd_57/U2/CO (FA1D1BWP30P140HVT)               0.07       0.53 f
+  u_csa/intadd_2/U10/CO (FA1D1BWP30P140HVT)               0.07       0.59 f
+  u_csa/intadd_2/U9/S (FA1D1BWP30P140HVT)                 0.09       0.69 f
+  u_csa/intadd_59/U2/CO (FA1D1BWP30P140HVT)               0.07       0.76 f
+  u_csa/intadd_0/U7/CO (FA1D1BWP30P140HVT)                0.07       0.83 f
+  u_csa/intadd_0/U6/CO (FA1D1BWP30P140HVT)                0.06       0.88 f
+  u_csa/intadd_0/U5/CO (FA1D1BWP30P140HVT)                0.06       0.94 f
+  u_csa/intadd_0/U4/CO (FA1D1BWP30P140HVT)                0.06       0.99 f
+  u_csa/intadd_0/U3/S (FA1D1BWP30P140HVT)                 0.09       1.09 f
+  u_csa/intadd_1/U2/S (FA1D1BWP30P140HVT)                 0.11       1.19 r
+  carry_row_reg[11]/D (DFQD1BWP30P140HVT)                 0.00       1.19 r
+  data arrival time                                                  1.19
+
+  clock clock (rise edge)                                 1.50       1.50
+  clock network delay (ideal)                             0.20       1.70
+  clock uncertainty                                      -0.12       1.58
+  carry_row_reg[11]/CP (DFQD1BWP30P140HVT)                0.00       1.58 r
+  library setup time                                     -0.01       1.56
+  data required time                                                 1.56
+  --------------------------------------------------------------------------
+  data required time                                                 1.56
+  data arrival time                                                 -1.19
+  --------------------------------------------------------------------------
+  slack (MET)                                                        0.37
+
+
+  Startpoint: query_rows_q_reg[0]
+              (rising edge-triggered flip-flop clocked by clock)
+  Endpoint: carry_row_reg[0]
+            (rising edge-triggered flip-flop clocked by clock)
+  Path Group: clock
+  Path Type: min
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  MacroW8MainTreeCSATop
+                     ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+  MacroW8MainTreeCSA ZeroWireload          tcbn22ullbwp30p140hvttt0p8v25c
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  query_rows_q_reg[0]/CP (DFQD1BWP30P140HVT)              0.00       0.20 r
+  query_rows_q_reg[0]/Q (DFQD1BWP30P140HVT)               0.12       0.32 f
+  u_csa/intadd_6/U11/S (FA1D1BWP30P140HVT)                0.06       0.38 f
+  carry_row_reg[0]/D (DFQD1BWP30P140HVT)                  0.00       0.38 f
+  data arrival time                                                  0.38
+
+  clock clock (rise edge)                                 0.00       0.00
+  clock network delay (ideal)                             0.20       0.20
+  clock uncertainty                                       0.05       0.25
+  carry_row_reg[0]/CP (DFQD1BWP30P140HVT)                 0.00       0.25 r
+  library hold time                                       0.04       0.29
+  data required time                                                 0.29
+  --------------------------------------------------------------------------
+  data required time                                                 0.29
+  data arrival time                                                 -0.38
+  --------------------------------------------------------------------------
+  slack (MET)                                                        0.08
+
+
+    Net: u_csa/intadd_22/B[3]
+
+    max_transition         0.40
+  - Transition Time        0.04
+  ------------------------------
+    Slack                  0.36  (MET)
+
+
+    Net: u_csa/intadd_22/B[3]
+
+    max_capacitance        0.03
+  - Capacitance            0.00
+  ------------------------------
+    Slack                  0.03  (MET)
+
+
+    Net: carry_in
+
+    Capacitance            0.00
+  - min_capacitance        0.00
+  ------------------------------
+    Slack                  0.00  (VIOLATED: increase significant digits)
+
+
+    Design: MacroW8MainTreeCSATop
+
+    max_area               0.00
+  - Current Area        2334.65
+  ------------------------------
+    Slack              -2334.65  (VIOLATED)
+
+
+Min pulse width constraints
+
+                       Required      Actual
+  Pin                pulse width   pulse width   Slack           Scenario
+--------------------------------------------------------------------------------
+  query_rows_q_reg[575]/CP(low)
+                      0.12          0.62          0.50 (MET)
+
+1

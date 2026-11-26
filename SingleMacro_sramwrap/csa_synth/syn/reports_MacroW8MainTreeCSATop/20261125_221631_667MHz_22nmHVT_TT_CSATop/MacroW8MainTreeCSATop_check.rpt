@@ -1,0 +1,75 @@
+ 
+****************************************
+check_design summary:
+Version:     P-2019.03-SP5
+Date:        Wed Nov 25 22:18:58 2026
+****************************************
+
+                   Name                                            Total
+--------------------------------------------------------------------------------
+Inputs/Outputs                                                     22
+    Unconnected ports (LINT-28)                                    22
+
+Cells                                                              18
+    Connected to power or ground (LINT-32)                         18
+--------------------------------------------------------------------------------
+
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[17]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[16]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[15]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[14]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[13]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[12]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[11]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[10]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[9]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[8]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'correction[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'sum_row[17]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'sum_row[16]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'carry_row[17]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSA', port 'carry_row[16]' is not connected to any nets. (LINT-28)
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[17]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[16]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[15]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[14]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[13]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[12]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[11]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[10]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[9]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[8]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[7]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[6]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[5]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[4]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[3]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[2]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[1]' is connected to logic 0. 
+Warning: In design 'MacroW8MainTreeCSATop', a pin on submodule 'u_csa' is connected to logic 1 or logic 0. (LINT-32)
+   Pin 'correction[0]' is connected to logic 0. 
+1
