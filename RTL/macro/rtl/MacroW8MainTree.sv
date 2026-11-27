@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 `default_nettype none
-// Extracted mapped CSA followed by a synthesizable final carry-propagate sum.
+// CSA followed by a synthesizable final carry-propagate sum.
 // CSA outputs are captured together; correction is decoded from shared
 // n+1 mode registers and added during the CPA cycle, without payload DFFs.
 module MacroW8MainTree (
@@ -14,7 +14,13 @@ module MacroW8MainTree (
     wire carry_in;
     logic [17:0] sum_row_q,carry_row_q;
     logic carry_in_q;
+`ifdef SYNTHESIS
     MacroW8MainTreeCSA u_csa (
+`elsif MACRO_W8_CSA_GOLDEN
+    MacroW8MainTreeCSA_golden u_csa (
+`else
+    MacroW8MainTreeCSA u_csa (
+`endif
         .query_rows(query_rows),
         .correction(18'b0),
         .sum_row(sum_row),
@@ -30,7 +36,7 @@ module MacroW8MainTree (
         end
     end
     // Three aligned 18-bit operands plus the original bit-zero carry.
-    // The fixed CSA contributes no correction; add it exactly once here.
+    // The CSA contributes no correction; add it exactly once here.
     // Retain the low 18 bits and interpret their bit pattern as signed.
     assign result = sum_row_q + carry_row_q + correction + {17'b0,carry_in_q};
 endmodule

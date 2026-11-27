@@ -25,6 +25,7 @@ RTL 共 13 个 ICG：主时钟 1、SRAM 1、ACT 3、CSA 4、结果 4；综合允
 ## 文件与综合入口
 
 - [MacroW8MainTreeCSA.sv](MacroW8MainTreeCSA.sv)：已抽取的固定 CSA，包含 558 个 FA、5 个 HA，绑定 HVT 标准单元。
+- [MacroW8MainTreeCSA_golden.sv](MacroW8MainTreeCSA_golden.sv) 提供端口相同的数学模型供功能仿真。
 - [MacroW8MainTree.sv](MacroW8MainTree.sv)：CSA correction 接零、原 37 bit 输出寄存及最终 CPA。修正量在此与两条寄存行直接相加。
 - [preserve_csa.tcl](preserve_csa.tcl)：保护 CSA，保留 CPA 的优化空间。
 - [check_csa.tcl](check_csa.tcl)：沿用上游脚本，检查 SingleMacro 的四个 CSA 核心的单元类型、数量和保护属性。
@@ -41,7 +42,7 @@ Cluster 的 K=256 映射分别启用 2/4/8 个 Macro，按 ACT slot 路由完整
 
 ## 本地无库仿真
 
-[CSA golden model](../tb/models/MacroW8MainTreeCSA_golden.sv)按输入的数学契约计算
+[CSA golden model](MacroW8MainTreeCSA_golden.sv) 按输入的数学契约计算
 `correction + sum(query_row[plane][row] * 2**plane)`，保留低 18 bit。模型与固定树端口一致，用规范形式 `sum_row=total, carry_row=0, carry_in=0` 返回结果。它只保证三项之和，不保证固定树各条 carry-save row 的位图、门连接、延迟或切换活动。
 
 当前实例对 golden 的 correction 端口同样接零，因此 golden 只压缩 query row，实际修正量由真实第二拍译码/CPA 路径加入。TB 检查此端口恒零，并以独立整数点积检查结果。额外检查共享模式捕获/保持、由数学公式推导的 correction，以及 64 笔精度、符号和 phase 逐拍变化的请求，覆盖全部七精度和合法 phase。
@@ -52,4 +53,4 @@ Cluster 的 K=256 映射分别启用 2/4/8 个 Macro，按 ACT slot 路由完整
 python RTL/cluster/tb/py/run_sram_regression.py --csa-golden --full
 ```
 
-`--csa-golden` 在解析现有编译清单时替换固定 CSA 源文件，不改变生产 RTL，snapshot 的 `sources.json` 和 `summary.log` 记录所用模型。LUT、入口压缩、CSA 寄存边界、CPA、控制和实际 ICG 模型仍参与测试。默认清单与省略该选项的回归继续使用固定树，完整展开/仿真需要工艺模型。固定树与 golden 不能同时编入同一个仿真库。
+`--csa-golden` 给 ModelSim 传入 `+define+MACRO_W8_CSA_GOLDEN`，由 `MacroW8MainTree` 选择所例化的模块。`sources.json` 记录编译清单中的两个 CSA 文件，`summary.log` 记录选中的模型。默认以及定义 `SYNTHESIS` 时都选固定门级树，展开和仿真需对应工艺单元模型。

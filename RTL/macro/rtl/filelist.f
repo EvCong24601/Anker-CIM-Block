@@ -11,6 +11,7 @@ rtl/MacroCompress42.sv
 rtl/MacroFullWeightPairLUT.sv
 rtl/MacroW8MainEntry.sv
 rtl/MacroW8MainTreeCSA.sv
+rtl/MacroW8MainTreeCSA_golden.sv
 rtl/MacroW8MainTree.sv
 rtl/MacroW8MainCorrection.sv
 rtl/MacroW8MainOC.sv

@@ -14,6 +14,7 @@
 ../RTL/macro/rtl/MacroFullWeightPairLUT.sv
 ../RTL/macro/rtl/MacroW8MainEntry.sv
 ../RTL/macro/rtl/MacroW8MainTreeCSA.sv
+../RTL/macro/rtl/MacroW8MainTreeCSA_golden.sv
 ../RTL/macro/rtl/MacroW8MainTree.sv
 ../RTL/macro/rtl/MacroW8MainCorrection.sv
 ../RTL/macro/rtl/MacroW8MainOC.sv

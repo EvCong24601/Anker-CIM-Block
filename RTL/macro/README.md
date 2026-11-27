@@ -15,10 +15,11 @@
 7. `rtl/MacroFullWeightPairLUT.sv`
 8. `rtl/MacroW8MainEntry.sv`
 9. `rtl/MacroW8MainTreeCSA.sv`
-10. `rtl/MacroW8MainTree.sv`
-11. `rtl/MacroW8MainCorrection.sv`
-12. `rtl/MacroW8MainOC.sv`
-13. `rtl/SingleMacro.sv`
+10. `rtl/MacroW8MainTreeCSA_golden.sv`
+11. `rtl/MacroW8MainTree.sv`
+12. `rtl/MacroW8MainCorrection.sv`
+13. `rtl/MacroW8MainOC.sv`
+14. `rtl/SingleMacro.sv`
 
 文件清单中的路径相对于本目录。支持 filelist 的工具应从本目录运行，例如：
 
@@ -42,17 +43,19 @@ vlog -sv -f rtl/filelist.f
 
 ## 无工艺库的 golden model 仿真
 
-`tb/models/MacroW8MainTreeCSA_golden.sv` 提供与固定 CSA 相同的模块和端口。它按四个 ACT bit-plane 的位权累加 64 个 unsigned9 query row，再加一次 correction，并对 18 bit 取模。输出使用 `sum_row=total, carry_row=0, carry_in=0` 的规范形式，不承诺与固定树每条内部 carry-save row 相同。真实 CSA 寄存器、CPA、LUT、精度译码和 ICG 仍在仿真路径中。
+仿真编译加 `+define+MACRO_W8_CSA_GOLDEN` 时，`MacroW8MainTree` 例化 [MacroW8MainTreeCSA_golden](rtl/MacroW8MainTreeCSA_golden.sv)。默认例化固定门级 CSA，定义 `SYNTHESIS` 时也选择固定门级 CSA。
+
+golden 按四个 ACT bit-plane 的位权累加 64 个 unsigned9 query row，再加一次 correction，并对 18 bit 取模。输出使用 `sum_row=total, carry_row=0, carry_in=0` 的规范形式。真实 CSA 寄存器、CPA、LUT、精度译码和 ICG 仍在仿真路径中。
 
 当前 golden 实例的 correction 同样接零，实际修正量在真实第二拍路径中计算并相加。TB 检查固定/golden 输入恒零、共享模式捕获及保持、数学公式得到的修正量，以及精度、符号和 phase 逐拍切换的 II=1 序列。
 
-从仓库根目录运行现有 ModelSim 回归，显式替换固定 CSA 文件：
+从仓库根目录运行 ModelSim 回归，`--csa-golden` 会传入上述编译宏：
 
 ```sh
 python RTL/cluster/tb/py/run_sram_regression.py --csa-golden --full
 ```
 
-也可用重复的 `--case` 选择 `macro_gate0`、`macro_gate1`、`dw_k256_w2`、`dw_k256_w4`、`dw_k256_w8` 等现有用例。默认 RTL/VCS 编译清单始终选择固定树。golden 文件仅用于测试，不加入生产清单，也不能与固定文件一起编译。本流程验证功能及接口时序，固定门连接、carry-save 具体表示、工艺延迟和 PPA 仍待工艺库验证。
+也可用重复的 `--case` 选择 `macro_gate0`、`macro_gate1`、`dw_k256_w2`、`dw_k256_w4`、`dw_k256_w8` 等现有用例。本流程验证功能及接口时序，固定门连接、carry-save 的具体表示、工艺延迟和 PPA 仍需用工艺库验证。
 
 历史记录（删除 DW 专用逻辑前）：2026-11-16，correction 改为第二拍共享译码后的完整 ModelSim golden 回归通过 116 个用例，其中 84 个为预期协议/容量拒绝。门控开、关各核对 2,561 笔 Macro 结果及 3 笔复位取消请求，包含 64 笔有符号普通/DW 逐拍交替。七组 GEMM 的 1,504 个 signed32 结果全部匹配。固定 CSA 与上游 Git 对象逐字一致，功能与 `SYNTHESIS` 预处理分支源码编译通过；未展开或仿真固定门级树，也未进行逻辑综合或 STA。
 

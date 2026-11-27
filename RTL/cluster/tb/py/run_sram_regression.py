@@ -19,12 +19,12 @@ def main():
     parser.add_argument('--case',action='append',choices=catalog.CASES)
     parser.add_argument('--full',action='store_true',help='run every raw-output and protocol case')
     parser.add_argument('--csa-golden',action='store_true',
-                        help='replace only the fixed PDK CSA with its test-only arithmetic model')
+                        help='select the arithmetic CSA with +define+MACRO_W8_CSA_GOLDEN')
     args=parser.parse_args()
     dest=(args.sim_dir or ROOT.parent/'cluster_tb_work/local_sim/raw_psum').resolve()
     if dest==ROOT or ROOT in dest.parents:parser.error('--sim-dir must be outside the Git checkout')
     dest.mkdir(parents=True,exist_ok=True)
-    sources=svfiles.compile_union(svfiles.targets(),csa_golden=args.csa_golden)
+    sources=svfiles.compile_union(svfiles.targets())
     manifest={}
     for src in sources:
         shutil.copy2(src,dest/src.name);manifest[str(src)]=hashlib.sha256(src.read_bytes()).hexdigest()
@@ -39,7 +39,10 @@ def main():
         r=subprocess.run(argv,cwd=dest,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,errors='replace')
         log.write_text(r.stdout,encoding='utf-8');return r
     command(['vlib','work'],dest/'vlib.log')
-    r=command(['vlog','-sv','-svinputport=var','+incdir+.','+define+SINGLE_MACRO_ASSERTIONS','-work','work',*[s.name for s in sources]],dest/'compile.log')
+    defines=['+define+SINGLE_MACRO_ASSERTIONS']
+    if args.csa_golden:
+        defines.append('+define+MACRO_W8_CSA_GOLDEN')
+    r=command(['vlog','-sv','-svinputport=var','+incdir+.',*defines,'-work','work',*[s.name for s in sources]],dest/'compile.log')
     if r.returncode:raise RuntimeError(f'Compile failed: {dest / "compile.log"}')
     names=args.case or (list(catalog.CASES) if args.full else [
         'cluster_default','reduce_tree','macro_gate1','input_overlap','channels','os_count_limit','gate_equiv_default',

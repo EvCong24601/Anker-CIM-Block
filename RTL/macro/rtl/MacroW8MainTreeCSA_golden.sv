@@ -1,11 +1,10 @@
 `timescale 1ns/1ps
 `default_nettype none
-// Test-only arithmetic replacement for MacroW8MainTreeCSA.sv. Select exactly
-// one implementation in the compile list; never compile both into one library.
+// Arithmetic simulation model selected by MACRO_W8_CSA_GOLDEN in MacroW8MainTree.
 // This model has no PDK dependency and does not model the fixed FA/HA topology,
 // internal carry-save representation, propagation delay, or switching activity.
 `ifndef SYNTHESIS
-module MacroW8MainTreeCSA (
+module MacroW8MainTreeCSA_golden (
     input wire [575:0] query_rows,
     input wire [17:0] correction,
     output wire [17:0] sum_row, carry_row,

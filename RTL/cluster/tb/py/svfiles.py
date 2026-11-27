@@ -37,8 +37,8 @@ def targets():
     return sorted(n for n in names if n not in ('common', 'pl'))
 
 
-def compile_set(target, csa_golden=False):
-    """Resolve a target; csa_golden explicitly substitutes only the PDK CSA."""
+def compile_set(target):
+    """Resolve the source files, include directories, and top for a target."""
     path = LIST_DIR / f'verilog_file_{target}.f'
     if not path.is_file():
         raise SystemExit(f'unknown target {target}; known targets: {", ".join(targets())}')
@@ -46,21 +46,17 @@ def compile_set(target, csa_golden=False):
     # exactly the search path the simulator sees; verilog_file_macro.f omits common
     # on purpose and must not inherit its +incdir+ entries.
     files, incdirs = _read(path, LIST_DIR)
-    if csa_golden:
-        fixed = ROOT / 'RTL/macro/rtl/MacroW8MainTreeCSA.sv'
-        golden = ROOT / 'RTL/macro/tb/models/MacroW8MainTreeCSA_golden.sv'
-        files = [golden if f == fixed else f for f in files]
     tops = [f.stem for f in files if f.stem.startswith('tb_')]
     if not tops:
         raise SystemExit(f'target {target} declares no tb_* top module')
     return files, incdirs, tops[0]
 
 
-def compile_union(targets_used, csa_golden=False):
+def compile_union(targets_used):
     """Merge several targets, keeping first-seen order and dropping duplicates."""
     files = []
     for name in targets_used:
-        for entry in compile_set(name, csa_golden=csa_golden)[0]:
+        for entry in compile_set(name)[0]:
             if entry not in files:
                 files.append(entry)
     return files
